@@ -1,0 +1,91 @@
+service,vehicle_class,size_variant,one_person_hours,price_usd
+Full Detail,Coupes & Sedans,1,4,200
+Full Detail,Light Pickups & Offroad,1,4.5,220
+Full Detail,Fullsize Trucks,1,5.5,260
+Full Detail,Coupes & Sedans,2,5,220
+Full Detail,Crossovers & Wagons,2,6,250
+Full Detail,Light Pickups & Offroad,2,5.5,240
+Full Detail,Midsize SUVs,2,6.5,280
+Full Detail,Fullsize Trucks,2,6.5,280
+Full Detail,Crossovers & Wagons,3,6.5,280
+Full Detail,Midsize SUVs,3,7,310
+Full Detail,Fullsize SUVs & Minivans,3,7.5,330
+Interior Only,Coupes & Sedans,1,2,110
+Interior Only,Light Pickups & Offroad,1,2,110
+Interior Only,Fullsize Trucks,1,2.5,125
+Interior Only,Coupes & Sedans,2,3,130
+Interior Only,Crossovers & Wagons,2,3.5,150
+Interior Only,Light Pickups & Offroad,2,3,130
+Interior Only,Midsize SUVs,2,3.5,160
+Interior Only,Fullsize Trucks,2,3.5,150
+Interior Only,Crossovers & Wagons,3,4,180
+Interior Only,Midsize SUVs,3,4,190
+Interior Only,Fullsize SUVs & Minivans,3,4,200
+Exterior Only,Coupes & Sedans,,2,110
+Exterior Only,Crossovers & Wagons,,2.5,120
+Exterior Only,Light Pickups & Offroad,,2.5,130
+Exterior Only,Midsize SUVs,,3,150
+Exterior Only,Fullsize SUVs & Minivans,,3.5,170
+Exterior Only,Fullsize Trucks,,3,160
+Monthly Maintenance,Coupes & Sedans,1,4,100
+Monthly Maintenance,Light Pickups & Offroad,1,4.5,110
+Monthly Maintenance,Fullsize Trucks,1,5.5,130
+Monthly Maintenance,Coupes & Sedans,2,5,110
+Monthly Maintenance,Crossovers & Wagons,2,6,125
+Monthly Maintenance,Light Pickups & Offroad,2,5.5,120
+Monthly Maintenance,Midsize SUVs,2,6.5,140
+Monthly Maintenance,Fullsize Trucks,2,6.5,140
+Monthly Maintenance,Crossovers & Wagons,3,6.5,140
+Monthly Maintenance,Midsize SUVs,3,7,155
+Monthly Maintenance,Fullsize SUVs & Minivans,3,7.5,165
+Quarterly Maintenance,Coupes & Sedans,1,4,160
+Quarterly Maintenance,Light Pickups & Offroad,1,4.5,176
+Quarterly Maintenance,Fullsize Trucks,1,5.5,208
+Quarterly Maintenance,Coupes & Sedans,2,5,176
+Quarterly Maintenance,Crossovers & Wagons,2,6,200
+Quarterly Maintenance,Light Pickups & Offroad,2,5.5,192
+Quarterly Maintenance,Midsize SUVs,2,6.5,224
+Quarterly Maintenance,Fullsize Trucks,2,6.5,224
+Quarterly Maintenance,Crossovers & Wagons,3,6.5,224
+Quarterly Maintenance,Midsize SUVs,3,7,248
+Quarterly Maintenance,Fullsize SUVs & Minivans,3,7.5,264
+1-Step Paint Correction,Coupes & Sedans,,6,300
+1-Step Paint Correction,Crossovers & Wagons,,6.5,350
+1-Step Paint Correction,Light Pickups & Offroad,,6.5,350
+1-Step Paint Correction,Midsize SUVs,,7,400
+1-Step Paint Correction,Fullsize SUVs & Minivans,,7.5,450
+1-Step Paint Correction,Fullsize Trucks,,7.5,450
+2-Step Paint Correction,Coupes & Sedans,,8,450
+2-Step Paint Correction,Crossovers & Wagons,,8.5,550
+2-Step Paint Correction,Light Pickups & Offroad,,8.5,550
+2-Step Paint Correction,Midsize SUVs,,9,625
+2-Step Paint Correction,Fullsize SUVs & Minivans,,10,750
+2-Step Paint Correction,Fullsize Trucks,,10,750
+Headlight Restoration,Coupes & Sedans,,2,95
+Headlight Restoration,Crossovers & Wagons,,2,95
+Headlight Restoration,Light Pickups & Offroad,,2,95
+Headlight Restoration,Midsize SUVs,,2,95
+Headlight Restoration,Fullsize SUVs & Minivans,,2,95
+Headlight Restoration,Fullsize Trucks,,2,95
+Carpet Extraction,Coupes & Sedans,1,1,50
+Carpet Extraction,Light Pickups & Offroad,1,1,50
+Carpet Extraction,Fullsize Trucks,1,1,50
+Carpet Extraction,Coupes & Sedans,2,1.5,70
+Carpet Extraction,Crossovers & Wagons,2,1.5,70
+Carpet Extraction,Light Pickups & Offroad,2,1.5,70
+Carpet Extraction,Midsize SUVs,2,1.5,70
+Carpet Extraction,Fullsize Trucks,2,1.5,70
+Carpet Extraction,Crossovers & Wagons,3,2,90
+Carpet Extraction,Midsize SUVs,3,2,90
+Carpet Extraction,Fullsize SUVs & Minivans,3,2,90
+Seat Extraction,Coupes & Sedans,1,1,60
+Seat Extraction,Light Pickups & Offroad,1,1,60
+Seat Extraction,Fullsize Trucks,1,1,60
+Seat Extraction,Coupes & Sedans,2,1.5,80
+Seat Extraction,Crossovers & Wagons,2,1.5,80
+Seat Extraction,Light Pickups & Offroad,2,1.5,80
+Seat Extraction,Midsize SUVs,2,1.5,80
+Seat Extraction,Fullsize Trucks,2,1.5,80
+Seat Extraction,Crossovers & Wagons,3,2,100
+Seat Extraction,Midsize SUVs,3,2,100
+Seat Extraction,Fullsize SUVs & Minivans,3,2,100
