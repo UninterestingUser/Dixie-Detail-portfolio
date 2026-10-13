@@ -1,0 +1,10 @@
+# Runs dixie-public-health.service every 10 minutes.
+[Unit]
+Description=Dixie Detail public health check every 10 minutes
+
+[Timer]
+OnCalendar=*:00/10
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

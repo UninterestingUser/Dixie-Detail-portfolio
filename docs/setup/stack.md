@@ -74,8 +74,19 @@ Secrets live only in Bitwarden Secrets Manager, project "Dixie Detail". The name
 | Status and logs | `systemctl status dixie-stack`, `cd /srv/dixie-detail && sudo docker compose logs -f` |
 | Health over the tailnet | `curl https://server.<tailnet>.ts.net/health` |
 | Health through the tunnel | `curl https://api.dixiedetail.com/health` |
+| Last public health checks | `journalctl -u dixie-public-health.service -n 20` |
 
 Start and stop the stack with `systemctl`, not `docker compose up`. Compose on its own has no secrets to mount.
+
+## Public health check
+
+`dixie-public-health.timer` runs `ops/public-health.sh` every 10 minutes. The script fetches `PUBLIC_HEALTH_URL` (`https://api.dixiedetail.com/health`) the way a customer would reach the server, through Cloudflare and the tunnel. When the page answers `{"status":"ok"}`, it pings Healthchecks.
+
+Only success is pinged. If the app, the database, the tunnel, the server or its internet connection is down, the pings stop, and Healthchecks alerts once the grace time runs out. Each failed run logs its reason: `journalctl -u dixie-public-health.service -e`.
+
+**Setup.** On [healthchecks.io](https://healthchecks.io), create a check named "Public address" with a simple schedule: period 10 minutes, grace time 10 minutes. Save its ping URL in Bitwarden as `HEALTHCHECKS_PUBLIC_URL`, and set `PUBLIC_HEALTH_URL` in `.env`. `ops/deploy.sh` installs and enables the timer.
+
+**Outage record.** Healthchecks emails the owner each time the check goes down and comes back up. Those emails are the record for the move-to-cloud rule in [architecture.md](../architecture.md#hosting). The free plan's ping log is too short to rely on for a month's history.
 
 ## Rotating a secret
 
