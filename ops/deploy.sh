@@ -2,13 +2,13 @@
 # Pulls the latest code with the deploy key, then rebuilds and restarts the
 # stack. Run on the server as root:
 #
-#   sudo /opt/dixie-detail/ops/deploy.sh
+#   sudo /srv/dixie-detail/ops/deploy.sh
 #
 # The deploy key comes from Bitwarden and lives only in a private ssh-agent
 # for the length of the pull. First install: see docs/setup/stack.md.
 set -euo pipefail
 
-DIXIE_DIR=${DIXIE_DIR:-/opt/dixie-detail}
+DIXIE_DIR=${DIXIE_DIR:-/srv/dixie-detail}
 CRED=/etc/credstore.encrypted/dixie-bws-token.cred
 UNIT=dixie-stack.service
 ops_dir=$(cd "$(dirname "$0")" && pwd)
