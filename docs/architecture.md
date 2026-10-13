@@ -34,6 +34,7 @@ flowchart TB
 | Public website | Astro, static | Plain HTML with almost no JavaScript: fast and strong for SEO. |
 | Website hosting | Cloudflare free plan | Unlimited static requests and bandwidth. The site stays up if the server is down. |
 | Site-to-server link | Cloudflare Tunnel | Outbound-only. No open ports, no static IP. |
+| Reverse proxy | Caddy | Serves the whole app to the tailnet and only the health page and public API to the tunnel. |
 | Private access | Tailscale | Already in use. The control app is never on the public internet. |
 | Scheduling | Built into the core app | Services, durations and availability live in the same database. Replaces Setmore. |
 
@@ -50,7 +51,8 @@ The business data lives on the owner's home server. An APC battery covers the se
 
 ## Network
 
-- The control app listens only on the server's loopback address and is published to the tailnet with `tailscale serve`.
+- The control app listens only on the server's loopback address (Caddy on `127.0.0.1:8000`) and is published to the tailnet with `tailscale serve`.
+- The tunnel reaches Caddy's port 8080 over a private Docker network. That port serves only `/health` and `/api/public/`, and the app enforces the same rule. Details are in [setup/stack.md](setup/stack.md).
 - The server is its own Tailscale node, in addition to the pfSense subnet route. See [setup/server.md](setup/server.md).
 - The public API exposes three things only: list services and prices, show open slots, and take a booking.
 - Card details never touch the server.

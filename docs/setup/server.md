@@ -56,7 +56,7 @@ Connect the APC unit's USB cable to the server and install `apcupsd`, so the ser
 
 ## 4. Secrets
 
-The server keeps one secret, the Bitwarden machine-account token, encrypted with `systemd-creds` and bound to the TPM chip where available. Everything else comes from Bitwarden Secrets Manager when a service starts. The deploy key also lives in Bitwarden and is loaded into `ssh-agent` only for a pull. Step-by-step setup is in the Phase 0 runbook.
+The server keeps one secret, the Bitwarden machine-account token, encrypted with `systemd-creds` and bound to the TPM chip where available. Everything else comes from Bitwarden Secrets Manager when a service starts. The deploy key also lives in Bitwarden and is loaded into `ssh-agent` only for a pull. Step-by-step setup is in the [Phase 0 stack runbook](stack.md).
 
 ## Sources
 
