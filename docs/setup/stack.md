@@ -46,15 +46,15 @@ Secrets live only in Bitwarden Secrets Manager, project "Dixie Detail". The name
 4. **Write the settings.** From a checkout on Fedora, copy `ops/` and `.env.example` to the server. Then:
 
    ```bash
-   sudo install -d -m 0755 /opt/dixie-detail
-   sudo cp .env.example /opt/dixie-detail/.env
-   sudoedit /opt/dixie-detail/.env
+   sudo install -d -m 0755 /srv/dixie-detail
+   sudo cp .env.example /srv/dixie-detail/.env
+   sudoedit /srv/dixie-detail/.env
    ```
 
-5. **Pull and start.** The first run fills `/opt/dixie-detail` from GitHub, installs and enables `dixie-stack.service`, builds the app and starts the stack.
+5. **Pull and start.** The first run fills `/srv/dixie-detail` from GitHub, installs and enables `dixie-stack.service`, builds the app and starts the stack.
 
    ```bash
-   sudo DIXIE_DIR=/opt/dixie-detail bash ops/deploy.sh
+   sudo DIXIE_DIR=/srv/dixie-detail bash ops/deploy.sh
    ```
 
    Afterwards, delete the copied `ops/` and `.env.example` from your home directory.
@@ -67,9 +67,9 @@ Secrets live only in Bitwarden Secrets Manager, project "Dixie Detail". The name
 
 | Task | Command |
 | --- | --- |
-| Deploy the latest `main` | `sudo /opt/dixie-detail/ops/deploy.sh` |
+| Deploy the latest `main` | `sudo /srv/dixie-detail/ops/deploy.sh` |
 | Restart (fetches secrets again) | `sudo systemctl restart dixie-stack` |
-| Status and logs | `systemctl status dixie-stack`, `cd /opt/dixie-detail && sudo docker compose logs -f` |
+| Status and logs | `systemctl status dixie-stack`, `cd /srv/dixie-detail && sudo docker compose logs -f` |
 | Health over the tailnet | `curl https://server.<tailnet>.ts.net/health` |
 | Health through the tunnel | `curl https://api.dixiedetail.com/health` |
 
