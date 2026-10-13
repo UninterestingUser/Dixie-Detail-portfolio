@@ -32,3 +32,4 @@ Every settled decision, newest last. When a rule changes, add a new row instead 
 | 26 | 2026-10-08 | Texting | Submit carrier registration only when the new booking form with its consent checkboxes is public | The Setmore page cannot carry compliant consent wording |
 | 27 | 2026-10-13 | Backups | Nightly dumps to the RAID, plus an encrypted restic copy in the owner's Google Workspace Drive through rclone | Storage the owner already pays for |
 | 28 | 2026-10-13 | Security | Every key, password and token lives in Bitwarden Secrets Manager; nothing secret is stored in plaintext. The server keeps only the machine-account token, encrypted with systemd-creds, and fetches the rest at start | Owner's policy |
+| 29 | 2026-10-13 | Backups | Back up at 2:30 AM Eastern; keep 14 daily and 12 monthly dumps, on the RAID and on Drive; ping Healthchecks on success and failure | Owner's schedule and retention; a failed or missed backup raises an alert |

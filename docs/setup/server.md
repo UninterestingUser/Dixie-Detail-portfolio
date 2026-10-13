@@ -49,10 +49,13 @@ Connect the APC unit's USB cable to the server and install `apcupsd`, so the ser
 
 ## 3. Backups
 
-- Nightly database dumps to `/mnt/raid/backups/dixie-detail`.
-- An encrypted restic copy in the owner's Google Workspace Drive, through rclone with access only to the files it creates.
+- Nightly database dumps at 2:30 AM Eastern to `/mnt/raid/Backups/dixie-detail`, keeping 14 daily and 12 monthly.
+- An encrypted restic copy in the owner's Google Workspace Drive (`gdrive:dixie-detail-backups`), through rclone with access only to the files it creates, under the same 14 daily and 12 monthly policy.
 - The restic password and rclone's config password come from Bitwarden only while the backup runs.
-- A test restore in Phase 0 and again before launch.
+- Healthchecks is pinged on success and failure.
+- A test restore in Phase 0 and again before launch, with `ops/restore-test.sh`.
+
+Setup and restore steps are in the [backup runbook](backups.md).
 
 ## 4. Secrets
 
