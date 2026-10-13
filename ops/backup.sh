@@ -19,6 +19,8 @@ cd "$(dirname "$0")/.."
 . ops/lib/bws.sh
 # shellcheck source=lib/restic.sh
 . ops/lib/restic.sh
+# shellcheck source=lib/healthchecks.sh
+. ops/lib/healthchecks.sh
 
 : "${RUNTIME_DIRECTORY:?run this from dixie-backup.service}"
 : "${BWS_PROJECT_ID:?set BWS_PROJECT_ID in .env}"
@@ -39,16 +41,6 @@ restic_password=$(bws_value "$json" RESTIC_PASSWORD)
 rclone_config_pass=$(bws_value "$json" RCLONE_CONFIG_PASS)
 hc_url=$(bws_optional_value "$json" HEALTHCHECKS_BACKUP_URL)
 unset json
-
-# hc_ping SUFFIX [BODY_FILE]
-# The URL goes to curl on stdin, so it never appears on a command line.
-hc_ping() {
-	[[ -n $hc_url ]] || return 0
-	local args=(--fail --silent --show-error --max-time 10 --retry 5 --output /dev/null)
-	[[ -z ${2:-} ]] || args+=(--data-binary "@$2")
-	printf 'url = "%s%s"\n' "$hc_url" "$1" | curl "${args[@]}" --config - ||
-		echo "backup: Healthchecks ping failed" >&2
-}
 
 # keep_newest DIR N: delete all but the newest N dumps in DIR. Names sort by date.
 keep_newest() {
@@ -94,17 +86,17 @@ backup() {
 }
 
 log="$RUNTIME_DIRECTORY/backup.log"
-hc_ping /start
+hc_ping "$hc_url" /start
 set +e
 (set -e; backup) 2>&1 | tee "$log"
 rc=${PIPESTATUS[0]}
 set -e
 
 if ((rc == 0)); then
-	hc_ping ""
+	hc_ping "$hc_url" ""
 else
 	echo "backup: failed with exit status $rc" | tee -a "$log" >&2
 	tail -c 10000 "$log" >"$log.tail"
-	hc_ping /fail "$log.tail"
+	hc_ping "$hc_url" /fail "$log.tail"
 fi
 exit "$rc"
