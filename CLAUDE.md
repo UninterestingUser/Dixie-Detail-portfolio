@@ -9,7 +9,10 @@ This repository holds the Dixie Detail business system. Read this file first, th
 - Prices come only from `data/price-matrix.csv` and the rules in `docs/pricing.md`. Never hard-code a price.
 - The final price is always calculated on the server. The website only displays it.
 - The control app is reachable only over Tailscale. Never expose it publicly. The public API does three things: list services and prices, show open slots, take a booking.
-- Never commit secrets. Real values live in `.env` on the server; `.env.example` lists the names.
+- Secrets live only in Bitwarden Secrets Manager (project "Dixie Detail"). Never commit a secret or write one to disk in plaintext: not in `.env`, not in compose files, not in Docker environment variables (Docker saves those in its config on disk), not in logs, not in backups.
+- The server's only stored secret is the Bitwarden machine-account token, encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred`. Services load it with `LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred`, fetch their secrets with `bws`, and hand them to containers as files on in-memory mounts, or keep them in process memory.
+- `.env` holds non-secret settings only. `.env.example` lists those settings and the names of the Bitwarden secrets.
+- Local development uses a separate Bitwarden project with throwaway values, never production secrets.
 - Card details never touch the server.
 - Texts go only to customers with recorded consent of the right kind (appointment or follow-up). See `docs/compliance.md`.
 

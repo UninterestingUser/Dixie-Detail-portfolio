@@ -58,4 +58,4 @@ docs/         Everything in the table above
 
 ## Secrets
 
-Nothing secret is ever committed. Real values live in a `.env` file on the server, which `.gitignore` excludes. [.env.example](.env.example) lists every variable with no values.
+Every key, password and token lives in Bitwarden Secrets Manager, in the Dixie Detail project. Nothing secret is committed or stored in plaintext on the server. The server keeps one secret, the Bitwarden machine-account token, encrypted as a systemd credential; services fetch everything else from Bitwarden when they start. `.env` holds only settings that are not secret, and [.env.example](.env.example) lists them along with the names of the Bitwarden secrets.
