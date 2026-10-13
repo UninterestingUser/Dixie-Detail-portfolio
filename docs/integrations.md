@@ -7,6 +7,8 @@ Every outside service connects to the core app, never straight to the database. 
 | Cloudflare | Website hosting, Tunnel, DNS | 0 | The domain already runs through Cloudflare; confirm account access | Free plan |
 | Tailscale | Private access to the control app | 0 | In use; server not yet a node | Existing |
 | Bitwarden Secrets Manager | Every key, password and token | 0 | In use by the owner | Existing |
+| Healthchecks.io | Alerts when the nightly backup fails or does not run | 0 | Not set up | Free plan |
+| Google Drive (Workspace) | Encrypted off-site backups, through restic and rclone | 0 | Not set up | Existing |
 | Google Workspace Calendar | Jobs and Time Off calendars | 3 | Workspace not yet set up | Workspace plan |
 | Google Maps Platform | Address suggestions, traffic-aware drive times | 3 | Billing account approved, not created | Expected inside the free monthly allowance |
 | Census Bureau geocoder | Address to coordinates for sales tax | 3 | Not started | Free |

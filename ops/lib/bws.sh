@@ -26,3 +26,26 @@ bws_value() {
 		| if length == 1 then .[0].value
 		  else error("Bitwarden secret \($key): expected 1, found \(length)") end'
 }
+
+# bws_optional_value JSON KEY
+# Like bws_value, but prints nothing when no secret has that name.
+bws_optional_value() {
+	printf '%s' "$1" | jq -je --arg key "$2" '
+		[.[] | select(.key == $key)]
+		| if length == 0 then ""
+		  elif length == 1 then .[0].value
+		  else error("Bitwarden secret \($key): expected 1, found \(length)") end'
+}
+
+# bws_token
+# Prints the Bitwarden machine-account token. Under a unit with
+# LoadCredentialEncrypted=bws-token:... it comes from the credentials
+# directory; otherwise (a script run by hand as root) it is decrypted with
+# systemd-creds straight into the pipe.
+bws_token() {
+	if [[ -n ${CREDENTIALS_DIRECTORY:-} && -r $CREDENTIALS_DIRECTORY/bws-token ]]; then
+		cat -- "$CREDENTIALS_DIRECTORY/bws-token"
+	else
+		systemd-creds decrypt --name=bws-token /etc/credstore.encrypted/dixie-bws-token.cred -
+	fi
+}

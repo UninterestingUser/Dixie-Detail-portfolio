@@ -63,6 +63,8 @@ Secrets live only in Bitwarden Secrets Manager, project "Dixie Detail". The name
 
 7. **Publish to the tailnet:** `sudo tailscale serve --bg 8000` (see [server.md](server.md#1-tailscale-node)).
 
+8. **Backups:** follow the [backup runbook](backups.md). `deploy.sh` has already enabled `dixie-backup.timer`. Until the backup setup is done, the nightly run fails, and Healthchecks reports it once its check exists.
+
 ## Everyday use
 
 | Task | Command |
