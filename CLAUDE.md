@@ -19,6 +19,7 @@ This repository holds the Dixie Detail business system. Read this file first, th
 ## Owner's environment
 
 - Server: Ubuntu Server with Docker, hostname "Server". Clients: Fedora Workstation and a Google Pixel 9a.
+- On the server, the code lives at `/srv/dixie-detail`. The systemd unit, ops scripts and docs assume that path.
 - Linux-first. Anything the owner runs locally must work on Fedora.
 - Eastern time for everything customer-facing.
 
