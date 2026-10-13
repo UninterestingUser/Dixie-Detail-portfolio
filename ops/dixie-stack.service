@@ -1,5 +1,5 @@
 # Installed to /etc/systemd/system by ops/deploy.sh. Expects the repository
-# at /opt/dixie-detail.
+# at /srv/dixie-detail.
 [Unit]
 Description=Dixie Detail Docker stack
 Requires=docker.service
@@ -9,9 +9,9 @@ After=docker.service network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/dixie-detail
+WorkingDirectory=/srv/dixie-detail
 # Non-secret settings only.
-EnvironmentFile=/opt/dixie-detail/.env
+EnvironmentFile=/srv/dixie-detail/.env
 # The only stored secret: the Bitwarden machine-account token. systemd
 # decrypts it into $CREDENTIALS_DIRECTORY, in memory and readable only by
 # this service.
@@ -21,7 +21,7 @@ LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
 RuntimeDirectory=dixie-stack
 RuntimeDirectoryMode=0700
 UMask=0077
-ExecStart=/opt/dixie-detail/ops/stack-start.sh
+ExecStart=/srv/dixie-detail/ops/stack-start.sh
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=15min
 
