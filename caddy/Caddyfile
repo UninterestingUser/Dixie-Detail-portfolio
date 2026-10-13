@@ -1,0 +1,31 @@
+{
+	admin off
+	auto_https off
+}
+
+# Control app: the whole site. Published on 127.0.0.1:8000 only, for
+# `tailscale serve`. Requests from cloudflared are refused, so a tunnel route
+# pointed at this port by mistake exposes nothing.
+:8000 {
+	@tunnel remote_ip 172.31.250.10
+	abort @tunnel
+
+	reverse_proxy app:8000 {
+		header_up X-Dixie-Entrance tailnet
+	}
+}
+
+# Public entrance, reached only by cloudflared over the tunnel network: the
+# health page and the public API, nothing else. The app checks the same rule
+# (core/middleware.py).
+:8080 {
+	@public path /health /api/public/*
+	handle @public {
+		reverse_proxy app:8000 {
+			header_up X-Dixie-Entrance public
+		}
+	}
+	handle {
+		respond 404
+	}
+}
