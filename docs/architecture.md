@@ -47,7 +47,7 @@ flowchart TB
 
 ## Hosting
 
-The business data lives on the owner's home server. An APC battery covers the server, firewall and modem. A free outside monitor checks the booking service every few minutes. If it records more than one outage a month during booking hours, or any outage over four hours, the same Docker stack moves to a cloud server, at about $14 to $29 a month.
+The business data lives on the owner's home server. An APC battery covers the server, firewall and modem. Every 10 minutes the server fetches its own health page through Cloudflare and the tunnel and pings Healthchecks, a free outside service, which raises an alert when the pings stop. If it records more than one outage a month during booking hours, or any outage over four hours, the same Docker stack moves to a cloud server, at about $14 to $29 a month.
 
 ## Network
 
