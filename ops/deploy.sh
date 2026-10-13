@@ -56,7 +56,7 @@ for unit in ops/*.service ops/*.timer; do
 done
 ((changed == 0)) || systemctl daemon-reload
 systemctl enable --quiet dixie-stack.service
-systemctl enable --quiet --now dixie-backup.timer
+systemctl enable --quiet --now dixie-backup.timer dixie-public-health.timer
 
 docker compose build --pull
 systemctl restart dixie-stack.service
