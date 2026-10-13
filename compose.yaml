@@ -1,0 +1,106 @@
+# Dixie Detail stack. Start it with dixie-stack.service, not by hand: the unit
+# fetches the secrets from Bitwarden and writes them to /run/dixie-stack/secrets
+# (in memory), and the services below mount them as files under /run/secrets.
+# No secret is ever passed as an environment variable.
+#
+# Ports: only 127.0.0.1:8000 is published, for `tailscale serve`. The tunnel
+# reaches Caddy's port 8080 over the internal "tunnel" network.
+
+name: dixie
+
+services:
+  db:
+    image: postgres:18.6-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - source: db_postgres_password
+        target: postgres_password
+    volumes:
+      # Docker volumes live under /var/lib/docker, on the NVMe boot drive.
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: ./app
+    image: dixie-app:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?set DJANGO_ALLOWED_HOSTS in .env}
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - source: app_django_secret_key
+        target: django_secret_key
+      - source: app_postgres_password
+        target: postgres_password
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [app]
+    networks: [backend, tunnel]
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.1
+    restart: unless-stopped
+    user: "65532:65532"
+    command: tunnel --no-autoupdate run --token-file /run/secrets/cloudflared_token
+    secrets:
+      - source: tunnel_cloudflared_token
+        target: cloudflared_token
+    depends_on: [caddy]
+    networks:
+      tunnel:
+        # Fixed so Caddy can refuse this address on the control-app port.
+        ipv4_address: 172.31.250.10
+
+# Each file belongs to the user its container runs as (see ops/stack-start.sh).
+secrets:
+  db_postgres_password:
+    file: /run/dixie-stack/secrets/db/postgres_password
+  app_postgres_password:
+    file: /run/dixie-stack/secrets/app/postgres_password
+  app_django_secret_key:
+    file: /run/dixie-stack/secrets/app/django_secret_key
+  tunnel_cloudflared_token:
+    file: /run/dixie-stack/secrets/tunnel/cloudflared_token
+
+networks:
+  # Database, app and Caddy. cloudflared is not on it, so it cannot reach the
+  # database or the app directly.
+  backend: {}
+  # Caddy and cloudflared only.
+  tunnel:
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+
+volumes:
+  pgdata: {}
