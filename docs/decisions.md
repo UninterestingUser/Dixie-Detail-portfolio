@@ -30,3 +30,5 @@ Every settled decision, newest last. When a rule changes, add a new row instead 
 | 24 | 2026-10-07 | Maps | Google Maps Platform for address suggestions and traffic-aware drive times | Usage expected to stay inside the free monthly allowance |
 | 25 | 2026-10-07 | Tax | Sales tax added on top, at the rate for the customer's service address | Owner's decision; the rule stays a single setting |
 | 26 | 2026-10-08 | Texting | Submit carrier registration only when the new booking form with its consent checkboxes is public | The Setmore page cannot carry compliant consent wording |
+| 27 | 2026-10-13 | Backups | Nightly dumps to the RAID, plus an encrypted restic copy in the owner's Google Workspace Drive through rclone | Storage the owner already pays for |
+| 28 | 2026-10-13 | Security | Every key, password and token lives in Bitwarden Secrets Manager; nothing secret is stored in plaintext. The server keeps only the machine-account token, encrypted with systemd-creds, and fetches the rest at start | Owner's policy |

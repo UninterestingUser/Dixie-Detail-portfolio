@@ -49,9 +49,14 @@ Connect the APC unit's USB cable to the server and install `apcupsd`, so the ser
 
 ## 3. Backups
 
-- Nightly database dumps to `/mnt/raid`.
-- An encrypted copy off-site.
+- Nightly database dumps to `/mnt/raid/backups/dixie-detail`.
+- An encrypted restic copy in the owner's Google Workspace Drive, through rclone with access only to the files it creates.
+- The restic password and rclone's config password come from Bitwarden only while the backup runs.
 - A test restore in Phase 0 and again before launch.
+
+## 4. Secrets
+
+The server keeps one secret, the Bitwarden machine-account token, encrypted with `systemd-creds` and bound to the TPM chip where available. Everything else comes from Bitwarden Secrets Manager when a service starts. The deploy key also lives in Bitwarden and is loaded into `ssh-agent` only for a pull. Step-by-step setup is in the Phase 0 runbook.
 
 ## Sources
 
