@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -19,7 +19,7 @@ phases:
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
       - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
-      - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes (the app already migrates on every start)
+      - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes
     done_in_docs_migration:
       - BWS_SERVER_URL added to .env.example and used by every script that calls bws
       - Secret names in .env.example and data/configuration.yaml match what ops/ fetches
