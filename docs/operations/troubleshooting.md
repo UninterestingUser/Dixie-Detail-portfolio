@@ -99,7 +99,7 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 ### ssh-add: "Error loading key "(stdin)": error in libcrypto"
 
 **Cause:** nothing (or the wrong text) reached `ssh-add`, usually because the secret lookup failed.
-**Fix:** check the `DEPLOY_SSH_KEY` secret's name and that it holds the whole private key, every line. Phase 0 stored the key as `DEPLOY_KEY`; `ops/deploy.sh` asks for `DEPLOY_SSH_KEY`, so rename it in Bitwarden.
+**Fix:** check the `DEPLOY_SSH_KEY` secret's name and that it holds the whole private key, every line. Phase 0 stored the key as `DEPLOY_KEY`; it was renamed to `DEPLOY_SSH_KEY`, the name `ops/deploy.sh` asks for, on 2026-10-13.
 
 ### First pull asks "The authenticity of host 'github.com' can't be established"
 
