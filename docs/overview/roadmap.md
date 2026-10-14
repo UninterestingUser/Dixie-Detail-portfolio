@@ -4,7 +4,7 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [roadmap, phases, status]
 related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md]
 ---
@@ -22,7 +22,7 @@ The **restore test is deferred**: it fails correctly because the database has no
 **Phase 1 is next.** It starts with these carry-overs from Phase 0:
 
 1. Add `DEPLOY_REMOTE` and `DEPLOY_BRANCH` to the server's `.env` before the first run of `ops/deploy.sh`. (The deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY`, the name `ops/deploy.sh` asks for, on 2026-10-13.)
-2. Once the first models exist, run `sudo ops/restore-test.sh` and confirm it passes, which closes Phase 0. The app container already runs `python manage.py migrate --noinput` on every start; the database is empty only because the Phase 0 app has no models.
+2. Once the first models exist, run `sudo ops/restore-test.sh` and confirm it passes, which closes Phase 0.
 
 Two other carry-overs were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
 
