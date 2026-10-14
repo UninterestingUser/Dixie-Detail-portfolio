@@ -1,14 +1,17 @@
-"""Settings for the Dixie Detail core app.
+"""Production settings for the Dixie Detail core app.
 
 Non-secret settings come from environment variables (set from .env by
 compose.yaml). Secrets are read from files whose paths are given by *_FILE
 variables; the files are mounted from memory by dixie-stack.service.
+Development and tests use dixie.settings_dev instead.
 """
 
 import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
+
+from dixie.settings_base import *  # noqa: F403
 
 
 def read_secret(env_name):
@@ -25,19 +28,6 @@ ALLOWED_HOSTS = [
     host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if host.strip()
 ] + ["localhost"]
 
-INSTALLED_APPS = [
-    "core",
-]
-
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "core.middleware.PublicEntranceMiddleware",
-    "django.middleware.common.CommonMiddleware",
-]
-
-ROOT_URLCONF = "dixie.urls"
-WSGI_APPLICATION = "dixie.wsgi.application"
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -48,17 +38,4 @@ DATABASES = {
         "CONN_MAX_AGE": 60,
         "CONN_HEALTH_CHECKS": True,
     }
-}
-
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "America/New_York"
-USE_TZ = True
-
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "INFO"},
 }

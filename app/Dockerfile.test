@@ -1,0 +1,10 @@
+# Test image for tools/run-tests.sh: the production base and requirements,
+# plus pytest. The source is mounted read-only at run time, not copied.
+FROM docker.io/library/python:3.13.16-slim-trixie
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /srv/app
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
