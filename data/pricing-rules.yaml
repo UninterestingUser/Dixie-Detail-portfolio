@@ -1,0 +1,59 @@
+meta:
+  title: Pricing rules
+  summary: The numbers behind pricing and job length - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/pricing.md
+  note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
+
+price_lookup_keys: [service, vehicle_class, size_variant]
+missing_combination: does not exist (no price, not bookable)
+
+condition_levels:
+  applies_to: [Full Detail, Interior Only, Exterior Only]
+  rounding: whole dollar
+  levels:
+    - level: 1
+      adjustment_percent: 0
+    - level: 2
+      adjustment_percent: 10
+      mockup_label: Needs attention
+    - level: 3
+      adjustment_percent: 20
+
+maintenance_plans:
+  base_service: Full Detail
+  quarterly_percent_of_full_detail: 80
+  monthly_percent_of_full_detail: 50
+  hours: same as Full Detail
+
+crew:
+  sizes: [1, 2]
+  two_person_time_factor: 0.60
+  job_time_rounding_minutes: 15
+  rounding_method: nearest
+  default_crew:
+    Monthly Maintenance: 2
+    all_other_services: 1
+
+full_day_flag:
+  threshold_one_person_hours: 8
+  action: Flag in the control app for a second person; the estimate card shows "full day" instead of hours
+  blocks_booking: false
+
+price_build_order:
+  - base price from the price matrix
+  - condition adjustment
+  - add-ons
+  - promotions
+  - sales tax at the service address's rate
+  - on-site adjustment with a reason
+
+worked_example:
+  vehicle: 2019 Toyota RAV4 (Crossovers & Wagons, 2 rows)
+  lines:
+    - {item: Full Detail, price: 250, one_person_hours: 6}
+    - {item: "Condition level 2 (+10%)", price: 25}
+    - {item: Seat Extraction, price: 80, one_person_hours: 1.5}
+  total_before_tax: 355
+  one_person_hours: 7.5

@@ -1,0 +1,80 @@
+meta:
+  title: Service catalogue
+  summary: Every service Dixie Detail sells or has sold, what its price depends on, whether condition applies, and who can book it. Prices themselves are in price-matrix.csv.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/pricing.md
+  prices_in: data/price-matrix.csv
+
+services:
+  - name: Full Detail
+    kind: main
+    price_varies_by: [vehicle_class, size_variant]
+    condition_applies: true
+    booked_by: [customer, owner]
+    description: Inside and out, including undercarriage, engine bay and door jambs, finished with ceramic wax
+  - name: Interior Only
+    kind: main
+    price_varies_by: [vehicle_class, size_variant]
+    condition_applies: true
+    booked_by: [customer, owner]
+    description: The full interior half of the Full Detail
+  - name: Exterior Only
+    kind: main
+    price_varies_by: [vehicle_class]
+    condition_applies: true
+    booked_by: [customer, owner]
+    description: The full exterior half of the Full Detail
+  - name: 1-Step Paint Correction
+    kind: main
+    price_varies_by: [vehicle_class]
+    condition_applies: false
+    booked_by: [customer, owner]
+    description: Decontamination and a one-step polish for swirls, finished with ceramic wax
+  - name: 2-Step Paint Correction
+    kind: main
+    price_varies_by: [vehicle_class]
+    condition_applies: false
+    booked_by: [customer, owner]
+  - name: Headlight Restoration
+    kind: main
+    price_varies_by: []
+    condition_applies: false
+    booked_by: [customer, owner]
+  - name: Carpet Extraction
+    kind: add-on
+    price_varies_by: [size_variant]
+    condition_applies: false
+    booked_by: [customer, owner]
+  - name: Seat Extraction
+    kind: add-on
+    price_varies_by: [size_variant]
+    condition_applies: false
+    booked_by: [customer, owner]
+  - name: Quarterly Maintenance
+    kind: maintenance plan
+    price_varies_by: [vehicle_class, size_variant]
+    price_rule: 80% of the Full Detail price for the same class and size, with Full Detail hours
+    condition_applies: false
+    booked_by: [owner]
+  - name: Monthly Maintenance
+    kind: maintenance plan
+    price_varies_by: [vehicle_class, size_variant]
+    price_rule: 50% of the Full Detail price for the same class and size, with Full Detail hours
+    condition_applies: false
+    default_crew: 2
+    booked_by: [owner]
+
+custom_lines:
+  - name: Misc Services
+    use: A one-off job at a price the owner sets; owner only
+
+history_only_services:
+  - name: PPF Removal
+    note: Returns to the price list once priced
+  - name: Trim Restoration
+    note: Returns to the price list once priced
+
+not_offered:
+  - name: Wax upgrade
+    reason: Ceramic wax is included in every detail

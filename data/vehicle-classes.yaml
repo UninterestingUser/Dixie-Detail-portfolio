@@ -1,0 +1,46 @@
+meta:
+  title: Vehicle classes
+  summary: The six vehicle classes that set prices, what the size variant means for each, and the EPA size classes that map to them.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/vehicle-classification.md
+
+classes:
+  - name: Coupes & Sedans
+    size_variant_measures: doors
+    size_variants:
+      1: "two doors: coupes, convertibles and two-door hatchbacks"
+      2: "four doors: sedans and four-door hatchbacks"
+    customer_asked: Only when a model is sold both ways
+    epa_size_classes: car classes
+  - name: Crossovers & Wagons
+    size_variant_measures: seat rows
+    size_variants: {2: two rows, 3: three rows}
+    customer_asked: Only for an optional third row
+    epa_size_classes: small SUVs and station wagons
+  - name: Light Pickups & Offroad
+    size_variant_measures: cab style
+    size_variants: {1: regular cab, 2: extended or crew cab}
+    customer_asked: Yes, unless the model has one cab style
+    epa_size_classes: small pickups
+    overrides_in: [Jeep Wrangler]
+  - name: Midsize SUVs
+    size_variant_measures: seat rows
+    size_variants: {2: two rows, 3: three rows}
+    customer_asked: Only for an optional third row
+    epa_size_classes: standard SUVs
+  - name: Fullsize SUVs & Minivans
+    size_variant_measures: seat rows
+    size_variants: {3: always three rows}
+    customer_asked: Never
+    epa_size_classes: minivans and vans
+    overrides_in: [Chevrolet Suburban, Ford Expedition, Toyota Sequoia]
+  - name: Fullsize Trucks
+    size_variant_measures: cab style
+    size_variants: {1: regular cab, 2: extended or crew cab}
+    customer_asked: Yes, unless the model has one cab style
+    epa_size_classes: standard pickups
+    gaps_filled_by: NHTSA vPIC (2500 and 3500 series)
+
+fallback: Vehicles not in the data (for example pre-1984 classics) choose from six photo cards, one per class
+not_classed: Motorcycles are kept as past records with no class; they are not on the price list

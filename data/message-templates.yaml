@@ -1,0 +1,46 @@
+meta:
+  title: Text message templates
+  summary: Seed wording for each automated text, the consent each one requires, and the automatic STOP, HELP and START replies.
+  updated: 2026-10-13
+  status: planned
+  explained_in: docs/reference/text-messages.md
+  note: Seed wording for Phase 4. The owner edits live templates in the control app. Every message starts with "Dixie Detail:". Placeholders are in braces.
+
+templates:
+  - key: booking_confirmation
+    consent: appointment
+    sent: Immediately after booking
+    text: "Dixie Detail: Your {service} is booked for {date} at {arrival_time} at {address}. Reply here with questions. Reply STOP to opt out, HELP for help."
+  - key: reminder
+    consent: appointment
+    sent: The day before the job
+    text: "Dixie Detail: Reminder, we arrive tomorrow at {arrival_time} for your detail. Please have water and power available near the vehicle. Reply STOP to opt out."
+  - key: on_my_way
+    consent: appointment
+    sent: One tap from the time-to-leave alert
+    text: "Dixie Detail: {staff_first_name} is on the way and should arrive around {eta}. Reply STOP to opt out."
+  - key: payment_link
+    consent: appointment
+    sent: At completion
+    text: "Dixie Detail: Your detail is complete. Total due is {total}. Pay here: {payment_link} Thank you! Reply STOP to opt out."
+  - key: receipt
+    consent: appointment
+    sent: When payment is recorded
+    text: null   # wording to be written in Phase 4
+  - key: review_request
+    consent: follow-up
+    sent: After a paid job
+    text: "Dixie Detail: Thanks for choosing us, {first_name}. If you were happy with your detail, a quick Google review helps a lot: {review_link} Reply STOP to opt out."
+  - key: service_due
+    consent: follow-up
+    sent: When the next detail is due
+    text: "Dixie Detail: Hi {first_name}, it has been about {months} months since your last detail. Want to book the next one? {booking_link} Reply STOP to opt out."
+  - key: updated_estimate
+    consent: appointment
+    sent: Optional, when a pricebook change alters a booked job's price
+    text: null   # wording to be written in Phase 1 or 4
+
+automatic_replies:
+  STOP: "Dixie Detail: You are unsubscribed and will receive no more texts from us. Reply START to resubscribe."
+  HELP: "Dixie Detail: For help, call or text (423) 380-9120 or email {business_email}. Message and data rates may apply. Reply STOP to opt out."
+  START: "Dixie Detail: You are resubscribed to appointment texts. Message frequency varies. Message and data rates may apply. Reply STOP to opt out, HELP for help."
