@@ -4,7 +4,7 @@ summary: How every key, password and token is kept in Bitwarden Secrets Manager,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [security, secrets, bitwarden, systemd]
 related: [data/configuration.yaml, docs/decisions/0028-secrets-in-bitwarden.md, docs/decisions/0041-backup-password-paper-copy.md, docs/operations/secrets-management.md]
 ---
@@ -47,4 +47,4 @@ Scripts look secrets up by name in that list, through the shared helper `ops/lib
 ## Trade-offs accepted
 
 - **A cold start needs Bitwarden.** Running containers keep working through a Bitwarden outage, but starting the stack needs Bitwarden reachable. The start script does not retry: if Bitwarden cannot be reached, the start fails, and `sudo systemctl restart dixie-stack` starts it once Bitwarden is back.
-- **Local development uses a separate Bitwarden project** with throwaway values, never production secrets.
+- **Development and tests use no Bitwarden at all.** They use made-up values in `app/dixie/settings_dev.py`, which the production image leaves out. See [decision 0045](../decisions/0045-development-made-up-values.md).

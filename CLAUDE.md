@@ -12,7 +12,7 @@ This repository holds the Dixie Detail business system. Read this file first, th
 - Secrets live only in Bitwarden Secrets Manager (project "Dixie Detail"). Never commit a secret or write one to disk in plaintext: not in `.env`, not in compose files, not in Docker environment variables (Docker saves those in its config on disk), not in logs, not in backups.
 - The server's only stored secret is the Bitwarden machine-account token, encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred`. Services load it with `LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred`, fetch their secrets with `bws`, and hand them to containers as files on in-memory mounts, or keep them in process memory.
 - `.env` holds non-secret settings only. `.env.example` lists those settings and the names of the Bitwarden secrets.
-- Local development uses a separate Bitwarden project with throwaway values, never production secrets.
+- Development and tests use made-up throwaway values in `app/dixie/settings_dev.py`, never Bitwarden and never a real secret (decision 0045). The production image leaves that file out, and `tools/run-tests.sh` fails if it ever gets in. Production settings never import it.
 - Card details never touch the server.
 - Texts go only to customers with recorded consent of the right kind (appointment or follow-up). See `docs/reference/text-messages.md`.
 
@@ -37,3 +37,8 @@ This repository holds the Dixie Detail business system. Read this file first, th
 - When you solve a problem on the server, add it to `docs/operations/troubleshooting.md`.
 - Never put secret values or real customer data in docs, data files, issues or pull requests. Use invented examples.
 - Run `python3 tools/check_docs.py` before opening a pull request; it must pass.
+
+## Tests
+
+- Run `tools/run-tests.sh` before opening a pull request that touches `app/`; it must pass. It runs pytest in a container against a throwaway PostgreSQL 18 database, with Podman on the workstation, and GitHub Actions runs the same command on every pull request.
+- Phase 1 conventions are in decisions 0045 to 0052: htmx pages, exact decimals for money, UTC storage with Eastern display, 10-digit phone numbers, change history, Baserow ids on imported records, and Django sign-in over Tailscale.

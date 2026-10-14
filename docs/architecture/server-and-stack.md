@@ -62,6 +62,7 @@ The `app` container applies database migrations every time it starts, before the
 - Compose starts `app` only after the `db` healthcheck passes, so the migration never runs against a database that is still starting.
 - A migration that fails stops the container before gunicorn starts, so the app never serves requests against a schema that does not match the code. The error is in `docker logs dixie-app-1`, and Compose keeps restarting the container until the cause is fixed.
 - A migration that has already been applied is skipped, so a restart with no new migrations adds only a moment to start-up.
+- gunicorn runs with `--no-control-socket`. Its control socket would be created under the home folder, which the read-only container cannot write to, and nothing uses it. See [../operations/troubleshooting.md](../operations/troubleshooting.md).
 
 ## systemd units
 

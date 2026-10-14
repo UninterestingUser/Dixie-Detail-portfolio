@@ -4,7 +4,7 @@ summary: How the system's configuration is split between non-secret settings in 
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [configuration, settings, secrets, env]
 related: [data/configuration.yaml, docs/architecture/secrets.md, docs/operations/secrets-management.md, docs/operations/deploying-changes.md]
 ---
@@ -25,6 +25,10 @@ Every value the system needs at run time is either a **setting**, which is not s
 - Secrets are created in the Bitwarden web app, in the Dixie Detail project, with Bitwarden's generator for passwords, so no value passes through a file.
 - A secret's name in Bitwarden must match the name the code asks for exactly, capitals included. A mismatch stops the stack with "expected 1, found 0".
 - Scripts fetch secrets by name at start-up. See [../architecture/secrets.md](../architecture/secrets.md).
+
+## Development and test values
+
+Development and tests use neither `.env` nor Bitwarden. Their made-up values are written in `app/dixie/settings_dev.py`, which the production image leaves out. The settings that choose between production and development are listed under `development` in [data/configuration.yaml](../../data/configuration.yaml). See [decision 0045](../decisions/0045-development-made-up-values.md).
 
 ## Adding or renaming a setting or secret
 
