@@ -1,0 +1,42 @@
+meta:
+  title: Business facts
+  summary: Contact details, location, brand and profile links for Dixie Detail LLC. Public information only.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/overview/business-profile.md
+
+legal_name: Dixie Detail LLC
+trading_name: Dixie Detail
+entity: Limited liability company, registered with an EIN
+owner: Kris Grassman
+industry: Mobile vehicle detailing
+based_in:
+  town: Calhoun
+  county: McMinn
+  state: TN
+mailing_address: PO Box 21, Calhoun, TN 37309
+phone:
+  number: "(423) 380-9120"
+  type: VoIP, with its current provider until ported to Quo after carrier registration
+website: https://dixiedetail.com
+time_zone: America/New_York
+policy_pages:
+  privacy_policy: https://dixiedetail.com/privacy-policy/
+  text_message_terms: https://dixiedetail.com/sms-terms/
+social_profiles:
+  facebook: https://facebook.com/DixieDetailLLC
+  instagram: https://instagram.com/dixiedetailllc
+  x: https://x.com/dixiedetailllc
+  google_business_profile: null   # link not yet collected
+brand:
+  primary_red: "#CC0000"
+  accent_navy: "#002D65"
+  white: "#FFFFFF"
+  footer_charcoal: "#141518"
+  logo: Script wordmark, used on the hero photo and the booking header
+payment_methods_accepted: [cash, card, Venmo, PayPal, Cash App, Bitcoin]
+payment_terms: Due at the time of service. No deposit, no card on file.
+staffing:
+  today: The owner alone, with family members occasionally as a second person
+  plan: Two-person crews as the default later
+  crew_sizes_supported: [1, 2]

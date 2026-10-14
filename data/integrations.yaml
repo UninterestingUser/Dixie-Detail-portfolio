@@ -1,0 +1,86 @@
+meta:
+  title: Outside services
+  summary: Every outside service the system uses or will use, with its purpose, phase and status.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/architecture/integrations.md
+
+services:
+  - name: Cloudflare
+    purpose: DNS for dixiedetail.com, the Tunnel, and (Phase 3) website hosting on Pages
+    phase: 0
+    status: In use; tunnel dixie-detail with route api.dixiedetail.com
+    plan: Free
+  - name: Tailscale
+    purpose: Private access to the control app
+    phase: 0
+    status: In use; server is a node; control app published with tailscale serve
+  - name: Bitwarden Secrets Manager
+    purpose: Every key, password and token
+    phase: 0
+    status: In use; project Dixie Detail, machine account dixie-server
+  - name: GitHub
+    purpose: Private repository; server pulls with a read-only deploy key
+    phase: 0
+    status: In use
+  - name: Google Workspace Drive
+    purpose: Encrypted off-site backups through rclone and restic
+    phase: 0
+    status: In use
+  - name: Healthchecks.io
+    purpose: Alerts when the backup or the public path stops checking in
+    phase: 0
+    status: In use; two checks
+    plan: Free
+  - name: EPA FuelEconomy.gov
+    purpose: Year, make, model and size class
+    phase: 2
+    status: Not started
+  - name: NHTSA vPIC
+    purpose: Makes and models the EPA leaves out; door and seat data
+    phase: 2
+    status: Not started
+  - name: Google Workspace Calendar
+    purpose: Jobs and Time Off calendars
+    phase: 3
+    status: Calendars created 2026-10-11; service account not yet connected
+  - name: Google Maps Platform
+    purpose: Address suggestions (Places Autocomplete) and traffic-aware drive times (Routes)
+    phase: 3
+    status: Billing account approved, not yet created
+  - name: US Census Bureau geocoder
+    purpose: Address to coordinates for sales tax
+    phase: 3
+    status: Not started
+  - name: Tennessee Department of Revenue
+    purpose: Tax rates and boundaries, updated quarterly
+    phase: 3
+    status: Not started
+  - name: Quo
+    purpose: Calls, owner texts and automated texts
+    phase: 3-5
+    status: Account open on a new number, Starter plan; carrier registration waits for the new booking form; business number not ported
+  - name: Stripe
+    purpose: Card payment links, Cash App Pay, Tap to Pay
+    phase: 4
+    status: Owner to confirm the account is in the business's name and test Tap to Pay
+  - name: GnuCash
+    purpose: General ledger, fed by a multi-split CSV export
+    phase: 6
+    status: Chart of accounts mapped and cleaned up (2026-10-11)
+  - name: BTCPay Server
+    purpose: Bitcoin invoices
+    phase: 7
+    status: Deferred
+
+considered_not_used:
+  - name: Directus
+    reason: "Pricing, availability and promotions need custom code either way"
+  - name: Twilio
+    reason: "No phone app; calls would need a second service"
+  - name: UptimeRobot
+    reason: "Free plan is non-commercial since October 2024"
+  - name: Backblaze B2
+    reason: "Google Drive storage is already paid for"
+  - name: RockAuto
+    reason: "No public API; scraping may breach its terms"
