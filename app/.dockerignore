@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# Development settings never reach the production image (decision 0045).
+dixie/settings_dev.py

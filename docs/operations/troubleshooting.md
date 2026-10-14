@@ -4,7 +4,7 @@ summary: Known problems with the server, stack, backups and tools, each with the
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [operations, troubleshooting, errors]
 related: [docs/operations/deploying-changes.md, docs/operations/backups-and-restore.md, docs/architecture/server-and-stack.md, docs/architecture/secrets.md]
 ---
@@ -25,6 +25,11 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 
 **Cause:** the host name used is not in `DJANGO_ALLOWED_HOSTS`, or the setting contains `https://`, or the app was not restarted after `.env` changed.
 **Fix:** set `DJANGO_ALLOWED_HOSTS=server.example-tailnet.ts.net,api.dixiedetail.com,127.0.0.1,localhost` (bare names, commas, no spaces), then `sudo systemctl restart dixie-stack`. Check the running value with `docker compose exec app printenv DJANGO_ALLOWED_HOSTS`. The restart recreates every container, so it should show the new value.
+
+### The app logs "Control server error: [Errno 30] Read-only file system: '/home/app'" at every start
+
+**Cause:** gunicorn 25.1 and later open a control socket for the `gunicornc` tool, by default under `$HOME/.gunicorn/`. The app container's file system is read-only and the `app` user has no home folder, so creating it fails. The app still served requests; only the control socket was missing.
+**Fix (2026-10-14):** `app/Dockerfile` starts gunicorn with `--no-control-socket`, because nothing uses `gunicornc`: deploys restart the container instead. The file system stays read-only. Pointing the socket at the writable `/tmp` with `--control-socket /tmp/gunicorn.ctl` would also work. After the pull, `docker logs dixie-app-1` should show no control server error.
 
 ### dixie-stack fails with "Failed to load environment files: No such file or directory" (Result: resources)
 

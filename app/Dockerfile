@@ -15,4 +15,6 @@ RUN groupadd --gid 10001 app \
 USER 10001:10001
 
 EXPOSE 8000
-CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn dixie.wsgi --bind 0.0.0.0:8000 --workers 3 --access-logfile -"]
+# --no-control-socket: gunicorn's control socket would go in $HOME, which does
+# not exist on the read-only file system, and nothing here uses gunicornc.
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn dixie.wsgi --no-control-socket --bind 0.0.0.0:8000 --workers 3 --access-logfile -"]

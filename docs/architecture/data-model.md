@@ -4,7 +4,7 @@ summary: The business records the database will hold across all nine areas, and 
 audience: [owner, developer]
 visibility: internal
 status: planned
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [data-model, database, phase-1]
 related: [docs/overview/roadmap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md]
 ---
@@ -58,5 +58,8 @@ The model will cover all nine business areas from the start (customers, appointm
 
 ## Cross-cutting
 
-- **Change history** will record who changed every price or description, when, and the old value, so changes can be undone.
+- **Storage conventions.** Money will be exact decimals ([decision 0047](../decisions/0047-money-as-exact-decimals.md)), times will be stored in UTC and shown in Eastern ([decision 0048](../decisions/0048-times-utc-shown-eastern.md)), and phone numbers will be 10 digits ([decision 0049](../decisions/0049-phone-numbers-ten-digits.md)).
+- **Imported records** will keep their Baserow row id, so the import can be re-run before launch. See [decision 0051](../decisions/0051-baserow-ids-kept-on-import.md).
+
+- **Change history** will record who changed every price or description, when, and the old value, so changes can be undone. django-simple-history will keep it for the pricebook, customers, vehicles and appointments ([decision 0050](../decisions/0050-change-history-simple-history.md)).
 - **Settings** will hold hours, booking rules, home base, buffers and the tax sourcing rule. Seed values are in `data/`.

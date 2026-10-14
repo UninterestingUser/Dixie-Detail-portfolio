@@ -1,7 +1,7 @@
 from unittest import mock
 
-from django.db import OperationalError
-from django.test import SimpleTestCase
+from django.db import OperationalError, connection
+from django.test import SimpleTestCase, TestCase
 
 
 @mock.patch("core.views.connection")
@@ -19,6 +19,19 @@ class HealthTests(SimpleTestCase):
 
     def test_rejects_post(self, connection):
         self.assertEqual(self.client.post("/health").status_code, 405)
+
+
+class HealthDatabaseTests(TestCase):
+    """/health against the throwaway PostgreSQL database, not a mock."""
+
+    def test_ok_with_real_database(self):
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_database_is_postgresql_18(self):
+        self.assertEqual(connection.vendor, "postgresql")
+        self.assertEqual(connection.pg_version // 10000, 18)
 
 
 @mock.patch("core.views.connection")
