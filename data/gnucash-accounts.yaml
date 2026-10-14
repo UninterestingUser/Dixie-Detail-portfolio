@@ -1,0 +1,53 @@
+meta:
+  title: GnuCash account mapping
+  summary: Which GnuCash accounts each payment, fee, payout, discount and refund posts to, by full account name, for the CSV export.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/bookkeeping-gnucash.md
+
+export_format:
+  layout: GnuCash multi-split CSV
+  columns: [Date, Num, Description, Account, Amount, Memo]
+  transaction_start: a row with a date
+  sign: positive amounts are debits
+  account_names: full names
+  booked_when: paid (never to Accounts Receivable)
+
+payment_accounts:
+  card: Assets:Current Assets:Stripe
+  cash_app_pay: Assets:Current Assets:Stripe
+  venmo: Assets:Current Assets:Venmo
+  paypal: Assets:Current Assets:PayPal
+  cash: Assets:Current Assets:Petty Cash
+  cash_app_direct_to_cashtag: Assets:Current Assets:Cash.App
+  bitcoin: null   # left out of the export and listed for manual entry until Phase 7 adds an account
+  bank: Assets:Current Assets:Checking Account
+
+credit_accounts:
+  sales: Income:Detailing Services   # one credit split per line: service, condition, each add-on
+  tips: Income:Tips                  # not taxable
+  sales_tax: Liabilities:Sales Tax Payable
+
+other_postings:
+  discount_or_promotion:
+    debit: Income:Discounts & Refunds
+    note: Extra split; tax is charged on the discounted price
+  stripe_fee:
+    debit: Expenses:Fees:Payment Processing Fees
+    credit: Assets:Current Assets:Stripe
+  stripe_payout:
+    debit: Assets:Current Assets:Checking Account
+    credit: Assets:Current Assets:Stripe
+  refund:
+    debit: [Income:Discounts & Refunds, Liabilities:Sales Tax Payable (tax refunded)]
+    credit: the account it was paid from
+
+account_types:
+  Liabilities:Sales Tax Payable: Liability (plain, not Accounts Payable)
+  Liabilities:Loans: Liability
+
+entered_by_hand:
+  - Venmo, PayPal and Cash App fees and transfers
+  - Cash moved from Petty Cash to Checking
+  - Expenses
+  - Sales tax payments (Sales Tax Payable to Checking)

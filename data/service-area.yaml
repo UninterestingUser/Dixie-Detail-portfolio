@@ -1,0 +1,42 @@
+meta:
+  title: Service area
+  summary: The five Tennessee counties Dixie Detail serves, how out-of-area addresses are approved, and how sales tax rates are sourced.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/sales-tax.md
+
+state: TN
+counties:
+  - name: Bradley
+    notable_places: [Cleveland]
+  - name: McMinn
+    notable_places: [Athens, Calhoun]
+  - name: Polk
+    notable_places: []
+  - name: Meigs
+    notable_places: []
+  - name: Hamilton
+    notable_places: [Chattanooga]
+
+city_pages_planned: [Cleveland, Athens, Chattanooga]
+
+approved_out_of_area:
+  policy: The owner can approve any individual address outside the counties. It passes the service-area check, books online and gets normal drive times.
+  current_count: 1
+  current_locations: [Cohutta, GA]   # one regular customer; no personal details here
+  tennessee_tax: none, because the work is performed outside Tennessee
+
+sales_tax:
+  rule: Added on top at the rate for the service address (a single setting; the alternative is the business-location rate)
+  rate_source: Tennessee Department of Revenue rate tables and quarterly boundary data, matched from the address's coordinates
+  geocoder_for_owner_entered_addresses: US Census Bureau geocoder
+  unmatched_address: Use the county's rate and flag for the owner
+  rate_changes: A scheduled job compares stored rates with the state's and flags changes for approval
+  tennessee_state_rate_percent: 7.0
+  tennessee_local_rate_max_percent: 2.75
+  reference_note: A June 2026 rate table listed 9.75% combined across the service area except Chattanooga at 9.25%. The system uses the state's data, not these figures.
+  per_state_rates:
+    GA:
+      rate_percent: 0.0
+      basis: Georgia generally does not tax car wash and detailing labour (letter ruling LR SUT-2019-11)
+      status: To be confirmed by the owner's accountant, including any Georgia income tax filing

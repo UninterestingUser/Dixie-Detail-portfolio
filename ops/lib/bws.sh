@@ -6,13 +6,16 @@
 
 # bws_project_secrets TOKEN PROJECT_ID
 # Prints the project's secrets as bws JSON. Runs bws with a throwaway config
-# in /dev/shm that turns off its on-disk state file.
+# in /dev/shm that turns off its on-disk state file. Needs BWS_SERVER_URL
+# (from .env): a config profile without a server makes bws fail with
+# "Profile has no `server_base` or `server_identity`".
 bws_project_secrets() {
 	local cfg rc=0
+	: "${BWS_SERVER_URL:?set BWS_SERVER_URL in .env}"
 	cfg=$(mktemp -d /dev/shm/dixie-bws.XXXXXX)
 	printf '[profiles.default]\nstate_opt_out = "true"\n' >"$cfg/config"
 	BWS_ACCESS_TOKEN="$1" BWS_CONFIG_FILE="$cfg/config" \
-		bws secret list "$2" --output json --color no || rc=$?
+		bws secret list "$2" --server-url "$BWS_SERVER_URL" --output json --color no || rc=$?
 	rm -rf -- "$cfg"
 	return "$rc"
 }

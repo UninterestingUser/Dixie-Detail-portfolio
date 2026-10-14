@@ -1,0 +1,56 @@
+meta:
+  title: Build phases
+  summary: The eight build phases with their scope, done-when test and status.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/overview/roadmap.md
+
+phases:
+  - number: 0
+    name: Foundations
+    status: done
+    completed: 2026-10-13
+    done_when: A backup has been restored successfully and the server answers through the tunnel
+    open_items:
+      - Restore test deferred until the database has tables (run in Phase 1)
+  - number: 1
+    name: Core data and control app
+    status: next
+    done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
+    carry_overs_from_phase_0:
+      - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
+      - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes (the app already migrates on every start)
+    done_in_docs_migration:
+      - BWS_SERVER_URL added to .env.example and used by every script that calls bws
+      - Secret names in .env.example and data/configuration.yaml match what ops/ fetches
+      - Bitwarden secret DEPLOY_KEY renamed to DEPLOY_SSH_KEY (2026-10-13)
+  - number: 2
+    name: Vehicle catalog
+    status: planned
+    done_when: The owner approves the class for every model in the job history and a spot-check list
+  - number: 3
+    name: Scheduling and website
+    status: planned
+    done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
+  - number: 4
+    name: Texts, alerts and payments
+    status: planned
+    done_when: One test appointment runs from booking through reminder, payment by every method and review request
+  - number: 5
+    name: Launch
+    status: planned
+    done_when: Old links redirect, a real customer books, and Setmore is switched off
+  - number: 6
+    name: Back office
+    status: planned
+    done_when: A month's export imports cleanly into GnuCash and matches the bank deposits
+  - number: 7
+    name: Bitcoin
+    status: planned
+    done_when: A test Bitcoin invoice marks its appointment paid
+
+owner_actions_open:
+  - Stripe account check and Tap to Pay test
+  - Confirm Venmo and Cash App accounts are business profiles
+  - Collect the Google Business Profile link for the footer
+  - Accountant check on Georgia sales and income tax for the out-of-area customer

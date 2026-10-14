@@ -5,7 +5,7 @@
 #   sudo /srv/dixie-detail/ops/deploy.sh
 #
 # The deploy key comes from Bitwarden and lives only in a private ssh-agent
-# for the length of the pull. First install: see docs/setup/stack.md.
+# for the length of the pull. Routine use: docs/operations/deploying-changes.md.
 set -euo pipefail
 
 DIXIE_DIR=${DIXIE_DIR:-/srv/dixie-detail}
