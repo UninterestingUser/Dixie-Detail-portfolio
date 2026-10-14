@@ -89,7 +89,7 @@ secrets:
     purpose: Read-only GitHub deploy key (private half, OpenSSH format)
     used_by: ops/deploy.sh and manual pulls, via ssh-agent
     phase: 0
-    note: Phase 0 stored it in Bitwarden as DEPLOY_KEY; renamed to match ops/deploy.sh
+    note: Phase 0 stored it in Bitwarden as DEPLOY_KEY; renamed in Bitwarden to match ops/deploy.sh on 2026-10-13
   - name: RESTIC_PASSWORD
     purpose: Encrypts the off-site backups
     used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh

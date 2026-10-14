@@ -10,7 +10,7 @@ This repository is private. All rights reserved.
 
 | Part | What it is | Where it runs |
 | --- | --- | --- |
-| Database | PostgreSQL, the single source of truth | Home server ("Server"), in Docker |
+| Database | PostgreSQL, the single source of truth | Home server (`grassman-server`), in Docker |
 | Core app | Django: business logic, REST API, scheduled jobs | Home server, in Docker |
 | Control app | Web app served by the core app; installable on the Pixel | Home server, reachable only over Tailscale |
 | Public website | Astro static site with the booking flow | Cloudflare (free plan) |

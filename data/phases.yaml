@@ -18,11 +18,12 @@ phases:
     status: next
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
-      - Rename the Bitwarden secret DEPLOY_KEY to DEPLOY_SSH_KEY and add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
+      - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
       - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes (the app already migrates on every start)
     done_in_docs_migration:
       - BWS_SERVER_URL added to .env.example and used by every script that calls bws
       - Secret names in .env.example and data/configuration.yaml match what ops/ fetches
+      - Bitwarden secret DEPLOY_KEY renamed to DEPLOY_SSH_KEY (2026-10-13)
   - number: 2
     name: Vehicle catalog
     status: planned
