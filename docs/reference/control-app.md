@@ -4,7 +4,7 @@ summary: The private web app the owner and staff use to run the business, the ar
 audience: [owner, staff, developer]
 visibility: internal
 status: planned
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [control-app, back-office]
 related: [docs/architecture/network-and-access.md, docs/overview/roadmap.md]
 ---
@@ -33,4 +33,6 @@ The control app will be a private web app on the home server, opened in a browse
 
 - **Linux-first by being a web app.** Nothing to install or update on any workstation. It can be wrapped in its own desktop window later without a rewrite.
 - **Changes are traceable.** Every price or description change records who made it and when, and can be undone.
+- **Server-rendered pages, phone first.** Screens are Django pages with htmx, designed for the phone first and installable to the home screen; the Django admin is for superusers only. See [decision 0046](../decisions/0046-control-app-django-htmx.md).
+- **Everyone signs in.** Each person has their own account, and the sign-in page is reachable only over Tailscale. See [decision 0052](../decisions/0052-django-sign-in-over-tailscale.md).
 - **GnuCash stays the books.** The app keeps the sales side and hands GnuCash balanced entries to import.

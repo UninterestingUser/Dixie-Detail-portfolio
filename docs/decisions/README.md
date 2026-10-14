@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on.
 
 ## Open points
 
@@ -68,3 +68,11 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0042](0042-server-paths.md) | 2026-10-13 | infrastructure | Server paths: code at /srv/dixie-detail, backups at /mnt/raid/Backups/dixie-detail | accepted |
 | [0043](0043-workstation-git-over-https.md) | 2026-10-13 | security | Workstation Git over HTTPS with the GitHub CLI keyring | accepted |
 | [0044](0044-documentation-as-code.md) | 2026-10-13 | documentation | Documentation lives in the repository as Markdown and YAML | accepted |
+| [0045](0045-development-made-up-values.md) | 2026-10-14 | security | Development and tests use made-up throwaway values, not Bitwarden | accepted |
+| [0046](0046-control-app-django-htmx.md) | 2026-10-14 | control-app | Control app screens are Django pages with htmx, mobile-first and installable; Django admin for superusers only | accepted |
+| [0047](0047-money-as-exact-decimals.md) | 2026-10-14 | pricing | Money is stored as exact decimals, never floating point | accepted |
+| [0048](0048-times-utc-shown-eastern.md) | 2026-10-14 | scheduling | Times are stored in UTC and shown in Eastern | accepted |
+| [0049](0049-phone-numbers-ten-digits.md) | 2026-10-14 | customers | Phone numbers are stored as 10 digits | accepted |
+| [0050](0050-change-history-simple-history.md) | 2026-10-14 | stack | django-simple-history records changes to the pricebook, customers, vehicles and appointments | accepted |
+| [0051](0051-baserow-ids-kept-on-import.md) | 2026-10-14 | migration | Imported records keep their Baserow ids so the import can be re-run before launch | accepted |
+| [0052](0052-django-sign-in-over-tailscale.md) | 2026-10-14 | security | Django sign-in, reachable only over Tailscale | accepted |

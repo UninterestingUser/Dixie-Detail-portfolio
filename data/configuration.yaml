@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -130,6 +130,24 @@ secrets:
     phase: 7
   - name: BTCPAY_WEBHOOK_SECRET
     phase: 7
+
+development:
+  rule: Development and tests use made-up values written in app/dixie/settings_dev.py, never Bitwarden and never a real secret (decision 0045). The production image leaves that file out, and tools/run-tests.sh fails if it gets in.
+  settings:
+    - name: DJANGO_SETTINGS_MODULE
+      purpose: Chooses the settings file
+      production: dixie.settings (the default in manage.py and wsgi.py)
+      tests: dixie.settings_dev (set by app/pytest.ini)
+      phase: 1
+    - name: CONTAINER_ENGINE
+      purpose: Optional; forces tools/run-tests.sh to use podman or docker. Without it the script uses Podman, or Docker where Podman is not installed
+      example: docker
+      phase: 1
+  made_up_values:
+    - name: SECRET_KEY
+      where: app/dixie/settings_dev.py
+    - name: database password
+      where: app/dixie/settings_dev.py and tools/run-tests.sh, which starts the throwaway database with it
 
 stored_on_server:
   - name: bws-token
