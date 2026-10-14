@@ -1,0 +1,41 @@
+# Dixie Detail business system
+
+> Private repository for the business system of Dixie Detail LLC, a mobile vehicle detailing business in Calhoun, Tennessee. One PostgreSQL database on the owner's home server is the single source of truth; a Django core app serves a private control app (over Tailscale) and a small public API (through a Cloudflare Tunnel); an Astro website on Cloudflare will show live prices and take bookings. Status on 2026-10-13: Phase 0 (Foundations) complete, Phase 1 next.
+
+Every Markdown file under docs/ has a YAML header with title, summary, audience, visibility and status. "status: planned" means the feature is designed but not built. Structured facts are in data/ (YAML, plus the price matrix CSV). Decisions are one file each in docs/decisions/.
+
+## Start here
+
+- [Documentation map](docs/README.md): every document with its summary and status
+- [Project goals and scope](docs/overview/project-goals.md)
+- [System overview](docs/architecture/system-overview.md)
+- [Glossary](docs/overview/glossary.md)
+- [Roadmap and phase status](docs/overview/roadmap.md)
+
+## Business rules
+
+- [Pricing rules](docs/reference/pricing.md)
+- [Scheduling, calendars and alerts](docs/reference/scheduling-and-calendars.md)
+- [Customer booking flow](docs/reference/booking-flow.md)
+- [Sales tax](docs/reference/sales-tax.md)
+- [Payments](docs/reference/payments.md)
+- [Text messages and consent](docs/reference/text-messages.md)
+- [Bookkeeping with GnuCash](docs/reference/bookkeeping-gnucash.md)
+
+## Decisions
+
+- [Decision records index](docs/decisions/README.md)
+
+## Data
+
+- [Data files](data/README.md)
+- [Price matrix](data/price-matrix.csv)
+
+## Operations
+
+- [Deploying changes](docs/operations/deploying-changes.md)
+- [Troubleshooting](docs/operations/troubleshooting.md)
+
+## Conventions
+
+- [Documentation conventions](docs/CONVENTIONS.md)

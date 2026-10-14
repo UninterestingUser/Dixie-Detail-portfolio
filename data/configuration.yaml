@@ -1,0 +1,138 @@
+meta:
+  title: Settings and secrets
+  summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
+  updated: 2026-10-13
+  status: current
+  explained_in: docs/reference/configuration.md
+  rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
+  reconcile: Phase 0 names checked against .env.example and ops/ on 2026-10-13. Later phases add their names in the pull request that uses them.
+
+settings:
+  - name: BWS_PROJECT_ID
+    purpose: ID of the Bitwarden project "Dixie Detail" (from the end of the project page's address)
+    used_by: ops/stack-start.sh, ops/backup.sh, ops/public-health.sh, ops/deploy.sh, ops/restore-test.sh, ops/restic.sh
+    phase: 0
+  - name: BWS_SERVER_URL
+    example: https://vault.bitwarden.com
+    purpose: Points bws at Bitwarden's US cloud; every script that calls bws stops without it
+    used_by: ops/lib/bws.sh
+    phase: 0
+  - name: POSTGRES_DB
+    example: dixie
+    purpose: Database name, for the db container and the app
+    phase: 0
+  - name: POSTGRES_USER
+    example: dixie
+    purpose: Database user, for the db container and the app
+    phase: 0
+  - name: DJANGO_ALLOWED_HOSTS
+    example: server.example-tailnet.ts.net,api.dixiedetail.com,127.0.0.1,localhost
+    format: Bare host names separated by commas; no https:// and no spaces
+    note: The app always accepts localhost as well, for its own health check
+    phase: 0
+  - name: DEPLOY_REMOTE
+    example: git@github.com:OWNER/Dixie-Detail.git
+    purpose: Where ops/deploy.sh pulls from, over SSH with the deploy key
+    phase: 0
+  - name: DEPLOY_BRANCH
+    example: main
+    purpose: The branch ops/deploy.sh pulls
+    phase: 0
+  - name: BACKUP_DIR
+    example: /mnt/raid/Backups/dixie-detail
+    used_by: ops/backup.sh
+    phase: 0
+  - name: RESTIC_REPOSITORY
+    example: rclone:gdrive:dixie-detail-backups
+    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    phase: 0
+  - name: RCLONE_CONFIG
+    purpose: Path to the owner's encrypted rclone config, so the root-run backup finds it
+    example: /home/OWNER/.config/rclone/rclone.conf
+    note: .env.example shows /root/.config/rclone/rclone.conf; set it to wherever rclone config was run
+    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    phase: 0
+  - name: PUBLIC_HEALTH_URL
+    example: https://api.dixiedetail.com/health
+    used_by: ops/public-health.sh
+    phase: 0
+  - name: GOOGLE_CALENDAR_JOBS_ID
+    phase: 3
+  - name: GOOGLE_CALENDAR_TIME_OFF_ID
+    phase: 3
+  - name: GOOGLE_MAPS_BROWSER_KEY
+    purpose: Public by design; used by the website's address field, restricted to dixiedetail.com and the Maps services it needs
+    lives_in: the website's build settings, not .env
+    phase: 3
+  - name: QUO_PHONE_NUMBER
+    phase: 4
+  - name: BTCPAY_URL
+    phase: 7
+  - name: BTCPAY_STORE_ID
+    phase: 7
+
+secrets:
+  - name: POSTGRES_PASSWORD
+    purpose: Database password
+    used_by: ops/stack-start.sh (db and app containers)
+    phase: 0
+    note: Earlier docs called it DB_PASSWORD; renamed to match the code on 2026-10-13. PostgreSQL reads it only when it first creates the database
+  - name: DJANGO_SECRET_KEY
+    purpose: Django's signing key
+    used_by: ops/stack-start.sh (app container)
+    phase: 0
+  - name: CLOUDFLARE_TUNNEL_TOKEN
+    purpose: Connects the cloudflared container to the dixie-detail tunnel
+    used_by: ops/stack-start.sh (cloudflared container); required for the stack to start
+    phase: 0
+  - name: DEPLOY_SSH_KEY
+    purpose: Read-only GitHub deploy key (private half, OpenSSH format)
+    used_by: ops/deploy.sh and manual pulls, via ssh-agent
+    phase: 0
+    note: Phase 0 stored it in Bitwarden as DEPLOY_KEY; renamed in Bitwarden to match ops/deploy.sh on 2026-10-13
+  - name: RESTIC_PASSWORD
+    purpose: Encrypts the off-site backups
+    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    phase: 0
+    exception: Also kept in the owner's Bitwarden vault and as a sealed paper copy (decision 0041)
+  - name: RCLONE_CONFIG_PASS
+    purpose: Decrypts rclone's config, which holds the Google Drive sign-in
+    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    phase: 0
+  - name: HEALTHCHECKS_BACKUP_URL
+    purpose: Ping address for the nightly backup check
+    used_by: ops/backup.sh
+    note: Optional; without it the backup runs with no pings
+    phase: 0
+  - name: HEALTHCHECKS_PUBLIC_URL
+    purpose: Ping address for the public address check
+    used_by: ops/public-health.sh
+    note: Required; the check fails without it
+    phase: 0
+  - name: GOOGLE_SERVICE_ACCOUNT_JSON
+    purpose: Service account key for the two calendars, read into memory
+    phase: 3
+  - name: GOOGLE_MAPS_SERVER_KEY
+    purpose: Server-side Maps key for drive times
+    phase: 3
+  - name: CLOUDFLARE_PAGES_DEPLOY_HOOK
+    purpose: Triggers a website rebuild when the pricebook is published
+    phase: 3
+  - name: QUO_API_KEY
+    phase: 4
+  - name: QUO_WEBHOOK_SECRET
+    phase: 4
+  - name: STRIPE_SECRET_KEY
+    phase: 4
+  - name: STRIPE_WEBHOOK_SECRET
+    phase: 4
+  - name: BTCPAY_API_KEY
+    phase: 7
+  - name: BTCPAY_WEBHOOK_SECRET
+    phase: 7
+
+stored_on_server:
+  - name: bws-token
+    purpose: Bitwarden machine-account access token for dixie-server
+    location: /etc/credstore.encrypted/dixie-bws-token.cred
+    protection: systemd-creds, --with-key=host+tpm2
