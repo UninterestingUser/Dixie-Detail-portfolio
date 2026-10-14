@@ -4,7 +4,7 @@ summary: The home server's hardware and folders, the four containers of the Phas
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [server, docker, systemd, infrastructure]
 related: [docs/architecture/network-and-access.md, docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/deploying-changes.md]
 ---
@@ -54,6 +54,14 @@ The Compose project is named `dixie`. Container names follow Compose's pattern, 
 | `cloudflared` | `cloudflare/cloudflared:2026.9.1` | Cloudflare Tunnel connector | Nothing; it dials out to Cloudflare |
 
 The only port published on the server is `127.0.0.1:8000`, which listens on the server itself, not the LAN. See [network-and-access.md](network-and-access.md).
+
+## How the app container starts
+
+The `app` container applies database migrations every time it starts, before the web server starts. Its command in `app/Dockerfile` runs `python manage.py migrate --noinput` and then, only if that succeeds, replaces itself with gunicorn. This keeps the database schema in step with the code after every deploy, restart or reboot, with no manual step.
+
+- Compose starts `app` only after the `db` healthcheck passes, so the migration never runs against a database that is still starting.
+- A migration that fails stops the container before gunicorn starts, so the app never serves requests against a schema that does not match the code. The error is in `docker logs dixie-app-1`, and Compose keeps restarting the container until the cause is fixed.
+- A migration that has already been applied is skipped, so a restart with no new migrations adds only a moment to start-up.
 
 ## systemd units
 
