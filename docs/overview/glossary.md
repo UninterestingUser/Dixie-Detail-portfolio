@@ -115,9 +115,11 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Assignment.** A staff member on a job, with the flat pay for that job.
 
-**Helper.** A person other than the owner who works jobs, such as a family member, paid a flat amount per job.
+**Family helper.** A helper who is a member of the owner's family. Family helpers are paid a flat amount per job as professional services, on the owner's accountant's advice; it is the only pay type in use.
 
-**Helper pay.** The flat amount a helper earns per job. Each helper has a usual amount, copied onto each assignment, which the owner can override for one job. It posts to the Professional Services expense account in GnuCash.
+**Helper.** A person other than the owner who works jobs, paid a flat amount per job. Each helper has a pay type: family helper or employee (planned).
+
+**Helper pay.** The flat amount a helper earns per job. Each helper has a usual amount, copied onto each assignment, which the owner can override for one job. Its GnuCash account comes from the helper's pay type: Professional Services for a family helper; an employee's wages account is a later decision.
 
 **Staff payout.** Money paid to a helper that settles one or more assignments.
 

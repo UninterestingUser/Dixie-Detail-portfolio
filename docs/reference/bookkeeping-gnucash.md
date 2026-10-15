@@ -41,8 +41,11 @@ GnuCash stays the general ledger. The system keeps the sales side and hands GnuC
 | Promotion or discount on a job | Income:Discounts & Refunds, as an extra split | None; tax is charged on the discounted price |
 | Stripe fee on a payment | Expenses:Fees:Payment Processing Fees | Assets:Current Assets:Stripe |
 | Stripe payout to the bank | Assets:Current Assets:Checking Account | Assets:Current Assets:Stripe |
-| Helper pay | Expenses:Professional Services | The account the pay came from |
+| Pay to a family helper | Expenses:Professional Services | The account the pay came from |
+| Pay to an employee (planned) | No account yet; wages and payroll are a later decision | The account the pay came from |
 | Refund | Income:Discounts & Refunds, plus Liabilities:Sales Tax Payable for the tax refunded | The account it was paid from |
+
+Helper pay posts by the helper's pay type, copied onto each payout, not to one fixed account. Family helpers are paid as professional services on the advice of the owner's accountant; that is not a rule for every helper. See [decision 0053](../decisions/0053-check-and-trade-owner-only.md).
 
 Sales Tax Payable and Loans are Liability-type accounts in the owner's chart. Gift Cards Outstanding is a Liability account, created in GnuCash on 2026-10-14; its balance is what the business owes on unused cards (decision 0054). Sales Tax Payable stays a plain Liability, not Accounts Payable.
 
