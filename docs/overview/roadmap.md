@@ -13,13 +13,13 @@ related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md]
 
 The booking path ships first because it earns money; the back-office features follow once real data is flowing. Each phase becomes a GitHub milestone, and each task an issue. A phase ends when the owner runs its test and it passes. The structured list is in [data/phases.yaml](../../data/phases.yaml).
 
-## Where the project stands (2026-10-13)
+## Where the project stands (2026-10-14)
 
 **Phase 0 is complete**, except for one deferred check. The server runs the empty stack under systemd, the control app answers over Tailscale, the public health page answers through the Cloudflare Tunnel, nightly backups reach the RAID and Google Drive, and both Healthchecks.io checks are green.
 
 The **restore test is deferred**: it fails correctly because the database has no tables yet. It will pass once Phase 1 runs the first migrations.
 
-**Phase 1 is next.** It starts with these carry-overs from Phase 0:
+**Phase 1 is under way.** The data model for all nine areas is built ([../architecture/data-model.md](../architecture/data-model.md)); the app creates its tables on the first start after the deploy. Still to come in Phase 1: loading the pricebook, the Baserow import and the control app screens. Phase 1 started with these carry-overs from Phase 0:
 
 1. Add `DEPLOY_REMOTE` and `DEPLOY_BRANCH` to the server's `.env` before the first run of `ops/deploy.sh`. (The deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY`, the name `ops/deploy.sh` asks for, on 2026-10-13.)
 2. Once the first models exist, run `sudo ops/restore-test.sh` and confirm it passes, which closes Phase 0.
@@ -31,7 +31,7 @@ Two other carry-overs were done in the documentation migration on 2026-10-13: `B
 | Phase | What gets built | Done when | Status |
 | --- | --- | --- | --- |
 | 0. Foundations | Accounts, the server stack (Docker, PostgreSQL, Caddy, tunnel), Tailscale access, backups, monitoring, the repository | A backup has been restored successfully and the server answers through the tunnel | Done, restore test deferred |
-| 1. Core data and control app | The data model for all nine areas; screens for customers, vehicles, pricebook and appointments; the Baserow import; pricebook versioning; the returning-customer review queue | The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable | Next |
+| 1. Core data and control app | The data model for all nine areas; screens for customers, vehicles, pricebook and appointments; the Baserow import; pricebook versioning; the returning-customer review queue | The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable | In progress: data model built |
 | 2. Vehicle catalog | EPA and NHTSA import, class rules, size-variant flags, review queue, monthly refresh | The owner approves the class for every model in the job history and a spot-check list | Planned |
 | 3. Scheduling and website | Availability engine, Google Calendar sync, sales tax, booking API, quiet customer matching, the Astro site with the estimate card on a staging address, carrier registration once the booking form is public | The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved | Planned |
 | 4. Texts, alerts and payments | Quo messages, STOP and HELP handling, time-to-leave alerts, Stripe links and Tap to Pay matching, "paid" buttons, invoices and receipts | One test appointment runs from booking through reminder, payment by every method and review request | Planned |

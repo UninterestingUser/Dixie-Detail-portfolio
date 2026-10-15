@@ -15,7 +15,9 @@ phases:
       - Restore test deferred until the database has tables (run in Phase 1)
   - number: 1
     name: Core data and control app
-    status: next
+    status: in_progress
+    progress:
+      - Data model for all nine areas built, with migrations and change history (2026-10-14)
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
       - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh

@@ -3,13 +3,31 @@
 """
 
 INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "simple_history",
     "core",
+    "customers",
+    "vehicles",
+    "pricebook",
+    "promotions",
+    "appointments",
+    "billing",
+    "staff",
+    "bookkeeping",
+    "marketing",
+    "messaging",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "core.middleware.PublicEntranceMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Records the signed-in user on change history (decision 0050).
+    "simple_history.middleware.HistoryRequestMiddleware",
 ]
 
 ROOT_URLCONF = "dixie.urls"

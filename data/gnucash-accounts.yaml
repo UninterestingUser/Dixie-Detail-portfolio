@@ -1,7 +1,7 @@
 meta:
   title: GnuCash account mapping
   summary: Which GnuCash accounts each payment, fee, payout, discount and refund posts to, by full account name, for the CSV export.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/reference/bookkeeping-gnucash.md
 
@@ -21,6 +21,9 @@ payment_accounts:
   cash: Assets:Current Assets:Petty Cash
   cash_app_direct_to_cashtag: Assets:Current Assets:Cash.App
   bitcoin: null   # left out of the export and listed for manual entry until Phase 7 adds an account
+  check: Assets:Current Assets:Checking Account   # a direct deposit (decision 0053)
+  trade: null     # goods instead of money; left out of the export and listed for manual entry (decision 0053)
+  gift_card: null # to be confirmed by the owner; listed for manual entry until then
   bank: Assets:Current Assets:Checking Account
 
 credit_accounts:
@@ -38,6 +41,10 @@ other_postings:
   stripe_payout:
     debit: Assets:Current Assets:Checking Account
     credit: Assets:Current Assets:Stripe
+  helper_pay:
+    debit: Expenses:Professional Services   # full name to be confirmed by the owner
+    credit: the account the pay came from
+    note: Flat pay per job, set per helper and overridable per job
   refund:
     debit: [Income:Discounts & Refunds, Liabilities:Sales Tax Payable (tax refunded)]
     credit: the account it was paid from
