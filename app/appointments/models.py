@@ -99,7 +99,8 @@ class AppointmentLine(models.Model):
 
     This is the line snapshot (decision 0033): every value is copied from the
     pricebook, so a later pricebook change cannot alter a booked or completed
-    job. The links to the service, promotion and version are for reporting;
+    job. The links to the service, promotion, version, vehicle class and size
+    variant are for reporting;
     the copied fields are what was charged.
     """
 
@@ -119,8 +120,11 @@ class AppointmentLine(models.Model):
     # Positive for a charge, negative for a promotion or a no-charge gift.
     amount = MoneyField()
     one_person_hours = HoursField(null=True, blank=True)
+    # The vehicle class and size variant as booked, copied so renaming or
+    # retiring either never changes a past job.
     vehicle_class_name = models.CharField(max_length=60, blank=True)
-    size_variant = models.PositiveSmallIntegerField(null=True, blank=True)
+    size_variant_value = models.PositiveSmallIntegerField(null=True, blank=True)
+    size_variant_label = models.CharField(max_length=100, blank=True)
     condition_level = models.PositiveSmallIntegerField(null=True, blank=True)
     reason = models.TextField(blank=True)
     service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
@@ -128,6 +132,8 @@ class AppointmentLine(models.Model):
     pricebook_version = models.ForeignKey(
         "pricebook.PricebookVersion", on_delete=models.PROTECT, null=True, blank=True
     )
+    vehicle_class = models.ForeignKey("vehicles.VehicleClass", on_delete=models.PROTECT, null=True, blank=True)
+    size_variant = models.ForeignKey("vehicles.SizeVariant", on_delete=models.PROTECT, null=True, blank=True)
 
     history = HistoricalRecords()
 
@@ -163,6 +169,9 @@ class AppointmentLine(models.Model):
             amount=price.price,
             one_person_hours=price.one_person_hours,
             vehicle_class_name=price.vehicle_class.name,
+            size_variant_value=price.size_variant.value if price.size_variant else None,
+            size_variant_label=price.size_variant.label if price.size_variant else "",
+            vehicle_class=price.vehicle_class,
             size_variant=price.size_variant,
             service=service,
             pricebook_version=price.version,

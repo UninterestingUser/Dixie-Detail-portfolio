@@ -12,7 +12,7 @@ from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 from core.fields import HoursField, MoneyField, PercentField
-from vehicles.models import SIZE_VARIANTS
+from vehicles.models import check_size_variant_class
 
 
 class PublishedVersionError(Exception):
@@ -121,11 +121,12 @@ class Service(models.Model):
 
 class Price(VersionContent):
     """One cell of the price matrix: a service's price and one-person hours for
-    a vehicle class and, where it matters, a size variant."""
+    a vehicle class and, where it matters, a size variant. A class with no size
+    variants, or a service that ignores size, has no size variant."""
 
     service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="prices")
     vehicle_class = models.ForeignKey("vehicles.VehicleClass", on_delete=models.PROTECT)
-    size_variant = models.PositiveSmallIntegerField(choices=SIZE_VARIANTS, null=True, blank=True)
+    size_variant = models.ForeignKey("vehicles.SizeVariant", on_delete=models.PROTECT, null=True, blank=True)
     price = MoneyField()
     one_person_hours = HoursField()
 
@@ -143,8 +144,17 @@ class Price(VersionContent):
         ]
 
     def __str__(self):
-        size = f", size {self.size_variant}" if self.size_variant else ""
+        size = f", size {self.size_variant.value}" if self.size_variant else ""
         return f"{self.service} / {self.vehicle_class}{size}: {self.price}"
+
+    def save(self, *args, **kwargs):
+        check_size_variant_class(self.size_variant, self.vehicle_class_id)
+        # A retired class or size variant is kept for history but not priced again.
+        if self._state.adding and not self.vehicle_class.active:
+            raise ValueError(f"{self.vehicle_class} is retired and cannot be priced.")
+        if self._state.adding and self.size_variant and not self.size_variant.active:
+            raise ValueError(f"{self.size_variant} is retired and cannot be priced.")
+        super().save(*args, **kwargs)
 
 
 class DerivedPriceRule(VersionContent):

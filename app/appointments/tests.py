@@ -9,7 +9,7 @@ from appointments.models import Appointment, AppointmentLine
 from customers.models import Customer
 from pricebook.models import Price, PricebookVersion, Service
 from promotions.models import Promotion
-from vehicles.models import Vehicle, VehicleClass
+from vehicles.models import SizeVariant, Vehicle, VehicleClass
 
 # Invented test figures, not the business's prices.
 VERSION_1_PRICE = Decimal("100.00")
@@ -21,21 +21,22 @@ class LineSnapshotTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.vehicle_class = VehicleClass.objects.create(name="Test Class", size_variant_measures="seat_rows")
+        cls.vehicle_class = VehicleClass.objects.create(name="Test Class", size_variant_measures="seat rows")
+        cls.two_rows = SizeVariant.objects.create(vehicle_class=cls.vehicle_class, value=2, label="two rows")
         cls.service = Service.objects.create(name="Test Detail", kind=Service.Kind.MAIN)
         cls.version_1 = PricebookVersion.objects.create(number=1)
         cls.price_1 = Price.objects.create(
             version=cls.version_1,
             service=cls.service,
             vehicle_class=cls.vehicle_class,
-            size_variant=2,
+            size_variant=cls.two_rows,
             price=VERSION_1_PRICE,
             one_person_hours=Decimal("6"),
         )
         cls.version_1.publish(datetime.date(2026, 10, 1))
         customer = Customer.objects.create(first_name="Pat", mobile="4235550142")
         vehicle = Vehicle.objects.create(
-            customer=customer, year=2019, make="Toyota", model="RAV4", vehicle_class=cls.vehicle_class, size_variant=2
+            customer=customer, year=2019, make="Toyota", model="RAV4", vehicle_class=cls.vehicle_class, size_variant=cls.two_rows
         )
         cls.appointment = Appointment.objects.create(
             customer=customer,
@@ -51,6 +52,8 @@ class LineSnapshotTests(TestCase):
         self.assertEqual(self.line.one_person_hours, Decimal("6"))
         self.assertEqual(self.line.description, "Test Detail")
         self.assertEqual(self.line.vehicle_class_name, "Test Class")
+        self.assertEqual(self.line.size_variant_value, 2)
+        self.assertEqual(self.line.size_variant_label, "two rows")
         self.assertEqual(self.line.pricebook_version, self.version_1)
 
     def test_new_version_does_not_change_booked_line(self):
@@ -59,7 +62,7 @@ class LineSnapshotTests(TestCase):
             version=version_2,
             service=self.service,
             vehicle_class=self.vehicle_class,
-            size_variant=2,
+            size_variant=self.two_rows,
             price=VERSION_2_PRICE,
             one_person_hours=Decimal("7"),
         )
@@ -79,12 +82,104 @@ class LineSnapshotTests(TestCase):
             version=draft,
             service=self.service,
             vehicle_class=self.vehicle_class,
-            size_variant=2,
+            size_variant=self.two_rows,
             price=VERSION_2_PRICE,
             one_person_hours=Decimal("6"),
         )
         with self.assertRaises(ValueError):
             AppointmentLine.snapshot(self.appointment, price)
+
+
+class NewVehicleClassTests(TestCase):
+    """Vehicle classes are records: a new one needs no code change, and renaming
+    or retiring one never changes a past job."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.sedans = VehicleClass.objects.create(name="Test Sedans", size_variant_measures="doors")
+        cls.four_doors = SizeVariant.objects.create(vehicle_class=cls.sedans, value=2, label="four doors")
+        cls.service = Service.objects.create(name="Test Detail", kind=Service.Kind.MAIN)
+        cls.version_1 = PricebookVersion.objects.create(number=1)
+        price = Price.objects.create(
+            version=cls.version_1,
+            service=cls.service,
+            vehicle_class=cls.sedans,
+            size_variant=cls.four_doors,
+            price=VERSION_1_PRICE,
+            one_person_hours=Decimal("5"),
+        )
+        cls.version_1.publish(datetime.date(2026, 10, 1))
+        cls.customer = Customer.objects.create(first_name="Pat")
+        cls.past_job = Appointment.objects.create(
+            customer=cls.customer, scheduled_start=timezone.now(), source=Appointment.Source.OWNER
+        )
+        cls.past_line = AppointmentLine.snapshot(cls.past_job, price)
+        cls.past_line.save()
+
+    def test_seventh_class_gets_prices_in_a_new_version_without_code_change(self):
+        # A class with a single price: no doors, cab style or seat rows.
+        motorcycles = VehicleClass.objects.create(name="Test Motorcycles")
+        self.assertFalse(motorcycles.size_variants.exists())
+        version_2 = PricebookVersion.objects.create(number=2)
+        price = Price.objects.create(
+            version=version_2,
+            service=self.service,
+            vehicle_class=motorcycles,
+            price=VERSION_2_PRICE,
+            one_person_hours=Decimal("3"),
+        )
+        version_2.publish(datetime.date(2026, 11, 1))
+
+        bike = Vehicle.objects.create(
+            customer=self.customer, year=2020, make="Honda", model="Gold Wing", vehicle_class=motorcycles
+        )
+        self.assertEqual(bike.missing_details, [])
+        job = Appointment.objects.create(
+            customer=self.customer, vehicle=bike, scheduled_start=timezone.now(), source=Appointment.Source.OWNER
+        )
+        line = AppointmentLine.snapshot(job, price)
+        line.save()
+        self.assertEqual(line.vehicle_class_name, "Test Motorcycles")
+        self.assertIsNone(line.size_variant_value)
+        self.assertEqual(line.amount, VERSION_2_PRICE)
+
+        past = AppointmentLine.objects.get(pk=self.past_line.pk)
+        self.assertEqual(past.amount, VERSION_1_PRICE)
+        self.assertEqual(past.vehicle_class_name, "Test Sedans")
+        self.assertEqual(past.size_variant_label, "four doors")
+
+    def test_renaming_or_retiring_a_class_never_changes_a_past_job(self):
+        self.sedans.name = "Renamed Sedans"
+        self.sedans.active = False
+        self.sedans.save()
+        self.four_doors.label = "renamed"
+        self.four_doors.active = False
+        self.four_doors.save()
+
+        past = AppointmentLine.objects.get(pk=self.past_line.pk)
+        self.assertEqual(past.vehicle_class_name, "Test Sedans")
+        self.assertEqual(past.size_variant_value, 2)
+        self.assertEqual(past.size_variant_label, "four doors")
+        self.assertEqual(past.vehicle_class, self.sedans)  # kept for history, not deleted
+
+    def test_retired_class_cannot_be_priced_again(self):
+        self.sedans.active = False
+        self.sedans.save()
+        draft = PricebookVersion.objects.create(number=3)
+        with self.assertRaises(ValueError):
+            Price.objects.create(
+                version=draft,
+                service=self.service,
+                vehicle_class=self.sedans,
+                size_variant=self.four_doors,
+                price=VERSION_2_PRICE,
+                one_person_hours=Decimal("5"),
+            )
+
+    def test_size_variant_must_belong_to_the_class(self):
+        other = VehicleClass.objects.create(name="Test Trucks", size_variant_measures="cab style")
+        with self.assertRaises(ValueError):
+            Vehicle.objects.create(customer=self.customer, vehicle_class=other, size_variant=self.four_doors)
 
 
 class LineRuleTests(TestCase):

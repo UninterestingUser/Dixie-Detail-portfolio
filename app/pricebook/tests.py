@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.test import TestCase
 
 from pricebook.models import Price, PricebookVersion, PublishedVersionError, Service
-from vehicles.models import VehicleClass
+from vehicles.models import SizeVariant, VehicleClass
 
 
 class PublishedVersionTests(TestCase):
@@ -13,13 +13,14 @@ class PublishedVersionTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         vehicle_class = VehicleClass.objects.create(name="Test Class", size_variant_measures="doors")
+        two_doors = SizeVariant.objects.create(vehicle_class=vehicle_class, value=1, label="two doors")
         service = Service.objects.create(name="Test Detail", kind=Service.Kind.MAIN)
         cls.version = PricebookVersion.objects.create(number=1)
         cls.price = Price.objects.create(
             version=cls.version,
             service=service,
             vehicle_class=vehicle_class,
-            size_variant=1,
+            size_variant=two_doors,
             price=Decimal("100.00"),
             one_person_hours=Decimal("4"),
         )
