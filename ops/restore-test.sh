@@ -55,8 +55,11 @@ done
 docker exec "$container" pg_isready -q -h 127.0.0.1 || fail "throwaway PostgreSQL did not start"
 
 echo "Restoring into $image"
+# Count TABLE entries only. Each table also has a "TABLE DATA" entry, whose
+# fourth field is TABLE too, so match on the fifth field not being DATA (in a
+# TABLE entry the fifth field is the schema).
 expected=$(run_restic dump "$snap_id" "$SNAPSHOT_FILE" |
-	docker exec -i "$container" pg_restore --list | awk '$4 == "TABLE"' | wc -l)
+	docker exec -i "$container" pg_restore --list | awk '$4 == "TABLE" && $5 != "DATA"' | wc -l)
 run_restic dump "$snap_id" "$SNAPSHOT_FILE" |
 	docker exec -i "$container" pg_restore -U postgres -d restore_test --no-owner --no-privileges --exit-on-error ||
 	fail "pg_restore reported an error"
