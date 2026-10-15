@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -42,7 +42,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | Document | Summary | Status |
 | --- | --- | --- |
 | [Backups and monitoring design](architecture/backups-and-monitoring.md) | How the database is backed up every night to the RAID and to Google Drive, how long copies are kept, and how Healthchecks.io watches the backups and the public path. | current |
-| [Data model outline](architecture/data-model.md) | The business records the database will hold across all nine areas, and how they relate, as designed before Phase 1 builds them. | planned |
+| [Data model](architecture/data-model.md) | The records the database holds across all nine business areas, as built in Phase 1, with a diagram of the main records and what each one is for. | current |
 | [Outside services and integrations](architecture/integrations.md) | Every outside service the system uses or will use, what it does for the business, which phase connects it, and how it talks to the core app. | current |
 | [Network and access](architecture/network-and-access.md) | How staff reach the private control app over Tailscale, how the public reaches only the health page and booking API through the Cloudflare Tunnel, and which host names the app accepts. | current |
 | [Secrets architecture](architecture/secrets.md) | How every key, password and token is kept in Bitwarden Secrets Manager, how the server holds one encrypted token, and how secrets reach containers without touching disk. | current |

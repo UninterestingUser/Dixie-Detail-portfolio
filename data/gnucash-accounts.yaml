@@ -1,7 +1,7 @@
 meta:
   title: GnuCash account mapping
   summary: Which GnuCash accounts each payment, fee, payout, discount and refund posts to, by full account name, for the CSV export.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/reference/bookkeeping-gnucash.md
 
@@ -21,6 +21,9 @@ payment_accounts:
   cash: Assets:Current Assets:Petty Cash
   cash_app_direct_to_cashtag: Assets:Current Assets:Cash.App
   bitcoin: null   # left out of the export and listed for manual entry until Phase 7 adds an account
+  check: Assets:Current Assets:Checking Account   # a direct deposit (decision 0053)
+  trade: null     # goods instead of money; left out of the export and listed for manual entry (decision 0053)
+  gift_card: Liabilities:Gift Cards Outstanding   # a card's balance used on a job (decision 0054); the one imported gift-card prepayment has no card and is listed for manual entry
   bank: Assets:Current Assets:Checking Account
 
 credit_accounts:
@@ -38,12 +41,37 @@ other_postings:
   stripe_payout:
     debit: Assets:Current Assets:Checking Account
     credit: Assets:Current Assets:Stripe
+  gift_card_sale:
+    debit: the payment account the buyer paid into
+    credit: Liabilities:Gift Cards Outstanding
+    note: The whole amount, which includes sales tax. No sales tax is posted at the sale (decision 0054)
+  gift_card_used:
+    debit: Liabilities:Gift Cards Outstanding
+    credit: [Income:Detailing Services, Liabilities:Sales Tax Payable]
+    note: As for any paid job, one income split per line
+  voucher:
+    when_given: nothing
+    when_used:
+      debit: Income:Discounts & Refunds
+      note: The value used, as an extra split like a promotion; tax is charged on the reduced price
+  helper_pay:
+    account_from: the helper's pay type, copied onto each payout (decision 0053)
+    credit: the account the pay came from
+    note: Both pay types are a flat amount per job, set per helper and overridable per job
+    by_pay_type:
+      family_helper:
+        debit: Expenses:Professional Services   # the owner's accountant's advice for family helpers; full name confirmed 2026-10-14
+        status: current
+      employee:
+        debit: null   # wages and payroll are a later decision
+        status: planned
   refund:
     debit: [Income:Discounts & Refunds, Liabilities:Sales Tax Payable (tax refunded)]
     credit: the account it was paid from
 
 account_types:
   Liabilities:Sales Tax Payable: Liability (plain, not Accounts Payable)
+  Liabilities:Gift Cards Outstanding: Liability (created in GnuCash by the owner, 2026-10-14)
   Liabilities:Loans: Liability
 
 entered_by_hand:

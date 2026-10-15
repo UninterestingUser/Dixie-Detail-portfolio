@@ -1,7 +1,7 @@
 meta:
   title: Pricing rules
   summary: The numbers behind pricing and job length - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/reference/pricing.md
   note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
@@ -40,6 +40,10 @@ full_day_flag:
   threshold_one_person_hours: 8
   action: Flag in the control app for a second person; the estimate card shows "full day" instead of hours
   blocks_booking: false
+
+promotions:
+  percentage_rounding: nearest cent   # 0.01; an exact half cent rounds up (decision 0055)
+  kinds: [percent_off, amount_off, fixed_price, voucher]
 
 price_build_order:
   - base price from the price matrix

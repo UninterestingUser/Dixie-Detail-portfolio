@@ -1,4 +1,7 @@
+from io import StringIO
 from unittest import mock
+
+from django.core.management import call_command
 
 from django.db import OperationalError, connection
 from django.test import SimpleTestCase, TestCase
@@ -55,3 +58,9 @@ class PublicEntranceTests(SimpleTestCase):
         with mock.patch("core.middleware.HttpResponseNotFound") as blocked:
             self.client.get("/anything", headers={"X-Dixie-Entrance": "tailnet"})
         blocked.assert_not_called()
+
+
+class MigrationTests(TestCase):
+    def test_every_model_change_has_a_migration(self):
+        # Fails if a model changed without "manage.py makemigrations".
+        call_command("makemigrations", "--check", "--dry-run", stdout=StringIO())
