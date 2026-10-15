@@ -51,6 +51,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Size variant.** The 1, 2 or 3 in the price matrix's size column, also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs.
 
+**Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
+
 **Vehicle class.** One of six groups that set the price: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
 ## Booking and scheduling terms
@@ -89,6 +91,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Check.** A payment by paper check, an owner-only payment method. It posts to the business checking account in GnuCash.
 
+**Gift card.** A dollar balance sold in advance, with sales tax included, identified by a code and recording the buyer and any recipient. The balance is money owed until it is used, can be spent across several jobs, and never goes below zero. See [../reference/payments.md](../reference/payments.md).
+
 **Jurisdiction.** The city or county whose local sales tax rate applies to a service address.
 
 **Multi-split CSV.** The GnuCash import format the system exports: a row with a date starts a transaction, and the rows below it are its other splits. See [../reference/bookkeeping-gnucash.md](../reference/bookkeeping-gnucash.md).
@@ -99,7 +103,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **"Paid" button.** The one-tap control the owner uses to mark cash, Venmo, PayPal and Bitcoin payments as received.
 
-**Prepayment.** A payment recorded before the job, such as a gift card, so the appointment shows as already paid.
+**Prepayment.** A payment recorded before the job, so the appointment shows as already paid. The one imported gift-card job is a prepayment.
 
 **Sales Tax Payable.** The GnuCash liability account that holds collected sales tax until it is remitted.
 

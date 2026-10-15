@@ -170,6 +170,20 @@ class AppointmentLine(models.Model):
         )
 
 
+    @classmethod
+    def for_promotion(cls, appointment, promotion, amount, **fields):
+        """A new, unsaved promotion line taking the promotion's discount off
+        amount. A voucher applies this way too (decision 0054)."""
+        return cls(
+            appointment=appointment,
+            kind=cls.Kind.PROMOTION,
+            description=promotion.name,
+            amount=-promotion.discount_on(amount),
+            promotion=promotion,
+            **fields,
+        )
+
+
 class MatchFlag(models.Model):
     """A difference between a booking and the customer record it was quietly
     matched to, waiting for the owner (returning-customers.md, decision 0034)."""

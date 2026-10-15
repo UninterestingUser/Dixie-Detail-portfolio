@@ -8,6 +8,7 @@ from django.utils import timezone
 from appointments.models import Appointment, AppointmentLine
 from customers.models import Customer
 from pricebook.models import Price, PricebookVersion, Service
+from promotions.models import Promotion
 from vehicles.models import Vehicle, VehicleClass
 
 # Invented test figures, not the business's prices.
@@ -110,3 +111,40 @@ class LineRuleTests(TestCase):
     def test_promotion_cannot_add_to_the_price(self):
         with self.assertRaises(IntegrityError):
             self.line(kind=AppointmentLine.Kind.PROMOTION, amount=Decimal("10.00"))
+
+
+class VoucherTests(TestCase):
+    """A free voucher is a promotion with a code and a dollar value (decision 0054)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        customer = Customer.objects.create(first_name="Pat")
+        cls.appointment = Appointment.objects.create(
+            customer=customer, scheduled_start=timezone.now(), source=Appointment.Source.OWNER
+        )
+        AppointmentLine.objects.create(
+            appointment=cls.appointment, kind=AppointmentLine.Kind.SERVICE, description="Service", amount=VERSION_1_PRICE
+        )
+
+    def voucher(self, value):
+        return Promotion.objects.create(
+            name=f"Voucher {value}", kind=Promotion.Kind.VOUCHER, value=Decimal(value), promo_code=f"V{value}"
+        )
+
+    def test_voucher_applies_as_a_promotion_line(self):
+        voucher = self.voucher("25.00")
+        line = AppointmentLine.for_promotion(self.appointment, voucher, self.appointment.total_before_tax)
+        line.save()
+        self.assertEqual(line.kind, AppointmentLine.Kind.PROMOTION)
+        self.assertEqual(line.promotion, voucher)
+        self.assertEqual(line.amount, Decimal("-25.00"))
+        self.assertEqual(self.appointment.total_before_tax, VERSION_1_PRICE - Decimal("25.00"))
+
+    def test_voucher_never_takes_more_than_the_job(self):
+        line = AppointmentLine.for_promotion(self.appointment, self.voucher("500.00"), VERSION_1_PRICE)
+        line.save()
+        self.assertEqual(self.appointment.total_before_tax, Decimal("0.00"))
+
+    def test_voucher_needs_a_code(self):
+        with self.assertRaises(IntegrityError):
+            Promotion.objects.create(name="No code", kind=Promotion.Kind.VOUCHER, value=Decimal("25.00"))

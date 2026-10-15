@@ -1,4 +1,7 @@
-"""Named promotions, such as Friends & Family, Multi-Vehicle or a seasonal offer."""
+"""Named promotions, such as Friends & Family, Multi-Vehicle or a seasonal
+offer, and free vouchers (decision 0054)."""
+
+from decimal import Decimal
 
 from django.db import models
 from django.db.models import Q
@@ -12,10 +15,11 @@ class Promotion(models.Model):
         PERCENT_OFF = "percent_off", "Percentage off"
         AMOUNT_OFF = "amount_off", "Dollar amount off"
         FIXED_PRICE = "fixed_price", "Fixed price"
+        VOUCHER = "voucher", "Free voucher"
 
     name = models.CharField(max_length=100, unique=True)
     kind = models.CharField(max_length=20, choices=Kind.choices)
-    # A percentage for percent_off, dollars for amount_off and fixed_price.
+    # A percentage for percent_off; dollars for amount_off, fixed_price and voucher.
     value = models.DecimalField(max_digits=10, decimal_places=2)
     starts_on = models.DateField(null=True, blank=True)
     ends_on = models.DateField(null=True, blank=True)
@@ -44,7 +48,21 @@ class Promotion(models.Model):
                 condition=Q(starts_on__isnull=True) | Q(ends_on__isnull=True) | Q(ends_on__gte=models.F("starts_on")),
                 name="promotion_ends_after_start",
             ),
+            models.CheckConstraint(
+                condition=~Q(kind="voucher") | Q(promo_code__isnull=False),
+                name="voucher_has_code",
+            ),
         ]
 
     def __str__(self):
         return self.name
+
+    def discount_on(self, amount):
+        """How much this promotion takes off an amount before tax, never more
+        than the amount itself."""
+        if self.kind in (self.Kind.AMOUNT_OFF, self.Kind.VOUCHER):
+            return min(self.value, amount)
+        if self.kind == self.Kind.FIXED_PRICE:
+            return max(amount - self.value, Decimal("0.00"))
+        # How a percentage is rounded to the cent has not been settled.
+        raise NotImplementedError("Percentage promotions need a rounding rule first.")
