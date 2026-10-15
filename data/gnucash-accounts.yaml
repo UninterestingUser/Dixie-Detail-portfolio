@@ -55,9 +55,16 @@ other_postings:
       debit: Income:Discounts & Refunds
       note: The value used, as an extra split like a promotion; tax is charged on the reduced price
   helper_pay:
-    debit: Expenses:Professional Services   # full name confirmed by the owner, 2026-10-14
+    account_from: the helper's pay type, copied onto each payout (decision 0053)
     credit: the account the pay came from
-    note: Flat pay per job, set per helper and overridable per job
+    note: Both pay types are a flat amount per job, set per helper and overridable per job
+    by_pay_type:
+      family_helper:
+        debit: Expenses:Professional Services   # the owner's accountant's advice for family helpers; full name confirmed 2026-10-14
+        status: current
+      employee:
+        debit: null   # wages and payroll are a later decision
+        status: planned
   refund:
     debit: [Income:Discounts & Refunds, Liabilities:Sales Tax Payable (tax refunded)]
     credit: the account it was paid from

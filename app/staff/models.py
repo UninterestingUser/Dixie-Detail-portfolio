@@ -1,9 +1,25 @@
-"""The owner and helpers, their job assignments and what each is paid."""
+"""The owner and helpers, their job assignments and what each is paid.
+
+No helper names, ages or pay totals belong in code, tests or docs (decision 0053).
+"""
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 from core.fields import MoneyField, PhoneField, phone_check
+
+
+class PayType(models.TextChoices):
+    """How a helper is paid, which sets the GnuCash account for their pay
+    (decision 0053). Both are a flat amount per job."""
+
+    # The owner's accountant's advice for family helpers: posts to
+    # Expenses:Professional Services.
+    FAMILY_HELPER = "family_helper", "Family helper"
+    # Planned: normal wages per job. The GnuCash account and payroll are a
+    # later decision.
+    EMPLOYEE = "employee", "Employee"
 
 
 class StaffMember(models.Model):
@@ -13,6 +29,8 @@ class StaffMember(models.Model):
 
     name = models.CharField(max_length=150)
     role = models.CharField(max_length=10, choices=Role.choices)
+    # Every helper has one; the owner has none.
+    pay_type = models.CharField(max_length=20, choices=PayType.choices, blank=True)
     phone = PhoneField(blank=True)
     # A helper without a login, such as a family member, has no user.
     user = models.OneToOneField(
@@ -28,15 +46,24 @@ class StaffMember(models.Model):
 
     class Meta:
         ordering = ["name"]
-        constraints = [phone_check("phone", "staff_phone_10_digits")]
+        constraints = [
+            phone_check("phone", "staff_phone_10_digits"),
+            models.CheckConstraint(
+                condition=Q(role="owner", pay_type="") | (Q(role="helper") & ~Q(pay_type="")),
+                name="helper_has_pay_type",
+            ),
+        ]
 
     def __str__(self):
         return self.name
 
 
 class StaffPayout(models.Model):
-    """Money paid to a helper, settling one or more assignments. Posts to the
-    Professional Services expense account in GnuCash."""
+    """Money paid to a helper, settling one or more assignments.
+
+    The helper's pay type is copied when the payout is made, so the GnuCash
+    account for past pay stays right if the helper's pay type changes later.
+    """
 
     class Method(models.TextChoices):
         CASH = "cash", "Cash"
@@ -47,6 +74,7 @@ class StaffPayout(models.Model):
         BANK_TRANSFER = "bank_transfer", "Bank transfer"
 
     staff_member = models.ForeignKey(StaffMember, on_delete=models.PROTECT, related_name="payouts")
+    pay_type = models.CharField(max_length=20, choices=PayType.choices)
     amount = MoneyField()
     method = models.CharField(max_length=20, choices=Method.choices)
     paid_on = models.DateField()
@@ -55,8 +83,16 @@ class StaffPayout(models.Model):
         "bookkeeping.ExportBatch", on_delete=models.PROTECT, null=True, blank=True, related_name="staff_payouts"
     )
 
+    class Meta:
+        constraints = [models.CheckConstraint(condition=~Q(pay_type=""), name="payout_has_pay_type")]
+
     def __str__(self):
         return f"{self.amount} to {self.staff_member} on {self.paid_on}"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.pay_type:
+            self.pay_type = self.staff_member.pay_type
+        super().save(*args, **kwargs)
 
 
 class Assignment(models.Model):

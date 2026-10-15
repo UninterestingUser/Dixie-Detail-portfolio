@@ -27,6 +27,15 @@ Payment is due at the time of service, with no deposit and no card on file. The 
 | Check (owner only) | Handed to the owner, by arrangement | The owner records it with the check number |
 | Trade (owner only) | Goods instead of money, by arrangement | The owner records what was received and its value |
 
+## Paying helpers
+
+Helpers are paid a flat amount per job, set for each helper, which the owner can override for one job. Each helper has a pay type, and the pay type decides how their pay is booked:
+
+- **Family helper,** the only type in use: paid as professional services, on the advice of the owner's accountant.
+- **Employee,** planned: paid normal wages per job. The wages account and payroll are a later decision, made before the first employee is hired.
+
+The accounts are in [bookkeeping-gnucash.md](bookkeeping-gnucash.md). Helpers' names, ages and pay totals are kept in the control app, never in these docs. See [decision 0053](../decisions/0053-check-and-trade-owner-only.md).
+
 ## Gift cards and vouchers
 
 - **A gift card** is sold as a dollar balance, with sales tax included in that amount. It has a code, the buyer and, if given, the recipient. The balance is money owed until it is used, and it can be spent across several jobs.

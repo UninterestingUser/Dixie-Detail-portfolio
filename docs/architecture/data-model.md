@@ -95,9 +95,9 @@ The `billing` app. Every amount of money is an exact decimal (decision 0047).
 
 The `staff` app.
 
-- **Staff member** is the owner or a helper, with a phone number, a login if they have one, a flat pay per job, and where their drive times start.
+- **Staff member** is the owner or a helper, with a phone number, a login if they have one, a flat pay per job, and where their drive times start. Every helper has a pay type: family helper, the only one in use, or employee, which is planned. The owner has none.
 - **Assignment** puts a staff member on a job. Their per-job pay is copied when they are assigned, so a later change to it does not alter past jobs. The owner can override the pay for one job.
-- **Staff payout** is money paid to a helper, settling one or more assignments. In GnuCash it posts to the Professional Services expense account.
+- **Staff payout** is money paid to a helper, settling one or more assignments. It keeps the helper's pay type from when it was made, and the pay type sets its GnuCash account: Professional Services for a family helper. An employee's wages account and payroll are a later decision (decision 0053).
 
 ## Bookkeeping, messages and marketing
 
