@@ -85,6 +85,13 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 **Cause:** the database is empty. The app already runs `python manage.py migrate --noinput` every time it starts, but the Phase 0 app has no models, and Django does not create its `django_migrations` table when there is nothing to migrate. Running `migrate` by hand changes nothing.
 **Fix:** none needed in Phase 0. The test passes once Phase 1 adds the first models: the next start creates the tables, the next backup captures them, and the test can be re-run.
 
+### restore-test: "FAIL: table count does not match" with twice as many tables in the dump as restored
+
+The output reads, for example, "Tables: 126 in the dump, 63 restored", while the live database has 63 tables.
+
+**Cause:** the script counted the dump's tables from `pg_restore --list`, which lists every table twice: once as `TABLE` (its definition) and once as `TABLE DATA` (its rows). The filter matched the word `TABLE` in the fourth field, which both kinds of entry have, so the expected count was doubled. The restore itself was fine. This first showed up on 2026-10-14, the first test run after the Phase 1 data model created the tables.
+**Fix:** `ops/restore-test.sh` now counts only `TABLE` entries, skipping `TABLE DATA`. Pull the fix and run `sudo /srv/dixie-detail/ops/restore-test.sh` again; it should show the same number on both sides and end with `restore-test: PASS`.
+
 ### rclone: "gdrive" refers to a local folder / "directory not found"
 
 **Cause:** the remote name was typed without its colon.
