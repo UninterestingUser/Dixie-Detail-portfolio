@@ -1,7 +1,7 @@
 meta:
   title: Business facts
   summary: Contact details, location, brand and profile links for Dixie Detail LLC. Public information only.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/overview/business-profile.md
 
@@ -35,6 +35,7 @@ brand:
   footer_charcoal: "#141518"
   logo: Script wordmark, used on the hero photo and the booking header
 payment_methods_accepted: [cash, card, Venmo, PayPal, Cash App, Bitcoin]
+owner_only_payment_methods: [check, trade]   # accepted case by case, never offered on the website (decision 0053)
 payment_terms: Due at the time of service. No deposit, no card on file.
 staffing:
   today: The owner alone, with family members occasionally as a second person

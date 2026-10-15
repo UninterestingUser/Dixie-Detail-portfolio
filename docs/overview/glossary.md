@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -19,11 +19,13 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Condition level.** The customer's choice of how dirty the vehicle is, in three levels that add 0%, 10% or 20% to the base price of Full Detail, Interior Only or Exterior Only. The adjustment is rounded to the whole dollar. See [../reference/pricing.md](../reference/pricing.md).
 
+**Derived price rule.** A pricebook rule that prices one service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance at 80% and Monthly Maintenance at 50% of Full Detail are derived price rules.
+
 **Estimate.** The price shown before the job, built from the pricebook. The final price is confirmed on site.
 
 **Full day flag.** A job of 8 or more one-person hours. The control app flags it for a second person, and the customer's estimate card says "full day" instead of hours.
 
-**Line.** One priced item on an appointment: the service, the condition adjustment, each add-on, a promotion or an on-site adjustment.
+**Line.** One priced item on an appointment: the service, the condition adjustment, each add-on, a promotion, an on-site adjustment, a no-charge line or a custom line.
 
 **Line snapshot.** The copy of each line (service, price, hours, condition, promotion) stored on an appointment when it is booked, so later pricebook changes cannot alter it. See [../reference/pricebook-changes.md](../reference/pricebook-changes.md).
 
@@ -31,19 +33,27 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Misc Services.** An owner-only custom line for a one-off job, at a price the owner sets.
 
-**On-site adjustment.** A price change the owner enters at the job, always with a reason, which appears on the invoice.
+**No-charge line.** A line, with a reason, that brings a job's total to zero when the owner gives the job as a gift. A no-charge job has no payment.
 
 **One-person hours.** The job length in the price matrix, measured for one person working alone.
+
+**On-site adjustment.** A price change the owner enters at the job, always with a reason, which appears on the invoice.
 
 **Price matrix.** The owner's table of 90 prices and job lengths, stored in [data/price-matrix.csv](../../data/price-matrix.csv). It is the only source of prices.
 
 **Pricebook.** The price matrix plus its rules (condition levels, maintenance percentages, add-ons, promotions) as stored in the database and edited in the control app.
 
+**Pricebook draft.** A pricebook version still being edited. Once published, a version and its prices never change; the next change is a new draft.
+
 **Pricebook version.** A numbered, published state of the pricebook with an effective date.
 
-**Size variant.** The 1, 2 or 3 in the price matrix's size column, also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs.
+**Promotion.** A named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer, defined as a percentage off, a dollar amount off or a fixed price. It appears on a job as its own line.
 
-**Vehicle class.** One of six groups that set the price: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as motorcycles, and then has a single price per service.
+
+**Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
+
+**Vehicle class.** A group of vehicles that share prices. There are six at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
 ## Booking and scheduling terms
 
@@ -69,6 +79,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Consent.** A customer's recorded permission to receive texts, of two separate kinds: appointment texts and follow-up texts. See [../reference/text-messages.md](../reference/text-messages.md).
 
+**Match flag.** A difference in name, address or vehicle between a booking and the customer it was quietly matched to, waiting for the owner to choose one of four actions. See [../reference/returning-customers.md](../reference/returning-customers.md).
+
 **Quiet matching.** Linking a new booking to an existing customer by mobile number, without showing the customer anything. See [../reference/returning-customers.md](../reference/returning-customers.md).
 
 **Second contact.** A second person with their own name and number on a customer's record, such as a spouse, who can book under that record.
@@ -77,15 +89,45 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 ## Money and bookkeeping terms
 
+**Check.** A payment by paper check, an owner-only payment method. It posts to the business checking account in GnuCash.
+
+**Gift card.** A dollar balance sold in advance, with sales tax included, identified by a code and recording the buyer and any recipient. The balance is money owed until it is used, can be spent across several jobs, and never goes below zero. See [../reference/payments.md](../reference/payments.md).
+
 **Jurisdiction.** The city or county whose local sales tax rate applies to a service address.
 
 **Multi-split CSV.** The GnuCash import format the system exports: a row with a date starts a transaction, and the rows below it are its other splits. See [../reference/bookkeeping-gnucash.md](../reference/bookkeeping-gnucash.md).
 
+**Negative tip.** How a short payment is recorded: when a customer pays less than the total, the shortfall is a tip below zero, and the job's lines keep the full price.
+
+**Owner-only payment method.** Check or trade: accepted by the owner case by case and never offered on the website. See [../reference/payments.md](../reference/payments.md).
+
 **"Paid" button.** The one-tap control the owner uses to mark cash, Venmo, PayPal and Bitcoin payments as received.
+
+**Prepayment.** A payment recorded before the job, so the appointment shows as already paid. The one imported gift-card job is a prepayment.
 
 **Sales Tax Payable.** The GnuCash liability account that holds collected sales tax until it is remitted.
 
+**Split payment.** A job paid with two methods, recorded as one payment for each method.
+
+**Trade.** A job paid in goods instead of money, an owner-only payment method. The goods and their value are recorded; the value is the payment amount. Trades are left out of the GnuCash export and entered by hand.
+
+## Staff terms
+
+**Assignment.** A staff member on a job, with the flat pay for that job.
+
+**Family helper.** A helper who is a member of the owner's family. Family helpers are paid a flat amount per job as professional services, on the owner's accountant's advice; it is the only pay type in use.
+
+**Helper.** A person other than the owner who works jobs, paid a flat amount per job. Each helper has a pay type: family helper or employee (planned).
+
+**Helper pay.** The flat amount a helper earns per job. Each helper has a usual amount, copied onto each assignment, which the owner can override for one job. Its GnuCash account comes from the helper's pay type: Professional Services for a family helper; an employee's wages account is a later decision.
+
+**Staff payout.** Money paid to a helper that settles one or more assignments.
+
 ## System terms
+
+**Baserow id.** The id of the Baserow row an imported customer, vehicle or appointment came from. It is kept so the import can be re-run before launch without making duplicates.
+
+**Change history.** The earlier versions of a record, with who changed it and when, kept for the pricebook (promotions included), customers, vehicles and appointments.
 
 **Control app.** The private web app the owner and staff use to run the business, served by the core app and reachable only over Tailscale.
 
