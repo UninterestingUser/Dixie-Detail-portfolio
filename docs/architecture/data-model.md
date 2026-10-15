@@ -37,6 +37,8 @@ erDiagram
     PricebookVersion |o--o{ AppointmentLine : "was the source of"
     Promotion |o--o{ AppointmentLine : "discounts"
     Payment ||--o{ Refund : "is returned by"
+    Customer ||--o{ GiftCard : "buys"
+    GiftCard |o--o{ Payment : "pays part of"
     ExportBatch |o--o{ Payment : "exported"
 ```
 
@@ -62,7 +64,7 @@ The `pricebook` and `promotions` apps. Prices are loaded from [data/price-matrix
 - **Derived price rule** prices a service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance is 80% and Monthly Maintenance 50% of Full Detail. See [../reference/pricing.md](../reference/pricing.md).
 - **Condition level** holds each of the three condition levels with the percentage it adds, in each version.
 - **Pricing rules** holds a version's crew time factor, job-time rounding and full-day threshold.
-- **Promotion** is a named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer. It is a percentage off, a dollar amount off, or a fixed price. It can have dates, a promo code, a website banner, and the services it applies to (none listed means every service).
+- **Promotion** is a named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer. It is a percentage off, a dollar amount off, a fixed price, or a free voucher. A **voucher** must have a code; its dollar value comes off the job as a promotion line, never more than the job's price (decision 0054). It can have dates, a promo code, a website banner, and the services it applies to (none listed means every service).
 
 ## Appointments
 
@@ -83,6 +85,7 @@ The `appointments` app.
 The `billing` app. Every amount of money is an exact decimal (decision 0047).
 
 - **Payment** is money, or goods in a trade, received for an appointment: the method, the amount toward the job, the tip, when it was paid, a reference such as a check number, and the processor fee. A job paid two ways has two payments. A gift card or other prepayment is a payment recorded before the job. A tip can be negative: a customer who paid less than the total is recorded with a negative tip. A trade must say what goods were received, and its amount is their value. See [../reference/payments.md](../reference/payments.md).
+- **Gift card** is a dollar balance sold in advance, sales tax included, with a code, the buyer, an optional recipient and how the buyer paid. Its balance is the amount sold less the gift-card payments made from it. Paying with a card uses as much of the balance as the bill needs and never takes it below zero, so the rest of the bill becomes a second payment by another method. The one imported gift-card job has a gift-card payment with no card (decision 0054).
 - **Payment methods** are card, Cash App Pay, Cash App to the owner's $cashtag, Venmo, PayPal, cash, bitcoin, check, trade and gift card. Check and trade are owner-only and never offered on the website (decision 0053).
 - **Invoice** holds a completed job's bill: the number, the tax jurisdiction, the state and local rates as charged, the taxable amount, each tax and the total. The rates are copied, so a later rate change cannot alter it.
 - **Refund** holds an amount returned on a payment, the tax refunded and the reason.
@@ -100,7 +103,7 @@ The `staff` app.
 
 The `bookkeeping`, `messaging` and `marketing` apps.
 
-- **Export batch** is one GnuCash export. Payments, refunds and staff payouts point to the batch that exported them, so nothing is exported twice. Bitcoin, trades and gift cards are listed for manual entry instead. See [../reference/bookkeeping-gnucash.md](../reference/bookkeeping-gnucash.md).
+- **Export batch** is one GnuCash export. Payments, refunds and staff payouts point to the batch that exported them, so nothing is exported twice. Bitcoin, trades and the imported gift-card prepayment are listed for manual entry instead. Gift card sales point to their batch too. See [../reference/bookkeeping-gnucash.md](../reference/bookkeeping-gnucash.md).
 - **Message template** holds the editable wording of one automated text and the consent it needs.
 - **Message** logs every text sent or received, with its number, wording, delivery status and the customer and appointment it belongs to.
 - **Review request** records the request sent after a paid job and whether a review followed.
