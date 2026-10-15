@@ -9,10 +9,9 @@ phases:
   - number: 0
     name: Foundations
     status: done
-    completed: 2026-10-13
+    completed: 2026-10-14
     done_when: A backup has been restored successfully and the server answers through the tunnel
-    open_items:
-      - Restore test deferred until the database has tables (run in Phase 1)
+    note: Everything but the restore test was done on 2026-10-13; the restore test was deferred until the database had tables and passed on 2026-10-14
   - number: 1
     name: Core data and control app
     status: in_progress
@@ -21,7 +20,7 @@ phases:
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
       - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
-      - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes
+      - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes (done 2026-10-14)
     done_in_docs_migration:
       - BWS_SERVER_URL added to .env.example and used by every script that calls bws
       - Secret names in .env.example and data/configuration.yaml match what ops/ fetches
