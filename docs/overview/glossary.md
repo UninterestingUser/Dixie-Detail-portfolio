@@ -49,11 +49,11 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Promotion.** A named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer, defined as a percentage off, a dollar amount off or a fixed price. It appears on a job as its own line.
 
-**Size variant.** The 1, 2 or 3 in the price matrix's size column, also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs.
+**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as motorcycles, and then has a single price per service.
 
 **Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
 
-**Vehicle class.** One of six groups that set the price: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+**Vehicle class.** A group of vehicles that share prices. There are six at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
 ## Booking and scheduling terms
 

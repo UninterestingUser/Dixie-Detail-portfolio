@@ -1,9 +1,10 @@
 meta:
   title: Vehicle classes
   summary: The six vehicle classes that set prices, what the size variant means for each, and the EPA size classes that map to them.
-  updated: 2026-10-13
+  updated: 2026-10-14
   status: current
   explained_in: docs/reference/vehicle-classification.md
+  note: The launch set. In the database, vehicle classes and their size variants are records the owner can add, rename or retire without a code change (docs/architecture/data-model.md); update this file when the set changes.
 
 classes:
   - name: Coupes & Sedans
