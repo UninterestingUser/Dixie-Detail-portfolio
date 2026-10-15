@@ -4,7 +4,7 @@ summary: How to confirm the nightly backup ran, run one by hand, test a restore,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [operations, backups, restore, restic]
 related: [docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md]
 ---
@@ -33,7 +33,7 @@ journalctl -u dixie-backup.service --no-pager | tail -15
 sudo /srv/dixie-detail/ops/restore-test.sh
 ```
 
-The script restores the newest Drive snapshot into a throwaway PostgreSQL container with no network and its data in memory, then checks that the snapshot is under 36 hours old, that `pg_restore` finished without an error, that every table in the dump came back, and that `django_migrations` exists. It prints each table's row count and ends with `restore-test: PASS`. The container is removed either way. The test must pass at the end of Phase 0 and again before launch. It fails with "django_migrations is missing" until the database has tables; at the end of Phase 0 that was expected, and the test was deferred to Phase 1.
+The script restores the newest Drive snapshot into a throwaway PostgreSQL container with no network and its data in memory, then checks that the snapshot is under 36 hours old, that `pg_restore` finished without an error, that every table in the dump came back, and that `django_migrations` exists. It prints each table's row count and ends with `restore-test: PASS`. The container is removed either way. The test must pass at the end of Phase 0 and again before launch. It fails with "django_migrations is missing" if the database has no tables; at the end of Phase 0 that was expected, and the test was deferred until Phase 1 created them. It passed on 2026-10-14.
 
 ## Recover the database (outline)
 
