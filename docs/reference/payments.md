@@ -4,9 +4,9 @@ summary: How each payment method is taken at the job and marked paid, and the pa
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [payments, stripe, billing]
-related: [docs/reference/bookkeeping-gnucash.md, docs/decisions/0008-stripe-and-manual-payments.md, docs/decisions/0009-bitcoin-later-phase.md]
+related: [docs/reference/bookkeeping-gnucash.md, docs/decisions/0008-stripe-and-manual-payments.md, docs/decisions/0009-bitcoin-later-phase.md, docs/decisions/0053-check-and-trade-owner-only.md, docs/architecture/data-model.md]
 ---
 
 # Payments
@@ -24,13 +24,22 @@ Payment is due at the time of service, with no deposit and no card on file. The 
 | PayPal | The owner's PayPal link or QR code in the payment text | The owner taps "paid" |
 | Cash | In hand | The owner taps "paid" |
 | Bitcoin | The owner's wallet QR code | The owner taps "paid" until Phase 7 adds BTCPay invoices |
+| Check (owner only) | Handed to the owner, by arrangement | The owner records it with the check number |
+| Trade (owner only) | Goods instead of money, by arrangement | The owner records what was received and its value |
+
+## Owner-only methods
+
+Checks and trades are accepted by the owner case by case and are never offered on the website. A check posts to the business checking account in GnuCash. A trade is left out of the GnuCash export and listed for manual entry, like bitcoin. See [decision 0053](../decisions/0053-check-and-trade-owner-only.md).
 
 ## Rules for every payment
 
 - **Totals include sales tax,** shown as its own line on the payment link and the receipt.
-- **Tips** are recorded separately and are not taxed.
+- **Tips** are recorded separately and are not taxed. When a customer pays less than the total, the shortfall is recorded as a negative tip, as the Baserow history does, so the job's lines still show the full price.
 - **Card details never touch the server.** Stripe handles them.
 - **Gift cards and prepayments** are recorded as payments before the job, so the appointment shows as already paid.
+- **A job paid two ways,** such as part cash and part check, has one payment for each method.
+- **A job given as a gift** carries a "no charge" line, with a reason, that brings its total to zero. It has no payment.
+- **A final price that differs from the list price** is an on-site adjustment line with a reason. The list price stays on the job's lines.
 - **Unpaid finished jobs** stay as open balances in the control app; they are not sent to the books until paid.
 
 ## Later options

@@ -4,7 +4,7 @@ summary: How paid jobs, fees, payouts and refunds become balanced GnuCash transa
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [bookkeeping, gnucash, accounting, export]
 related: [data/gnucash-accounts.yaml, docs/reference/payments.md, docs/reference/sales-tax.md, docs/decisions/0010-gnucash-stays.md, docs/decisions/0035-gnucash-account-mapping.md]
 ---
@@ -31,16 +31,20 @@ GnuCash stays the general ledger. The system keeps the sales side and hands GnuC
 | Paid in cash | Assets:Current Assets:Petty Cash | The same three |
 | Paid straight to the owner's $cashtag | Assets:Current Assets:Cash.App | The same three |
 | Paid in bitcoin | Left out of the export and listed for manual entry until Phase 7 adds an account | The same three |
+| Paid by check (owner only) | Assets:Current Assets:Checking Account, as a direct deposit | The same three |
+| Paid in a trade (owner only) | Left out of the export and listed for manual entry, with the goods received and their value | The same three |
+| Paid by gift card | Listed for manual entry until the owner confirms an account | The same three |
 | Promotion or discount on a job | Income:Discounts & Refunds, as an extra split | None; tax is charged on the discounted price |
 | Stripe fee on a payment | Expenses:Fees:Payment Processing Fees | Assets:Current Assets:Stripe |
 | Stripe payout to the bank | Assets:Current Assets:Checking Account | Assets:Current Assets:Stripe |
+| Helper pay | Expenses:Professional Services (full name to be confirmed) | The account the pay came from |
 | Refund | Income:Discounts & Refunds, plus Liabilities:Sales Tax Payable for the tax refunded | The account it was paid from |
 
 Sales Tax Payable and Loans are Liability-type accounts in the owner's chart. Sales Tax Payable stays a plain Liability, not Accounts Payable.
 
 ## What the owner keeps entering by hand
 
-Venmo, PayPal and Cash App fees and transfers from each statement; cash moved from Petty Cash to Checking; expenses; and sales tax payments (Sales Tax Payable to Checking, using the app's tax report).
+Venmo, PayPal and Cash App fees and transfers from each statement; payments in bitcoin, trades and gift cards from the export's manual-entry list; cash moved from Petty Cash to Checking; expenses; and sales tax payments (Sales Tax Payable to Checking, using the app's tax report).
 
 ## The CSV layout, with an example
 
