@@ -23,7 +23,7 @@ A percentage off can produce fractions of a cent: 15% off $133.33 is $19.9995. T
 
 ## Decision
 
-A percentage promotion's discount is rounded to the nearest $0.01. An exact half cent rounds up, so 12.5% off $0.20 ($0.025) is $0.03. The owner set the nearest-cent rule on 2026-10-14; rounding an exact half cent up is the usual rule for money.
+A percentage promotion's discount is rounded to the nearest $0.01. An exact half cent rounds up, so 12.5% off $0.20 ($0.025) is $0.03. The owner set both parts of the rule on 2026-10-14: the nearest cent, and an exact half cent up.
 
 ## Alternatives considered
 
