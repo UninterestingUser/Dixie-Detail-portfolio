@@ -4,14 +4,14 @@ summary: The step-by-step procedure that built the server foundation in Phase 0,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [operations, runbook, phase-0, rebuild]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/operations/deploying-changes.md, docs/operations/workstation-setup.md]
 ---
 
 # Phase 0 foundations runbook
 
-Phase 0 ended on 2026-10-13 with the server running the empty stack, reachable privately over Tailscale and publicly through the Cloudflare Tunnel, backed up nightly to the RAID and Google Drive, and watched by Healthchecks.io. The restore test was deferred until the database has tables.
+Phase 0 ended on 2026-10-13 with the server running the empty stack, reachable privately over Tailscale and publicly through the Cloudflare Tunnel, backed up nightly to the RAID and Google Drive, and watched by Healthchecks.io. The restore test was deferred until the database had tables, and passed on 2026-10-14, which completed Phase 0.
 
 This runbook is the procedure as finally executed, with every correction folded in. It was first written as the Claude doc "Phase 0: Foundations runbook" (now frozen). To rebuild the server, follow it in order; each step ends with a check. Problems met along the way are in [troubleshooting.md](troubleshooting.md).
 
@@ -155,7 +155,7 @@ sudo systemctl enable --now dixie-backup.timer
 sudo systemctl start dixie-backup.service
 ```
 
-6. Run `sudo ops/restore-test.sh`. (Deferred at the end of Phase 0 until the database has tables.)
+6. Run `sudo ops/restore-test.sh`. (Deferred at the end of Phase 0 until the database had tables; passed on 2026-10-14.)
 
 **Check:** a `dixie-detail-backups` folder appears in Google Drive, `systemctl list-timers | grep dixie` shows tonight's run, and the restore test passes.
 
@@ -174,7 +174,7 @@ sudo systemctl start dixie-backup.service
 - [x] `apcaccess status` shows the battery unit ONLINE.
 - [x] `https://api.dixiedetail.com/health` answers from outside, and other paths return "not found".
 - [x] The tailnet address opens the app with Tailscale on, and nothing answers on `192.0.2.10:8000`.
-- [x] A backup has reached Google Drive. (Restore test deferred to Phase 1.)
+- [x] A backup has reached Google Drive and been restored: the restore test passed on 2026-10-14.
 - [x] `RESTIC_PASSWORD` is in Secrets Manager, the Bitwarden vault and on sealed paper.
 - [x] Both Healthchecks.io checks are green, and the test alert arrived.
 - [x] No secret sits in plaintext on the server: `.env` holds only settings, `~/.ssh` has no deploy key, and rclone's config is encrypted.

@@ -4,7 +4,7 @@ summary: How the database is backed up every night to the RAID and to Google Dri
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [backups, restic, rclone, monitoring, healthchecks]
 related: [docs/operations/backups-and-restore.md, docs/operations/monitoring.md, docs/decisions/0027-backups-to-google-drive.md, docs/decisions/0039-healthchecks-monitoring.md]
 ---
@@ -35,7 +35,7 @@ The backup fetches `RESTIC_PASSWORD`, `RCLONE_CONFIG_PASS` and `HEALTHCHECKS_BAC
 
 ## Restore test
 
-`sudo ops/restore-test.sh` restores the newest Drive snapshot into a throwaway PostgreSQL container and checks it. The test fails if the newest snapshot is more than 36 hours old, if `pg_restore` reports an error, if the number of tables restored differs from the number in the dump, or if Django's `django_migrations` table is missing. It prints each table's row count. The container has no network and keeps its data in memory, and the dump streams from restic straight into it, so no plaintext copy is written to disk. A restore is required at the end of Phase 0 and again before launch. At the end of Phase 0 the test was deferred because the database had no tables yet; see [../overview/roadmap.md](../overview/roadmap.md).
+`sudo ops/restore-test.sh` restores the newest Drive snapshot into a throwaway PostgreSQL container and checks it. The test fails if the newest snapshot is more than 36 hours old, if `pg_restore` reports an error, if the number of tables restored differs from the number in the dump, or if Django's `django_migrations` table is missing. It prints each table's row count. The container has no network and keeps its data in memory, and the dump streams from restic straight into it, so no plaintext copy is written to disk. A restore is required at the end of Phase 0 and again before launch. At the end of Phase 0 the test was deferred because the database had no tables yet; it passed on 2026-10-14, once the Phase 1 data model had created them. See [../overview/roadmap.md](../overview/roadmap.md).
 
 ## Monitoring with Healthchecks.io
 
