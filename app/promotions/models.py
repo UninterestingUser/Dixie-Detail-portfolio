@@ -1,7 +1,7 @@
 """Named promotions, such as Friends & Family, Multi-Vehicle or a seasonal
 offer, and free vouchers (decision 0054)."""
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import models
 from django.db.models import Q
@@ -64,5 +64,5 @@ class Promotion(models.Model):
             return min(self.value, amount)
         if self.kind == self.Kind.FIXED_PRICE:
             return max(amount - self.value, Decimal("0.00"))
-        # How a percentage is rounded to the cent has not been settled.
-        raise NotImplementedError("Percentage promotions need a rounding rule first.")
+        # Rounded to the nearest cent, an exact half cent up (decision 0055).
+        return (amount * self.value / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

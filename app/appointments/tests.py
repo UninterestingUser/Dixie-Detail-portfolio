@@ -145,6 +145,26 @@ class VoucherTests(TestCase):
         line.save()
         self.assertEqual(self.appointment.total_before_tax, Decimal("0.00"))
 
+    def test_percentage_promotion_rounds_to_the_nearest_cent(self):
+        # Decision 0055. Invented percentages and amounts.
+        cases = [
+            ("15.000", "133.33", "20.00"),  # 19.9995
+            ("10.000", "133.33", "13.33"),  # 13.333
+            ("12.500", "0.20", "0.03"),  # 0.025, an exact half cent, rounds up
+        ]
+        for percent, amount, expected in cases:
+            with self.subTest(percent=percent, amount=amount):
+                promotion = Promotion(name="Test", kind=Promotion.Kind.PERCENT_OFF, value=Decimal(percent))
+                self.assertEqual(promotion.discount_on(Decimal(amount)), Decimal(expected))
+
+    def test_percentage_promotion_applies_as_a_promotion_line(self):
+        promotion = Promotion.objects.create(
+            name="Test percent", kind=Promotion.Kind.PERCENT_OFF, value=Decimal("15")
+        )
+        line = AppointmentLine.for_promotion(self.appointment, promotion, VERSION_1_PRICE)
+        line.save()
+        self.assertEqual(line.amount, Decimal("-15.00"))
+
     def test_voucher_needs_a_code(self):
         with self.assertRaises(IntegrityError):
             Promotion.objects.create(name="No code", kind=Promotion.Kind.VOUCHER, value=Decimal("25.00"))

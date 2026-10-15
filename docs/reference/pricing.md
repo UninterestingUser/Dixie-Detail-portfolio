@@ -4,9 +4,9 @@ summary: How every price is built from the price matrix, what size variants mean
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-14
 tags: [pricing, pricebook, crew]
-related: [data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
+related: [docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
@@ -23,7 +23,7 @@ A price is looked up by three things together: service, vehicle class and size v
 
 1. **Base price,** looked up by service, vehicle class and size variant.
 2. **Condition adjustment** of 0%, 10% or 20% of the base price, for Full Detail, Interior Only and Exterior Only only. Rounded to the whole dollar.
-3. **Add-ons,** then **promotions.**
+3. **Add-ons,** then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
 4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md).
 5. **On-site adjustment,** entered by the owner at the job, always with a reason, shown on the invoice.
 
