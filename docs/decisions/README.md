@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, gift cards and vouchers found in the job history.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round.
 
 ## Open points
 
@@ -78,3 +78,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0052](0052-django-sign-in-over-tailscale.md) | 2026-10-14 | security | Django sign-in, reachable only over Tailscale | accepted |
 | [0053](0053-check-and-trade-owner-only.md) | 2026-10-14 | payments | Check and trade are owner-only payment methods | accepted |
 | [0054](0054-gift-cards-and-vouchers.md) | 2026-10-14 | payments | Gift cards are a balance owed until used; vouchers are promotions | accepted |
+| [0055](0055-percentage-promotions-round-to-the-cent.md) | 2026-10-14 | pricing | Percentage promotions round to the nearest cent | accepted |

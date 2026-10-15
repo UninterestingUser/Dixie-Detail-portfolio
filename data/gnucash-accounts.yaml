@@ -55,7 +55,7 @@ other_postings:
       debit: Income:Discounts & Refunds
       note: The value used, as an extra split like a promotion; tax is charged on the reduced price
   helper_pay:
-    debit: Expenses:Professional Services   # full name to be confirmed by the owner
+    debit: Expenses:Professional Services   # full name confirmed by the owner, 2026-10-14
     credit: the account the pay came from
     note: Flat pay per job, set per helper and overridable per job
   refund:
@@ -64,7 +64,7 @@ other_postings:
 
 account_types:
   Liabilities:Sales Tax Payable: Liability (plain, not Accounts Payable)
-  Liabilities:Gift Cards Outstanding: Liability (to be created by the owner before the first gift card export)
+  Liabilities:Gift Cards Outstanding: Liability (created in GnuCash by the owner, 2026-10-14)
   Liabilities:Loans: Liability
 
 entered_by_hand:
