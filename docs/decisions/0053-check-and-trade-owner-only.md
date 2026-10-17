@@ -7,7 +7,7 @@ area: payments
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-14
+updated: 2026-10-17
 supersedes: []
 superseded_by: []
 related: [docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, data/gnucash-accounts.yaml, data/business.yaml]
@@ -43,3 +43,5 @@ The history also includes helpers paid a flat amount per job. Today every helper
 ## Consequences
 
 The payment methods in code mark check and trade as owner-only, and the website's list of methods leaves them out. A trade needs the owner's judgement in GnuCash, such as which asset or expense account the goods belong to, so it stays manual. Hiring an employee needs its own decision first, covering the wages account and payroll.
+
+On 2026-10-17 the owner confirmed that family helper pay posts to Expenses:Professional Services. How family helpers are paid will be revisited when their help becomes regular.

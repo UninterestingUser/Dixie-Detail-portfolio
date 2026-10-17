@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -13,11 +13,11 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps.
 
 ## Open points
 
-- **0022:** rounding the second Monthly job's start up to the quarter hour is proposed, not yet confirmed by the owner.
+- **0056** (from 0022): rounding a later job's start up to the quarter hour is proposed, not yet confirmed by the owner.
 - **0037:** the Georgia tax treatment awaits the accountant's confirmation.
 
 ## All decisions
@@ -44,8 +44,8 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0018](0018-monthly-maintenance-two-person-default.md) | 2026-10-07 | crew | Monthly Maintenance defaults to a two-person crew | accepted |
 | [0019](0019-second-person-flag-at-8-hours.md) | 2026-10-07 | crew | Flag a second person at 8 one-person hours | accepted |
 | [0020](0020-arrival-times-and-notice.md) | 2026-10-07 | booking | Arrival at 8:00, 8:30 or 9:00 AM, closed Sundays, two days' notice | accepted |
-| [0021](0021-one-job-per-day.md) | 2026-10-07 | booking | One job per day, except two Monthly Maintenance jobs | accepted |
-| [0022](0022-second-monthly-job-timing.md) | 2026-10-07 | booking | Timing of the second Monthly Maintenance job | accepted |
+| [0021](0021-one-job-per-day.md) | 2026-10-07 | booking | One job per day, except two Monthly Maintenance jobs | superseded by [0056](0056-scheduling-rules-are-settings.md) |
+| [0022](0022-second-monthly-job-timing.md) | 2026-10-07 | booking | Timing of the second Monthly Maintenance job | superseded by [0056](0056-scheduling-rules-are-settings.md) |
 | [0023](0023-time-to-leave-alert.md) | 2026-10-07 | alerts | Time-to-leave alert at drive time plus 10 minutes | accepted |
 | [0024](0024-google-maps-platform.md) | 2026-10-07 | maps | Google Maps Platform for address suggestions and drive times | accepted |
 | [0025](0025-sales-tax-by-service-address.md) | 2026-10-07 | tax | Sales tax added on top at the service address's rate | accepted |
@@ -79,3 +79,10 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0053](0053-check-and-trade-owner-only.md) | 2026-10-14 | payments | Check and trade are owner-only payment methods; helper pay follows the pay type | accepted |
 | [0054](0054-gift-cards-and-vouchers.md) | 2026-10-14 | payments | Gift cards are a balance owed until used; vouchers are promotions | accepted |
 | [0055](0055-percentage-promotions-round-to-the-cent.md) | 2026-10-14 | pricing | Percentage promotions round to the nearest cent | accepted |
+| [0056](0056-scheduling-rules-are-settings.md) | 2026-10-17 | scheduling | Scheduling rules are settings, checked by one availability check | accepted |
+| [0057](0057-calendar-sync-and-conflict-rules.md) | 2026-10-17 | calendar | Calendar sync and conflict rules: the app writes Jobs, reads Time Off, and neither calendar changes an appointment | accepted |
+| [0058](0058-service-times-exclude-setup-and-breakdown.md) | 2026-10-17 | pricing | Service times in the price matrix exclude setup and breakdown | accepted |
+| [0059](0059-quoted-price-is-price-of-record.md) | 2026-10-17 | pricing | The quoted price is the price of record | accepted |
+| [0060](0060-vehicle-classification-rules-are-data.md) | 2026-10-17 | vehicles | Vehicle classification rules are data the owner edits | accepted |
+| [0061](0061-staff-authorized-per-service.md) | 2026-10-17 | staff | Staff are authorized per service, and a manager assigns staff to each job | accepted |
+| [0062](0062-arrival-and-departure-by-one-tap.md) | 2026-10-17 | scheduling | Arrival and departure times are recorded by one tap | accepted |

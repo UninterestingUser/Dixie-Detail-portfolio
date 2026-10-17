@@ -4,7 +4,7 @@ summary: How each payment method is taken at the job and marked paid, and the pa
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [payments, stripe, billing]
 related: [docs/reference/bookkeeping-gnucash.md, docs/decisions/0008-stripe-and-manual-payments.md, docs/decisions/0009-bitcoin-later-phase.md, docs/decisions/0053-check-and-trade-owner-only.md, docs/decisions/0054-gift-cards-and-vouchers.md, docs/architecture/data-model.md]
 ---
@@ -31,7 +31,7 @@ Payment is due at the time of service, with no deposit and no card on file. The 
 
 Helpers are paid a flat amount per job, set for each helper, which the owner can override for one job. Each helper has a pay type, and the pay type decides how their pay is booked:
 
-- **Family helper,** the only type in use: paid as professional services, on the advice of the owner's accountant.
+- **Family helper,** the only type in use: paid as professional services, on the advice of the owner's accountant. The owner confirmed on 2026-10-17 that family helper pay posts to Expenses:Professional Services. How family helpers are paid will be revisited when their help becomes regular.
 - **Employee,** planned: paid normal wages per job. The wages account and payroll are a later decision, made before the first employee is hired.
 
 The accounts are in [bookkeeping-gnucash.md](bookkeeping-gnucash.md). Helpers' names, ages and pay totals are kept in the control app, never in these docs. See [decision 0053](../decisions/0053-check-and-trade-owner-only.md).

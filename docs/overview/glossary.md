@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -23,7 +23,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Estimate.** The price shown before the job, built from the pricebook. The final price is confirmed on site.
 
-**Full day flag.** A job of 8 or more one-person hours. The control app flags it for a second person, and the customer's estimate card says "full day" instead of hours.
+**Full day flag.** A job whose one-person time on site is 8 hours or more (7 or more one-person service hours). The control app flags it for a second person, and the customer's estimate card says "full day" instead of hours.
 
 **Line.** One priced item on an appointment: the service, the condition adjustment, each add-on, a promotion, an on-site adjustment, a no-charge line or a custom line.
 
@@ -35,11 +35,11 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **No-charge line.** A line, with a reason, that brings a job's total to zero when the owner gives the job as a gift. A no-charge job has no payment.
 
-**One-person hours.** The job length in the price matrix, measured for one person working alone.
+**One-person service hours.** The service time in the price matrix, measured for one person working alone. Setup and breakdown are not included. Called "one-person hours" before 2026-10-17, when the hours still included them.
 
 **On-site adjustment.** A price change the owner enters at the job, always with a reason, which appears on the invoice.
 
-**Price matrix.** The owner's table of 90 prices and job lengths, stored in [data/price-matrix.csv](../../data/price-matrix.csv). It is the only source of prices.
+**Price matrix.** The owner's table of 90 prices and one-person service hours, stored in [data/price-matrix.csv](../../data/price-matrix.csv). It is the only source of prices.
 
 **Pricebook.** The price matrix plus its rules (condition levels, maintenance percentages, add-ons, promotions) as stored in the database and edited in the control app.
 
@@ -49,6 +49,10 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Promotion.** A named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer, defined as a percentage off, a dollar amount off or a fixed price. It appears on a job as its own line.
 
+**Quote.** The server's record of a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. The website books with a reference to the quote, and its lines become the appointment's line snapshot. See [../reference/pricing.md](../reference/pricing.md).
+
+**Service time.** The time spent working on the vehicle, without setup and breakdown. The price matrix holds one-person service time; two people take 60% of it, rounded to the nearest 15 minutes. The pricing engine returns service time.
+
 **Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as motorcycles, and then has a single price per service.
 
 **Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
@@ -57,21 +61,31 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 ## Booking and scheduling terms
 
-**Arrival time.** The time the crew arrives: 8:00, 8:30 or 9:00 AM.
+**Arrival time.** The time the crew arrives and setup starts. It is the start time the customer picks.
 
 **Booking flow.** The seven-step process on the website that ends in a confirmed appointment. See [../reference/booking-flow.md](../reference/booking-flow.md).
 
-**Crew.** The one or two people working a job. Two people take 60% of the one-person hours.
+**Breakdown time.** The time after the service to pack up, 30 minutes for one person divided by the number of people on the job. A scheduling setting.
+
+**Crew.** The one or two people working a job. Two people take 60% of the one-person service time, and split setup and breakdown between them.
 
 **Estimate card.** The running total shown beside the booking steps on a desktop, and as a bar at the bottom of a phone screen.
 
 **Home base.** The address drive times start from, normally the owner's home. A setting.
 
-**Jobs calendar.** The Google calendar "Dixie Detail Jobs", written only by the system.
+**Jobs calendar.** The Google calendar "Dixie Detail Jobs", written only by the system. An edit made to it in Google is reset at the next sync.
 
-**Time Off calendar.** The Google calendar "Dixie Detail Time Off", written by the owner. An all-day event closes that day for booking.
+**Scheduling setting.** One of the rules that decide which days and start times are open, such as working hours, minimum notice or jobs per day. Launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml); live values will be in the database. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
 
-**Time-to-leave alert.** A push notification sent at drive time plus 10 minutes before a job's start.
+**Setup time.** The time before the service to unpack and get ready, 30 minutes for one person divided by the number of people on the job. A scheduling setting.
+
+**Start time.** A time a job can begin, offered online from that weekday's list of start times (8:00, 8:30 and 9:00 AM at launch). The start time is the arrival time.
+
+**Time Off calendar.** The Google calendar "Dixie Detail Time Off", written by the owner. An all-day event closes that day for booking; a timed event blocks only its own time.
+
+**Time on site.** How long the crew is at the customer's address: setup + service time + breakdown, rounded to the nearest 15 minutes. The Jobs calendar event and the estimate card show time on site.
+
+**Time-to-leave alert.** A push notification sent at drive time plus 10 minutes before a job's arrival time.
 
 ## Customer terms
 
@@ -115,11 +129,15 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Assignment.** A staff member on a job, with the flat pay for that job.
 
+**Authorization.** The record that a staff member may perform a service. Managers are authorized for every service. A manager can assign someone not yet authorized, for training, with a reason. See [../reference/control-app.md](../reference/control-app.md).
+
 **Family helper.** A helper who is a member of the owner's family. Family helpers are paid a flat amount per job as professional services, on the owner's accountant's advice; it is the only pay type in use.
 
 **Helper.** A person other than the owner who works jobs, paid a flat amount per job. Each helper has a pay type: family helper or employee (planned).
 
 **Helper pay.** The flat amount a helper earns per job. Each helper has a usual amount, copied onto each assignment, which the owner can override for one job. Its GnuCash account comes from the helper's pay type: Professional Services for a family helper; an employee's wages account is a later decision.
+
+**Manager.** A staff member who can assign staff, book outside the scheduling rules and is authorized for every service. Only the owner today.
 
 **Staff payout.** Money paid to a helper that settles one or more assignments.
 
