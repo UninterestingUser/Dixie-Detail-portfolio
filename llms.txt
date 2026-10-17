@@ -35,6 +35,7 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 
 - [Deploying changes](docs/operations/deploying-changes.md)
 - [Troubleshooting](docs/operations/troubleshooting.md)
+- [Publishing the public portfolio copy](docs/operations/publishing-the-portfolio.md)
 
 ## Conventions
 

@@ -16,7 +16,9 @@ phases:
     name: Core data and control app
     status: in_progress
     progress:
+      - Development setup and automated tests (pull request #14)
       - Data model for all nine areas built, with migrations and change history (2026-10-14)
+      - Plan review applied, decisions 0056 to 0062 (pull request #18)
     plan_review_2026_10_17:     # decisions 0056 to 0062
       step_3: [service hours without setup and breakdown, quote record, time on site, room for another price basis]
       step_5b: [staff authorization per service, staff page and service page toggles, assigning staff from the qualified list]
