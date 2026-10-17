@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-10-13
+  updated: 2026-10-17
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -40,6 +40,10 @@ services:
     purpose: Makes and models the EPA leaves out; door and seat data
     phase: 2
     status: Not started
+  - name: NHTSA vPIC Canadian vehicle specifications
+    purpose: Curb weight, overall length, width, height and wheelbase per trim, for the classification rules (GetCanadianVehicleSpecifications)
+    phase: 2
+    status: Not started; checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
   - name: Google Workspace Calendar
     purpose: Jobs and Time Off calendars
     phase: 3

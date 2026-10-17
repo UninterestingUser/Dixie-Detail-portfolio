@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-14
+  updated: 2026-10-17
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -17,6 +17,9 @@ phases:
     status: in_progress
     progress:
       - Data model for all nine areas built, with migrations and change history (2026-10-14)
+    plan_review_2026_10_17:     # decisions 0056 to 0062
+      step_3: [service hours without setup and breakdown, quote record, time on site, room for another price basis]
+      step_5b: [staff authorization per service, staff page and service page toggles, assigning staff from the qualified list]
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
       - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
@@ -28,14 +31,17 @@ phases:
   - number: 2
     name: Vehicle catalog
     status: planned
+    scope_from_plan_review: [classification rules as data, per-model and per-vehicle overrides, preview before saving, vehicle class settings, vPIC Canadian specifications]
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3
     name: Scheduling and website
     status: planned
+    scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4
     name: Texts, alerts and payments
     status: planned
+    scope_from_plan_review: [arrival and departure taps]
     done_when: One test appointment runs from booking through reminder, payment by every method and review request
   - number: 5
     name: Launch
@@ -49,6 +55,11 @@ phases:
     name: Bitcoin
     status: planned
     done_when: A test Bitcoin invoice marks its appointment paid
+
+later_add_ons:              # not scheduled
+  - name: Automatic arrival and departure
+    what: Native Android companion app using Android geofencing (about 150 m around each job address)
+    decision: "0062"
 
 owner_actions_open:
   - Stripe account check and Tap to Pay test

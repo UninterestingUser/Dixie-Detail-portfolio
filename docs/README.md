@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -60,12 +60,12 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Moving existing records](reference/data-migration.md) | How customers, vehicles and appointments are imported once from Baserow, with Setmore filling gaps, before both are retired. | planned |
 | [Payments](reference/payments.md) | How each payment method is taken at the job and marked paid, and the payment rules that apply to every appointment. | current |
 | [When prices or services change](reference/pricebook-changes.md) | How pricebook edits are published as versions with an effective date, why completed jobs never change, and how the owner decides case by case for booked jobs. | current |
-| [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and the rules that keep prices consistent. | current |
+| [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and why the quoted price is the price of record. | current |
 | [Returning customers and quiet matching](reference/returning-customers.md) | How a new booking is linked to an existing customer by mobile number without showing the customer anything, and how the owner resolves differences in the control app. | current |
 | [Sales tax](reference/sales-tax.md) | How sales tax is added at the rate for the customer's service address, how the rate is found and kept current, how approved out-of-area addresses are treated, and how collected tax is tracked until remitted. | current |
-| [Scheduling, calendars and time-to-leave alerts](reference/scheduling-and-calendars.md) | The booking rules that decide which days and times are open, how the two Google Workspace calendars are used, and how time-to-leave alerts are timed and delivered. | current |
+| [Scheduling, calendars and time-to-leave alerts](reference/scheduling-and-calendars.md) | The scheduling settings and the one availability check that decide which days and start times are open, time on site, the calendar sync and conflict rules, time-to-leave alerts and arrival taps. | current |
 | [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the two kinds of consent each one needs, the exact consent wording, automatic STOP and HELP replies, and the carrier registration plan. | current |
-| [Vehicle classification](reference/vehicle-classification.md) | How a customer's year, make and model is turned into one of the six vehicle classes and a size variant using free EPA and NHTSA data, override rules and an owner review queue. | planned |
+| [Vehicle classification](reference/vehicle-classification.md) | How a customer's year, make and model will be turned into a vehicle class and size variant, using free EPA and NHTSA data, owner-editable classification rules, overrides and a review queue. | planned |
 | [Website and SEO](reference/website-and-seo.md) | The structure, design direction and search-ranking safeguards for the new Astro website that replaces WordPress at launch. | planned |
 
 ## Operations: running the server
@@ -88,7 +88,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 44 records as of 2026-10-13, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 62 records as of 2026-10-17, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

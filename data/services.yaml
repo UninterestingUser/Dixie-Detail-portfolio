@@ -1,7 +1,7 @@
 meta:
   title: Service catalogue
   summary: Every service Dixie Detail sells or has sold, what its price depends on, whether condition applies, and who can book it. Prices themselves are in price-matrix.csv.
-  updated: 2026-10-13
+  updated: 2026-10-17
   status: current
   explained_in: docs/reference/pricing.md
   prices_in: data/price-matrix.csv
@@ -54,13 +54,13 @@ services:
   - name: Quarterly Maintenance
     kind: maintenance plan
     price_varies_by: [vehicle_class, size_variant]
-    price_rule: 80% of the Full Detail price for the same class and size, with Full Detail hours
+    price_rule: 80% of the Full Detail price for the same class and size, with Full Detail service hours
     condition_applies: false
     booked_by: [owner]
   - name: Monthly Maintenance
     kind: maintenance plan
     price_varies_by: [vehicle_class, size_variant]
-    price_rule: 50% of the Full Detail price for the same class and size, with Full Detail hours
+    price_rule: 50% of the Full Detail price for the same class and size, with Full Detail service hours
     condition_applies: false
     default_crew: 2
     booked_by: [owner]

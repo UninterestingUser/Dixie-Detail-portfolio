@@ -1,49 +1,95 @@
 meta:
   title: Booking and scheduling rules
-  summary: Working days, notice, arrival times, daily capacity, second-job timing and alert timing, used to seed the scheduling settings.
-  updated: 2026-10-13
+  summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
+  updated: 2026-10-17
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
-  note: Launch defaults. Once the control app exists, the live values are in the database.
+  note: >-
+    Launch values. Every scheduling rule is a setting (decision 0056). These values seed the
+    settings; once the control app's settings screen exists (Phase 3), the live values are in the
+    database, with change history. Update this file when a launch value changes.
 
-closed_weekdays: [Sunday]
-days_off_sources: [control app, "all-day events on the Dixie Detail Time Off calendar"]
-minimum_notice_days: 2          # no same-day or next-day booking
-arrival_times: ["08:00", "08:30", "09:00"]
 time_zone: America/New_York
 
-capacity:
-  jobs_per_day: 1
-  exception: Two Monthly Maintenance jobs can share a day
-  owner_only_services: [Monthly Maintenance, Quarterly Maintenance]
-  repeating_series: owner can book a single visit or a repeating series
+# Which days are open
+open_weekdays: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]   # Sunday closed
+working_hours:            # per open weekday
+  Monday: {open: "08:00", close: "18:00"}
+  Tuesday: {open: "08:00", close: "18:00"}
+  Wednesday: {open: "08:00", close: "18:00"}
+  Thursday: {open: "08:00", close: "18:00"}
+  Friday: {open: "08:00", close: "18:00"}
+  Saturday: {open: "08:00", close: "18:00"}
+date_exceptions:
+  kinds: [closed all day, different hours]
+  sources: [control app, "events on the Dixie Detail Time Off calendar"]
 
-second_monthly_job:
-  start: first job's scheduled end + buffer
-  buffer: drive time between the two addresses
-  minimum_buffer_minutes: 30
+# Which start times are offered online
+start_times_online:       # per weekday; the start time is the arrival time, when setup starts
+  Monday: ["08:00", "08:30", "09:00"]
+  Tuesday: ["08:00", "08:30", "09:00"]
+  Wednesday: ["08:00", "08:30", "09:00"]
+  Thursday: ["08:00", "08:30", "09:00"]
+  Friday: ["08:00", "08:30", "09:00"]
+  Saturday: ["08:00", "08:30", "09:00"]
+minimum_notice_days: 2           # no same-day or next-day booking
+furthest_bookable_days: 90       # the furthest date bookable online
+
+# Time on site = setup + service time + breakdown (decision 0056)
+setup_minutes_one_person: 30         # divided by the number of people on the job
+breakdown_minutes_one_person: 30     # divided by the number of people on the job
+time_on_site_rounding_minutes: 15    # nearest
+
+# Daily capacity
+jobs_per_day: 1
+services_sharing_a_day:
+  - {service: Monthly Maintenance, max_per_day: 2}
+gap_between_jobs:
+  rule: a later job starts no earlier than the earlier job's end (after breakdown) plus the drive time between the two addresses
+  minimum_minutes: 30
   round_start_up_to_minutes: 15
-  rounding_status: proposed during planning, not yet confirmed by the owner
-  example: "08:00 job of 3 hours + 42-minute drive = 11:45 start"
+  rounding_status: proposed during planning (decision 0022), not yet confirmed by the owner
+last_job_ends_by_closing: when the day holds more than one job; a single job may run past closing time
+crews_at_once: 1          # one crew working one job at a time; two crews at once would be a design change
 
+owner_only_services: [Monthly Maintenance, Quarterly Maintenance]
+repeating_series: the owner can book a single visit or a repeating series
 second_vehicle_same_day: accepted as a request the owner approves
+manager_override: a manager can book outside any rule in the control app after a warning, with a reason; the website never can
+
+# Staff assignment (decision 0061)
+staff_assignment:
+  automatic_when_one_qualified: true   # assign the only qualified active staff member and skip the prompt
 
 time_to_leave_alert:
   lead: drive time + buffer
   buffer_minutes: 10
-  drive_time_from: home base, or the first job's address for a second job that day
+  counts_back_from: the arrival time (the start of setup)
+  drive_time_from: home base, or the earlier job's address for a later job that day
   traffic: predicted for that time of day
   computed: at booking and again on the morning of the job
   delivery: push notification from the control app to every assigned staff member
   backup: '"Drive to job" block on the Jobs calendar'
+
+arrival_and_departure:        # Phase 4 (decision 0062)
+  arrived_prompt: push at the scheduled arrival time
+  departed_reminder: push at the expected end time
+  recorded_by: [tap, automatic, edited]
+  background_location: false
 
 calendars:
   jobs:
     name: Dixie Detail Jobs
     written_by: the system only
     service_account_access: edit
+    sync_within_minutes: 1
+    full_check: nightly
   time_off:
     name: Dixie Detail Time Off
     written_by: the owner
     service_account_access: read
+    check_every_minutes: 5          # and again when a booking is submitted
+    timed_event_buffer_minutes: 0
+    stale_copy_warning_minutes: 60  # warn in the control app when the last copy is older
+    free_busy_setting: ignored      # every event counts
   customers_as_guests: false
