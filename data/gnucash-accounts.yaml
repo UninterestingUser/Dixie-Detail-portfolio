@@ -1,7 +1,7 @@
 meta:
   title: GnuCash account mapping
   summary: Which GnuCash accounts each payment, fee, payout, discount and refund posts to, by full account name, for the CSV export.
-  updated: 2026-10-14
+  updated: 2026-10-17
   status: current
   explained_in: docs/reference/bookkeeping-gnucash.md
 
@@ -60,8 +60,9 @@ other_postings:
     note: Both pay types are a flat amount per job, set per helper and overridable per job
     by_pay_type:
       family_helper:
-        debit: Expenses:Professional Services   # the owner's accountant's advice for family helpers; full name confirmed 2026-10-14
+        debit: Expenses:Professional Services   # the owner's accountant's advice for family helpers; full name confirmed 2026-10-14, account confirmed by the owner 2026-10-17
         status: current
+        revisit: when family helpers' help becomes regular
       employee:
         debit: null   # wages and payroll are a later decision
         status: planned

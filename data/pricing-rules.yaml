@@ -1,7 +1,7 @@
 meta:
   title: Pricing rules
-  summary: The numbers behind pricing and job length - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
-  updated: 2026-10-14
+  summary: The numbers behind pricing and service time - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
+  updated: 2026-10-17
   status: current
   explained_in: docs/reference/pricing.md
   note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
@@ -25,19 +25,23 @@ maintenance_plans:
   base_service: Full Detail
   quarterly_percent_of_full_detail: 80
   monthly_percent_of_full_detail: 50
-  hours: same as Full Detail
+  service_hours: same as Full Detail
+
+service_time:
+  matrix_hours: one-person service time only; setup and breakdown are not included (decision 0058)
+  time_on_site: service time + setup + breakdown, from data/booking-rules.yaml (decision 0056)
 
 crew:
   sizes: [1, 2]
-  two_person_time_factor: 0.60
-  job_time_rounding_minutes: 15
+  two_person_time_factor: 0.60     # applies to service time
+  job_time_rounding_minutes: 15     # service time for the crew; time on site rounds the same way
   rounding_method: nearest
   default_crew:
     Monthly Maintenance: 2
     all_other_services: 1
 
 full_day_flag:
-  threshold_one_person_hours: 8
+  threshold_one_person_time_on_site_hours: 8   # 7 service hours plus 1 hour of setup and breakdown; the same jobs as the earlier 8 one-person hours
   action: Flag in the control app for a second person; the estimate card shows "full day" instead of hours
   blocks_booking: false
 
@@ -53,11 +57,20 @@ price_build_order:
   - sales tax at the service address's rate
   - on-site adjustment with a reason
 
+quote:                    # decision 0059; record built in Phase 1 Step 3, used by the website in Phase 3
+  issued_by: the server's pricing engine only
+  holds: [inputs, lines, totals, pricebook version, tax rate, service time, time on site]
+  booking: references the quote, never a price sent from the browser
+  becomes: the appointment's line snapshot (decision 0033)
+  owner_alert: any price change on a booked job not made by the owner
+  sales_tax: rate on the day of service; the price before tax never changes
+
 worked_example:
   vehicle: 2019 Toyota RAV4 (Crossovers & Wagons, 2 rows)
   lines:
-    - {item: Full Detail, price: 250, one_person_hours: 6}
+    - {item: Full Detail, price: 250, one_person_service_hours: 5}
     - {item: "Condition level 2 (+10%)", price: 25}
-    - {item: Seat Extraction, price: 80, one_person_hours: 1.5}
+    - {item: Seat Extraction, price: 80, one_person_service_hours: 1.5}
   total_before_tax: 355
-  one_person_hours: 7.5
+  one_person_service_hours: 6.5
+  one_person_time_on_site_hours: 7.5

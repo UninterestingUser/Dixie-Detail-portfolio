@@ -4,9 +4,9 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [data-model, database, phase-1]
-related: [docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
+related: [docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
 
 # Data model
@@ -124,8 +124,18 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 - **Imported records** keep the id of the Baserow row they came from, on customers, vehicles and appointments, so the import can be re-run before launch (decision 0051).
 - **Nothing is deleted from under a job.** A customer, vehicle, address, service, promotion or pricebook version that a job refers to cannot be deleted.
 
+## Planned: records decided but not built yet
+
+Everything above describes the code as it is. This section is the exception: it describes records the owner decided on 2026-10-17 that the code does not have yet. Each will move into the sections above, in the present tense, when it is built.
+
+- **Staff authorization** will link each staff member to each service they may perform: every active service, add-ons included, but not history-only services. The staff page and the service page will both edit this one record. Managers (only the owner today) will be authorized for every service, and a new service will start with only managers authorized. An assignment of someone not yet authorized, for training, will record the reason. Built in Phase 1 Step 5b (decision 0061).
+- **Quote** will hold a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. Its lines become the appointment's lines when the job is booked. Built in Phase 1 Step 3 (decision 0059).
+- **Appointment times as booked.** Each appointment will store its setup minutes, service minutes, breakdown minutes and crew size as booked, beside its start (arrival) time, so a later settings change never alters it (decision 0056). Today's single calculated job length (`job_minutes`) and the lines' `one_person_hours` predate the split into service time and time on site; Phase 1 Step 3 renames them.
+- **Scheduling settings** will hold the live values of the rules in [data/booking-rules.yaml](../../data/booking-rules.yaml), with change history. Built in Phase 3 (decision 0056).
+- **Arrival and departure** will be stored on each appointment, each with how it was recorded (tap, automatic or edited), and corrections logged. Built in Phase 4 (decision 0062).
+
 ## What is not built yet
 
-- Settings such as working hours, the home base and buffers. Their launch values are in `data/` until the scheduling work in Phase 3.
+- Settings such as working hours, start times, setup and breakdown, the home base and buffers. Their launch values are in `data/` until the scheduling work in Phase 3.
 - Loading the pricebook from `data/price-matrix.csv`, and the Baserow import.
 - Every screen of the control app, the Django admin and sign-in.
