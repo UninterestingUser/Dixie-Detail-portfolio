@@ -36,6 +36,7 @@ This repository holds the Dixie Detail business system. Read this file first, th
 - Code is the authority on what exists. If the docs and the code disagree, fix whichever is wrong and say so in the pull request.
 - When you solve a problem on the server, add it to `docs/operations/troubleshooting.md`.
 - Never put secret values or real customer data in docs, data files, issues or pull requests. Use invented examples.
+- This repository is published as a public portfolio copy by `tools/publish-portfolio.sh` (decision 0063), which replaces server addresses and a few private details in every commit. Write everything as if it were public after those replacements: no secrets, no customer data, no personal details about the owner's family. Refer to server-specific values by their setting name (for example "the tailnet name in `DJANGO_ALLOWED_HOSTS`") instead of writing the value.
 - Run `python3 tools/check_docs.py` before opening a pull request; it must pass.
 
 ## Tests
