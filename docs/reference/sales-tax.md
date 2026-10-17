@@ -4,9 +4,9 @@ summary: How sales tax is added at the rate for the customer's service address, 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-17
 tags: [sales-tax, tennessee, georgia, compliance]
-related: [data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
+related: [docs/decisions/0059-quoted-price-is-price-of-record.md, data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
 ---
 
 # Sales tax
@@ -27,7 +27,7 @@ The estimate card shows the tax line as soon as the address is entered; before t
 
 ## Keeping rates current
 
-The state publishes rate tables and boundary data, and its boundary map service is updated quarterly. A scheduled job compares stored rates with the state's and flags any change for the owner's approval. Each job is taxed at the rate in effect for its address on the day of service, so a rate change flows into booked jobs without a prompt.
+The state publishes rate tables and boundary data, and its boundary map service is updated quarterly. A scheduled job compares stored rates with the state's and flags any change for the owner's approval. Each job is taxed at the rate in effect for its address on the day of service. If a rate changes after a job is booked, the new rate applies, and the owner gets a push alert with the booked total shown beside the new one in the control app. The price before tax never changes ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
 
 ## Approved out-of-area addresses
 

@@ -4,9 +4,9 @@ summary: The seven steps a customer follows on the website to book a job, how th
 audience: [owner, staff, developer]
 visibility: internal
 status: planned
-updated: 2026-10-13
+updated: 2026-10-17
 tags: [booking, website, estimate-card, phase-3]
-related: [docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
+related: [docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
 
 # Customer booking flow
@@ -21,9 +21,9 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 2. **Condition.** Three cards with plain descriptions. The first adds nothing, the second 10% and the third 20%.
 3. **Service and add-ons.** Service cards show prices already adjusted for class, size and condition. Add-ons are tick boxes with their added price. Maintenance plans never appear here.
 4. **Location.** The service address, validated as the customer types (see below). It is checked against the service area and sets the sales tax rate, with a reminder that water and power are needed.
-5. **Date and time.** Only open days, and the three arrival times: 8:00, 8:30 or 9:00 AM.
+5. **Date and time.** Only the days and start times the availability check offers. The start times come from that weekday's start-times setting (8:00, 8:30 and 9:00 AM on every open day at launch), and a start time is shown only when the whole time on site fits. See [scheduling-and-calendars.md](scheduling-and-calendars.md).
 6. **Details.** Name, mobile number, preferred payment method, and two unchecked consent checkboxes: appointment texts and follow-up texts. Nothing is charged.
-7. **Review and confirm.** The full estimate, then a confirmation text (with consent) and a calendar file.
+7. **Review and confirm.** The full estimate, then a confirmation text (with consent) and a calendar file. The booking refers to the server's quote, never to a price sent from the browser.
 
 ## How the steps behave
 
@@ -34,8 +34,9 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 ## The estimate card
 
 - **Always in view.** It sits beside the steps on a desktop, and becomes a navy bar pinned to the bottom of a phone screen that opens into a full sheet when tapped.
-- **Builds line by line.** Vehicle and class, the service, the condition adjustment, each add-on, sales tax once the address is known, the total and the estimated job length. Before the address, the card says the total is before sales tax.
-- **Shows "full day"** instead of hours for a job of 8 or more one-person hours.
+- **Builds line by line.** Vehicle and class, the service, the condition adjustment, each add-on, sales tax once the address is known, the total and the estimated time on site (setup, service time and breakdown together). Before the address, the card says the total is before sales tax.
+- **Shows the server's numbers only.** Every price, total and time on the card comes from the server's quote; the website does no arithmetic of its own ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
+- **Shows "full day"** instead of hours when the one-person time on site is 8 hours or more.
 - **Sets expectations.** It states that the final price is confirmed when the vehicle is seen, and that nothing is charged until the job is done.
 
 ## Address entry is validated as the customer types
@@ -49,4 +50,4 @@ The mobile number field formats itself as (###) ###-#### while the customer type
 ## Other cases
 
 - **A second vehicle the same day** is taken as a request the owner approves.
-- **If the server is offline,** the site and prices still load, and the form becomes a "request a time" form that Cloudflare holds until the server returns.
+- **If the server is offline,** the site and prices still load, and the form becomes a "request a time" form that Cloudflare holds until the server returns. The form shows prices from the last published pricebook. When the server returns, it prices each request, and the owner is notified if a price differs from what the customer saw.
