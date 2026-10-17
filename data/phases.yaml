@@ -22,7 +22,7 @@ phases:
       step_5b: [staff authorization per service, staff page and service page toggles, assigning staff from the qualified list]
     done_when: The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable
     carry_overs_from_phase_0:
-      - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh
+      - Add DEPLOY_REMOTE and DEPLOY_BRANCH to the server's .env before the first run of ops/deploy.sh (done; confirmed by the owner 2026-10-17, ops/deploy.sh works)
       - Once the first models exist, run "sudo ops/restore-test.sh" and confirm it passes (done 2026-10-14)
     done_in_docs_migration:
       - BWS_SERVER_URL added to .env.example and used by every script that calls bws

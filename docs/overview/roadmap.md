@@ -19,9 +19,9 @@ The booking path ships first because it earns money; the back-office features fo
 
 The **restore test passed** on 2026-10-14, the last Phase 0 check. It had been deferred until the database had tables, which the Phase 1 data model created.
 
-**Phase 1 is under way.** The data model for all nine areas is built ([../architecture/data-model.md](../architecture/data-model.md)); the app creates its tables on the first start after the deploy. Still to come in Phase 1: loading the pricebook, the Baserow import and the control app screens. Phase 1 started with these carry-overs from Phase 0:
+**Phase 1 is under way.** The data model for all nine areas is built ([../architecture/data-model.md](../architecture/data-model.md)); the app creates its tables on the first start after the deploy. Still to come in Phase 1: loading the pricebook, the Baserow import and the control app screens. Phase 1 started with these carry-overs from Phase 0, both now done:
 
-1. Add `DEPLOY_REMOTE` and `DEPLOY_BRANCH` to the server's `.env` before the first run of `ops/deploy.sh`. (The deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY`, the name `ops/deploy.sh` asks for, on 2026-10-13.)
+1. Add `DEPLOY_REMOTE` and `DEPLOY_BRANCH` to the server's `.env` before the first run of `ops/deploy.sh`. (The deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY`, the name `ops/deploy.sh` asks for, on 2026-10-13.) **Done:** the owner confirmed on 2026-10-17 that both settings are in the server's `.env` and `ops/deploy.sh` works.
 2. Once the first models exist, run `sudo ops/restore-test.sh` and confirm it passes, which closes Phase 0. **Done 2026-10-14.**
 
 Two other carry-overs were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
