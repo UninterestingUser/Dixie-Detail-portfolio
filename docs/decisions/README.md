@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps. Record 0063 keeps the working repository private and publishes a rewritten public copy as a portfolio.
 
 ## Open points
 
@@ -86,3 +86,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0060](0060-vehicle-classification-rules-are-data.md) | 2026-10-17 | vehicles | Vehicle classification rules are data the owner edits | accepted |
 | [0061](0061-staff-authorized-per-service.md) | 2026-10-17 | staff | Staff are authorized per service, and a manager assigns staff to each job | accepted |
 | [0062](0062-arrival-and-departure-by-one-tap.md) | 2026-10-17 | scheduling | Arrival and departure times are recorded by one tap | accepted |
+| [0063](0063-public-portfolio-copy.md) | 2026-10-17 | repository | The working repository stays private; a rewritten public copy serves as a portfolio | accepted |
