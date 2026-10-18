@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from django.test import TestCase
+from django.utils import timezone
 
 from pricebook.models import Price, PricebookVersion, PublishedVersionError, Service
 from vehicles.models import SizeVariant, VehicleClass
@@ -22,9 +23,9 @@ class PublishedVersionTests(TestCase):
             vehicle_class=vehicle_class,
             size_variant=two_doors,
             price=Decimal("100.00"),
-            one_person_hours=Decimal("4"),
+            one_person_service_hours=Decimal("4"),
         )
-        cls.version.publish(datetime.date(2026, 10, 1))
+        cls.version.publish(timezone.localdate())
 
     def test_price_in_published_version_cannot_change(self):
         price = Price.objects.get(pk=self.price.pk)
