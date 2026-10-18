@@ -2,7 +2,7 @@
 
 The booking, scheduling, pricing and back-office system for Dixie Detail LLC, a one-person mobile vehicle detailing business in southeast Tennessee. One PostgreSQL database is the single source of truth for customers, vehicles, appointments, prices, payments, staff and bookkeeping. A private control app runs the business, and a fast public website will show live prices and take bookings.
 
-**Status (October 2026):** Phase 0 (foundations) is done and running on the home server. Phase 1 (core data and control app) is under way: the data model for all nine business areas is built, and the pricebook and pricing engine are next. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
+**Status (October 2026):** Phase 0 (foundations) is done and running on the home server. Phase 1 (core data and control app) is under way: the data model for all nine business areas, the pricebook and pricing engine, the import of the earlier records, and the control app's shell and customer screens are built. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
 
 **About the public copy.** The working repository is private. A public copy is published from it with [tools/publish-portfolio.sh](tools/publish-portfolio.sh), which rewrites every commit to replace server addresses and a few private details with placeholders. Everything else, including the full commit history, is as built.
 
@@ -40,7 +40,9 @@ This is a real system for a real business, built by its owner working with AI to
 | --- | --- |
 | Home server stack, private and public access, secrets handling, nightly off-site backups with restore tests, monitoring | Running (Phase 0) |
 | Data model for customers, vehicles, appointments, pricebook, promotions, billing, staff, bookkeeping and messaging, with change history | Built (Phase 1) |
-| Pricebook and pricing engine, import of the earlier records, control app screens | In progress (Phase 1) |
+| Pricebook and pricing engine, import of the earlier records | Built (Phase 1) |
+| Control app: installable phone-first shell, sign-in, customer search and customer pages | Built (Phase 1) |
+| Control app screens for the pricebook, appointments and staff | In progress (Phase 1) |
 | Vehicle catalog from EPA and NHTSA data, with classification rules the owner can edit | Planned (Phase 2) |
 | Public website with live estimates and online booking, scheduling settings, Google Calendar sync | Planned (Phase 3) |
 | Text messages, time-to-leave alerts, card payments, arrival and departure times | Planned (Phase 4) |

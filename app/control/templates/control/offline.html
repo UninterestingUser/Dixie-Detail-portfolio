@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Can't reach the control app · Dixie Detail</title>
+  <meta name="theme-color" content="{{ brand.navy }}">
+  {# Self-contained: the service worker shows it from its cache when the server cannot be reached. #}
+  <style>
+    body { margin: 0; font: 18px/1.5 system-ui, sans-serif; background: {{ brand.white }}; color: {{ brand.charcoal }}; }
+    header { background: {{ brand.navy }}; color: {{ brand.white }}; padding: 14px 16px; font-weight: 700; }
+    main { padding: 24px 16px; max-width: 32rem; }
+    button { font: inherit; width: 100%; min-height: 52px; border: 0; border-radius: 10px; background: {{ brand.red }}; color: {{ brand.white }}; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header>Dixie Detail</header>
+  <main>
+    <h1>Can't reach the control app</h1>
+    <p>The control app opens only over Tailscale. Check that Tailscale is connected on this device and that you have a signal, then try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

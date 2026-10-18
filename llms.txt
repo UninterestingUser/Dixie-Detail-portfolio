@@ -22,6 +22,12 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Text messages and consent](docs/reference/text-messages.md)
 - [Bookkeeping with GnuCash](docs/reference/bookkeeping-gnucash.md)
 
+## Guides
+
+- [Finding a customer and their history](docs/guides/finding-a-customer.md)
+- [Installing the control app](docs/guides/installing-the-control-app.md)
+- [Control app](docs/reference/control-app.md)
+
 ## Decisions
 
 - [Decision records index](docs/decisions/README.md)

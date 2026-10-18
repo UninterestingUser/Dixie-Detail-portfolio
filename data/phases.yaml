@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-17
+  updated: 2026-10-18
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -21,6 +21,7 @@ phases:
       - Plan review applied, decisions 0056 to 0062 (pull request #18)
       - "Step 3: pricebook loaded from data/ (load_pricebook), pricing engine, time on site, quote record and pricebook versioning; the tests check all 90 cells of the price matrix"
       - "Step 4: Baserow and Setmore import (import_baserow), a dry run by default, keyed on Baserow ids; not yet run on the server"
+      - "Control app shell and customer screens: phone-first and installable, sign-in over the tailnet address, customer search by name or phone, customer pages, adding and editing customers and vehicles"
     plan_review_2026_10_17:     # decisions 0056 to 0062
       step_3: [service hours without setup and breakdown, quote record, time on site, room for another price basis]
       step_5b: [staff authorization per service, staff page and service page toggles, assigning staff from the qualified list]

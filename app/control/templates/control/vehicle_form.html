@@ -1,0 +1,14 @@
+{% extends "control/base.html" %}
+{% block title %}{% if vehicle.pk %}Edit {{ vehicle }}{% else %}New vehicle{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if vehicle.pk %}Edit {{ vehicle }}{% else %}New vehicle{% endif %}</h1>
+<p class="muted">For {{ customer }}</p>
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  {% for field in form %}{% include "control/_field.html" %}{% endfor %}
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <a class="button" href="{% url 'customer' customer.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -56,7 +56,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Customer booking flow](reference/booking-flow.md) | The seven steps a customer follows on the website to book a job, how the running estimate card behaves, and how address and phone entry are validated. | planned |
 | [Bookkeeping with GnuCash](reference/bookkeeping-gnucash.md) | How paid jobs, fees, payouts and refunds become balanced GnuCash transactions, which accounts each event posts to, and the CSV layout the owner imports. | current |
 | [Settings and secrets reference](reference/configuration.md) | How the system's configuration is split between non-secret settings in .env and secrets in Bitwarden, with rules for adding or renaming either. | current |
-| [Control app](reference/control-app.md) | The private web app the owner and staff use to run the business, the areas it will contain, and the rules it follows. | planned |
+| [Control app](reference/control-app.md) | The private web app the owner and staff use to run the business, the screens built so far, the areas still to come, and the rules it follows. | current |
 | [Moving existing records](reference/data-migration.md) | How customers, vehicles, appointments, payments and staff are imported from Baserow, with Setmore filling gaps, how each export format is converted, and how re-runs update. | current |
 | [Payments](reference/payments.md) | How each payment method is taken at the job and marked paid, and the payment rules that apply to every appointment. | current |
 | [When prices or services change](reference/pricebook-changes.md) | How pricebook edits are published as versions with an effective date, why completed jobs never change, and how the owner decides case by case for booked jobs. | current |
@@ -86,11 +86,13 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 | Document | Summary | Status |
 | --- | --- | --- |
-| [Guides for day-to-day use](guides/README.md) | The index of task-based guides for using the Dixie Detail system day to day, by role, with the guides planned for each phase. | planned |
+| [Guides for day-to-day use](guides/README.md) | The index of task-based guides for using the Dixie Detail system day to day, by role: the guides written so far and those planned for each phase. | current |
+| [Finding a customer and their history](guides/finding-a-customer.md) | How to find a customer in the control app by name or by phone number in any format, what the customer page shows, and how to add or edit a customer or a vehicle. | current |
+| [Installing the control app on a phone or computer](guides/installing-the-control-app.md) | How to get a control app account, connect to Tailscale, sign in, and install the control app to the Pixel's home screen or a Fedora workstation, with what to do when it will not open or sign in. | current |
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 66 records as of 2026-10-17, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 68 records as of 2026-10-18, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

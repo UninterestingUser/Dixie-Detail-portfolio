@@ -1,0 +1,23 @@
+{% load control %}
+{% if not query %}
+  <p class="hint">Type a name or a phone number. Any format works: 423-555-0142, (423) 555-0142, or just the last four digits.</p>
+{% elif customers %}
+  <ul class="list">
+    {% for customer in customers %}
+      <li>
+        <a class="row" href="{% url 'customer' customer.pk %}">
+          <strong>{{ customer }}</strong>{% if customer.company %} <span class="muted">· {{ customer.company }}</span>{% endif %}
+          <span class="sub">{{ customer.mobile|phone|default:"No phone number" }}</span>
+          {% with vehicles=customer.vehicles.all contacts=customer.second_contacts.all %}
+            {% if vehicles %}<span class="sub">{{ vehicles|join:"; " }}</span>{% endif %}
+            {% if contacts %}<span class="sub">Also: {% for contact in contacts %}{{ contact.name }} {{ contact.phone|phone }}{% if not forloop.last %}; {% endif %}{% endfor %}</span>{% endif %}
+          {% endwith %}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  {% if more %}<p class="hint">Showing the first {{ customers|length }}. Type more to narrow it down.</p>{% endif %}
+{% else %}
+  <p class="hint">No customer matches “{{ query }}”.</p>
+  <p><a class="button" href="{% url 'customer-new' %}">Add a new customer</a></p>
+{% endif %}
