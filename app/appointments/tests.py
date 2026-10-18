@@ -1,8 +1,9 @@
 import datetime
 from decimal import Decimal
 
-from django.db import IntegrityError
-from django.test import TestCase
+from django.db import IntegrityError, connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from appointments.models import Appointment, AppointmentLine
@@ -263,3 +264,26 @@ class VoucherTests(TestCase):
     def test_voucher_needs_a_code(self):
         with self.assertRaises(IntegrityError):
             Promotion.objects.create(name="No code", kind=Promotion.Kind.VOUCHER, value=Decimal("25.00"))
+
+
+class CanceledSpellingMigrationTests(TransactionTestCase):
+    """Migration 0006 stores the canceled status in US spelling."""
+
+    before = [("appointments", "0005_exact_line_hours")]
+    after = [("appointments", "0006_canceled_us_spelling")]
+
+    def tearDown(self):
+        MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
+
+    def test_rows_in_the_old_spelling_become_canceled(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.before)
+        apps = executor.loader.project_state(self.before).apps
+        customer = apps.get_model("customers", "Customer").objects.create(first_name="Pat", mobile="4235550142")
+        appointment = apps.get_model("appointments", "Appointment").objects.create(
+            customer=customer, scheduled_start=timezone.now(), status="cancelled"  # the old British spelling
+        )
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.after)
+        self.assertEqual(Appointment.objects.get(pk=appointment.pk).status, Appointment.Status.CANCELED)
+        self.assertEqual(Appointment.Status.CANCELED.label, "Canceled")

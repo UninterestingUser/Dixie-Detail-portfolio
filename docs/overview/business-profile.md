@@ -11,7 +11,7 @@ related: [data/business.yaml, data/service-area.yaml, data/services.yaml, docs/o
 
 # Business profile
 
-Exact contact details, brand colours and profile links are in [data/business.yaml](../../data/business.yaml). This page explains them.
+Exact contact details, brand colors and profile links are in [data/business.yaml](../../data/business.yaml). This page explains them.
 
 ## What Dixie Detail does
 
@@ -41,7 +41,7 @@ Customers pay at the time of service, with no deposit. Accepted methods are cash
 
 ## Brand
 
-Red (#CC0000) is the main business colour, with navy blue (#002D65) as the accent and white. The logo is a script wordmark. The website direction is in [../reference/website-and-seo.md](../reference/website-and-seo.md).
+Red (#CC0000) is the main business color, with navy blue (#002D65) as the accent and white. The logo is a script wordmark. The website direction is in [../reference/website-and-seo.md](../reference/website-and-seo.md).
 
 ## Tools in use before the new system
 

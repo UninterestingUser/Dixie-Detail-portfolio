@@ -26,7 +26,7 @@ Kept from the current site, by the owner's direction (2026-10-10):
 
 Also on the homepage: services with "from" prices read from the database, the service area, frequently asked questions with a red call-to-action card, and a charcoal footer with a red top edge.
 
-## Colours and type
+## Colors and type
 
 - Red #CC0000 is the base: buttons, the band under the hero, review cards and the call-to-action card.
 - Navy #002D65 is the accent: small labels, prices, links, finished booking steps, and the booking estimate card and its phone bar.

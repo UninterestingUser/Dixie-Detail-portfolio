@@ -1,4 +1,4 @@
-"""Vehicle classes and their size variants, the vehicle catalogue and
+"""Vehicle classes and their size variants, the vehicle catalog and
 customers' vehicles.
 
 Vehicle classes and size variants are records, not choices in code: adding,

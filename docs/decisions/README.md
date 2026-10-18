@@ -91,3 +91,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0064](0064-app-reads-data-folder-read-only.md) | 2026-10-17 | infrastructure | The app reads the repository's data/ folder, mounted read-only | accepted |
 | [0065](0065-condition-lengthens-service-time.md) | 2026-10-17 | pricing | The condition level lengthens the main service's service time | accepted |
 | [0066](0066-imported-payments-already-in-the-books.md) | 2026-10-17 | migration | Imported payments are held by an "already in GnuCash" export batch; a split keeps both methods | accepted |
+| [0067](0067-color-tells-identical-vehicles-apart.md) | 2026-10-18 | booking | An optional color tells a returning customer's identical vehicles apart | accepted |
