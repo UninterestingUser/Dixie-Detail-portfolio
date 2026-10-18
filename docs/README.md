@@ -57,7 +57,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Bookkeeping with GnuCash](reference/bookkeeping-gnucash.md) | How paid jobs, fees, payouts and refunds become balanced GnuCash transactions, which accounts each event posts to, and the CSV layout the owner imports. | current |
 | [Settings and secrets reference](reference/configuration.md) | How the system's configuration is split between non-secret settings in .env and secrets in Bitwarden, with rules for adding or renaming either. | current |
 | [Control app](reference/control-app.md) | The private web app the owner and staff use to run the business, the areas it will contain, and the rules it follows. | planned |
-| [Moving existing records](reference/data-migration.md) | How customers, vehicles and appointments are imported once from Baserow, with Setmore filling gaps, before both are retired. | planned |
+| [Moving existing records](reference/data-migration.md) | How customers, vehicles, appointments, payments and staff are imported from Baserow, with Setmore filling gaps, how each export format is converted, and how re-runs update. | current |
 | [Payments](reference/payments.md) | How each payment method is taken at the job and marked paid, and the payment rules that apply to every appointment. | current |
 | [When prices or services change](reference/pricebook-changes.md) | How pricebook edits are published as versions with an effective date, why completed jobs never change, and how the owner decides case by case for booked jobs. | current |
 | [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and why the quoted price is the price of record. | current |
@@ -74,6 +74,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | --- | --- | --- |
 | [Running and checking backups, and restoring](operations/backups-and-restore.md) | How to confirm the nightly backup ran, run one by hand, test a restore, and recover the database from the RAID or from Google Drive. | current |
 | [Deploying changes to the server](operations/deploying-changes.md) | The routine for getting a merged pull request onto the server, and what to restart, copy or add afterwards depending on what changed. | current |
+| [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
 | [Monitoring and alerts](operations/monitoring.md) | What the two Healthchecks.io checks watch, what to do when an alert email arrives, and how to test the alerts. | current |
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
@@ -89,7 +90,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 65 records as of 2026-10-17, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 66 records as of 2026-10-17, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 
