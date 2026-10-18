@@ -10,8 +10,12 @@
 	@tunnel remote_ip 172.31.250.10
 	abort @tunnel
 
+	# tailscale serve ends HTTPS and is the only way to this port, so every
+	# request here arrived over HTTPS. The app needs to know that for its
+	# secure cookies and sign-in form (decision 0068).
 	reverse_proxy app:8000 {
 		header_up X-Dixie-Entrance tailnet
+		header_up X-Forwarded-Proto https
 	}
 }
 

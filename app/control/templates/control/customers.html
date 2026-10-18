@@ -1,0 +1,17 @@
+{% extends "control/base.html" %}
+{% block title %}Customers{% endblock %}
+{% block content %}
+<h1>Customers</h1>
+<div class="search-page">
+<div id="results" aria-live="polite">{% include "control/_customer_results.html" %}</div>
+{# Last on the page and pinned above the tab bar on a phone, where the thumb reaches. #}
+<form class="search-bar" role="search" action="{% url 'customers' %}" method="get">
+  <label for="q" class="visually-hidden">Name or phone number</label>
+  <input id="q" type="search" name="q" value="{{ query }}" placeholder="Name or phone number"
+         autocomplete="off" enterkeyhint="search"{% if not query %} autofocus{% endif %}
+         hx-get="{% url 'customers' %}" hx-trigger="input changed delay:250ms, search"
+         hx-target="#results" hx-push-url="true" hx-sync="this:replace">
+  <button type="submit" class="primary">Search</button>
+</form>
+</div>
+{% endblock %}

@@ -27,6 +27,8 @@ DEBUG = False
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if host.strip()
 ] + ["localhost"]
+# The tailnet address, so signing in over HTTPS passes Django's origin check.
+CSRF_TRUSTED_ORIGINS = trusted_origins(ALLOWED_HOSTS)  # noqa: F405
 
 DATABASES = {
     "default": {

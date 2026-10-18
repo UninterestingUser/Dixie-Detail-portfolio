@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-17
+  updated: 2026-10-18
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -28,7 +28,7 @@ settings:
   - name: DJANGO_ALLOWED_HOSTS
     example: server.example-tailnet.ts.net,api.dixiedetail.com,127.0.0.1,localhost
     format: Bare host names separated by commas; no https:// and no spaces
-    note: The app always accepts localhost as well, for its own health check
+    note: The app always accepts localhost as well, for its own health check. Each name except localhost and 127.0.0.1 is also trusted, as https://NAME, as an origin for sign-in and other forms (decision 0068)
     phase: 0
   - name: DEPLOY_REMOTE
     example: git@github.com:OWNER/Dixie-Detail.git

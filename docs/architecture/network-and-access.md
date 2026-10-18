@@ -4,7 +4,7 @@ summary: How staff reach the private control app over Tailscale, how the public 
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-18
 tags: [network, tailscale, cloudflare, security]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/decisions/0005-tailscale-private-access.md, docs/decisions/0038-two-doors-access-model.md]
 ---
@@ -23,6 +23,14 @@ The core app has two ways in, and Caddy is the only container either way reaches
 - The server joined without `--accept-routes`, and key expiry is disabled for it in the Tailscale admin console.
 - MagicDNS and HTTPS certificates are enabled for the tailnet. Phones need "Use Tailscale DNS" turned on in the Tailscale app to resolve the name.
 
+## HTTPS and sign-in behind tailscale serve
+
+`tailscale serve` ends HTTPS and passes each request to Caddy's port 8000, which passes it to the app over plain HTTP. So that the app knows the visitor used HTTPS, Caddy's port 8000 sets `X-Forwarded-Proto: https` on every request, and the app trusts that header ([decision 0068](../decisions/0068-control-app-https-static-and-sign-in.md)). Caddy's port 8080 sets the header from its own plain connection, so a visitor on the public door cannot fake it.
+
+- The session and CSRF cookies are marked Secure, and the session cookie is HttpOnly.
+- Forms, including sign-in, are accepted only when the browser says they came from `https://` plus a name in `DJANGO_ALLOWED_HOSTS` (other than `localhost` and `127.0.0.1`). Adding the tailnet name to `DJANGO_ALLOWED_HOSTS` is all sign-in needs.
+- Every control app page needs a signed-in user (decision 0052). The app serves its own stylesheet, icons and htmx file, after the public-door check, so they too are reachable only over the tailnet.
+
 ## The public door: the internet through Cloudflare
 
 - The Cloudflare Tunnel named `dixie-detail` connects outward from the `cloudflared` container to Cloudflare. Its token is the Bitwarden secret `CLOUDFLARE_TUNNEL_TOKEN`.
@@ -40,7 +48,7 @@ Django refuses any request whose host name is not in `DJANGO_ALLOWED_HOSTS` in `
 DJANGO_ALLOWED_HOSTS=server.example-tailnet.ts.net,api.dixiedetail.com,127.0.0.1,localhost
 ```
 
-- `server.example-tailnet.ts.net` for the control app over Tailscale
+- `server.example-tailnet.ts.net` for the control app over Tailscale; its `https://` address is also trusted for sign-in
 - `api.dixiedetail.com` for the public door
 - `127.0.0.1` and `localhost` for checks run on the server itself
 

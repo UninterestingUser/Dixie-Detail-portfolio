@@ -1,0 +1,48 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{% endblock %} · Dixie Detail</title>
+  <meta name="theme-color" content="{{ brand.navy }}">
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" href="{% static 'control/icons/icon-192.png' %}">
+  {# The brand colors come from data/business.yaml. #}
+  <style>:root { --red: {{ brand.red }}; --navy: {{ brand.navy }}; --white: {{ brand.white }}; --charcoal: {{ brand.charcoal }}; }</style>
+  <link rel="stylesheet" href="{% static 'control/app.css' %}">
+  <script src="{% static 'control/htmx-2.0.11.min.js' %}" defer></script>
+  <script src="{% static 'control/app.js' %}" defer></script>
+</head>
+<body class="{% block body_class %}{% endblock %}{% if not user.is_authenticated %} no-tabbar{% endif %}">
+  <header class="topbar">
+    <a class="brand" href="{% url 'home' %}">Dixie Detail</a>
+    {% block topbar_action %}{% endblock %}
+  </header>
+  <main>
+    {% if messages %}
+      <ul class="messages" role="status">
+        {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  {% if user.is_authenticated %}
+    {% with here=request.resolver_match.url_name %}
+    <nav class="tabbar" aria-label="Main">
+      <a href="{% url 'customers' %}"{% if here == 'customers' or here == 'customer' or here == 'customer-edit' or here == 'vehicle-new' or here == 'vehicle-edit' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span>Customers</span>
+      </a>
+      <a href="{% url 'customer-new' %}"{% if here == 'customer-new' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        <span>New customer</span>
+      </a>
+      <a href="{% url 'account' %}"{% if here == 'account' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+        <span>Account</span>
+      </a>
+    </nav>
+    {% endwith %}
+  {% endif %}
+</body>
+</html>
