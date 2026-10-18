@@ -4,7 +4,7 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [scheduling, availability, calendar, alerts, settings]
 related: [docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
@@ -75,7 +75,11 @@ The 30-minute minimum gap is the owner's rule. Rounding a later job's start up t
 
 ## Maintenance plans are booked by the owner
 
-Monthly and Quarterly Maintenance never appear on the website. The owner books them in the control app, as a single visit or a repeating series.
+Monthly and Quarterly Maintenance never appear on the website. The owner books them in the control app, as a single visit or a repeating series ([../guides/booking-a-job.md](../guides/booking-a-job.md)).
+
+- **A Monthly series** repeats on the same day of each month and **a Quarterly series** every three months, at the same arrival time. In a month too short for that day, the visit falls on the month's last day.
+- **Each visit is its own job,** priced from the pricebook in effect on its own date, with its own quote, so a series can span a price change. A series has 2 to 24 visits.
+- **The owner can book any date in the control app,** outside every scheduling rule; the availability check and its manager override arrive in Phase 3. The control app warns when a job overlaps another that day.
 
 ## The two Google Workspace calendars
 

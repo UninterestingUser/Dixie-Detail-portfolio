@@ -1,0 +1,5 @@
+<li class="toggle" id="toggle-{{ member.pk }}-{{ service.pk }}">
+  <label for="auth-{{ member.pk }}-{{ service.pk }}"><a href="{% url 'service' service.pk %}">{{ service }}</a> <span class="muted">{{ service.get_kind_display }}</span>{% if error %}<span class="sub warn">{{ error }}</span>{% endif %}</label>
+  <input type="checkbox" role="switch" id="auth-{{ member.pk }}-{{ service.pk }}" name="authorized"{% if authorized %} checked{% endif %}{% if member.is_manager or not can_edit %} disabled{% endif %}
+         hx-post="{% url 'authorization' member.pk service.pk %}" hx-vals='{"from": "staff"}' hx-trigger="change" hx-target="#toggle-{{ member.pk }}-{{ service.pk }}" hx-swap="outerHTML">
+</li>

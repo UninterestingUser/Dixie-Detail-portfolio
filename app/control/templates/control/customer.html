@@ -86,13 +86,14 @@
 
 <section aria-labelledby="appointments">
   <h2 id="appointments">Appointments</h2>
+  <p><a class="button primary" href="{% url 'appointment-new' customer.pk %}">Book a job</a></p>
   {% if appointments %}
     <ul class="list">
       {% for row in appointments %}
         {% with appointment=row.appointment %}
         <li class="card{% if row.is_canceled %} faded{% endif %}">
           <div class="card-head">
-            <strong>{{ appointment.scheduled_start|date:"D, M j, Y, g:i A" }}</strong>
+            <strong><a href="{% url 'appointment' appointment.pk %}">{{ appointment.scheduled_start|date:"D, M j, Y, g:i A" }}</a></strong>
             <span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>
           </div>
           <span class="sub">{{ appointment.vehicle|default:"No vehicle recorded" }}</span>

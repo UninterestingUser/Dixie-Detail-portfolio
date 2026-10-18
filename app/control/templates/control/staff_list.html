@@ -1,0 +1,16 @@
+{% extends "control/base.html" %}
+{% block title %}Staff{% endblock %}
+{% block content %}
+<h1>Staff</h1>
+<p class="button-row"><a class="button" href="{% url 'services' %}">Services and who can do them</a></p>
+<ul class="list">
+  {% for member, count in rows %}
+    <li><a class="row{% if not member.active %} faded{% endif %}" href="{% url 'staff-member' member.pk %}">
+      <strong>{{ member }}</strong>{% if member.is_manager %} <span class="badge">Manager</span>{% endif %}{% if not member.active %} <span class="badge">Inactive</span>{% endif %}
+      <span class="sub">{% if member.is_manager %}Authorized for every service{% else %}Authorized for {{ count }} of {{ service_count }} services{% endif %}</span>
+    </a></li>
+  {% empty %}
+    <li class="muted">No staff members yet. They are added in the Django admin, or by the import.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

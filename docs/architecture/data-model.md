@@ -106,7 +106,7 @@ The `billing` app. Every amount of money is an exact decimal (decision 0047).
 The `staff` app.
 
 - **Staff member** is the owner or a helper, with a phone number, a login if they have one, a flat pay per job, and where their drive times start. Every helper has a pay type: family helper, the only one in use, or employee, which is planned. The owner has none.
-- **Assignment** puts a staff member on a job. Their per-job pay is copied when they are assigned, so a later change to it does not alter past jobs. The owner can override the pay for one job.
+- **Assignment** puts a staff member on a job. Their per-job pay is copied when they are assigned, so a later change to it does not alter past jobs. The owner can override the pay for one job. An assignment of someone not yet authorized for the job's services, for training, records the reason (decision 0061).
 - **Staff payout** is money paid to a helper, settling one or more assignments. An imported payout keeps an import key. It keeps the helper's pay type from when it was made, and the pay type sets its GnuCash account: Professional Services for a family helper. An employee's wages account and payroll are a later decision (decision 0053).
 
 ## Bookkeeping, messages and marketing
@@ -132,7 +132,7 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 
 Everything above describes the code as it is. This section is the exception: it describes records the owner decided on 2026-10-17 that the code does not have yet. Each will move into the sections above, in the present tense, when it is built.
 
-- **Staff authorization** will link each staff member to each service they may perform: every active service, add-ons included, but not history-only services. The staff page and the service page will both edit this one record. Managers (only the owner today) will be authorized for every service, and a new service will start with only managers authorized. An assignment of someone not yet authorized, for training, will record the reason. Built in Phase 1 Step 5b (decision 0061).
+- **Staff authorization** links one staff member to one service they may perform: every active service, add-ons included, but not history-only services or custom lines. The staff page and the service page both edit these records, with their change history. Managers (staff with the owner role, so only the owner today) are authorized for every service without a record, so a new service starts with only managers authorized (decisions 0061 and 0069).
 - **Scheduling settings** will hold the live values of the rules in [data/booking-rules.yaml](../../data/booking-rules.yaml), with change history. Built in Phase 3 (decision 0056).
 - **Arrival and departure** will be stored on each appointment, each with how it was recorded (tap, automatic or edited), and corrections logged. Built in Phase 4 (decision 0062).
 

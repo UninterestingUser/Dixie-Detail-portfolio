@@ -1,0 +1,11 @@
+{% extends "control/base.html" %}
+{% block title %}Services{% endblock %}
+{% block content %}
+<h1>Services</h1>
+<p class="help">Every active service, add-ons included. Tap one to see and change who is authorized for it.</p>
+<ul class="list">
+  {% for service in services %}
+    <li><a class="row" href="{% url 'service' service.pk %}"><strong>{{ service }}</strong><span class="sub">{{ service.get_kind_display }}</span></a></li>
+  {% endfor %}
+</ul>
+{% endblock %}

@@ -125,16 +125,16 @@ button, .button {
 }
 .search-bar input { font-size: 1.1rem; }
 
-/* The tab bar: three large targets along the bottom edge. */
+/* The tab bar: five large targets along the bottom edge. */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(5, 1fr);
   height: var(--tabbar); padding-bottom: env(safe-area-inset-bottom);
   background: var(--white); border-top: 1px solid var(--line);
 }
 .tabbar a {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  color: var(--muted); text-decoration: none; font-size: 0.8rem; font-weight: 600;
+  color: var(--muted); text-decoration: none; font-size: 0.72rem; font-weight: 600;
 }
 .tabbar svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .tabbar a[aria-current="page"] { color: var(--red); }
@@ -154,3 +154,41 @@ button, .button {
   .search-page { min-height: 0; }
   .search-bar { order: -1; margin: 0 0 16px; }
 }
+
+/* Groups of form fields, the live price and the day pager. */
+fieldset { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px 14px; margin: 0; display: grid; gap: 14px; background: var(--white); }
+legend { font-weight: 700; color: var(--navy); padding: 0 4px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.field ul label { font-weight: 400; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; min-height: 0; margin: 0; flex: none; accent-color: var(--red); }
+.price { border-color: var(--navy); border-width: 2px; }
+.price-title { margin-top: 0; }
+.pager { display: grid; grid-auto-flow: column; gap: 8px; margin: 0 0 14px; }
+.pager .button { padding: 8px; }
+.actions.single { grid-template-columns: 1fr; }
+.inline-form { display: grid; gap: 10px; margin-top: 10px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.danger { border-color: var(--warn); color: var(--warn); }
+.notice { background: #fff4e5; border: 1px solid #f5c88a; border-radius: var(--radius); padding: 12px 14px; }
+.notice.error { color: var(--ink); font-weight: 400; }
+.choice-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.choice { display: flex; gap: 12px; align-items: flex-start; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-height: 52px; }
+.choice.unqualified { opacity: 0.6; }
+.choice .sub { margin-top: 2px; }
+.toggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; min-height: 56px; }
+.toggle input { width: 44px; height: 26px; appearance: none; border-radius: 999px; background: #c7ccd6; position: relative; cursor: pointer; border: 0; padding: 0; }
+.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--white); transition: left 0.15s; }
+.toggle input:checked { background: var(--ok); }
+.toggle input:checked::after { left: 21px; }
+.toggle input:disabled { opacity: 0.6; cursor: default; }
+.matrix { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); font-size: 0.95rem; }
+.matrix th, .matrix td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.matrix .num { text-align: right; white-space: nowrap; }
+.matrix input { min-height: 40px; padding: 6px 8px; text-align: right; }
+.matrix .hours input { width: 4rem; }
+.matrix .money input { width: 5.5rem; }
+.matrix .sub { font-size: 0.85rem; }
+.table-scroll { overflow-x: auto; }
+.affected { display: grid; gap: 8px; }
+input.short { width: 6rem; display: inline-block; min-height: 40px; padding: 4px 8px; text-align: right; }

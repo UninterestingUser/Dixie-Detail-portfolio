@@ -7,6 +7,8 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
+from simple_history.models import HistoricalRecords
+
 from core.fields import MoneyField, PhoneField, phone_check
 
 
@@ -56,6 +58,39 @@ class StaffMember(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_manager(self):
+        """Managers are authorized for every service and may assign someone
+        not yet authorized, for training (decision 0061). Only the owner today."""
+        return self.role == self.Role.OWNER
+
+
+class ServiceAuthorization(models.Model):
+    """One staff member authorized to perform one service (decision 0061).
+
+    The staff page and the service page both edit these rows, so there is
+    nothing to keep in sync. Managers need no rows: they are authorized for
+    every service, so a new service starts with only managers authorized.
+    """
+
+    staff_member = models.ForeignKey(StaffMember, on_delete=models.CASCADE, related_name="authorizations")
+    service = models.ForeignKey("pricebook.Service", on_delete=models.CASCADE, related_name="authorizations")
+    granted_at = models.DateTimeField(auto_now_add=True)
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+
+    # Granting and removing are both kept, with who did it.
+    history = HistoricalRecords()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["staff_member", "service"], name="one_authorization_per_service")
+        ]
+
+    def __str__(self):
+        return f"{self.staff_member}: {self.service}"
 
 
 class StaffPayout(models.Model):
@@ -111,6 +146,9 @@ class Assignment(models.Model):
     default_pay = MoneyField(null=True, blank=True)
     pay_override = MoneyField(null=True, blank=True)
     override_reason = models.CharField(max_length=200, blank=True)
+    # Why a manager assigned someone not yet authorized for every service on
+    # the job, such as training (decision 0061). Empty otherwise.
+    training_reason = models.CharField(max_length=200, blank=True)
     payout = models.ForeignKey(
         StaffPayout, on_delete=models.SET_NULL, null=True, blank=True, related_name="assignments"
     )

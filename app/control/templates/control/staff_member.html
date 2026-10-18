@@ -1,0 +1,12 @@
+{% extends "control/base.html" %}
+{% block title %}{{ member }}{% endblock %}
+{% block content %}
+<h1>{{ member }}</h1>
+<p class="muted">{{ member.get_role_display }}{% if member.is_manager %}, manager{% endif %}{% if not member.active %}, inactive{% endif %}</p>
+<h2>Services {{ member }} may perform</h2>
+{% if member.is_manager %}<p class="help">A manager is authorized for every service, including new ones.</p>
+{% elif not can_edit %}<p class="help">Only a manager can change these.</p>{% endif %}
+<ul class="list">
+  {% for service, authorized in rows %}{% include "control/_toggle_service.html" %}{% endfor %}
+</ul>
+{% endblock %}
