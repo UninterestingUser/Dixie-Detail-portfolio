@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "bookkeeping",
     "marketing",
     "messaging",
+    "importer",
 ]
 
 MIDDLEWARE = [

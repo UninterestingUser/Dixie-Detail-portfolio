@@ -82,6 +82,8 @@ class StaffPayout(models.Model):
     export_batch = models.ForeignKey(
         "bookkeeping.ExportBatch", on_delete=models.PROTECT, null=True, blank=True, related_name="staff_payouts"
     )
+    # Where an imported payout came from, so a re-run updates it (decision 0051).
+    import_key = models.CharField(max_length=60, unique=True, null=True, blank=True)
 
     class Meta:
         constraints = [models.CheckConstraint(condition=~Q(pay_type=""), name="payout_has_pay_type")]

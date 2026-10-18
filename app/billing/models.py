@@ -164,6 +164,11 @@ class Payment(models.Model):
         "appointments.Appointment", on_delete=models.PROTECT, related_name="payments"
     )
     method = models.CharField(max_length=20, choices=PaymentMethod.choices)
+    # An imported payment split between two methods, whose split amounts were
+    # never recorded (data-migration.md). Empty for every other payment.
+    split_method = models.CharField(
+        max_length=20, choices=PaymentMethod.choices, blank=True, help_text="Second method of a split payment."
+    )
     # Toward the job, excluding the tip. For a trade, the value of the goods.
     amount = MoneyField()
     tip = MoneyField(default=0)
@@ -183,6 +188,9 @@ class Payment(models.Model):
     export_batch = models.ForeignKey(
         "bookkeeping.ExportBatch", on_delete=models.PROTECT, null=True, blank=True, related_name="payments"
     )
+    # Where an imported payment came from, such as "bookkeeping:123", so a
+    # re-run of the import updates it (decision 0051). Empty otherwise.
+    import_key = models.CharField(max_length=60, unique=True, null=True, blank=True)
 
     class Meta:
         ordering = ["paid_at"]

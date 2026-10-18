@@ -86,6 +86,9 @@ class Address(models.Model):
     )
     active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
+    # Where an imported address came from, such as "customer:12", so a re-run
+    # of the import updates it (decision 0051). Empty otherwise.
+    import_key = models.CharField(max_length=60, unique=True, null=True, blank=True)
 
     history = HistoricalRecords()
 

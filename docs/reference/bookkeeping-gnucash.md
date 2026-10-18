@@ -20,6 +20,7 @@ GnuCash stays the general ledger. The system keeps the sales side and hands GnuC
 3. Stripe fees and payouts produce their own transactions, so the Stripe balance reconciles to the bank deposits.
 4. The control app exports any date range as one file in GnuCash's multi-split CSV layout, using full account names.
 5. The owner imports it in GnuCash with a saved preset. GnuCash's importer supports multi-split files, saved settings and duplicate matching.
+6. Payments and helper payouts imported from Baserow are already in the books. They belong to the export batch "Already in GnuCash: Baserow import", so the export never sends them ([decision 0066](../decisions/0066-imported-payments-already-in-the-books.md)).
 
 ## Account mapping
 
@@ -51,7 +52,7 @@ Sales Tax Payable and Loans are Liability-type accounts in the owner's chart. Gi
 
 ## What the owner keeps entering by hand
 
-Venmo, PayPal and Cash App fees and transfers from each statement; payments in bitcoin, trades and the imported gift-card prepayment from the export's manual-entry list; cash moved from Petty Cash to Checking; expenses; and sales tax payments (Sales Tax Payable to Checking, using the app's tax report).
+Venmo, PayPal and Cash App fees and transfers from each statement; payments in bitcoin and trades from the export's manual-entry list; cash moved from Petty Cash to Checking; expenses; and sales tax payments (Sales Tax Payable to Checking, using the app's tax report).
 
 ## The CSV layout, with an example
 
