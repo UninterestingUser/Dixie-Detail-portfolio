@@ -28,14 +28,14 @@ They live in `"$HOME/Dixie Detail/github-portfolio"` on the Fedora workstation, 
 | File | What it holds |
 | --- | --- |
 | `replacements.txt` | One rule per line, `old text==>new text`. A line starting with `regex:` is a regular expression. Longer phrases go before shorter ones, because the rules apply in order. No comments or blank lines. |
-| `mailmap` | One line mapping the old commit email to the owner's name and GitHub no-reply address: `Kris Grassman <ID+UninterestingUser@users.noreply.github.com> <old email>` |
-| `public-url` | One line: the public repository's URL, for example `https://github.com/UninterestingUser/dixie-detail-portfolio.git` |
+| `mailmap` | Two lines. The first, `Kris Grassman <ID+UninterestingUser@users.noreply.github.com>`, gives every commit made with the no-reply address the owner's full name, whatever name it was made under. The second, `Kris Grassman <ID+UninterestingUser@users.noreply.github.com> <old email>`, maps commits made with the old personal email to the same name and no-reply address. |
+| `public-url` | One line: the public repository's URL, for example `https://github.com/UninterestingUser/Dixie-Detail-portfolio.git` |
 
 ## One-time setup
 
 1. **Make the working repository private.** On GitHub, open the repository page and check the fork count first: a fork made while it was public stays public. Then Settings, General, Danger Zone, Change repository visibility, Private.
 2. **Create the public repository** on GitHub, named as in `public-url`, set to Public, with no README, license or `.gitignore`, so it starts empty.
-3. **Find the no-reply email.** GitHub Settings, Emails: turn on "Keep my email addresses private" and copy the address shown, which looks like `12345678+UninterestingUser@users.noreply.github.com`. Put it in `mailmap`. To use it for future commits too: `git config --global user.email "<that address>"`.
+3. **Find the no-reply email.** GitHub Settings, Emails: turn on "Keep my email addresses private" and copy the address shown, which looks like `12345678+UninterestingUser@users.noreply.github.com`. Put it in both lines of `mailmap`. To use it for future commits too: `git config --global user.email "<that address>"`.
 4. **Install git filter-repo:** `sudo dnf install git-filter-repo`.
 5. **Put the three settings files in place:** `mkdir -p "$HOME/Dixie Detail/github-portfolio"`, copy the files in, then `chmod 600 "$HOME/Dixie Detail/github-portfolio"/*`.
 6. **Publish for the first time,** from the repository on the workstation:

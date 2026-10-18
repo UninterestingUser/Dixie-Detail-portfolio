@@ -38,6 +38,9 @@ erDiagram
     Service ||--o{ Price : "is priced by"
     VehicleClass ||--o{ Price : "sets"
     PricebookVersion |o--o{ AppointmentLine : "was the source of"
+    PricebookVersion ||--o{ Quote : "prices"
+    Quote ||--o{ QuoteLine : "is priced by"
+    Quote |o--o| Appointment : "is booked as"
     Promotion |o--o{ AppointmentLine : "discounts"
     Payment ||--o{ Refund : "is returned by"
     Customer ||--o{ GiftCard : "buys"
@@ -53,7 +56,7 @@ The `customers` and `vehicles` apps.
 - **Second contact** holds another person's own name and number on a customer's record, such as a spouse. A booking under that number matches the customer. See [../reference/returning-customers.md](../reference/returning-customers.md).
 - **Address** holds a service address with its coordinates, Google place ID, tax jurisdiction and whether it has been verified. An address outside the service area that the owner has allowed is marked as an approved out-of-area address.
 - **Consent** holds one answer to a text consent question: appointment or follow-up, yes or no, the number, where it was given (web form, phone, text reply or import) and the wording version. Answers are never edited. A STOP reply adds a "no", so the latest answer counts and the whole history stays. See [../reference/text-messages.md](../reference/text-messages.md).
-- **Vehicle class** is a group of vehicles that share prices, with a note of what its size variant measures, such as doors, seat rows or cab style. There are six at launch, listed in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+- **Vehicle class** is a group of vehicles that share prices, with a note of what its size variant measures, such as doors, seat rows or cab style. Each class also records its price basis: the fixed price list, the only one built, which leaves room for another way of pricing, such as per foot of length (decision 0060). There are six at launch, listed in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 - **Size variant** is one size within a vehicle class, such as "two doors" or "three rows", with the number used in the price matrix's size column. A class with no size variants, such as motorcycles, has a single price per service.
 - **Vehicle model** holds a make and model over a range of years, with its vehicle class, and either the size variant every vehicle of that model has or a flag to ask the customer. Phase 2 fills these from EPA and NHTSA data.
 - **Vehicle** belongs to a customer, with year, make, model, colour, vehicle class and size variant. Any of those may be missing on older records. The vehicle is kept and its missing details are listed to fill in. A size variant counts as missing only when the class has size variants.
@@ -62,22 +65,23 @@ The `customers` and `vehicles` apps.
 
 ## Pricebook and promotions
 
-The `pricebook` and `promotions` apps. Prices are loaded from [data/price-matrix.csv](../../data/price-matrix.csv) and never written in code.
+The `pricebook` and `promotions` apps. Prices are loaded from [data/price-matrix.csv](../../data/price-matrix.csv) by the `load_pricebook` command and never written in code. The pricing engine in `pricebook/pricing.py` is the only code that works out a price (decision 0059).
 
 - **Pricebook version** is a numbered state of the pricebook: a draft while the owner edits it, then published with an effective date. A published version, and everything in it, can never be changed or deleted; a change is a new draft that becomes the next version (decision 0033).
 - **Service** holds a service's name, kind (main service, add-on, maintenance plan or custom line), description, whether the condition adjustment applies, whether customers can book it online, whether it is on the price list, and its default crew size. Past services such as PPF Removal are kept off the price list.
-- **Price** is one cell of the price matrix in one version: a service's price and one-person hours for a vehicle class and, where it matters, a size variant of that class. A class with no size variants, or a service that ignores size, has one price per class.
-- **Derived price rule** prices a service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance is 80% and Monthly Maintenance 50% of Full Detail. See [../reference/pricing.md](../reference/pricing.md).
+- **Price** is one cell of the price matrix in one version: a service's price and one-person service hours (setup and breakdown not included, decision 0058) for a vehicle class and, where it matters, a size variant of that class. A class with no size variants, or a service that ignores size, has one price per class.
+- **Derived price rule** prices a service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance is 80% and Monthly Maintenance 50% of Full Detail, stored as rules rather than prices, so a Full Detail price change moves both. See [../reference/pricing.md](../reference/pricing.md).
 - **Condition level** holds each of the three condition levels with the percentage it adds, in each version.
-- **Pricing rules** holds a version's crew time factor, job-time rounding and full-day threshold.
+- **Pricing rules** holds a version's two-person time factor, service-time rounding and full-day threshold, which counts one-person time on site.
+- **Quote** is a priced job issued by the server before booking, the price of record (decision 0059): the service, vehicle class, size variant, condition level, add-ons, promotions and crew size asked for; the pricebook version; the total before tax, tax rate, sales tax and total; the one-person service hours; and the setup, service, breakdown and time-on-site minutes, with the full-day flag. A **quote line** holds each priced line. A quote never changes once issued, and its lines become an appointment's lines exactly when it is booked. Sales tax is zero until Phase 3.
 - **Promotion** is a named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer. It is a percentage off, a dollar amount off, a fixed price, or a free voucher. A **voucher** must have a code; its dollar value comes off the job as a promotion line, never more than the job's price (decision 0054). It can have dates, a promo code, a website banner, and the services it applies to (none listed means every service).
 
 ## Appointments
 
 The `appointments` app.
 
-- **Appointment** is one job: a customer, a vehicle, a service address and a start time, with its status (requested, booked, completed or cancelled), where it came from (website, owner or import), crew size, calculated job length, preferred payment method and the Jobs calendar event it is mirrored to. Its total before tax is the sum of its lines.
-- **Appointment line** is the line snapshot (decision 0033). Each priced item on a job is copied onto the appointment when it is booked: the description, amount, one-person hours, the vehicle class name and size variant (number and label) as booked, the condition level, and the pricebook version it came from. A later pricebook change, or renaming or retiring a vehicle class or size variant, cannot alter it. One appointment has several lines: a main service, its add-ons, the condition adjustment, any promotion, and any of these:
+- **Appointment** is one job: a customer, a vehicle, a service address and a start (arrival) time, with its status (requested, booked, completed or cancelled), where it came from (website, owner or import), crew size, its setup, service and breakdown minutes as booked (decision 0056), the quote it was booked from, preferred payment method and the Jobs calendar event it is mirrored to. Its total before tax is the sum of its lines, and its time on site the sum of its three times. Imported jobs may have no times.
+- **Appointment line** is the line snapshot (decision 0033). Each priced item on a job is copied onto the appointment when it is booked, from its quote: the description, amount, one-person service hours, the vehicle class name and size variant (number and label) as booked, the condition level, and the pricebook version it came from. A later pricebook change, or renaming or retiring a vehicle class or size variant, cannot alter it. One appointment has several lines: a main service, its add-ons, the condition adjustment, any promotion, and any of these:
   - an **on-site adjustment**, when the final price differs from the list price, always with a reason;
   - a **no charge** line, when a job is given as a gift, with a reason, bringing the total to zero;
   - a **custom line**, such as Misc Services, at a price the owner sets.
@@ -129,13 +133,11 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 Everything above describes the code as it is. This section is the exception: it describes records the owner decided on 2026-10-17 that the code does not have yet. Each will move into the sections above, in the present tense, when it is built.
 
 - **Staff authorization** will link each staff member to each service they may perform: every active service, add-ons included, but not history-only services. The staff page and the service page will both edit this one record. Managers (only the owner today) will be authorized for every service, and a new service will start with only managers authorized. An assignment of someone not yet authorized, for training, will record the reason. Built in Phase 1 Step 5b (decision 0061).
-- **Quote** will hold a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. Its lines become the appointment's lines when the job is booked. Built in Phase 1 Step 3 (decision 0059).
-- **Appointment times as booked.** Each appointment will store its setup minutes, service minutes, breakdown minutes and crew size as booked, beside its start (arrival) time, so a later settings change never alters it (decision 0056). Today's single calculated job length (`job_minutes`) and the lines' `one_person_hours` predate the split into service time and time on site; Phase 1 Step 3 renames them.
 - **Scheduling settings** will hold the live values of the rules in [data/booking-rules.yaml](../../data/booking-rules.yaml), with change history. Built in Phase 3 (decision 0056).
 - **Arrival and departure** will be stored on each appointment, each with how it was recorded (tap, automatic or edited), and corrections logged. Built in Phase 4 (decision 0062).
 
 ## What is not built yet
 
 - Settings such as working hours, start times, setup and breakdown, the home base and buffers. Their launch values are in `data/` until the scheduling work in Phase 3.
-- Loading the pricebook from `data/price-matrix.csv`, and the Baserow import.
+- The Baserow import.
 - Every screen of the control app, the Django admin and sign-in.

@@ -4,7 +4,7 @@ summary: The routine for getting a merged pull request onto the server, and what
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-17
 tags: [operations, deploy, git, systemd]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/reference/configuration.md]
 ---
@@ -102,3 +102,22 @@ sudo docker inspect dixie-app-1 --format '{{json .Config.Env}}'
 ```
 
 The first should show only `127.0.0.1:8000`. The second should show file paths such as `POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password`, never a secret value. If anything fails, see [troubleshooting.md](troubleshooting.md).
+
+## Loading the pricebook, once
+
+The first deploy that includes the pricing engine leaves the pricebook empty. Load it once, after the stack is up:
+
+```bash
+sudo docker exec dixie-app-1 python manage.py load_pricebook
+```
+
+It loads `data/price-matrix.csv`, `data/services.yaml`, `data/pricing-rules.yaml` and the vehicle classes from `data/vehicle-classes.yaml` as pricebook version 1, effective that day, and prints how many prices it stored. Running it again changes nothing: it only reports whether version 1 still matches the files. A later price change is a new pricebook draft, not an edit to the files followed by a reload. See [../reference/pricebook-changes.md](../reference/pricebook-changes.md).
+
+To price a job from the terminal, without storing anything:
+
+```bash
+sudo docker exec dixie-app-1 python manage.py quote --service "Full Detail" \
+  --class "Crossovers & Wagons" --size 2 --condition 2 --add-on "Seat Extraction"
+```
+
+It prints the lines, the total before tax, the service time and the time on site. `--crew 2` prices two people, `--promotion` takes a promotion's name or code, and `--help` lists every option.

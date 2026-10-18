@@ -35,6 +35,10 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
+    volumes:
+      # The price matrix and launch values the pricebook and scheduling read
+      # (settings DATA_DIR), from the checkout, read-only.
+      - ./data:/srv/data:ro
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?set DJANGO_ALLOWED_HOSTS in .env}
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key

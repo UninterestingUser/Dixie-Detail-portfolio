@@ -13,6 +13,10 @@ related: [docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference
 
 Completed jobs never change, and booked jobs change only when the owner says so. This is settled policy, built in Phase 1.
 
+## What is built and what comes later
+
+Since Phase 1 Step 3 the system has pricebook versions, drafts copied from the latest published version, publishing with an effective date today or later, and the list of booked jobs a draft would change, each with its booked and new totals and service hours, a note when the new hours make it a full day, and a note when the job can no longer be priced. The control app screens that let the owner edit a draft, publish it and choose for each listed job (steps 3 to 7 below) come with the pricebook screens later in Phase 1, and the availability check in step 5 with Phase 3.
+
 ## Every appointment keeps its own copy of its prices
 
 When a job is booked, each line is copied onto the appointment: the service, price, hours, condition level and any promotion. This line snapshot means a later pricebook edit cannot reach back into a booked or completed job. The lines come from the server's quote, so the price the customer saw is the price booked, and the control app never re-prices a booked job on its own ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)). The choices below are the owner's, so they raise no price-change alert; they are logged instead.

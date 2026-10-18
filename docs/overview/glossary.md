@@ -39,6 +39,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **On-site adjustment.** A price change the owner enters at the job, always with a reason, which appears on the invoice.
 
+**Price basis.** How a vehicle class is priced. Every class uses the fixed price list, the only basis built; another, such as per foot of length, could be added for a class later.
+
 **Price matrix.** The owner's table of 90 prices and one-person service hours, stored in [data/price-matrix.csv](../../data/price-matrix.csv). It is the only source of prices.
 
 **Pricebook.** The price matrix plus its rules (condition levels, maintenance percentages, add-ons, promotions) as stored in the database and edited in the control app.
@@ -47,9 +49,11 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Pricebook version.** A numbered, published state of the pricebook with an effective date.
 
+**Pricing engine.** The one module on the server that works out every price, line and service time from the pricebook. Nothing else does price arithmetic.
+
 **Promotion.** A named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer, defined as a percentage off, a dollar amount off or a fixed price. It appears on a job as its own line.
 
-**Quote.** The server's record of a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. The website books with a reference to the quote, and its lines become the appointment's line snapshot. See [../reference/pricing.md](../reference/pricing.md).
+**Quote.** The server's record of a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. It never changes once issued. A booking refers to the quote, and its lines become the appointment's line snapshot. See [../reference/pricing.md](../reference/pricing.md).
 
 **Service time.** The time spent working on the vehicle, without setup and breakdown. The price matrix holds one-person service time; two people take 60% of it, rounded to the nearest 15 minutes. The pricing engine returns service time.
 
