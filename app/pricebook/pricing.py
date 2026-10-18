@@ -164,6 +164,13 @@ class PricedJob:
         return self.one_person_time_on_site.total_minutes >= self.full_day_time_on_site_hours * 60
 
 
+def crew_service_minutes(one_person_service_hours, crew_size, rules):
+    """Service time for the crew: one-person hours, times the two-person
+    factor for two people, rounded once to the rounding step (pricing.md)."""
+    factor = rules.two_person_time_factor if crew_size == 2 else Decimal("1")
+    return round_to_nearest(Decimal(one_person_service_hours) * 60 * factor, rules.service_time_rounding_minutes)
+
+
 def _service_line(version, service, vehicle_class, base, kind, condition_level=None):
     return LineDraft(
         kind=kind,
@@ -320,10 +327,7 @@ def price_job(
         (line.one_person_service_hours for line in job.lines if line.one_person_service_hours is not None),
         Decimal("0"),
     )
-    factor = rules.two_person_time_factor if crew_size == 2 else Decimal("1")
-    job.service_minutes = round_to_nearest(
-        job.one_person_service_hours * 60 * factor, rules.service_time_rounding_minutes
-    )
+    job.service_minutes = crew_service_minutes(job.one_person_service_hours, crew_size, rules)
     return job
 
 

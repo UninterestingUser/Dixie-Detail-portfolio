@@ -32,6 +32,14 @@ def launch_values():
     )
 
 
+@cache
+def automatic_assignment():
+    """Whether the only qualified active staff member is assigned without the
+    prompt (decision 0061), from data/booking-rules.yaml. On at launch."""
+    rules = yaml.safe_load((settings.DATA_DIR / "booking-rules.yaml").read_text())
+    return bool(rules["staff_assignment"]["automatic_when_one_qualified"])
+
+
 def round_to_nearest(minutes, step):
     """Round minutes to the nearest step, an exact half step up."""
     steps = (Decimal(minutes) / step).quantize(Decimal(1), rounding=ROUND_HALF_UP)

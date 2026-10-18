@@ -1,0 +1,61 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Publish version {{ version.number }}{% endblock %}
+{% block content %}
+<h1>Publish version {{ version.number }}</h1>
+<p class="help">Completed jobs never change. Booked jobs change only as you choose below. Online bookings use the new prices from the effective date.</p>
+<form method="get" class="stack">
+  {% include "control/_field.html" with field=form.effective_date %}
+  <button type="submit">Show the booked jobs this changes</button>
+</form>
+
+{% if jobs is not None %}
+<form method="post" class="stack">
+  {% csrf_token %}
+  <input type="hidden" name="effective_date" value="{{ form.cleaned_data.effective_date|date:'Y-m-d' }}">
+  {% if jobs %}
+    <h2>{{ jobs|length }} booked job{{ jobs|length|pluralize }} on or after {{ form.cleaned_data.effective_date|date:"M j, Y" }}</h2>
+    <p class="help">Keep booked price is the default. "Use new price" re-prices the job from this version. A custom amount becomes the job's total before tax.</p>
+    <div class="button-row">
+      <button type="submit" name="all" value="keep">Keep all and publish</button>
+      <button type="submit" name="all" value="use_new">Use new for all and publish</button>
+    </div>
+    {% for series_obj, series_jobs in series %}
+      <div class="field">
+        <label for="series-{{ series_obj.pk }}">{{ series_obj }}: every visit left ({{ series_jobs|length }})</label>
+        <select id="series-{{ series_obj.pk }}" name="series-{{ series_obj.pk }}">
+          <option value="">Decide each visit below</option>
+          <option value="keep">Keep booked price</option>
+          <option value="use_new">Use new price</option>
+        </select>
+      </div>
+    {% endfor %}
+    <ul class="affected list">
+      {% for job in jobs %}
+        <li class="card">
+          <strong><a href="{% url 'appointment' job.appointment.pk %}">{{ job.appointment.customer }}</a>, {{ job.appointment.scheduled_start|date:"D M j, Y" }}</strong>
+          {% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}
+          {% if job.becomes_full_day %}<span class="sub warn">The new service hours make this a full day.</span>{% endif %}
+          <div class="field">
+            <label for="choice-{{ job.appointment.pk }}">Choice</label>
+            <select id="choice-{{ job.appointment.pk }}" name="choice-{{ job.appointment.pk }}">
+              <option value="keep">Keep booked price ({{ job.booked_total|money }})</option>
+              {% if job.new_total is not None %}<option value="use_new">Use new price ({{ job.new_total|money }})</option>{% endif %}
+              <option value="custom">Custom amount</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="amount-{{ job.appointment.pk }}">Custom amount <span class="muted">(only for a custom amount)</span></label>
+            <input id="amount-{{ job.appointment.pk }}" name="amount-{{ job.appointment.pk }}" inputmode="decimal">
+          </div>
+          {% if job.new_total is None %}<p class="help">This job can no longer be priced. Keep it as it is or give a custom amount, then change its service from the job page if needed.</p>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="hint">No booked job on or after that date changes.</p>
+  {% endif %}
+  <div class="actions single"><button type="submit" name="publish" value="yes" class="primary">Publish version {{ version.number }}</button></div>
+</form>
+{% endif %}
+{% endblock %}
