@@ -4,7 +4,7 @@ summary: How customers, vehicles, appointments, payments and staff are imported 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [migration, import, baserow, setmore, phase-1]
 related: [docs/operations/importing-baserow.md, docs/decisions/0036-baserow-import.md, docs/decisions/0051-baserow-ids-kept-on-import.md, docs/decisions/0066-imported-payments-already-in-the-books.md, docs/reference/returning-customers.md, docs/architecture/data-model.md]
 ---
@@ -34,6 +34,7 @@ The source files are the owner's exports: the Baserow Customers, Vehicles, Appoi
 - **Each imported record keeps its Baserow id** (decision 0051): customers, vehicles and appointments by their row id; payments by their Bookkeeping row; addresses and helper payouts by the row they came from. A re-run with fresh exports updates them instead of duplicating them.
 - **Links between tables are display strings,** such as "First Last - 4235551234". A customer link matches the customer with that exact display, or else the same name and the last 10 digits of the phone, or else a name only one customer has.
 - **A vehicle link** matches a vehicle of that name belonging to the appointment's customer. Where the customer has two of the same name, the vehicle's own Appointments column, then the vehicle class and seat rows, tell them apart; a job still undecided keeps no vehicle and is reported.
+- **A vehicle named in the corrections file wins.** An `appointment_fixes` entry with `set: {vehicle_baserow_id: N}` links that appointment to the Baserow vehicle with id N, for a customer with two vehicles of the same name. The report lists it under "Corrections applied". It is used only when vehicle N was imported and belongs to the appointment's customer; otherwise it is listed under "Could not place" and the usual matching applies.
 - **An appointment's Bookkeeping value** equals exactly one Bookkeeping row's Name; that row holds the job's payment.
 - **Setmore contacts** match a Baserow customer by phone number, or as named in the corrections file.
 

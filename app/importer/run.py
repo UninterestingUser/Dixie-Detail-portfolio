@@ -364,6 +364,24 @@ class Importer:
             if vehicle.missing_details:
                 self.report.count("vehicles with details to fill in")
 
+    def fixed_vehicle(self, where, value, customer, fix):
+        """The vehicle an appointment_fixes entry names by its Baserow id, for a
+        customer with two vehicles of the same name. None, with the reason
+        reported, when it cannot be used; the usual matching then applies."""
+        try:
+            vehicle = self.vehicles.get(int(value))
+        except (TypeError, ValueError):
+            self.report.cannot_place(where, f"set vehicle_baserow_id: {value!r} is not a Baserow id")
+            return None
+        if vehicle is None:
+            self.report.cannot_place(where, f"set vehicle_baserow_id: no imported vehicle has Baserow id {value}")
+            return None
+        if vehicle.customer_id != customer.pk:
+            self.report.cannot_place(where, f"set vehicle_baserow_id: vehicle {value} belongs to another customer")
+            return None
+        self.report.correction(where, f"linked to vehicle {value} ({fix.get('reason', 'no reason given')})")
+        return vehicle
+
     def vehicle_for(self, row, customer):
         """The vehicle an appointment names, told apart by its customer and,
         where one customer has two of the same name, by the vehicle's own
@@ -440,10 +458,13 @@ class Importer:
             if status is None:
                 self.report.cannot_place(where, f"unknown status {row['Status']!r}")
                 continue
+            vehicle = None
             for name, value in (fix.get("set") or {}).items():
                 if name == "final_price":
                     final_price = parsing.money(str(value))
                     self.report.correction(where, f"set final price ({fix.get('reason', 'no reason given')})")
+                elif name == "vehicle_baserow_id":
+                    vehicle = self.fixed_vehicle(where, value, customer, fix)
                 else:
                     self.report.warn(where, f"the corrections file sets {name!r}, which the import does not know")
 
@@ -465,7 +486,7 @@ class Importer:
                 baserow_id=baserow_id,
                 defaults={
                     "customer": customer,
-                    "vehicle": self.vehicle_for(row, customer),
+                    "vehicle": vehicle or self.vehicle_for(row, customer),
                     "service_address": self.addresses.get(customer.baserow_id),
                     "scheduled_start": start,
                     "status": status,
