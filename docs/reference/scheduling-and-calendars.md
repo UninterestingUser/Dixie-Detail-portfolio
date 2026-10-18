@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-17
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
@@ -50,7 +50,7 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 - **The start time the customer picks is the arrival time,** when setup starts. The Jobs calendar event covers the whole time on site. The time-to-leave alert still counts back from the arrival time.
 - **The estimate card shows time on site,** not service time, and shows "full day" when the one-person time on site is 8 hours or more.
 
-Examples: one person with 5 hours of service is 6 hours on site, so an 8:00 arrival runs to 14:00. The RAV4 worked example in [pricing.md](pricing.md) is 6.5 hours of service and 7.5 hours on site. Monthly Maintenance with two people runs 2.25 to 4.5 hours on site. A two-person Full Detail on a 2-row Midsize SUV is 3.25 hours of service and 3.75 hours on site.
+Examples: one person with 5 hours of service is 6 hours on site, so an 8:00 arrival runs to 14:00. The RAV4 worked example in [pricing.md](pricing.md), at the second condition level, is 7 hours of service and 8 hours on site. Monthly Maintenance with two people runs 2.25 to 4.5 hours on site. A two-person Full Detail on a 2-row Midsize SUV is 3.25 hours of service and 3.75 hours on site at the first condition level, and 4 and 4.5 hours at the third, because condition lengthens the service time.
 
 ## The availability check
 
