@@ -132,7 +132,11 @@ class Vehicle(models.Model):
     history = HistoricalRecords()
 
     def __str__(self):
-        return " ".join(str(part) for part in (self.year, self.make, self.model) if part) or "Vehicle"
+        """Year, make and model, then the color, such as "2019 Honda Accord,
+        silver", so a customer's identical vehicles can be told apart
+        wherever vehicles are listed or picked (decision 0067)."""
+        name = " ".join(str(part) for part in (self.year, self.make, self.model) if part) or "Vehicle"
+        return f"{name}, {self.color.strip()}" if self.color.strip() else name
 
     def save(self, *args, **kwargs):
         check_size_variant_class(self.size_variant, self.vehicle_class_id)

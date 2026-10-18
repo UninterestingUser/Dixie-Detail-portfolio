@@ -1,0 +1,14 @@
+{% extends "control/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block body_class %}narrow{% endblock %}
+{% block content %}
+<h1>Sign in</h1>
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="error" role="alert">Your username or password is not right. Try again.</p>{% endif %}
+  {% include "control/_field.html" with field=form.username %}
+  {% include "control/_field.html" with field=form.password %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="actions"><button type="submit" class="primary">Sign in</button></div>
+</form>
+{% endblock %}
