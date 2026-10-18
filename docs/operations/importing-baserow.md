@@ -4,7 +4,7 @@ summary: How to copy the Baserow and Setmore exports and the corrections file to
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [operations, import, baserow, setmore, migration]
 related: [docs/reference/data-migration.md, docs/decisions/0036-baserow-import.md, docs/decisions/0051-baserow-ids-kept-on-import.md, docs/decisions/0066-imported-payments-already-in-the-books.md, data/configuration.yaml]
 ---
@@ -71,7 +71,7 @@ The dry run imports everything inside a transaction and then rolls it back, so i
 - **Questions in the corrections file,** left alone until the owner settles them.
 - **Expected results from the corrections file,** to compare with the counts.
 
-Fix a problem in Baserow or in the corrections file, export again, copy again and repeat the dry run until the report is right.
+Fix a problem in Baserow or in the corrections file, export again, copy again and repeat the dry run until the report is right. For a warning that a customer has two vehicles of the same name, add the job to `appointment_fixes` with `set: {vehicle_baserow_id: N}`, where N is the right vehicle's id in the Vehicles export; the next report shows "linked to vehicle N" under "Corrections applied".
 
 ## Step 3: Apply
 

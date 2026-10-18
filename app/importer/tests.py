@@ -42,6 +42,8 @@ VEHICLES = [
      "Pat Example - 4235550101", "Pat Example - 14235550101 - Toyota RAV4"],
     ["12", "Honda Civic", "", "Honda", "Civic", "Coupes & Sedans", "2 Rows", "", "Lee Sample - 4235550102", ""],
     ["13", "Harley ", "", "Harley", "", "", "", "", "Lee Sample - 4235550102", ""],
+    # A second record for the same car: Lee's jobs cannot tell the two apart by name.
+    ["15", "Honda Civic", "", "Honda", "Civic", "Coupes & Sedans", "2 Rows", "", "Lee Sample - 4235550102", ""],
     ["14", "Ghost Car", "", "", "", "Midsize SUVs", "", "", "Nobody Here - 4235550199", ""],
 ]
 APPOINTMENTS = [
@@ -115,6 +117,16 @@ setmore_merged_into_baserow: []
 setmore_not_imported:
   - Skip Me null
 appointment_fixes:
+  - baserow_id: 22
+    customer_name_on_export: Lee Sample
+    set:
+      vehicle_baserow_id: 15
+    reason: Lee has two Honda Civic records; this job was the second one
+  - baserow_id: 23
+    customer_name_on_export: Lee Sample
+    set:
+      vehicle_baserow_id: 11
+    reason: Wrong id, for the test
   - baserow_id: 24
     customer_name_on_export: Pat Example
     no_charge:
@@ -249,6 +261,13 @@ class DryRunTests(ImportTestCase):
         self.assertIn("Is this customer still active?", report)
         self.assertIn("must show 11:30 AM Eastern", report)
 
+    def test_without_the_fix_two_same_named_vehicles_are_left_blank(self):
+        corrections = CORRECTIONS.replace("      vehicle_baserow_id: 15\n", "      vehicle_baserow_id: 99\n")
+        (self.folder / "import-corrections.yaml").write_text(corrections)
+        report = self.run_import()
+        self.assertIn("Appointments id 22: set vehicle_baserow_id: no imported vehicle has Baserow id 99", report)
+        self.assertIn("Appointments id 22: the customer has 2 vehicles named 'Honda Civic'; vehicle left blank", report)
+
     def test_staff_without_an_owner_are_reported(self):
         output = io.StringIO()
         call_command("import_baserow", str(self.folder), stdout=output)
@@ -284,7 +303,7 @@ class ApplyTests(ImportTestCase):
         self.assertFalse(Customer.objects.filter(first_name="Stranger").exists())
 
     def test_vehicles(self):
-        self.assertEqual(Vehicle.objects.count(), 3)
+        self.assertEqual(Vehicle.objects.count(), 4)
         rav4 = Vehicle.objects.get(baserow_id=11)
         self.assertEqual((rav4.vehicle_class.name, rav4.size_variant.value, rav4.year), ("Crossovers & Wagons", 2, 2019))
         harley = Vehicle.objects.get(baserow_id=13)
@@ -307,6 +326,16 @@ class ApplyTests(ImportTestCase):
         )
         self.assertEqual(job.total_before_tax, Decimal("290.00"))
         self.assertFalse(Promotion.objects.get(name="Friends & Family").active)
+
+    def test_a_fix_names_the_vehicle_by_its_baserow_id(self):
+        self.assertEqual(Appointment.objects.get(baserow_id=22).vehicle.baserow_id, 15)
+        self.assertIn("Appointments id 22: linked to vehicle 15 (Lee has two Honda Civic records", self.report)
+        self.assertNotIn("Appointments id 22: the customer has 2 vehicles", self.report)
+
+    def test_a_fix_naming_another_customers_vehicle_is_refused(self):
+        self.assertIn("Appointments id 23: set vehicle_baserow_id: vehicle 11 belongs to another customer", self.report)
+        # The usual matching still applies.
+        self.assertEqual(Appointment.objects.get(baserow_id=23).vehicle.baserow_id, 13)
 
     def test_hours_are_the_time_on_site_split_by_the_crew(self):
         job = Appointment.objects.get(baserow_id=21)
