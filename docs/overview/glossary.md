@@ -17,7 +17,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Add-on.** A service that can only be added to another service: Carpet Extraction and Seat Extraction. Add-ons are priced by seat rows alone and are not affected by the condition level.
 
-**Condition level.** The customer's choice of how dirty the vehicle is, in three levels that add 0%, 10% or 20% to the base price of Full Detail, Interior Only or Exterior Only. The adjustment is rounded to the whole dollar. See [../reference/pricing.md](../reference/pricing.md).
+**Condition level.** The customer's choice of how dirty the vehicle is, in three levels that add 0%, 10% or 20% to the base price and the service time of Full Detail, Interior Only or Exterior Only. The price adjustment is rounded to the whole dollar; the extra time is not rounded until the job's service time is. See [../reference/pricing.md](../reference/pricing.md).
 
 **Derived price rule.** A pricebook rule that prices one service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance at 80% and Monthly Maintenance at 50% of Full Detail are derived price rules.
 

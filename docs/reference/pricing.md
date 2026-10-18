@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-17
 tags: [pricing, pricebook, crew, quote]
-related: [docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
+related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
@@ -22,12 +22,12 @@ A price is looked up by three things together: service, vehicle class and size v
 ## How a price is built
 
 1. **Base price,** looked up by service, vehicle class and size variant.
-2. **Condition adjustment** of 0%, 10% or 20% of the base price, for Full Detail, Interior Only and Exterior Only only. Rounded to the whole dollar.
+2. **Condition adjustment** of 0%, 10% or 20% of the base price, for Full Detail, Interior Only and Exterior Only only. Rounded to the whole dollar. The same percentage lengthens the main service's service time ([decision 0065](../decisions/0065-condition-lengthens-service-time.md)).
 3. **Add-ons,** then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
 4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md). Until Phase 3 adds the rate lookup, quotes carry a tax rate of zero.
 5. **On-site adjustment,** entered by the owner at the job, always with a reason, shown on the invoice.
 
-Worked example: a 2019 Toyota RAV4 (Crossovers & Wagons, two rows) booked for a Full Detail at the second condition level, with Seat Extraction. Base $250, condition +10% = $25, Seat Extraction $80. Total $355 before tax. The service time is 5 + 1.5 = 6.5 one-person hours, and the time on site, with 30 minutes of setup and 30 of breakdown, is 7.5 hours.
+Worked example: a 2019 Toyota RAV4 (Crossovers & Wagons, two rows) booked for a Full Detail at the second condition level, with Seat Extraction. Base $250 and 5 hours, condition +10% = $25 and 0.5 hours, Seat Extraction $80 and 1.5 hours. Total $355 before tax. The service time is 5 + 0.5 + 1.5 = 7 one-person hours, and the time on site, with 30 minutes of setup and 30 of breakdown, is 8 hours, so the job is flagged as a full day.
 
 ## What the size variant means for each vehicle class
 
@@ -51,7 +51,16 @@ How two promotions on one job combine has not been set by the owner. Until it is
 
 ## Condition adjustment
 
-The customer picks one of three condition levels with plain descriptions. The first adds nothing, the second adds 10% and the third adds 20% of the base price of Full Detail, Interior Only or Exterior Only, rounded to the whole dollar. On a $280 Full Detail that is $28 or $56. The condition adjustment never applies to add-ons, paint correction, headlights or maintenance plans. The three levels follow the Armstrong booking template to start, described in the owner's own words.
+The customer picks one of three condition levels with plain descriptions. The first adds nothing, the second adds 10% and the third adds 20% of the base price of Full Detail, Interior Only or Exterior Only, rounded to the whole dollar. On a $280 Full Detail that is $28 or $56. The condition adjustment never applies to add-ons, paint correction, headlights or maintenance plans.
+
+## Condition lengthens the service time
+
+A dirtier vehicle takes longer as well as costing more ([decision 0065](../decisions/0065-condition-lengthens-service-time.md)). The condition level's percentage is added to the main service's one-person service time as well as its price, for Full Detail, Interior Only and Exterior Only only.
+
+- **The condition line carries the extra time:** the base service hours times the percentage, unrounded. A 5-hour Full Detail at the second level adds 0.5 hours; a 5.5-hour one at the third level adds 1.1 hours.
+- **Nothing else is lengthened.** Add-ons, maintenance plans, and setup and breakdown never change with condition.
+- **Rounded once.** The add-on hours are added, the two-person factor is applied, and the service time is rounded to the nearest 15 minutes once, at the end. Time on site follows from that service time.
+- Examples: a two-door Coupes & Sedans Full Detail at the third level is 3 + 0.6 = 3.6 hours, rounded to 3.5 hours of service and 4.5 hours on site. A two-person 2-row Midsize SUV Full Detail at the third level is (5.5 + 1.1) × 0.60 = 3.96 hours, rounded to 4 hours of service and 4.5 hours on site. The three levels follow the Armstrong booking template to start, described in the owner's own words.
 
 ## Maintenance plans are priced from Full Detail
 
@@ -69,9 +78,9 @@ The price matrix holds **service time** only: the hours spent working on the veh
 
 - Matrix hours are one-person service hours.
 - Two people take 60% of the one-person service time, the owner's measured figure. Crews are one or two people only.
-- Service time for the crew is rounded to the nearest 15 minutes, and so is time on site. A Full Detail of 5.5 service hours with two people is 3.3 hours, rounded to 3.25 hours of service, and 3.75 hours on site.
+- Service time for the crew is rounded to the nearest 15 minutes, and so is time on site. A Full Detail of 5.5 service hours at the first condition level, with two people, is 3.3 hours, rounded to 3.25 hours of service, and 3.75 hours on site.
 - Monthly Maintenance defaults to a two-person crew, which puts it at 2.25 to 4.5 hours on site. Every other service defaults to one person.
-- A job of 8 or more hours of one-person **time on site** (7 or more one-person service hours) is flagged in the control app for a second person, and the customer's estimate card shows "full day" instead of hours. These are the same jobs the earlier rule of 8 one-person hours flagged. Long jobs are allowed; nothing blocks them.
+- A job of 8 or more hours of one-person **time on site** (7 or more one-person service hours, condition time included) is flagged in the control app for a second person, and the customer's estimate card shows "full day" instead of hours. A higher condition level can therefore make a job a full day. Long jobs are allowed; nothing blocks them.
 
 ## The quoted price is the price of record
 
