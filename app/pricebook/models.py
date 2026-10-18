@@ -280,7 +280,9 @@ class PricedLine(models.Model):
     description = models.CharField(max_length=200)
     # Positive for a charge, negative for a promotion or a no-charge gift.
     amount = MoneyField()
-    one_person_service_hours = HoursField(null=True, blank=True)
+    # Exact: a condition line carries the base hours times its percentage,
+    # unrounded (decision 0065), which can need up to seven decimal places.
+    one_person_service_hours = HoursField(max_digits=10, decimal_places=7, null=True, blank=True)
     # The vehicle class and size variant as priced, copied so renaming or
     # retiring either never changes a past job.
     vehicle_class_name = models.CharField(max_length=60, blank=True)
@@ -348,7 +350,8 @@ class Quote(models.Model):
     tax_rate = PercentField(default=0)
     sales_tax = MoneyField(default=0)
     total = MoneyField()
-    one_person_service_hours = HoursField()
+    # The exact sum of the lines' hours, before the crew factor and rounding.
+    one_person_service_hours = HoursField(max_digits=10, decimal_places=7)
     service_minutes = models.PositiveIntegerField(help_text="Service time for the crew.")
     setup_minutes = models.PositiveIntegerField()
     breakdown_minutes = models.PositiveIntegerField()

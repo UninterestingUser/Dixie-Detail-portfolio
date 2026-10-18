@@ -6,7 +6,7 @@ visibility: internal
 status: planned
 updated: 2026-10-17
 tags: [booking, website, estimate-card, phase-3]
-related: [docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
+related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
 
 # Customer booking flow
@@ -34,9 +34,9 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 ## The estimate card
 
 - **Always in view.** It sits beside the steps on a desktop, and becomes a navy bar pinned to the bottom of a phone screen that opens into a full sheet when tapped.
-- **Builds line by line.** Vehicle and class, the service, the condition adjustment, each add-on, sales tax once the address is known, the total and the estimated time on site (setup, service time and breakdown together). Before the address, the card says the total is before sales tax.
+- **Builds line by line.** Vehicle and class, the service, the condition adjustment, each add-on, sales tax once the address is known, the total and the estimated time on site (setup, service time and breakdown together). The condition level lengthens the time as well as the price, so changing it changes both ([decision 0065](../decisions/0065-condition-lengthens-service-time.md)). Before the address, the card says the total is before sales tax.
 - **Shows the server's numbers only.** Every price, total and time on the card comes from the server's quote; the website does no arithmetic of its own ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
-- **Shows "full day"** instead of hours when the one-person time on site is 8 hours or more.
+- **Shows "full day"** instead of hours when the one-person time on site is 8 hours or more, condition time included.
 - **Sets expectations.** It states that the final price is confirmed when the vehicle is seen, and that nothing is charged until the job is done.
 
 ## Address entry is validated as the customer types

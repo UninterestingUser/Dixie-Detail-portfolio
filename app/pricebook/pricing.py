@@ -6,8 +6,10 @@ before tax and the service time, as docs/reference/pricing.md describes:
 
 1. Base price, looked up by service, vehicle class and size variant. A
    maintenance plan is a percentage of Full Detail (a derived price rule).
-2. Condition adjustment, for services it applies to, rounded to the whole dollar.
-3. Add-ons, at their own price; the condition level never changes them.
+2. Condition adjustment, for services it applies to: the level's percentage
+   of the base price, rounded to the whole dollar, and the same percentage of
+   the base service hours, unrounded (decision 0065).
+3. Add-ons, at their own price and hours; the condition level never changes them.
 4. Promotions, each on the lines it applies to, never below zero.
 
 Sales tax is added in Phase 3; until then it is zero. issue_quote() stores
@@ -254,23 +256,25 @@ def price_job(
         _service_line(version, service, vehicle_class, base, PricedLine.Kind.SERVICE, level and level.level)
     )
 
-    # 2. Condition adjustment: a percentage of the base price only, rounded
-    # to the whole dollar. A level that adds nothing has no line.
-    if level is not None:
+    # 2. Condition adjustment: the level's percentage of the main service's
+    # base price, rounded to the whole dollar, and of its base service hours,
+    # unrounded (decision 0065). Add-ons, maintenance plans, setup and
+    # breakdown are never adjusted. A level that adds nothing has no line.
+    if level is not None and level.adjustment_percent:
         adjustment = (base.price * level.adjustment_percent / 100).quantize(DOLLAR, rounding=ROUND_HALF_UP)
-        if adjustment:
-            job.lines.append(
-                LineDraft(
-                    kind=PricedLine.Kind.CONDITION,
-                    description=f"Condition level {level.level} (+{format_percent(level.adjustment_percent)}%)",
-                    amount=to_cents(adjustment),
-                    condition_level=level.level,
-                    service=service,
-                    pricebook_version=version,
-                    vehicle_class_name=vehicle_class.name,
-                    vehicle_class=vehicle_class,
-                )
+        job.lines.append(
+            LineDraft(
+                kind=PricedLine.Kind.CONDITION,
+                description=f"Condition level {level.level} (+{format_percent(level.adjustment_percent)}%)",
+                amount=to_cents(adjustment),
+                one_person_service_hours=base.one_person_service_hours * level.adjustment_percent / 100,
+                condition_level=level.level,
+                service=service,
+                pricebook_version=version,
+                vehicle_class_name=vehicle_class.name,
+                vehicle_class=vehicle_class,
             )
+        )
 
     # 3. Add-ons, at their own price for the class and size variant.
     for add_on in add_ons:

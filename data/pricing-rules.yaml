@@ -12,6 +12,10 @@ missing_combination: does not exist (no price, not bookable)
 condition_levels:
   applies_to: [Full Detail, Interior Only, Exterior Only]
   rounding: whole dollar
+  # The same percentage lengthens the main service's one-person service time,
+  # unrounded; the condition line carries the extra hours (decision 0065).
+  # Add-ons, maintenance plans, setup and breakdown are never adjusted.
+  adds_to_service_time: true
   levels:
     - level: 1
       adjustment_percent: 0
@@ -71,8 +75,9 @@ worked_example:
   vehicle: 2019 Toyota RAV4 (Crossovers & Wagons, 2 rows)
   lines:
     - {item: Full Detail, price: 250, one_person_service_hours: 5}
-    - {item: "Condition level 2 (+10%)", price: 25}
+    - {item: "Condition level 2 (+10%)", price: 25, one_person_service_hours: 0.5}
     - {item: Seat Extraction, price: 80, one_person_service_hours: 1.5}
   total_before_tax: 355
-  one_person_service_hours: 6.5
-  one_person_time_on_site_hours: 7.5
+  one_person_service_hours: 7
+  one_person_time_on_site_hours: 8
+  full_day: true            # 8 hours of one-person time on site
