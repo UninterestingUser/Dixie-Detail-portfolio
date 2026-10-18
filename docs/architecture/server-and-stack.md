@@ -4,7 +4,7 @@ summary: The home server's hardware and folders, the four containers of the Phas
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-17
 tags: [server, docker, systemd, infrastructure]
 related: [docs/architecture/network-and-access.md, docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/deploying-changes.md]
 ---
@@ -62,6 +62,7 @@ The `app` container applies database migrations every time it starts, before the
 - Compose starts `app` only after the `db` healthcheck passes, so the migration never runs against a database that is still starting.
 - A migration that fails stops the container before gunicorn starts, so the app never serves requests against a schema that does not match the code. The error is in `docker logs dixie-app-1`, and Compose keeps restarting the container until the cause is fixed.
 - A migration that has already been applied is skipped, so a restart with no new migrations adds only a moment to start-up.
+- The repository's `data/` folder is mounted read-only at `/srv/data`, beside the app at `/srv/app` (decision 0064). The pricebook load reads the price matrix and rules from it, and the time-on-site calculation reads the setup and breakdown launch values from `data/booking-rules.yaml` until Phase 3 moves them into settings. A deploy that changes a file in `data/` reaches the app on the next restart; the pricebook itself changes only through a new pricebook version.
 - gunicorn runs with `--no-control-socket`. Its control socket would be created under the home folder, which the read-only container cannot write to, and nothing uses it. See [../operations/troubleshooting.md](../operations/troubleshooting.md).
 
 ## systemd units

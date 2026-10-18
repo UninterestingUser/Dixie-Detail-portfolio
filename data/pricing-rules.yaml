@@ -34,7 +34,7 @@ service_time:
 crew:
   sizes: [1, 2]
   two_person_time_factor: 0.60     # applies to service time
-  job_time_rounding_minutes: 15     # service time for the crew; time on site rounds the same way
+  service_time_rounding_minutes: 15   # service time for the crew; time on site rounds the same way
   rounding_method: nearest
   default_crew:
     Monthly Maintenance: 2
@@ -47,6 +47,8 @@ full_day_flag:
 
 promotions:
   percentage_rounding: nearest cent   # 0.01; an exact half cent rounds up (decision 0055)
+  applies_to: the lines for the promotion's services (the main service with its condition adjustment, and add-ons); none listed means the whole job
+  combining: not yet set by the owner; the engine applies them in order, each on what is left, never below zero
   kinds: [percent_off, amount_off, fixed_price, voucher]
 
 price_build_order:
@@ -57,13 +59,13 @@ price_build_order:
   - sales tax at the service address's rate
   - on-site adjustment with a reason
 
-quote:                    # decision 0059; record built in Phase 1 Step 3, used by the website in Phase 3
+quote:                    # decision 0059; built in Phase 1 Step 3 (app/pricebook/pricing.py), used by the website from Phase 3
   issued_by: the server's pricing engine only
   holds: [inputs, lines, totals, pricebook version, tax rate, service time, time on site]
   booking: references the quote, never a price sent from the browser
   becomes: the appointment's line snapshot (decision 0033)
   owner_alert: any price change on a booked job not made by the owner
-  sales_tax: rate on the day of service; the price before tax never changes
+  sales_tax: rate on the day of service; the price before tax never changes. Zero until Phase 3 adds the rate lookup
 
 worked_example:
   vehicle: 2019 Toyota RAV4 (Crossovers & Wagons, 2 rows)

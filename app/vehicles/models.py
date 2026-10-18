@@ -14,6 +14,12 @@ from simple_history.models import HistoricalRecords
 class VehicleClass(models.Model):
     """A group of vehicles that share prices, such as Midsize SUVs."""
 
+    class PriceBasis(models.TextChoices):
+        # The only basis built. Another, such as per foot of length for RVs,
+        # would be a new choice here and a new basis in pricebook.pricing
+        # (decision 0060).
+        PRICE_LIST = "price_list", "Fixed price list"
+
     name = models.CharField(max_length=60, unique=True)
     size_variant_measures = models.CharField(
         max_length=60,
@@ -23,6 +29,12 @@ class VehicleClass(models.Model):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     active = models.BooleanField(default=True, help_text="Off when the class is retired.")
+    price_basis = models.CharField(
+        max_length=20,
+        choices=PriceBasis.choices,
+        default=PriceBasis.PRICE_LIST,
+        help_text="How the class is priced. Only the fixed price list is built.",
+    )
 
     history = HistoricalRecords()
 

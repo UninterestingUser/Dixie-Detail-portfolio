@@ -7,7 +7,8 @@ meta:
   note: >-
     Launch values. Every scheduling rule is a setting (decision 0056). These values seed the
     settings; once the control app's settings screen exists (Phase 3), the live values are in the
-    database, with change history. Update this file when a launch value changes.
+    database, with change history. Until then the app reads the setup, breakdown and rounding values
+    from this file (app/core/scheduling.py). Update this file when a launch value changes.
 
 time_zone: America/New_York
 

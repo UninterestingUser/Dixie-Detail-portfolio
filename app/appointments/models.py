@@ -3,13 +3,13 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from simple_history.models import HistoricalRecords
 
 from billing.methods import PaymentMethod
-from core.fields import HoursField, MoneyField
-from pricebook.models import Service
+from core.fields import MoneyField
+from pricebook.models import PricedLine, Quote, Service
 
 
 class RecurringSeries(models.Model):
@@ -63,8 +63,17 @@ class Appointment(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.BOOKED)
     source = models.CharField(max_length=10, choices=Source.choices)
     crew_size = models.PositiveSmallIntegerField(choices=[(1, "1"), (2, "2")], default=1)
-    job_minutes = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Calculated job length for the crew, rounded to 15 minutes."
+    # The times as booked, so a later settings or pricebook change never
+    # alters them (decision 0056). Time on site is their sum. Empty on
+    # imported jobs that did not record them.
+    setup_minutes = models.PositiveIntegerField(null=True, blank=True)
+    service_minutes = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Service time for the crew, rounded to 15 minutes."
+    )
+    breakdown_minutes = models.PositiveIntegerField(null=True, blank=True)
+    # The quote a booking was made from (decision 0059). A quote books one appointment.
+    quote = models.OneToOneField(
+        Quote, on_delete=models.PROTECT, null=True, blank=True, related_name="appointment"
     )
     preferred_payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, blank=True)
     series = models.ForeignKey(
@@ -93,47 +102,52 @@ class Appointment(models.Model):
     def is_no_charge(self):
         return self.lines.filter(kind=AppointmentLine.Kind.NO_CHARGE).exists()
 
+    @property
+    def time_on_site_minutes(self):
+        """Setup + service time + breakdown, or None when any is missing."""
+        parts = (self.setup_minutes, self.service_minutes, self.breakdown_minutes)
+        return None if None in parts else sum(parts)
 
-class AppointmentLine(models.Model):
+    @classmethod
+    @transaction.atomic
+    def book_from_quote(cls, quote, **fields):
+        """Book an appointment from a quote: the quote's lines become its line
+        snapshot exactly, and its crew and times are copied as booked. The
+        price is never taken from anywhere else (decision 0059).
+
+        fields are the appointment's own details, such as customer,
+        scheduled_start and source.
+        """
+        if Appointment.objects.filter(quote=quote).exists():
+            raise ValueError(f"Quote {quote.pk} is already booked.")
+        appointment = cls.objects.create(
+            quote=quote,
+            crew_size=quote.crew_size,
+            setup_minutes=quote.setup_minutes,
+            service_minutes=quote.service_minutes,
+            breakdown_minutes=quote.breakdown_minutes,
+            **fields,
+        )
+        for quote_line in quote.lines.all():
+            AppointmentLine.objects.create(
+                appointment=appointment,
+                **{name: getattr(quote_line, name) for name in PricedLine.COPIED_FIELDS},
+            )
+        return appointment
+
+
+class AppointmentLine(PricedLine):
     """One priced line on an appointment, copied when it is booked.
 
     This is the line snapshot (decision 0033): every value is copied from the
-    pricebook, so a later pricebook change cannot alter a booked or completed
-    job. The links to the service, promotion, version, vehicle class and size
-    variant are for reporting;
-    the copied fields are what was charged.
+    quote it was booked from (decision 0059), or from the pricebook, so a later
+    pricebook change cannot alter a booked or completed job. The links to the
+    service, promotion, version, vehicle class and size variant are for
+    reporting; the copied fields are what was charged.
     """
 
-    class Kind(models.TextChoices):
-        SERVICE = "service", "Service"
-        ADD_ON = "add_on", "Add-on"
-        CONDITION = "condition", "Condition adjustment"
-        CUSTOM = "custom", "Custom line"
-        PROMOTION = "promotion", "Promotion"
-        ADJUSTMENT = "adjustment", "On-site adjustment"
-        NO_CHARGE = "no_charge", "No charge (gift)"
-
     appointment = models.ForeignKey(Appointment, on_delete=models.CASCADE, related_name="lines")
-    position = models.PositiveSmallIntegerField(default=0)
-    kind = models.CharField(max_length=20, choices=Kind.choices)
-    description = models.CharField(max_length=200)
-    # Positive for a charge, negative for a promotion or a no-charge gift.
-    amount = MoneyField()
-    one_person_hours = HoursField(null=True, blank=True)
-    # The vehicle class and size variant as booked, copied so renaming or
-    # retiring either never changes a past job.
-    vehicle_class_name = models.CharField(max_length=60, blank=True)
-    size_variant_value = models.PositiveSmallIntegerField(null=True, blank=True)
-    size_variant_label = models.CharField(max_length=100, blank=True)
-    condition_level = models.PositiveSmallIntegerField(null=True, blank=True)
     reason = models.TextField(blank=True)
-    service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
-    promotion = models.ForeignKey("promotions.Promotion", on_delete=models.PROTECT, null=True, blank=True)
-    pricebook_version = models.ForeignKey(
-        "pricebook.PricebookVersion", on_delete=models.PROTECT, null=True, blank=True
-    )
-    vehicle_class = models.ForeignKey("vehicles.VehicleClass", on_delete=models.PROTECT, null=True, blank=True)
-    size_variant = models.ForeignKey("vehicles.SizeVariant", on_delete=models.PROTECT, null=True, blank=True)
 
     history = HistoricalRecords()
 
@@ -152,9 +166,6 @@ class AppointmentLine(models.Model):
             ),
         ]
 
-    def __str__(self):
-        return f"{self.description}: {self.amount}"
-
     @classmethod
     def snapshot(cls, appointment, price, **fields):
         """A new, unsaved line copied from a price in a published version."""
@@ -167,7 +178,7 @@ class AppointmentLine(models.Model):
             kind=kind,
             description=service.name,
             amount=price.price,
-            one_person_hours=price.one_person_hours,
+            one_person_service_hours=price.one_person_service_hours,
             vehicle_class_name=price.vehicle_class.name,
             size_variant_value=price.size_variant.value if price.size_variant else None,
             size_variant_label=price.size_variant.label if price.size_variant else "",
