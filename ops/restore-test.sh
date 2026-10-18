@@ -47,7 +47,7 @@ docker run --detach --rm --name "$container" --network none \
 	--tmpfs /var/lib/postgresql \
 	-e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=restore_test \
 	"$image" >/dev/null
-# TCP only answers once initialisation is over and the real server is up.
+# TCP only answers once initialization is over and the real server is up.
 for _ in $(seq 60); do
 	docker exec "$container" pg_isready -q -h 127.0.0.1 && break
 	sleep 1

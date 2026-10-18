@@ -1,10 +1,10 @@
 ---
 title: Documentation conventions
-summary: How every document and data file in this repository is written, labelled and kept current, for human readers and for AI retrieval.
+summary: How every document and data file in this repository is written, labeled and kept current, for human readers and for AI retrieval.
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-18
 tags: [documentation, conventions, rag]
 related: [docs/README.md, docs/templates/doc-template.md, docs/templates/decision-template.md, tools/check_docs.py]
 ---
@@ -25,7 +25,7 @@ This repository is the single source of truth for how the Dixie Detail business 
 | --- | --- | --- |
 | `docs/overview/` | Why the system exists, what it covers, the vocabulary, the phases | `glossary.md` |
 | `docs/architecture/` | How the system is built and connected | `secrets.md` |
-| `docs/reference/` | Business rules and behaviour in detail: pricing, booking, tax, texts | `pricing.md` |
+| `docs/reference/` | Business rules and behavior in detail: pricing, booking, tax, texts | `pricing.md` |
 | `docs/decisions/` | One file per decision, with the reasons and the alternatives | `0028-secrets-in-bitwarden.md` |
 | `docs/operations/` | Procedures for running the server: deploy, back up, restore, fix | `troubleshooting.md` |
 | `docs/guides/` | Day-to-day use of the system, by role, written as tasks | `owner-daily-routine.md` (planned) |
@@ -73,6 +73,7 @@ A retrieval system hands the AI a few paragraphs cut from the middle of a file. 
 - **Keep files short.** A few screens at most. Long procedures become numbered steps under clear headings.
 - **Give the reason with the rule.** "Two people take 60% of the time (the owner's measured figure)" lets an AI explain the rule, not just recite it.
 - **Use plain words.** The owner and future staff read these too.
+- **Write in US English.** The owner writes US English: color, behavior, canceled, catalog, labeled, recognize. Third-party names, commands and library identifiers keep their own spelling.
 
 ## Facts live in one place
 
@@ -90,7 +91,7 @@ A fact written in two places will eventually disagree with itself, and an AI fed
 
 ## Docs are part of done
 
-A pull request that changes behaviour, a setting, a secret name, a server path or a business rule also updates the matching documentation. The pull request checklist asks for it, and Claude Code is told the same in `CLAUDE.md`.
+A pull request that changes behavior, a setting, a secret name, a server path or a business rule also updates the matching documentation. The pull request checklist asks for it, and Claude Code is told the same in `CLAUDE.md`.
 
 | You changed | Also update |
 | --- | --- |

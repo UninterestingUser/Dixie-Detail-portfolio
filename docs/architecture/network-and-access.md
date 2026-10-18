@@ -28,7 +28,7 @@ The core app has two ways in, and Caddy is the only container either way reaches
 - The Cloudflare Tunnel named `dixie-detail` connects outward from the `cloudflared` container to Cloudflare. Its token is the Bitwarden secret `CLOUDFLARE_TUNNEL_TOKEN`.
 - The tunnel has one published application route: `api.dixiedetail.com` to `http://caddy:8080`. Cloudflare created the DNS record itself.
 - Caddy's port 8080 exists only inside the `dixie_tunnel` Docker network, which holds only Caddy and `cloudflared`, and answers two paths: `/health` and anything under `/api/public/`. Every other path returns "not found", so the admin and control app cannot be reached from the internet even by guessing addresses.
-- The app checks the public-door rule a second time. Caddy labels every request with the door it came through, in an `X-Dixie-Entrance` header that overwrites any value the visitor sent, and the app serves only `/health` and `/api/public/` to requests not labelled as coming over the tailnet.
+- The app checks the public-door rule a second time. Caddy labels every request with the door it came through, in an `X-Dixie-Entrance` header that overwrites any value the visitor sent, and the app serves only `/health` and `/api/public/` to requests not labeled as coming over the tailnet.
 - The public API, once built, does three things: list services and prices, show open slots, and take a booking.
 - The WordPress site and the email DNS records were not touched. The rest of `dixiedetail.com` keeps working as before until the launch cutover in Phase 5.
 
