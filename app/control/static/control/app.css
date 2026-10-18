@@ -1,0 +1,156 @@
+/* The control app. Phone first (decision 0046): one column, large touch
+   targets, and the tab bar and main buttons at the bottom where a thumb
+   reaches. Wider screens move the tab bar to the top. The brand colors are
+   set on :root by base.html from data/business.yaml. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --ink: #1d1f24;
+  --muted: #5b6270;
+  --line: #d9dce3;
+  --paper: #f4f5f8;
+  --warn: #9a3412;
+  --ok: #166534;
+  --tabbar: calc(64px + env(safe-area-inset-bottom));
+  --radius: 10px;
+}
+/* Signed out there is no tab bar to leave room for. */
+.no-tabbar { --tabbar: env(safe-area-inset-bottom); }
+
+body {
+  margin: 0;
+  font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  padding-bottom: var(--tabbar);
+}
+
+a { color: var(--navy); }
+
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: var(--navy); color: var(--white);
+}
+.topbar .brand { color: var(--white); font-weight: 800; font-style: italic; text-decoration: none; font-size: 1.15rem; }
+
+main { padding: 16px; max-width: 48rem; margin: 0 auto; }
+.narrow main { max-width: 26rem; }
+
+h1 { font-size: 1.5rem; line-height: 1.25; margin: 4px 0 12px; }
+h2 { font-size: 1.1rem; margin: 28px 0 8px; color: var(--navy); }
+.heading p { margin: -8px 0 0; }
+
+.muted, .help, .hint { color: var(--muted); }
+.help { font-size: 0.9rem; margin: 4px 0 0; }
+.hint { margin: 8px 0 16px; }
+.warn { color: var(--warn); font-weight: 600; }
+.ok { color: var(--ok); font-weight: 600; }
+.error { color: var(--warn); font-weight: 600; margin: 4px 0 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Lists and cards */
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.card, .row {
+  position: relative; display: block;
+  background: var(--white); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.row { color: inherit; text-decoration: none; min-height: 56px; }
+.row:active, .row:hover { border-color: var(--navy); }
+.sub { display: block; color: var(--muted); font-size: 0.95rem; }
+.sub.warn { color: var(--warn); }
+.sub.ok { color: var(--ok); }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.card > p:first-child { margin-top: 0; }
+.card > p:last-child { margin-bottom: 0; }
+.card:has(.card-action) { padding-right: 64px; }
+.card-action { position: absolute; top: 4px; right: 4px; padding: 8px 12px; min-height: 44px; display: inline-flex; align-items: center; }
+.faded { opacity: 0.65; }
+.badge {
+  display: inline-block; font-size: 0.8rem; font-weight: 600; padding: 1px 8px; margin: 4px 4px 0 0;
+  border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--muted);
+}
+.status-booked { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.status-requested { border-color: var(--red); color: var(--red); }
+
+.details { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0 0 12px; }
+.details dt { color: var(--muted); }
+.details dd { margin: 0; overflow-wrap: anywhere; }
+
+.lines { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 0.95rem; }
+.lines td { padding: 2px 0; vertical-align: top; }
+.lines .amount { text-align: right; white-space: nowrap; padding-left: 12px; }
+.lines .total td { border-top: 1px solid var(--line); font-weight: 700; padding-top: 4px; }
+.payments { margin: 4px 0; padding-left: 18px; font-size: 0.95rem; }
+
+.messages { list-style: none; padding: 0; margin: 0 0 12px; }
+.messages li { background: #e8f3ec; border: 1px solid #b7dcc4; border-radius: var(--radius); padding: 10px 14px; }
+
+/* Forms and buttons: at least 48px tall for a thumb. */
+.stack { display: grid; gap: 14px; }
+.field label { display: block; font-weight: 600; margin-bottom: 4px; }
+input, select, textarea {
+  width: 100%; font: inherit; color: inherit; background: var(--white);
+  border: 1px solid #aeb4c0; border-radius: var(--radius); padding: 10px 12px; min-height: 48px;
+}
+input:focus, select:focus, textarea:focus { outline: 3px solid color-mix(in srgb, var(--navy) 35%, transparent); border-color: var(--navy); }
+.has-error input, .has-error select, .has-error textarea { border-color: var(--warn); }
+
+button, .button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 10px 18px; font: inherit; font-weight: 700; text-decoration: none;
+  border-radius: var(--radius); border: 1px solid var(--navy); background: var(--white); color: var(--navy); cursor: pointer;
+}
+.primary { background: var(--red); border-color: var(--red); color: var(--white); }
+
+/* The form buttons stay in reach above the tab bar while the form scrolls. */
+.actions {
+  position: sticky; bottom: var(--tabbar); z-index: 5;
+  display: grid; grid-template-columns: 2fr 1fr; gap: 8px;
+  margin: 0 -16px; padding: 10px 16px; background: var(--paper); border-top: 1px solid var(--line);
+}
+.narrow .actions { grid-template-columns: 1fr; }
+
+/* The search box, pinned above the tab bar, after the results. */
+/* On a phone the page fills the screen, so the box sits at the bottom even with few results. */
+.search-page { display: flex; flex-direction: column; min-height: calc(100dvh - 105px - var(--tabbar)); }
+.search-page #results { flex: 1; }
+.search-bar {
+  position: sticky; bottom: var(--tabbar); z-index: 5;
+  display: grid; grid-template-columns: 1fr auto; gap: 8px;
+  margin: 12px -16px 0; padding: 10px 16px; background: var(--paper); border-top: 1px solid var(--line);
+}
+.search-bar input { font-size: 1.1rem; }
+
+/* The tab bar: three large targets along the bottom edge. */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  height: var(--tabbar); padding-bottom: env(safe-area-inset-bottom);
+  background: var(--white); border-top: 1px solid var(--line);
+}
+.tabbar a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--muted); text-decoration: none; font-size: 0.8rem; font-weight: 600;
+}
+.tabbar svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.tabbar a[aria-current="page"] { color: var(--red); }
+
+/* Desktop: the tab bar moves up beside the brand, and nothing is pinned to the bottom. */
+@media (min-width: 900px) {
+  :root { --tabbar: 0px; }
+  .tabbar {
+    top: 0; bottom: auto; left: auto; right: 16px; height: 56px; width: auto;
+    display: flex; gap: 8px; background: transparent; border: 0;
+  }
+  .tabbar a { flex-direction: row; gap: 6px; color: var(--white); font-size: 0.95rem; padding: 0 10px; }
+  .tabbar a[aria-current="page"] { color: var(--white); text-decoration: underline; text-underline-offset: 6px; }
+  .tabbar svg { width: 20px; height: 20px; }
+  .topbar { height: 56px; padding-top: 0; padding-bottom: 0; }
+  .search-bar, .actions { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; }
+  .search-page { min-height: 0; }
+  .search-bar { order: -1; margin: 0 0 16px; }
+}

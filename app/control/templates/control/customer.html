@@ -1,0 +1,127 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}{{ customer }}{% endblock %}
+{% block content %}
+<div class="heading">
+  <h1>{{ customer }}</h1>
+  {% if customer.company %}<p class="muted">{{ customer.company }}</p>{% endif %}
+</div>
+
+<section aria-labelledby="contact">
+  <h2 id="contact">Contact</h2>
+  <dl class="details">
+    <dt>Mobile</dt>
+    <dd>{% if customer.mobile %}<a href="tel:+1{{ customer.mobile }}">{{ customer.mobile|phone }}</a> · <a href="sms:+1{{ customer.mobile }}">Text</a>{% else %}<span class="muted">No phone number</span>{% endif %}</dd>
+    <dt>Email</dt>
+    <dd>{% if customer.email %}<a href="mailto:{{ customer.email }}">{{ customer.email }}</a>{% else %}<span class="muted">None</span>{% endif %}</dd>
+    {% if customer.source %}<dt>Came from</dt><dd>{{ customer.source }}</dd>{% endif %}
+    <dt>Customer since</dt>
+    <dd>{{ customer.created_at|date:"M j, Y" }}{% if customer.baserow_id %} <span class="muted">(imported from Baserow)</span>{% endif %}</dd>
+  </dl>
+  <p><a class="button" href="{% url 'customer-edit' customer.pk %}">Edit customer</a></p>
+</section>
+
+{% if customer.notes %}
+<section aria-labelledby="notes">
+  <h2 id="notes">Notes</h2>
+  <div class="card">{{ customer.notes|linebreaks }}</div>
+</section>
+{% endif %}
+
+<section aria-labelledby="second-contacts">
+  <h2 id="second-contacts">Second contacts</h2>
+  {% if second_contacts %}
+    <ul class="list">
+      {% for contact in second_contacts %}
+        <li class="card">
+          <strong>{{ contact.name }}</strong>{% if contact.relationship %} <span class="muted">· {{ contact.relationship }}</span>{% endif %}
+          <span class="sub"><a href="tel:+1{{ contact.phone }}">{{ contact.phone|phone }}</a></span>
+          {% if contact.notes %}<span class="sub">{{ contact.notes }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="addresses">
+  <h2 id="addresses">Addresses</h2>
+  {% if addresses %}
+    <ul class="list">
+      {% for address in addresses %}
+        <li class="card">
+          {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}<br>{{ address.city }}, {{ address.state }} {{ address.zip_code }}
+          {% if not address.active %}<span class="badge">No longer used</span>{% endif %}
+          {% if address.approved_out_of_area %}<span class="badge">Out of area, approved</span>{% endif %}
+          {% if not address.verified %}<span class="badge">Not verified</span>{% endif %}
+          {% if address.notes %}<span class="sub">{{ address.notes }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="vehicles">
+  <h2 id="vehicles">Vehicles</h2>
+  {% if vehicles %}
+    <ul class="list">
+      {% for vehicle in vehicles %}
+        <li class="card">
+          <strong>{{ vehicle }}</strong>
+          <span class="sub">{% if vehicle.vehicle_class %}{{ vehicle.vehicle_class }}{% if vehicle.size_variant %}, {{ vehicle.size_variant.label }}{% endif %}{% else %}No vehicle class{% endif %}</span>
+          {% if vehicle.missing_details %}<span class="sub warn">To fill in: {{ vehicle.missing_details|join:", " }}</span>{% endif %}
+          {% if vehicle.notes %}<span class="sub">{{ vehicle.notes }}</span>{% endif %}
+          <a class="card-action" href="{% url 'vehicle-edit' vehicle.pk %}">Edit</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">None.</p>
+  {% endif %}
+  <p><a class="button" href="{% url 'vehicle-new' customer.pk %}">Add a vehicle</a></p>
+</section>
+
+<section aria-labelledby="appointments">
+  <h2 id="appointments">Appointments</h2>
+  {% if appointments %}
+    <ul class="list">
+      {% for row in appointments %}
+        {% with appointment=row.appointment %}
+        <li class="card{% if row.is_canceled %} faded{% endif %}">
+          <div class="card-head">
+            <strong>{{ appointment.scheduled_start|date:"D, M j, Y, g:i A" }}</strong>
+            <span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>
+          </div>
+          <span class="sub">{{ appointment.vehicle|default:"No vehicle recorded" }}</span>
+          {% if appointment.service_address %}<span class="sub">{{ appointment.service_address }}</span>{% endif %}
+          {% if row.lines %}
+            <table class="lines">
+              {% for line in row.lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+              <tr class="total"><td>Total before tax</td><td class="amount">{{ row.total|money }}</td></tr>
+            </table>
+          {% endif %}
+          {% if row.payments %}
+            <ul class="payments">
+              {% for payment in row.payments %}
+                <li>Paid {{ payment.amount|money }} by {{ payment.get_method_display }}{% if payment.split_method %} and {{ payment.get_split_method_display }}{% endif %}{% if payment.tip %}, tip {{ payment.tip|money }}{% endif %}, {{ payment.paid_at|date:"M j, Y" }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if not row.is_canceled %}
+            {% if not row.payments %}{% if row.total and appointment.status == "completed" %}<span class="sub warn">Not paid</span>{% endif %}
+            {% elif row.balance > 0 %}<span class="sub warn">Balance {{ row.balance|money }}</span>
+            {% elif row.payments %}<span class="sub ok">Paid in full</span>{% endif %}
+          {% endif %}
+          {% if appointment.notes %}<span class="sub">{{ appointment.notes|linebreaksbr }}</span>{% endif %}
+        </li>
+        {% endwith %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No appointments yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
