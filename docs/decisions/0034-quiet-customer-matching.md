@@ -19,7 +19,7 @@ related: [docs/reference/returning-customers.md]
 
 ## Context
 
-The owner wanted returning customers recognised without adding sign-in steps or exposing saved details.
+The owner wanted returning customers recognized without adding sign-in steps or exposing saved details.
 
 ## Decision
 

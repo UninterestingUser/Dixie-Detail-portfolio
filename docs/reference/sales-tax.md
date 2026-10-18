@@ -35,7 +35,7 @@ The owner can mark any address outside the five counties as an exception. Today 
 
 - The address passes the service-area check, can book online and gets normal drive times.
 - It is charged no Tennessee tax, because the work happens in Georgia.
-- Georgia generally does not tax detailing labour (Georgia letter ruling LR SUT-2019-11, on car wash charges), so its rate is kept as a per-state setting at 0%.
+- Georgia generally does not tax detailing labor (Georgia letter ruling LR SUT-2019-11, on car wash charges), so its rate is kept as a per-state setting at 0%.
 - The owner is to confirm both points with the accountant, and ask whether Georgia work creates a Georgia income tax filing.
 
 ## The sourcing rule is one setting

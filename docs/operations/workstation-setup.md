@@ -23,7 +23,7 @@ curl -fsSL https://claude.ai/install.sh | bash
 
 - In `gh auth login`, answer GitHub.com, then **HTTPS**, then Yes to authenticating Git with your GitHub credentials, then log in with a web browser. gh keeps its sign-in encrypted in the GNOME login keyring, so there is no SSH key file or plaintext token on the workstation. Afterwards `gh auth status` should end its account line with `(keyring)`.
 - `podman` runs the tests' containers and `python3-pyyaml` lets `tools/check_docs.py` read YAML. Fedora Workstation usually has both already; the command above changes nothing if so. Docker is not needed.
-- `rclone` is needed only to authorise the server's Google Drive connection (`rclone authorize "drive" …`), because the server has no browser.
+- `rclone` is needed only to authorize the server's Google Drive connection (`rclone authorize "drive" …`), because the server has no browser.
 - Check Claude Code with `claude --version`, then start it in the project folder with `claude`.
 
 ## Running the tests

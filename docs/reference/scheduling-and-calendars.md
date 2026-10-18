@@ -99,7 +99,7 @@ The database is the only record of appointments ([decision 0057](../decisions/00
 ### Jobs calendar: the app writes, the owner reads
 
 1. Each appointment has one event and one "Drive to job" block, linked to it by an ID stored on the appointment and in the event's private extended properties.
-2. Booking, moving or cancelling an appointment updates its events within a minute. If Google is down, the change waits in a queue and retries; a booking never waits for Google.
+2. Booking, moving or canceling an appointment updates its events within a minute. If Google is down, the change waits in a queue and retries; a booking never waits for Google.
 3. Appointments change in the control app, not in Google. A Jobs event edited in Google is restored to the app's version at the next sync, and the control app notes the reset. A Jobs event deleted in Google is recreated.
 4. An event added to Jobs by hand counts as busy time and is flagged in the control app, so the owner can move it to Time Off or delete it. The app never deletes it.
 5. Days closed in the control app show on Jobs as all-day "Closed" events.
