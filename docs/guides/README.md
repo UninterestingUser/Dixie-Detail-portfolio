@@ -21,12 +21,14 @@ Running the server itself (deploying, backups, monitoring) is covered in [../ope
 | --- | --- |
 | [Finding a customer and their history](finding-a-customer.md) | Owner and staff |
 | [Installing the control app on a phone or computer](installing-the-control-app.md) | Owner and staff |
+| [Booking a job](booking-a-job.md) | Owner and staff |
+| [Assigning staff and the services they may do](assigning-staff.md) | Owner |
+| [Editing and publishing the pricebook](editing-the-pricebook.md) | Owner |
 
 ## Planned guides for the owner
 
 | Guide | Written in |
 | --- | --- |
-| Editing and publishing the pricebook | Phase 1 |
 | Resolving a quiet-matching flag | Phase 3 |
 | Booking a maintenance plan or a repeating series | Phase 3 |
 | Closing a day or taking a holiday | Phase 3 |

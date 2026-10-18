@@ -1,5 +1,6 @@
 """The control app's pages (decision 0046): the shell, and finding, viewing,
-adding and editing customers and their vehicles."""
+adding and editing customers and their vehicles. The schedule and jobs, staff
+and pricebook are in their own modules."""
 
 from decimal import Decimal
 
@@ -25,7 +26,8 @@ from .search import find_customers
 
 @require_safe
 def home(request):
-    return redirect("customers")
+    """The control app opens on today's schedule."""
+    return redirect("schedule")
 
 
 @require_safe

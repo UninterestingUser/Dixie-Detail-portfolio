@@ -46,7 +46,7 @@ Open the control app's address in Chrome and sign in with your username and pass
 
 ## Using it with one hand
 
-The bar along the bottom of the phone screen has the three places you need: **Customers**, **New customer** and **Account**. The search box and the **Save** and **Cancel** buttons sit just above that bar, within reach of your thumb.
+The bar along the bottom of the phone screen has the five places you need: **Schedule**, **Customers**, **Staff**, **Pricebook** and **Account**. The app opens on today's schedule. The search box and the **Save** and **Cancel** buttons sit just above that bar, within reach of your thumb.
 
 ## When it will not open or sign in
 

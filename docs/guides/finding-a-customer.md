@@ -11,7 +11,7 @@ related: [docs/reference/control-app.md, docs/guides/installing-the-control-app.
 
 # Finding a customer and their history
 
-The control app opens on the Customers screen. From there you can find any customer, see everything about them on one page, and add or change their details and vehicles. You need to be signed in; see [installing-the-control-app.md](installing-the-control-app.md).
+The **Customers** screen finds any customer. From there you can see everything about them on one page, add or change their details and vehicles, and book them a job. You need to be signed in; see [installing-the-control-app.md](installing-the-control-app.md).
 
 ## Find a customer
 
@@ -26,7 +26,7 @@ What you can type:
 - **Part of a phone number,** at least three digits, such as the last four: "0142".
 - **A name and part of a number,** such as "Pat 0142".
 
-A second contact's number or name finds the customer they belong to. Each result shows the customer's number, their vehicles with each vehicle's color, and any second contacts, so you can pick the right person when two names are alike. When nothing matches, the screen offers **Add a new customer**.
+A second contact's number or name finds the customer they belong to. Each result shows the customer's number, their vehicles with each vehicle's color, and any second contacts, so you can pick the right person when two names are alike. When nothing matches, the screen offers **Add a new customer**. From a customer's page, **Book a job** books a job for them; see [booking-a-job.md](booking-a-job.md), and tap an appointment's date to open the job.
 
 ## What the customer page shows
 
@@ -41,7 +41,7 @@ From the top:
 
 ## Add or edit a customer
 
-- **New customer:** tap **New customer** in the bottom bar. Only the first name is required. Type the mobile number in any format; it is saved as 10 digits. A number that is not a full 10-digit US number is refused with a message.
+- **New customer:** on the Customers screen, tap **Add a customer**. Only the first name is required. Type the mobile number in any format; it is saved as 10 digits. A number that is not a full 10-digit US number is refused with a message.
 - **Edit:** on the customer page, tap **Edit customer**, change what you need, and tap **Save**. **Save** and **Cancel** stay at the bottom of the screen while you scroll.
 
 Every change records who made it and when.

@@ -2,14 +2,15 @@
 
 Completed jobs are never touched. affected_jobs() lists every booked job on
 or after the effective date whose price, service hours or service the draft
-would change, so the owner can decide each one. The control app screen that
-asks the owner comes later; this is the list it shows.
+would change, so the owner can decide each one; publish() publishes the draft
+and applies and logs the owner's choice for each.
 """
 
 import datetime
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from django.db import transaction
 from django.utils import timezone
 
 from core.scheduling import round_to_nearest, time_on_site
@@ -85,3 +86,48 @@ def _reprice(appointment, version):
         booked_stay = time_on_site(round_to_nearest(booked_hours * 60, 1), 1)
         result.becomes_full_day = job.full_day and booked_stay.total_minutes < job.full_day_time_on_site_hours * 60
     return result if result.reasons else None
+
+
+class PublishError(ValueError):
+    """The draft cannot be published with these choices."""
+
+
+@transaction.atomic
+def publish(version, effective_date, choices, user=None):
+    """Publish a draft and apply the owner's choice for every affected job.
+
+    choices maps an appointment id to ("keep", None), ("use_new", None) or
+    ("custom", amount). A job with no choice keeps its booked price, the
+    default. A job the draft can no longer price can only be kept or given a
+    custom amount. Every choice is logged with the old and new amounts.
+    """
+    from appointments.booking import inputs_from_appointment, reprice, set_final_price
+    from appointments.models import RepricingDecision
+
+    affected = affected_jobs(version, effective_date)
+    for job in affected:
+        choice, amount = choices.get(job.appointment.pk, ("keep", None))
+        if choice == "use_new" and job.new_total is None:
+            raise PublishError(f"{job.appointment} can no longer be priced; keep it or give a custom amount.")
+        if choice == "custom" and (amount is None or amount < 0):
+            raise PublishError(f"Give a custom amount for {job.appointment}.")
+        if choice not in ("keep", "use_new", "custom"):
+            raise PublishError(f"Unknown choice {choice!r}.")
+    version.publish(effective_date)
+    for job in affected:
+        appointment = job.appointment
+        choice, amount = choices.get(appointment.pk, ("keep", None))
+        if choice == "use_new":
+            reprice(appointment, inputs_from_appointment(appointment), f"New price from pricebook version {version.number}", version=version)
+        elif choice == "custom":
+            set_final_price(appointment, amount, f"Custom amount chosen when pricebook version {version.number} was published")
+        appointment.refresh_from_db()
+        RepricingDecision.objects.create(
+            appointment=appointment,
+            pricebook_version=version,
+            choice=choice,
+            old_amount=job.booked_total,
+            new_amount=appointment.total_before_tax if choice != "keep" else job.booked_total,
+            decided_by=user,
+        )
+    return affected

@@ -1,0 +1,11 @@
+{% extends "control/base.html" %}
+{% block title %}{{ service }}{% endblock %}
+{% block content %}
+<h1>{{ service }}</h1>
+<p class="muted">{{ service.get_kind_display }}</p>
+<h2>Who may perform {{ service }}</h2>
+<p class="help">Managers are always authorized.{% if not can_edit %} Only a manager can change these.{% endif %}</p>
+<ul class="list">
+  {% for member, authorized in rows %}{% include "control/_toggle_staff.html" %}{% endfor %}
+</ul>
+{% endblock %}

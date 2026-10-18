@@ -1,7 +1,7 @@
 meta:
   title: Booking and scheduling rules
   summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
-  updated: 2026-10-17
+  updated: 2026-10-18
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
   note: >-
@@ -60,7 +60,7 @@ manager_override: a manager can book outside any rule in the control app after a
 
 # Staff assignment (decision 0061)
 staff_assignment:
-  automatic_when_one_qualified: true   # assign the only qualified active staff member and skip the prompt
+  automatic_when_one_qualified: true   # assign the only qualified active staff member to a one-person job and skip the prompt (decision 0069)
 
 time_to_leave_alert:
   lead: drive time + buffer

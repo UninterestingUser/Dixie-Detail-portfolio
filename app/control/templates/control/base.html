@@ -13,7 +13,7 @@
   <script src="{% static 'control/htmx-2.0.11.min.js' %}" defer></script>
   <script src="{% static 'control/app.js' %}" defer></script>
 </head>
-<body class="{% block body_class %}{% endblock %}{% if not user.is_authenticated %} no-tabbar{% endif %}">
+<body class="{% block body_class %}{% endblock %}{% if not user.is_authenticated %} no-tabbar{% endif %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   <header class="topbar">
     <a class="brand" href="{% url 'home' %}">Dixie Detail</a>
     {% block topbar_action %}{% endblock %}
@@ -29,13 +29,21 @@
   {% if user.is_authenticated %}
     {% with here=request.resolver_match.url_name %}
     <nav class="tabbar" aria-label="Main">
-      <a href="{% url 'customers' %}"{% if here == 'customers' or here == 'customer' or here == 'customer-edit' or here == 'vehicle-new' or here == 'vehicle-edit' %} aria-current="page"{% endif %}>
+      <a href="{% url 'schedule' %}"{% if here == 'schedule' or here == 'schedule-week' or here == 'appointment' or here == 'appointment-edit' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>Schedule</span>
+      </a>
+      <a href="{% url 'customers' %}"{% if here == 'customers' or here == 'customer' or here == 'customer-new' or here == 'customer-edit' or here == 'vehicle-new' or here == 'vehicle-edit' or here == 'appointment-new' %} aria-current="page"{% endif %}>
         <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
         <span>Customers</span>
       </a>
-      <a href="{% url 'customer-new' %}"{% if here == 'customer-new' %} aria-current="page"{% endif %}>
-        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-        <span>New customer</span>
+      <a href="{% url 'staff' %}"{% if here == 'staff' or here == 'staff-member' or here == 'services' or here == 'service' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14.5c2.5 0 4.5 1.5 4.5 4.5"/></svg>
+        <span>Staff</span>
+      </a>
+      <a href="{% url 'pricebook' %}"{% if here == 'pricebook' or here == 'pricebook-version' or here == 'pricebook-publish' %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></svg>
+        <span>Pricebook</span>
       </a>
       <a href="{% url 'account' %}"{% if here == 'account' %} aria-current="page"{% endif %}>
         <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>

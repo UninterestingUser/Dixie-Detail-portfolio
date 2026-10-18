@@ -2,6 +2,7 @@
 {% block title %}Customers{% endblock %}
 {% block content %}
 <h1>Customers</h1>
+<p><a class="button" href="{% url 'customer-new' %}">Add a customer</a></p>
 <div class="search-page">
 <div id="results" aria-live="polite">{% include "control/_customer_results.html" %}</div>
 {# Last on the page and pinned above the tab bar on a phone, where the thumb reaches. #}

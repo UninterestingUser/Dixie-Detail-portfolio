@@ -130,7 +130,7 @@ class ScreenTests(ControlTestCase):
         ):
             with self.subTest(name=name):
                 self.assertEqual(self.client.get(reverse(name, args=args)).status_code, 200)
-        self.assertRedirects(self.client.get("/"), reverse("customers"))
+        self.assertRedirects(self.client.get("/"), reverse("schedule"))
 
     def test_the_customer_page(self):
         page = self.client.get(reverse("customer", args=[self.pat.pk]))
@@ -249,7 +249,7 @@ class SignInTests(TestCase):
             {"username": "owner", "password": "an-invented-password-1", "csrfmiddlewaretoken": token},
             headers={"Origin": f"https://{TAILNET_HOST}", "Referer": f"https://{TAILNET_HOST}/sign-in/"},
         )
-        self.assertRedirects(signed_in, reverse("customers"), fetch_redirect_response=False)
+        self.assertRedirects(signed_in, reverse("schedule"), fetch_redirect_response=False)
         self.assertTrue(signed_in.cookies["sessionid"]["secure"])
         self.assertTrue(signed_in.cookies["sessionid"]["httponly"])
         self.assertEqual(browser.get(reverse("customers")).status_code, 200)

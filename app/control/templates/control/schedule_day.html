@@ -1,0 +1,20 @@
+{% extends "control/base.html" %}
+{% block title %}{{ day|date:"D, M j" }}{% endblock %}
+{% block content %}
+<div class="heading">
+  <h1>{% if day == today %}Today, {% endif %}{{ day|date:"l, F j, Y" }}</h1>
+</div>
+<nav class="pager" aria-label="Days">
+  <a class="button" href="?date={{ previous|date:'Y-m-d' }}" aria-label="Previous day">‹ {{ previous|date:"D" }}</a>
+  {% if day != today %}<a class="button" href="{% url 'schedule' %}">Today</a>{% endif %}
+  <a class="button" href="{% url 'schedule-week' %}?date={{ day|date:'Y-m-d' }}">Week</a>
+  <a class="button" href="?date={{ next|date:'Y-m-d' }}" aria-label="Next day">{{ next|date:"D" }} ›</a>
+</nav>
+{% if appointments %}
+  <ul class="list">{% for appointment in appointments %}{% include "control/_appointment_row.html" %}{% endfor %}</ul>
+{% else %}
+  <p class="hint">No jobs on this day.</p>
+{% endif %}
+<p class="hint">To book a job, find the customer and tap <strong>Book a job</strong>.</p>
+<div class="actions single"><a class="button primary" href="{% url 'customers' %}">Book a job</a></div>
+{% endblock %}

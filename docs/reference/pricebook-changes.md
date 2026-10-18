@@ -4,9 +4,9 @@ summary: How pricebook edits are published as versions with an effective date, w
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [pricing, pricebook, versioning]
-related: [docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/architecture/data-model.md]
+related: [docs/guides/editing-the-pricebook.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/architecture/data-model.md]
 ---
 
 # When prices or services change
@@ -15,7 +15,7 @@ Completed jobs never change, and booked jobs change only when the owner says so.
 
 ## What is built and what comes later
 
-Since Phase 1 Step 3 the system has pricebook versions, drafts copied from the latest published version, publishing with an effective date today or later, and the list of booked jobs a draft would change, each with its booked and new totals and service hours, a note when the new hours make it a full day, and a note when the job can no longer be priced. The control app screens that let the owner edit a draft, publish it and choose for each listed job (steps 3 to 7 below) come with the pricebook screens later in Phase 1, and the availability check in step 5 with Phase 3.
+The pricebook screens in the control app do steps 1 to 5 and 7 below: the prices laid out like the price matrix, a draft copied from the latest published version, publishing with an effective date today or later, and the list of booked jobs the draft would change, each with its booked and new totals, a note when the new hours make it a full day, and a note when the job can no longer be priced, with a choice for each and every choice logged. The availability check in step 5 comes with Phase 3, and the text in step 6 with Phase 4. How to use the screens is in [../guides/editing-the-pricebook.md](../guides/editing-the-pricebook.md).
 
 ## Every appointment keeps its own copy of its prices
 
@@ -26,10 +26,10 @@ When a job is booked, each line is copied onto the appointment: the service, pri
 1. The owner edits the pricebook as a draft and publishes it with an effective date, today or later. Each publish is kept as a numbered pricebook version.
 2. Completed and paid jobs are left alone; they show what was done and charged.
 3. On publish, the control app lists every booked, not-yet-completed job on or after the effective date whose price, hours or service the change touches, and asks how to handle each one.
-4. For each job the owner picks **Keep booked price** (the default), **Use new price**, or a custom amount. "Keep all" and "Use new for all" handle a long list in one tap. A recurring Monthly or Quarterly series can be decided once for every visit left in it.
-5. A removed service needs a replacement or an explicit keep-as-is. A service-hours change that would push a job into a full day, or make its day fail the availability check (such as overlapping a second Monthly Maintenance visit), is flagged before the owner confirms.
+4. For each job the owner picks **Keep booked price** (the default), **Use new price**, which re-prices the job from the new version through a new quote, or a custom amount, which becomes the job's total before tax through an on-site adjustment line. "Keep all" and "Use new for all" handle a long list in one tap. A recurring Monthly or Quarterly series can be decided once for every visit left in it.
+5. A removed service needs an explicit keep-as-is or a custom amount; its replacement service is then set from the job page. A service-hours change that would push a job into a full day, or make its day fail the availability check (such as overlapping a second Monthly Maintenance visit), is flagged before the owner confirms.
 6. Where a price changes, a checkbox texts that customer the updated estimate, but only if they agreed to appointment texts.
-7. Every choice is logged with the old and new amounts. The website shows the new prices, and online bookings use them, from the effective date.
+7. Every choice is logged with the old and new amounts and who made it, and listed on the version's page. The website shows the new prices, and online bookings and jobs booked in the control app use them, from the effective date.
 
 ## Sales tax is not part of a pricebook change
 

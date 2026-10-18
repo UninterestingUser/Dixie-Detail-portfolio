@@ -1,8 +1,10 @@
 from decimal import Decimal
 
 from django import template
+from django.utils import timezone
 
 from core.fields import format_phone
+from core.scheduling import format_minutes
 
 register = template.Library()
 
@@ -21,3 +23,24 @@ def money(value):
 def phone(value):
     """10 stored digits as (423) 555-0142."""
     return format_phone(value)
+
+
+@register.filter
+def duration(minutes):
+    """90 as "1.5 hours", 30 as "30 minutes"."""
+    if minutes is None or minutes == "":
+        return ""
+    return format_minutes(int(minutes))
+
+
+@register.filter
+def local_time(moment):
+    """8:00 AM, in Eastern time."""
+    if not moment:
+        return ""
+    return timezone.localtime(moment).strftime("%-I:%M %p")
+
+
+@register.filter
+def get_item(mapping, key):
+    return mapping.get(key) if mapping else None

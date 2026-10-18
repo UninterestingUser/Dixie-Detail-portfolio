@@ -1,0 +1,20 @@
+{% extends "control/base.html" %}
+{% block title %}Week of {{ monday|date:"M j" }}{% endblock %}
+{% block content %}
+<h1>Week of {{ monday|date:"M j" }} to {{ sunday|date:"M j, Y" }}</h1>
+<nav class="pager" aria-label="Weeks">
+  <a class="button" href="?date={{ previous|date:'Y-m-d' }}">‹ Earlier</a>
+  <a class="button" href="{% url 'schedule-week' %}">This week</a>
+  <a class="button" href="?date={{ next|date:'Y-m-d' }}">Later ›</a>
+</nav>
+{% for day, appointments in days %}
+  <section aria-labelledby="day-{{ forloop.counter }}">
+    <h2 id="day-{{ forloop.counter }}"><a href="{% url 'schedule' %}?date={{ day|date:'Y-m-d' }}">{{ day|date:"l, M j" }}</a>{% if day == today %} <span class="badge">Today</span>{% endif %}</h2>
+    {% if appointments %}
+      <ul class="list">{% for appointment in appointments %}{% include "control/_appointment_row.html" %}{% endfor %}</ul>
+    {% else %}
+      <p class="muted">No jobs.</p>
+    {% endif %}
+  </section>
+{% endfor %}
+{% endblock %}
