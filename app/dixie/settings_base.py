@@ -75,7 +75,7 @@ WHITENOISE_USE_FINDERS = True
 
 # Sign-in (decision 0052).
 LOGIN_URL = "sign-in"
-LOGIN_REDIRECT_URL = "customers"
+LOGIN_REDIRECT_URL = "schedule"
 LOGOUT_REDIRECT_URL = "sign-in"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

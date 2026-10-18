@@ -1,0 +1,13 @@
+{% load control %}
+<li>
+  <a class="row{% if appointment.status == 'canceled' %} faded{% endif %}" href="{% url 'appointment' appointment.pk %}">
+    <div class="card-head">
+      <strong>{{ appointment.scheduled_start|local_time }}{% if appointment.ends_at %} to {{ appointment.ends_at|local_time }}{% endif %}</strong>
+      <span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>
+    </div>
+    <span class="sub"><strong>{{ appointment.customer }}</strong> · {{ appointment.vehicle|default:"No vehicle recorded" }}</span>
+    <span class="sub">{% for line in appointment.lines.all %}{% if line.kind == 'service' or line.kind == 'add_on' or line.kind == 'custom' %}{{ line.description }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %} · {{ appointment.total_before_tax|money }}</span>
+    {% if appointment.service_address %}<span class="sub">{{ appointment.service_address }}</span>{% endif %}
+    <span class="sub">{% with crew=appointment.assignments.all %}{% if crew %}Staff: {% for assignment in crew %}{{ assignment.staff_member }}{% if not forloop.last %}, {% endif %}{% endfor %}{% elif appointment.status == 'booked' %}<span class="warn">No staff assigned</span>{% endif %}{% endwith %}</span>
+  </a>
+</li>

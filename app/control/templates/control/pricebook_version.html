@@ -1,0 +1,95 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Pricebook version {{ version.number }}{% endblock %}
+{% block content %}
+<div class="heading">
+  <h1>Pricebook version {{ version.number }}</h1>
+  <p>
+    {% if version.is_published %}
+      <span class="badge status-booked">Published</span> in effect from {{ version.effective_date|date:"M j, Y" }}{% if current and current.pk == version.pk %} <span class="badge">In effect today</span>{% endif %}
+    {% else %}
+      <span class="badge status-requested">Draft</span> not yet published
+    {% endif %}
+  </p>
+</div>
+
+<nav aria-label="Versions" class="button-row">
+  {% for other in versions %}{% if other.pk != version.pk %}<a class="button" href="{% url 'pricebook-version' other.number %}">Version {{ other.number }}{% if not other.is_published %} (draft){% endif %}</a>{% endif %}{% endfor %}
+  {% if can_edit and not draft %}
+    <form method="post" action="{% url 'pricebook-new-draft' %}">{% csrf_token %}<button type="submit" class="primary">Start a draft</button></form>
+  {% endif %}
+</nav>
+{% if version.notes %}<p class="muted">{{ version.notes }}</p>{% endif %}
+
+{% if not version.is_published and can_edit %}
+<form method="post" action="{% url 'pricebook-save' version.number %}" class="stack" novalidate>
+  {% csrf_token %}
+  <p class="help">A draft is a copy of the latest published prices. Change any price or service time, then save. Nothing changes for customers until the draft is published.</p>
+{% endif %}
+
+{% for service, prices in groups %}
+  <section aria-labelledby="service-{{ service.pk }}">
+    <h2 id="service-{{ service.pk }}">{{ service }}</h2>
+    {% with first=prices.0 %}{% if first.rule %}<p class="help">{{ first.rule.percent.normalize }}% of {{ first.rule.base_service }}, set by the rule below; change {{ first.rule.base_service }} or the percentage.</p>{% endif %}{% endwith %}
+    <div class="table-scroll"><table class="matrix">
+      <thead><tr><th>Vehicle class and size</th><th class="num">Hours</th><th class="num">Price</th>{% if not version.is_published and can_edit %}<th><span class="visually-hidden">Remove</span>✕</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for price in prices %}
+        <tr>
+          <td>{{ price.vehicle_class }}<span class="sub">{% if price.size_variant %}{{ price.size_variant.value }}: {{ price.size_variant.label }}{% else %}Any size{% endif %}</span></td>
+          {% if price.rule %}
+            <td class="num">{{ price.one_person_service_hours.normalize }}</td>
+            <td class="num">{{ price.price|money }}</td>
+            {% if not version.is_published and can_edit %}<td class="muted">Rule</td>{% endif %}
+          {% elif not version.is_published and can_edit %}
+            <td class="num hours"><input name="hours-{{ price.pk }}" value="{{ price.one_person_service_hours.normalize }}" inputmode="decimal" aria-label="{{ service }}, {{ price.vehicle_class }}{% if price.size_variant %}, size {{ price.size_variant.value }}{% endif %}: hours"></td>
+            <td class="num money"><input name="price-{{ price.pk }}" value="{{ price.price }}" inputmode="decimal" aria-label="{{ service }}, {{ price.vehicle_class }}{% if price.size_variant %}, size {{ price.size_variant.value }}{% endif %}: price"></td>
+            <td><input type="checkbox" name="remove-{{ price.pk }}" aria-label="Remove this price"></td>
+          {% else %}
+            <td class="num">{{ price.one_person_service_hours.normalize }}</td>
+            <td class="num">{{ price.price|money }}</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+{% endfor %}
+
+<section aria-labelledby="rules-heading">
+  <h2 id="rules-heading">Rules</h2>
+  <ul class="list">
+    {% for rule in derived %}
+      <li class="card"><strong>{{ rule.service }}</strong>:
+        {% if not version.is_published and can_edit %}<input class="short" name="derived-{{ rule.pk }}" value="{{ rule.percent.normalize }}" inputmode="decimal" aria-label="{{ rule.service }} percentage">{% else %}{{ rule.percent.normalize }}{% endif %}% of {{ rule.base_service }}, with its service hours</li>
+    {% endfor %}
+    {% for level in conditions %}
+      <li class="card"><strong>Condition level {{ level.level }}</strong>{% if level.label %} ({{ level.label }}){% endif %}: adds
+        {% if not version.is_published and can_edit %}<input class="short" name="condition-{{ level.pk }}" value="{{ level.adjustment_percent.normalize }}" inputmode="decimal" aria-label="Condition level {{ level.level }} percentage">{% else %}{{ level.adjustment_percent.normalize }}{% endif %}% to the price and service time</li>
+    {% endfor %}
+    {% if rules %}<li class="card">Two people take {% widthratio rules.two_person_time_factor 1 100 %}% of the one-person service time, rounded to {{ rules.service_time_rounding_minutes }} minutes. A job of {{ rules.full_day_time_on_site_hours.normalize }} hours or more on site for one person is a full day.</li>{% endif %}
+  </ul>
+</section>
+
+{% if not version.is_published and can_edit %}
+  <div class="field"><label for="notes">Notes on this draft</label><textarea id="notes" name="notes" rows="2">{{ version.notes }}</textarea></div>
+  <div class="actions">
+    <button type="submit" class="primary">Save draft</button>
+    <a class="button" href="{% url 'pricebook-publish' version.number %}">Publish…</a>
+  </div>
+</form>
+<form method="post" action="{% url 'pricebook-discard' version.number %}" class="inline-form">{% csrf_token %}<button type="submit" class="danger">Discard this draft</button></form>
+{% endif %}
+
+{% if decisions %}
+<section aria-labelledby="log-heading">
+  <h2 id="log-heading">Booked jobs decided when this version was published</h2>
+  <ul class="list">
+    {% for decision in decisions %}
+      <li class="card"><a href="{% url 'appointment' decision.appointment.pk %}">{{ decision.appointment.customer }}, {{ decision.appointment.scheduled_start|date:"M j, Y" }}</a>
+        <span class="sub">{{ decision.get_choice_display }}: {{ decision.old_amount|money }} to {{ decision.new_amount|money }}, by {{ decision.decided_by|default:"unknown" }} on {{ decision.decided_at|date:"M j, Y" }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

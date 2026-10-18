@@ -1,5 +1,6 @@
 """Appointments, their line snapshots, repeating series and closed days."""
 
+import datetime
 from decimal import Decimal
 
 from django.conf import settings
@@ -107,6 +108,12 @@ class Appointment(models.Model):
         """Setup + service time + breakdown, or None when any is missing."""
         parts = (self.setup_minutes, self.service_minutes, self.breakdown_minutes)
         return None if None in parts else sum(parts)
+
+    @property
+    def ends_at(self):
+        """When the crew leaves: the start plus the time on site, or None."""
+        minutes = self.time_on_site_minutes
+        return None if minutes is None else self.scheduled_start + datetime.timedelta(minutes=minutes)
 
     @classmethod
     @transaction.atomic

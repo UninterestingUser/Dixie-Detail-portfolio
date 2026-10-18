@@ -1,0 +1,19 @@
+{% load control %}
+<h2 class="price-title">Price</h2>
+{% if errors %}
+  {% for error in errors %}<p class="warn">{{ error }}</p>{% endfor %}
+{% elif job %}
+  <table class="lines">
+    {% for line in job.lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+    <tr class="total"><td>Total before tax</td><td class="amount">{{ job.total_before_tax|money }}</td></tr>
+  </table>
+  <dl class="details">
+    <dt>Service time</dt><dd>{{ job.service_minutes|duration }} for {{ job.crew_size }} {% if job.crew_size == 1 %}person{% else %}people{% endif %}</dd>
+    <dt>Time on site</dt><dd>{{ stay.total_minutes|duration }} <span class="muted">(setup {{ stay.setup_minutes }} min, breakdown {{ stay.breakdown_minutes }} min)</span></dd>
+  </dl>
+  {% if job.full_day %}<p class="warn">Full day: consider a second person.</p>{% endif %}
+  <p class="help">From pricebook version {{ job.version.number }}. Sales tax is added from Phase 3.</p>
+  {% if changes_price %}<p class="warn">Saving re-prices this job from the pricebook. Give a reason below.</p>{% endif %}
+{% else %}
+  <p class="muted">Pick the service to see the price.</p>
+{% endif %}

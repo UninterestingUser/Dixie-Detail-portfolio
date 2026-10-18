@@ -88,11 +88,14 @@ Every page starts with a header block. `status` matters most: **current** descri
 | --- | --- | --- |
 | [Guides for day-to-day use](guides/README.md) | The index of task-based guides for using the Dixie Detail system day to day, by role: the guides written so far and those planned for each phase. | current |
 | [Finding a customer and their history](guides/finding-a-customer.md) | How to find a customer in the control app by name or by phone number in any format, what the customer page shows, and how to add or edit a customer or a vehicle. | current |
+| [Booking a job](guides/booking-a-job.md) | How to book a job or a repeating maintenance series in the control app with the price worked out as you go, change or cancel it, mark it completed, and record the final price with an on-site adjustment. | current |
+| [Assigning staff and the services they may do](guides/assigning-staff.md) | How to set which services each staff member is authorized for, from the staff page or the service page, and how to assign one or two people to a job, including someone in training. | current |
+| [Editing and publishing the pricebook](guides/editing-the-pricebook.md) | How to read the prices in the control app, change them in a draft, publish the draft with an effective date, and decide what happens to each booked job the change touches. | current |
 | [Installing the control app on a phone or computer](guides/installing-the-control-app.md) | How to get a control app account, connect to Tailscale, sign in, and install the control app to the Pixel's home screen or a Fedora workstation, with what to do when it will not open or sign in. | current |
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 68 records as of 2026-10-18, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 69 records as of 2026-10-18, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

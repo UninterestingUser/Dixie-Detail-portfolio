@@ -1,0 +1,106 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}{{ appointment.customer }}, {{ appointment.scheduled_start|date:"M j" }}{% endblock %}
+{% block content %}
+<div class="heading">
+  <h1>{{ appointment.scheduled_start|date:"D, M j, Y" }}, {{ appointment.scheduled_start|local_time }}</h1>
+  <p><span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>{% if appointment.series %} <span class="badge">{{ appointment.series.get_frequency_display }} series, {{ series_count }} visits</span>{% endif %}</p>
+</div>
+
+<dl class="details">
+  <dt>Customer</dt><dd><a href="{% url 'customer' appointment.customer.pk %}">{{ appointment.customer }}</a>{% if appointment.customer.mobile %} · <a href="tel:+1{{ appointment.customer.mobile }}">{{ appointment.customer.mobile|phone }}</a>{% endif %}</dd>
+  <dt>Vehicle</dt><dd>{{ appointment.vehicle|default:"None recorded" }}</dd>
+  <dt>Address</dt><dd>{{ appointment.service_address|default:"None recorded" }}</dd>
+  <dt>On site</dt><dd>{% if appointment.ends_at %}{{ appointment.scheduled_start|local_time }} to {{ appointment.ends_at|local_time }}{% else %}<span class="muted">No times recorded</span>{% endif %}</dd>
+  {% if stay %}
+  <dt>Service time</dt><dd>{{ stay.service_minutes|duration }} for {{ appointment.crew_size }} {% if appointment.crew_size == 1 %}person{% else %}people{% endif %}</dd>
+  <dt>Time on site</dt><dd>{{ stay.total_minutes|duration }}</dd>
+  {% endif %}
+</dl>
+{% if appointment.status == 'booked' or appointment.status == 'completed' %}
+<p><a class="button" href="{% url 'appointment-edit' appointment.pk %}">Change job</a></p>
+{% endif %}
+
+<section aria-labelledby="price-heading">
+  <h2 id="price-heading">Price</h2>
+  <div class="card">
+    <table class="lines">
+      {% for line in lines %}<tr><td>{{ line.description }}{% if line.reason %}<span class="sub">{{ line.reason }}</span>{% endif %}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+      <tr class="total"><td>Total before tax</td><td class="amount">{{ total|money }}</td></tr>
+    </table>
+    {% for payment in payments %}<span class="sub">Paid {{ payment.amount|money }} by {{ payment.get_method_display }}{% if payment.tip %}, tip {{ payment.tip|money }}{% endif %}, {{ payment.paid_at|date:"M j, Y" }}</span>{% endfor %}
+  </div>
+  {% if appointment.status != 'canceled' %}
+  <form method="post" action="{% url 'appointment-final-price' appointment.pk %}" class="inline-form" novalidate>
+    {% csrf_token %}
+    {% for error in final_form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+    {% include "control/_field.html" with field=final_form.final_price %}
+    {% include "control/_field.html" with field=final_form.reason %}
+    <p class="help">A different final price adds one on-site adjustment line for the difference, with its reason.</p>
+    <button type="submit">Save final price</button>
+  </form>
+  {% endif %}
+</section>
+
+<section aria-labelledby="staff-heading">
+  <h2 id="staff-heading">Staff</h2>
+  <form method="post" action="{% url 'appointment-staff' appointment.pk %}" class="stack">
+    {% csrf_token %}
+    <ul class="choice-list">
+      {% for choice in staff_choices %}
+        <li>
+          <label class="choice{% if not choice.qualified %} unqualified{% endif %}">
+            <input type="checkbox" name="staff" value="{{ choice.member.pk }}"{% if staff_warning %}{% if choice.member in staff_warning.members %} checked{% endif %}{% elif choice.member.pk in assigned %} checked{% endif %}>
+            <span><strong>{{ choice.member }}</strong>{% if choice.member.is_manager %} <span class="badge">Manager</span>{% endif %}
+              {% if choice.qualified %}<span class="sub ok">Qualified</span>{% else %}<span class="sub">Not authorized for: {{ choice.missing|join:", " }}</span>{% endif %}
+              {% with assignment=assigned|get_item:choice.member.pk %}{% if assignment.training_reason %}<span class="sub">Assigned for training: {{ assignment.training_reason }}</span>{% endif %}{% endwith %}
+            </span>
+          </label>
+        </li>
+      {% empty %}
+        <li class="muted">No active staff members.</li>
+      {% endfor %}
+    </ul>
+    <p class="help">One or two people. Together they must be authorized for every service on the job. A crew of a different size recalculates the time on site.</p>
+    {% if staff_warning %}
+      <div class="notice" role="alert">
+        <p><strong>Not authorized:</strong> no one on this crew is authorized for {{ staff_warning.gaps|join:", " }}.</p>
+        {% if staff_warning.is_manager %}
+          <label for="training_reason"><strong>Reason</strong>, such as training</label>
+          <input id="training_reason" name="training_reason" value="{{ staff_warning.reason }}" maxlength="200">
+          {% if staff_warning.needs_reason %}<p class="error">Give the reason.</p>{% endif %}
+          <input type="hidden" name="confirm" value="yes">
+          <p><button type="submit" class="primary">Assign anyway</button></p>
+        {% else %}
+          <p>Only a manager can assign someone not yet authorized.</p>
+        {% endif %}
+      </div>
+    {% else %}
+      <button type="submit">Save staff</button>
+    {% endif %}
+  </form>
+</section>
+
+<section aria-labelledby="status-heading">
+  <h2 id="status-heading">Status</h2>
+  <form method="post" action="{% url 'appointment-status' appointment.pk %}" class="button-row">
+    {% csrf_token %}
+    {% if appointment.status != 'completed' %}<button type="submit" name="status" value="completed">Mark completed</button>{% endif %}
+    {% if appointment.status != 'booked' %}<button type="submit" name="status" value="booked">Mark booked</button>{% endif %}
+    {% if appointment.status != 'canceled' %}<button type="submit" name="status" value="canceled" class="danger">Cancel job</button>{% endif %}
+  </form>
+</section>
+
+{% if appointment.notes %}
+<section aria-labelledby="notes-heading"><h2 id="notes-heading">Notes</h2><div class="card">{{ appointment.notes|linebreaks }}</div></section>
+{% endif %}
+
+<section aria-labelledby="history-heading">
+  <h2 id="history-heading">Changes</h2>
+  <ul class="list">
+    {% for record in history %}
+      <li class="card"><strong>{{ record.history_date|date:"M j, Y, g:i A" }}</strong> · {{ record.history_user|default:"System" }}<span class="sub">{{ record.history_change_reason|default:record.get_history_type_display }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}
