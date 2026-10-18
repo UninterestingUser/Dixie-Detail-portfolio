@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-14
+  updated: 2026-10-17
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -154,3 +154,12 @@ stored_on_server:
     purpose: Bitwarden machine-account access token for dixie-server
     location: /etc/credstore.encrypted/dixie-bws-token.cred
     protection: systemd-creds, --with-key=host+tpm2
+
+paths:
+  - name: Import folder
+    host: /srv/dixie-import
+    container: /srv/import
+    purpose: The Baserow and Setmore exports and import-corrections.yaml for one import run, mounted read-only into a one-off app container; removed after each run
+    holds_personal_data: true
+    used_by: python manage.py import_baserow (docs/operations/importing-baserow.md)
+    phase: 1

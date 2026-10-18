@@ -54,7 +54,7 @@ The `customers` and `vehicles` apps.
 
 - **Customer** holds a name, company, mobile number, email, where the customer came from, and notes. Some imported customers have no number; they are kept.
 - **Second contact** holds another person's own name and number on a customer's record, such as a spouse. A booking under that number matches the customer. See [../reference/returning-customers.md](../reference/returning-customers.md).
-- **Address** holds a service address with its coordinates, Google place ID, tax jurisdiction and whether it has been verified. An address outside the service area that the owner has allowed is marked as an approved out-of-area address.
+- **Address** holds a service address with its coordinates, Google place ID, tax jurisdiction and whether it has been verified. An imported address keeps an import key naming the Baserow customer it came from. An address outside the service area that the owner has allowed is marked as an approved out-of-area address.
 - **Consent** holds one answer to a text consent question: appointment or follow-up, yes or no, the number, where it was given (web form, phone, text reply or import) and the wording version. Answers are never edited. A STOP reply adds a "no", so the latest answer counts and the whole history stays. See [../reference/text-messages.md](../reference/text-messages.md).
 - **Vehicle class** is a group of vehicles that share prices, with a note of what its size variant measures, such as doors, seat rows or cab style. Each class also records its price basis: the fixed price list, the only one built, which leaves room for another way of pricing, such as per foot of length (decision 0060). There are six at launch, listed in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 - **Size variant** is one size within a vehicle class, such as "two doors" or "three rows", with the number used in the price matrix's size column. A class with no size variants, such as motorcycles, has a single price per service.
@@ -94,7 +94,7 @@ The `appointments` app.
 
 The `billing` app. Every amount of money is an exact decimal (decision 0047).
 
-- **Payment** is money, or goods in a trade, received for an appointment: the method, the amount toward the job, the tip, when it was paid, a reference such as a check number, and the processor fee. A job paid two ways has two payments. A gift card or other prepayment is a payment recorded before the job. A tip can be negative: a customer who paid less than the total is recorded with a negative tip. A trade must say what goods were received, and its amount is their value. See [../reference/payments.md](../reference/payments.md).
+- **Payment** is money, or goods in a trade, received for an appointment: the method, the amount toward the job, the tip, when it was paid, a reference such as a check number, and the processor fee. A job paid two ways has two payments, except an imported payment split between two methods whose amounts were never recorded: it is one payment with a split method (decision 0066). An imported payment keeps an import key naming its Bookkeeping row. A gift card or other prepayment is a payment recorded before the job. A tip can be negative: a customer who paid less than the total is recorded with a negative tip. A trade must say what goods were received, and its amount is their value. See [../reference/payments.md](../reference/payments.md).
 - **Gift card** is a dollar balance sold in advance, sales tax included, with a code, the buyer, an optional recipient and how the buyer paid. Its balance is the amount sold less the gift-card payments made from it. Paying with a card uses as much of the balance as the bill needs and never takes it below zero, so the rest of the bill becomes a second payment by another method. The one imported gift-card job has a gift-card payment with no card (decision 0054).
 - **Payment methods** are card, Cash App Pay, Cash App to the owner's $cashtag, Venmo, PayPal, cash, bitcoin, check, trade and gift card. Check and trade are owner-only and never offered on the website (decision 0053).
 - **Invoice** holds a completed job's bill: the number, the tax jurisdiction, the state and local rates as charged, the taxable amount, each tax and the total. The rates are copied, so a later rate change cannot alter it.
@@ -107,7 +107,7 @@ The `staff` app.
 
 - **Staff member** is the owner or a helper, with a phone number, a login if they have one, a flat pay per job, and where their drive times start. Every helper has a pay type: family helper, the only one in use, or employee, which is planned. The owner has none.
 - **Assignment** puts a staff member on a job. Their per-job pay is copied when they are assigned, so a later change to it does not alter past jobs. The owner can override the pay for one job.
-- **Staff payout** is money paid to a helper, settling one or more assignments. It keeps the helper's pay type from when it was made, and the pay type sets its GnuCash account: Professional Services for a family helper. An employee's wages account and payroll are a later decision (decision 0053).
+- **Staff payout** is money paid to a helper, settling one or more assignments. An imported payout keeps an import key. It keeps the helper's pay type from when it was made, and the pay type sets its GnuCash account: Professional Services for a family helper. An employee's wages account and payroll are a later decision (decision 0053).
 
 ## Bookkeeping, messages and marketing
 
@@ -125,7 +125,7 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 - **Times** are stored in UTC and shown in Eastern time (decision 0048).
 - **Money** is stored as exact decimals, never floating point (decision 0047).
 - **Change history.** Every change to the pricebook, promotions, customers, their second contacts and addresses, vehicles, and appointments and their lines keeps the earlier version: who changed it, when, and the old values. This is done with django-simple-history (decision 0050).
-- **Imported records** keep the id of the Baserow row they came from, on customers, vehicles and appointments, so the import can be re-run before launch (decision 0051).
+- **Imported records** keep the id of the Baserow row they came from, on customers, vehicles and appointments, and an import key on addresses, payments and helper payouts, so the import can be re-run before launch (decision 0051). Imported payments and payouts belong to the export batch "Already in GnuCash: Baserow import" (decision 0066).
 - **Nothing is deleted from under a job.** A customer, vehicle, address, service, promotion or pricebook version that a job refers to cannot be deleted.
 
 ## Planned: records decided but not built yet
@@ -139,5 +139,4 @@ Everything above describes the code as it is. This section is the exception: it 
 ## What is not built yet
 
 - Settings such as working hours, start times, setup and breakdown, the home base and buffers. Their launch values are in `data/` until the scheduling work in Phase 3.
-- The Baserow import.
 - Every screen of the control app, the Django admin and sign-in.
