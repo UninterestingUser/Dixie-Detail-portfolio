@@ -31,9 +31,9 @@ class LineSnapshotTests(TestCase):
             vehicle_class=cls.vehicle_class,
             size_variant=cls.two_rows,
             price=VERSION_1_PRICE,
-            one_person_hours=Decimal("6"),
+            one_person_service_hours=Decimal("6"),
         )
-        cls.version_1.publish(datetime.date(2026, 10, 1))
+        cls.version_1.publish(timezone.localdate())
         customer = Customer.objects.create(first_name="Pat", mobile="4235550142")
         vehicle = Vehicle.objects.create(
             customer=customer, year=2019, make="Toyota", model="RAV4", vehicle_class=cls.vehicle_class, size_variant=cls.two_rows
@@ -49,7 +49,7 @@ class LineSnapshotTests(TestCase):
 
     def test_snapshot_copies_the_price(self):
         self.assertEqual(self.line.amount, VERSION_1_PRICE)
-        self.assertEqual(self.line.one_person_hours, Decimal("6"))
+        self.assertEqual(self.line.one_person_service_hours, Decimal("6"))
         self.assertEqual(self.line.description, "Test Detail")
         self.assertEqual(self.line.vehicle_class_name, "Test Class")
         self.assertEqual(self.line.size_variant_value, 2)
@@ -64,15 +64,15 @@ class LineSnapshotTests(TestCase):
             vehicle_class=self.vehicle_class,
             size_variant=self.two_rows,
             price=VERSION_2_PRICE,
-            one_person_hours=Decimal("7"),
+            one_person_service_hours=Decimal("7"),
         )
-        version_2.publish(datetime.date(2026, 11, 1))
+        version_2.publish(timezone.localdate() + datetime.timedelta(days=15))
         self.service.name = "Renamed Detail"
         self.service.save()
 
         line = AppointmentLine.objects.get(pk=self.line.pk)
         self.assertEqual(line.amount, VERSION_1_PRICE)
-        self.assertEqual(line.one_person_hours, Decimal("6"))
+        self.assertEqual(line.one_person_service_hours, Decimal("6"))
         self.assertEqual(line.description, "Test Detail")
         self.assertEqual(self.appointment.total_before_tax, VERSION_1_PRICE)
 
@@ -84,7 +84,7 @@ class LineSnapshotTests(TestCase):
             vehicle_class=self.vehicle_class,
             size_variant=self.two_rows,
             price=VERSION_2_PRICE,
-            one_person_hours=Decimal("6"),
+            one_person_service_hours=Decimal("6"),
         )
         with self.assertRaises(ValueError):
             AppointmentLine.snapshot(self.appointment, price)
@@ -106,9 +106,9 @@ class NewVehicleClassTests(TestCase):
             vehicle_class=cls.sedans,
             size_variant=cls.four_doors,
             price=VERSION_1_PRICE,
-            one_person_hours=Decimal("5"),
+            one_person_service_hours=Decimal("5"),
         )
-        cls.version_1.publish(datetime.date(2026, 10, 1))
+        cls.version_1.publish(timezone.localdate())
         cls.customer = Customer.objects.create(first_name="Pat")
         cls.past_job = Appointment.objects.create(
             customer=cls.customer, scheduled_start=timezone.now(), source=Appointment.Source.OWNER
@@ -126,9 +126,9 @@ class NewVehicleClassTests(TestCase):
             service=self.service,
             vehicle_class=motorcycles,
             price=VERSION_2_PRICE,
-            one_person_hours=Decimal("3"),
+            one_person_service_hours=Decimal("3"),
         )
-        version_2.publish(datetime.date(2026, 11, 1))
+        version_2.publish(timezone.localdate() + datetime.timedelta(days=15))
 
         bike = Vehicle.objects.create(
             customer=self.customer, year=2020, make="Honda", model="Gold Wing", vehicle_class=motorcycles
@@ -173,7 +173,7 @@ class NewVehicleClassTests(TestCase):
                 vehicle_class=self.sedans,
                 size_variant=self.four_doors,
                 price=VERSION_2_PRICE,
-                one_person_hours=Decimal("5"),
+                one_person_service_hours=Decimal("5"),
             )
 
     def test_size_variant_must_belong_to_the_class(self):

@@ -38,7 +38,7 @@ ready || { "$engine" logs "$db" >&2; echo "run-tests: PostgreSQL did not start" 
 
 echo "run-tests: running pytest"
 "$engine" run --rm --network "container:$db" --security-opt label=disable \
-	-v "$repo/app:/srv/app:ro" dixie-app-test:local python -m pytest "$@"
+	-v "$repo/app:/srv/app:ro" -v "$repo/data:/srv/data:ro" dixie-app-test:local python -m pytest "$@"
 
 echo "run-tests: checking the production image leaves out the development settings"
 "$engine" build -q -t dixie-app:test-check "$repo/app" >/dev/null

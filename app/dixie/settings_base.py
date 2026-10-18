@@ -2,6 +2,14 @@
 (dixie.settings_dev). Nothing here is secret or differs between the two.
 """
 
+from pathlib import Path
+
+# The repository's data/ folder: the price matrix and the launch values the
+# pricebook and scheduling read. It sits beside app/ in the repository, and
+# compose.yaml and tools/run-tests.sh mount it read-only at /srv/data, beside
+# the app at /srv/app.
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
