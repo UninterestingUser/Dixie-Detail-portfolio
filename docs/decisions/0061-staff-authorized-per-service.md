@@ -26,7 +26,7 @@ Helpers are paid by pay type (decision 0053), and assignments put a staff member
 - **One authorization record** links each staff member to each service they may perform. It covers every active service, add-ons included; history-only services are left out.
 - **Two screens edit that same record:** the staff page (a person's services as toggles) and the service page (a service's staff as toggles). There is nothing to keep in sync.
 - **Managers** (only the owner today) are authorized for every service. A new service starts with only managers authorized.
-- **Assigning staff.** When a job is booked, the control app asks a manager to assign staff. Qualified staff are listed first; anyone else appears greyed out, with the services they aren't authorized for.
+- **Assigning staff.** When a job is booked, the control app asks a manager to assign staff. Qualified staff are listed first; anyone else appears grayed out, with the services they aren't authorized for.
 - **Two-person jobs.** The two people's authorizations together must cover every service on the job; neither needs all of them.
 - **Training.** A manager can assign someone not yet authorized after a warning; the job records the reason.
 - **Crew size.** Assigning a different number of people than the service's default recalculates time on site (crew time and the setup and breakdown split) and warns if the day no longer fits.

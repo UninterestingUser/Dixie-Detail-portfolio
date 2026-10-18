@@ -28,7 +28,7 @@ The database is the only record of appointments. The app writes the Jobs calenda
 **Jobs calendar.**
 
 1. Each appointment has one event and one "Drive to job" block, linked by an ID stored on the appointment and in the event's private extended properties.
-2. Booking, moving or cancelling updates the events within a minute. If Google is down, the change queues and retries; a booking never waits for Google.
+2. Booking, moving or canceling updates the events within a minute. If Google is down, the change queues and retries; a booking never waits for Google.
 3. A Jobs event edited in Google is restored to the app's version at the next sync, and the control app notes the reset. A deleted Jobs event is recreated.
 4. An event added to Jobs by hand counts as busy time and is flagged, so the owner can move it to Time Off or delete it. The app never deletes it.
 5. Days closed in the control app show on Jobs as all-day "Closed" events.
@@ -48,7 +48,7 @@ The database is the only record of appointments. The app writes the Jobs calenda
 ## Alternatives considered
 
 - **Two-way sync, letting a Jobs edit in Google move the appointment.** It would make Google a second source of truth, against the ground rule that PostgreSQL is the only one.
-- **Honour Google's Free/Busy setting on Time Off.** All-day events are "Free" by default, so a day off would silently stay open.
+- **Honor Google's Free/Busy setting on Time Off.** All-day events are "Free" by default, so a day off would silently stay open.
 - **Cancel or move a job automatically when time off covers it.** The customer would be affected by a calendar entry the owner may not have meant that way; the owner decides.
 
 ## Consequences

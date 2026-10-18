@@ -31,4 +31,4 @@ Adopt `docs/CONVENTIONS.md`: a folder layout by purpose, header blocks with audi
 
 ## Consequences
 
-Every pull request that changes behaviour updates the docs. The docs are ready to load into a retrieval system.
+Every pull request that changes behavior updates the docs. The docs are ready to load into a retrieval system.

@@ -42,7 +42,7 @@ class Appointment(models.Model):
         REQUESTED = "requested", "Requested"
         BOOKED = "booked", "Booked"
         COMPLETED = "completed", "Completed"
-        CANCELLED = "cancelled", "Cancelled"
+        CANCELED = "canceled", "Canceled"
 
     class Source(models.TextChoices):
         WEBSITE = "website", "Website"

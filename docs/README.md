@@ -49,7 +49,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Server and Docker stack](architecture/server-and-stack.md) | The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it. | current |
 | [System overview](architecture/system-overview.md) | The parts of the Dixie Detail business system, how they connect, how data moves between them, and the principles every part follows. | current |
 
-## Reference: business rules and behaviour
+## Reference: business rules and behavior
 
 | Document | Summary | Status |
 | --- | --- | --- |

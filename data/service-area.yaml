@@ -38,5 +38,5 @@ sales_tax:
   per_state_rates:
     GA:
       rate_percent: 0.0
-      basis: Georgia generally does not tax car wash and detailing labour (letter ruling LR SUT-2019-11)
+      basis: Georgia generally does not tax car wash and detailing labor (letter ruling LR SUT-2019-11)
       status: To be confirmed by the owner's accountant, including any Georgia income tax filing

@@ -47,7 +47,7 @@ One authorization record will link each staff member to each service they may pe
 
 ## Assigning staff to a job
 
-- **The assign-staff prompt.** When a job is booked, the control app will ask a manager to assign staff. Qualified staff are listed first; anyone else appears greyed out, with the services they aren't authorized for. The prompt for each new website booking comes in Phase 3.
+- **The assign-staff prompt.** When a job is booked, the control app will ask a manager to assign staff. Qualified staff are listed first; anyone else appears grayed out, with the services they aren't authorized for. The prompt for each new website booking comes in Phase 3.
 - **Two-person jobs.** The two people's authorizations together must cover every service on the job; neither needs all of them.
 - **Training.** A manager can assign someone not yet authorized after a warning; the job records the reason.
 - **Crew size.** Assigning a different number of people than the service's default recalculates time on site (crew time and the setup and breakdown split) and warns if the day no longer fits.

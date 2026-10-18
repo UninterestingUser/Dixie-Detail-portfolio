@@ -4,9 +4,9 @@ summary: The seven steps a customer follows on the website to book a job, how th
 audience: [owner, staff, developer]
 visibility: internal
 status: planned
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [booking, website, estimate-card, phase-3]
-related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
+related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
 
 # Customer booking flow
@@ -17,7 +17,7 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 
 ## The seven steps
 
-1. **Vehicle.** Year, then make, then model. A banner confirms the vehicle class, such as "Crossover identified", with that class's starting price. A doors, cab or third-row question appears only when the vehicle data cannot settle the size variant.
+1. **Vehicle.** Year, then make, then model. A banner confirms the vehicle class, such as "Crossover identified", with that class's starting price. A doors, cab or third-row question appears only when the vehicle data cannot settle the size variant. An optional Color box comes last; it is used only to tell a returning customer's identical vehicles apart and never changes the price ([decision 0067](../decisions/0067-color-tells-identical-vehicles-apart.md)).
 2. **Condition.** Three cards with plain descriptions. The first adds nothing, the second 10% and the third 20%.
 3. **Service and add-ons.** Service cards show prices already adjusted for class, size and condition. Add-ons are tick boxes with their added price. Maintenance plans never appear here.
 4. **Location.** The service address, validated as the customer types (see below). It is checked against the service area and sets the sales tax rate, with a reminder that water and power are needed.
@@ -46,6 +46,10 @@ The address field works like a Shopify checkout: suggestions appear as the custo
 ## Phone number entry
 
 The mobile number field formats itself as (###) ###-#### while the customer types and requires 10 digits. The number is stored as 10 digits and used for quiet matching; see [returning-customers.md](returning-customers.md).
+
+## The Color box
+
+The vehicle step's Color box is optional free text, such as "silver" or "dark blue", and the step can be finished without it. It will be used only when quiet matching finds a returning customer with more than one vehicle of the same make, model and year: the color picks the right one. A blank color, or one that matches none of them, never stops the booking; the appointment books and the control app asks the owner which vehicle it was. The color is not a price input, so it never appears on the estimate card or changes the quote. The full rule is in [returning-customers.md](returning-customers.md).
 
 ## Other cases
 

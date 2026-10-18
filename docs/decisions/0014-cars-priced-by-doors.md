@@ -19,7 +19,7 @@ related: [docs/reference/pricing.md]
 
 ## Context
 
-The price matrix's size column was labelled seat rows, but the owner prices cars by door count.
+The price matrix's size column was labeled seat rows, but the owner prices cars by door count.
 
 ## Decision
 

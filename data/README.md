@@ -14,7 +14,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | File | Holds | Role |
 | --- | --- | --- |
 | [price-matrix.csv](price-matrix.csv) | The 90 prices and one-person service hours (setup and breakdown not included) | Seed for the pricebook (Phase 1); the only price source |
-| [services.yaml](services.yaml) | The service catalogue | Seed and reference |
+| [services.yaml](services.yaml) | The service catalog | Seed and reference |
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels, maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Seed for pricebook settings |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The six vehicle classes, their size variants and settings, and the classification rules design | Seed and reference |
 | [booking-rules.yaml](booking-rules.yaml) | Launch values of the scheduling settings: open days, hours, start times, notice, setup and breakdown, capacity, gaps, calendar sync timing, alert timing | Seed for scheduling settings |

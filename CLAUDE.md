@@ -27,11 +27,12 @@ This repository holds the Dixie Detail business system. Read this file first, th
 
 - One issue per task, one short branch per issue, merged by pull request.
 - Plain, specific wording in customer-facing text. Every text message starts with "Dixie Detail:".
+- Write in US English (color, behavior, canceled, catalog) in docs, data files, code comments, user-facing text and test names. Third-party names, commands and library identifiers keep their own spelling.
 
 ## Documentation
 
 - `docs/` and `data/` are the knowledge base for the owner, future staff and the business's AI assistants. Follow `docs/CONVENTIONS.md` for every change.
-- Docs are part of done. A pull request that changes behaviour, a setting, a secret name, a server path or a business rule updates the matching docs and data files in the same pull request. A changed rule or design choice also gets a new record in `docs/decisions/`.
+- Docs are part of done. A pull request that changes behavior, a setting, a secret name, a server path or a business rule updates the matching docs and data files in the same pull request. A changed rule or design choice also gets a new record in `docs/decisions/`.
 - Every docs file has a header block. Use `status: planned` and the future tense for anything not built yet; when you build it, change the status to `current` and the text to the present tense.
 - Code is the authority on what exists. If the docs and the code disagree, fix whichever is wrong and say so in the pull request.
 - When you solve a problem on the server, add it to `docs/operations/troubleshooting.md`.
