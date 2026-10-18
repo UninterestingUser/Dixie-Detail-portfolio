@@ -273,6 +273,79 @@ class DryRunTests(ImportTestCase):
         call_command("import_baserow", str(self.folder), stdout=output)
         self.assertIn("run with --owner", output.getvalue())
 
+    def test_the_report_shows_helper_payouts(self):
+        report = self.run_import()
+        self.assertIn("Helper pay: every helper's pay and payout (1)", report)
+        self.assertIn("Appointments id 21: $75.00 to Helper Person, paid 2026-10-21 as cash (Wage Override in Baserow)", report)
+
+
+class HelperPayTests(ImportTestCase):
+    def fix_job_21(self, helper_pay, staff=None):
+        """Add an appointment fix for job 21, and optionally change its Staff."""
+        lines = "".join(f"      {name}: \"{amount}\"\n" for name, amount in helper_pay.items())
+        corrections = CORRECTIONS.replace(
+            "appointment_fixes:\n",
+            f"appointment_fixes:\n  - baserow_id: 21\n    helper_pay:\n{lines}    reason: Pay agreed by text\n",
+        )
+        (self.folder / "import-corrections.yaml").write_text(corrections)
+        if staff:
+            rows = [row[:] for row in APPOINTMENTS]
+            rows[0][19] = staff
+            write_csv(self.folder / "export - Appointments.csv", BASEROW_TABLES["Appointments"], rows)
+
+    def test_the_owner_is_never_a_helper(self):
+        # An earlier run without --owner made the owner a helper.
+        StaffMember.objects.create(name="Owner Person", role=StaffMember.Role.HELPER, pay_type="family_helper")
+        report = self.run_import("--apply")
+        owner = StaffMember.objects.get(name="Owner Person")
+        self.assertEqual((owner.role, owner.pay_type), (StaffMember.Role.OWNER, ""))
+        self.assertIn("staff 'Owner Person': the owner, never a helper: changed from helper to owner", report)
+        payout = StaffPayout.objects.get()
+        self.assertEqual((payout.staff_member.name, payout.amount), ("Helper Person", Decimal("75.00")))
+        self.assertIsNone(Assignment.objects.get(appointment__baserow_id=21, staff_member=owner).pay_override)
+
+    def test_a_wage_override_with_only_the_owner_on_the_job_is_not_pay(self):
+        self.fix_job_21({}, staff="Owner Person")
+        report = self.run_import("--apply")
+        self.assertFalse(StaffPayout.objects.exists())
+        self.assertIn("Appointments id 21: a Wage Override with 0 helpers on the job; helper pay not recorded", report)
+
+    def test_helper_pay_replaces_the_wage_override(self):
+        self.fix_job_21({"Helper Person": "60.00"})
+        report = self.run_import("--apply")
+        payout = StaffPayout.objects.get()
+        self.assertEqual((payout.staff_member.name, payout.amount), ("Helper Person", Decimal("60.00")))
+        self.assertIn("Appointments id 21: helper pay $60.00 to Helper Person (Pay agreed by text)", report)
+        self.assertIn("helper_pay totals $60.00, the Wage Override is $75.00; helper_pay is used", report)
+        self.assertIn("$60.00 to Helper Person, paid 2026-10-21 as cash (corrections file: Pay agreed by text)", report)
+
+    def test_helper_pay_splits_the_pay_between_two_helpers(self):
+        self.fix_job_21({"Helper Person": "45.00", "Other Helper": "30.00"}, staff="Owner Person, Helper Person, Other Helper")
+        report = self.run_import("--apply")
+        self.assertEqual(
+            sorted(StaffPayout.objects.values_list("staff_member__name", "amount")),
+            [("Helper Person", Decimal("45.00")), ("Other Helper", Decimal("30.00"))],
+        )
+        self.assertNotIn("helper_pay totals", report)
+        self.assertIn("Helper pay: every helper's pay and payout (2)", report)
+        # A re-run updates the same two payouts.
+        self.run_import("--apply")
+        self.assertEqual(StaffPayout.objects.count(), 2)
+
+    def test_two_helpers_without_helper_pay_are_reported(self):
+        self.fix_job_21({}, staff="Owner Person, Helper Person, Other Helper")
+        report = self.run_import()
+        self.assertIn("Appointments id 21: a Wage Override with 2 helpers on the job; helper pay not recorded", report)
+
+    def test_helper_pay_for_the_owner_or_someone_off_the_job_is_refused(self):
+        self.fix_job_21({"Owner Person": "75.00", "Nobody Else": "10.00"})
+        report = self.run_import("--apply")
+        self.assertIn("Appointments id 21: helper_pay names 'Owner Person', the owner, who is never a helper", report)
+        self.assertIn("Appointments id 21: helper_pay names 'Nobody Else', who is not in the job's Staff column", report)
+        # The Wage Override rule applies instead.
+        payout = StaffPayout.objects.get()
+        self.assertEqual((payout.staff_member.name, payout.amount), ("Helper Person", Decimal("75.00")))
+
 
 class ApplyTests(ImportTestCase):
     def setUp(self):
