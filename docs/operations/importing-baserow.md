@@ -60,7 +60,7 @@ sudo docker compose run --rm --no-deps -v /srv/dixie-import:/srv/import:ro app \
   python manage.py import_baserow --owner "OWNER NAME AS IN BASEROW"
 ```
 
-`--owner` names the owner as written in the Appointments table's Staff column. It is needed until the staff records exist: each other name in that column is created as a family helper. Without it, the staff are listed under "Could not place".
+`--owner` names the owner as written in the Appointments table's Staff column. It is needed until the staff records exist: each other name in that column is created as a family helper. Without it, the staff are listed under "Could not place". The owner is never a helper, so a Wage Override on a job with the owner and one helper is that helper's pay.
 
 The dry run imports everything inside a transaction and then rolls it back, so its report shows exactly what `--apply` would write. Read every section:
 
@@ -68,10 +68,11 @@ The dry run imports everything inside a transaction and then rolls it back, so i
 - **Corrections applied:** every entry in the corrections file that was used, with its reason.
 - **Warnings:** things imported with a gap, such as a vehicle left blank because a customer has two vehicles of the same name, or a name in the corrections file that no longer matches the export.
 - **Could not place:** every row left out, and why, such as a link to a customer who is not in the export.
+- **Helper pay:** every helper's pay for a job, with the amount, the date, whether it was paid and where the amount came from (the Wage Override or the corrections file). Check each against GnuCash's Professional Services entries.
 - **Questions in the corrections file,** left alone until the owner settles them.
 - **Expected results from the corrections file,** to compare with the counts.
 
-Fix a problem in Baserow or in the corrections file, export again, copy again and repeat the dry run until the report is right. For a warning that a customer has two vehicles of the same name, add the job to `appointment_fixes` with `set: {vehicle_baserow_id: N}`, where N is the right vehicle's id in the Vehicles export; the next report shows "linked to vehicle N" under "Corrections applied".
+Fix a problem in Baserow or in the corrections file, export again, copy again and repeat the dry run until the report is right. For a warning that a customer has two vehicles of the same name, add the job to `appointment_fixes` with `set: {vehicle_baserow_id: N}`, where N is the right vehicle's id in the Vehicles export; the next report shows "linked to vehicle N" under "Corrections applied". For a warning about a Wage Override with two helpers, add the job to `appointment_fixes` with `helper_pay: {Name: amount}` for each helper, named as in the Staff column.
 
 ## Step 3: Apply
 

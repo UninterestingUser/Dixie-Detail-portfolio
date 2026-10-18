@@ -55,6 +55,7 @@ class Command(BaseCommand):
             ("Corrections applied", report.corrections),
             ("Warnings", report.warnings),
             ("Could not place", report.unplaced),
+            ("Helper pay: every helper's pay and payout", report.helper_pay),
             ("Questions in the corrections file, left alone", report.questions),
             ("Expected results from the corrections file: compare with the counts above", report.checks),
         )

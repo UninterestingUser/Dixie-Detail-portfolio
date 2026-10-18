@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from appointments.models import Appointment, AppointmentLine
@@ -79,6 +80,7 @@ class Report:
     unplaced: list = field(default_factory=list)
     questions: list = field(default_factory=list)
     checks: list = field(default_factory=list)
+    helper_pay: list = field(default_factory=list)
 
     def count(self, kind, created=None):
         if created is None:
@@ -94,6 +96,9 @@ class Report:
 
     def cannot_place(self, where, why):
         self.unplaced.append(f"{where}: {why}")
+
+    def pay(self, where, text):
+        self.helper_pay.append(f"{where}: {text}")
 
 
 class Importer:
@@ -513,7 +518,7 @@ class Importer:
             if book_row:
                 used_bookkeeping.add(book_row["id"])
             self.import_payments(appointment, row, book_row, fix, bookkeeping_fixes, where)
-            self.import_staff(appointment, row, book_row, names, staff, where)
+            self.import_staff(appointment, row, book_row, names, staff, fix, where)
 
         for book_row in self.tables["Bookkeeping"]:
             if book_row["id"] not in used_bookkeeping:
@@ -769,13 +774,19 @@ class Importer:
     def staff_members(self):
         """Every staff name in the exports, matched to a staff member by name.
         A name with no record is created: the owner when it is the --owner
-        name, otherwise a family helper, the only pay type in use."""
+        name, otherwise a family helper, the only pay type in use. The owner
+        is never a helper (corrections file, rules.helper_pay): a record with
+        the --owner name that an earlier run made a helper becomes the owner."""
         names = {
             name for row in self.tables["Appointments"] for name in parsing.split_list(row["Staff"])
         }
         found = {}
         for name in sorted(names):
             member = StaffMember.objects.filter(name__iexact=name).first()
+            if member is not None and member.role != StaffMember.Role.OWNER and name.lower() == self.owner_name:
+                member.role, member.pay_type, member.default_job_pay = StaffMember.Role.OWNER, "", None
+                member.save(update_fields=["role", "pay_type", "default_job_pay"])
+                self.report.correction(f"staff {name!r}", "the owner, never a helper: changed from helper to owner")
             if member is None:
                 if self.owner_name is None and not StaffMember.objects.filter(role=StaffMember.Role.OWNER).exists():
                     self.report.cannot_place(f"staff {name!r}", "not a staff member yet; run with --owner \"<the owner's name as in Baserow>\"")
@@ -788,43 +799,88 @@ class Importer:
             found[name.lower()] = member
         return found
 
-    def import_staff(self, appointment, row, book_row, names, staff, where):
+    def import_staff(self, appointment, row, book_row, names, staff, fix, where):
         members = [staff[name.lower()] for name in names if name.lower() in staff]
         Assignment.objects.filter(appointment=appointment).exclude(staff_member__in=members).delete()
-        helpers = [member for member in members if member.role == StaffMember.Role.HELPER]
+        # The owner is never a helper, so with the owner and one helper on the
+        # job, the Wage Override is that helper's (corrections file, rules.helper_pay).
+        helpers = [member for member in members if member.role != StaffMember.Role.OWNER]
         wage = parsing.money(book_row["Wage Override"]) if book_row else None
         paid = squash(row["Employees Paid"]) == "1"
-        payout_key = f"appointment:{appointment.baserow_id}:helper-pay"
+        pay = self.fixed_helper_pay(where, fix, names, staff)
+        if pay:
+            total = sum(pay.values())
+            if wage is not None and wage != total:
+                self.report.warn(where, f"helper_pay totals ${total}, the Wage Override is ${wage}; helper_pay is used")
+            reason = f"corrections file: {fix.get('reason', 'no reason given')}"
+        elif wage is not None and len(helpers) == 1:
+            # Wage Override is the amount paid to the helper for the job.
+            pay = {helpers[0]: wage}
+            reason = "Wage Override in Baserow"
+        else:
+            pay = {}
+            if wage is not None:
+                self.report.warn(where, f"a Wage Override with {len(helpers)} helpers on the job; helper pay not recorded")
+            elif paid:
+                self.report.warn(where, "Employees Paid is 1 but no Wage Override gives the amount; helper pay not recorded")
+
+        payout_prefix = f"appointment:{appointment.baserow_id}:helper-pay"
+        kept = []
         for member in members:
             fields = {"pay_override": None, "override_reason": "", "payout": None}
-            # Wage Override is the amount paid to the helper for the job
-            # (corrections file, rules.helper_pay).
-            if wage is not None and member.role == StaffMember.Role.HELPER and len(helpers) == 1:
-                fields.update(pay_override=wage, override_reason="Wage Override in Baserow")
+            if member in pay:
+                amount = pay[member]
+                fields.update(pay_override=amount, override_reason=reason)
+                paid_on = timezone.localtime(appointment.scheduled_start).date()
                 if paid:
+                    key = f"{payout_prefix}:{member.pk}"
                     payout, created = StaffPayout.objects.update_or_create(
-                        import_key=payout_key,
+                        import_key=key,
                         defaults={
                             "staff_member": member,
                             "pay_type": member.pay_type,
-                            "amount": wage,
+                            "amount": amount,
                             # Baserow does not record how a helper was paid.
                             "method": StaffPayout.Method.CASH,
-                            "paid_on": timezone.localtime(appointment.scheduled_start).date(),
+                            "paid_on": paid_on,
                             "notes": "Imported from Baserow; how it was paid was not recorded, so it is entered as cash.",
                             "export_batch": self.already_in_books(),
                         },
                     )
+                    kept.append(key)
                     fields["payout"] = payout
                     self.report.count("helper payouts", created)
+                    self.report.pay(where, f"${amount} to {member.name}, paid {paid_on} as cash ({reason})")
+                else:
+                    self.report.pay(where, f"${amount} to {member.name}, not paid: Employees Paid is not 1 ({reason})")
             _, created = Assignment.objects.update_or_create(appointment=appointment, staff_member=member, defaults=fields)
             self.report.count("staff assignments", created)
-        if wage is not None and len(helpers) != 1:
-            self.report.warn(where, f"a Wage Override with {len(helpers)} helpers on the job; helper pay not recorded")
-        elif paid and wage is None:
-            self.report.warn(where, "Employees Paid is 1 but no Wage Override gives the amount; helper pay not recorded")
-        if not paid:
-            StaffPayout.objects.filter(import_key=payout_key).delete()
+        StaffPayout.objects.filter(
+            Q(import_key=payout_prefix) | Q(import_key__startswith=f"{payout_prefix}:")
+        ).exclude(import_key__in=kept).delete()
+
+    def fixed_helper_pay(self, where, fix, names, staff):
+        """helper_pay: {Name: amount} in an appointment fix, the pay of each
+        named helper on the job, used in place of the Wage Override."""
+        pay = {}
+        on_job = {name.lower() for name in names}
+        for name, value in (fix.get("helper_pay") or {}).items():
+            member = staff.get(squash(name).lower())
+            try:
+                amount = parsing.money(str(value))
+            except ValueError as error:
+                self.report.cannot_place(where, f"helper_pay for {name!r}: {error}")
+                continue
+            if squash(name).lower() not in on_job or member is None:
+                self.report.cannot_place(where, f"helper_pay names {name!r}, who is not in the job's Staff column")
+            elif member.role == StaffMember.Role.OWNER:
+                self.report.cannot_place(where, f"helper_pay names {name!r}, the owner, who is never a helper")
+            elif amount is None:
+                self.report.cannot_place(where, f"helper_pay for {name!r} has no amount")
+            else:
+                pay[member] = amount
+                self.report.correction(where, f"helper pay ${amount} to {member.name} ({fix.get('reason', 'no reason given')})")
+        return pay
 
     # The whole run ---------------------------------------------------------
 
