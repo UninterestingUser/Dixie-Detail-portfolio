@@ -4,7 +4,7 @@ summary: Known problems with the server, stack, backups and tools, each with the
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [operations, troubleshooting, errors]
 related: [docs/operations/deploying-changes.md, docs/operations/backups-and-restore.md, docs/architecture/server-and-stack.md, docs/architecture/secrets.md]
 ---
@@ -40,6 +40,12 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 
 **Cause:** the scripts run `bws` with a temporary settings profile that turns off its state file, and that profile has no server address unless `BWS_SERVER_URL` provides one. Since this was fixed, a missing setting stops the script earlier with "set BWS_SERVER_URL in .env".
 **Fix:** put `BWS_SERVER_URL=https://vault.bitwarden.com` in `.env` (use `https://vault.bitwarden.eu` only for an EU Bitwarden account) and restart the stack.
+
+### "429 Too Many Requests … Try again in 1m" from bws, and a script or the backup fails
+
+**Symptom:** the nightly backup failed (Healthchecks alert, or `journalctl -u dixie-backup` shows the error), or another ops script stopped with `Error: Received error message from server: [429 Too Many Requests] Slow down! Too many requests. Try again in 1m.`
+**Cause:** Bitwarden Secrets Manager limits how often one machine account may call it. Every ops script and unit uses the same machine account, so calls close together count against one limit. Until 2026-10-18 the backup timer (2:30 AM) fired in the same minute as the public health check, which runs every 10 minutes.
+**Fix (2026-10-18):** `ops/lib/bws.sh` now fetches all of a run's secrets with one `bws secret list` call (`bws_load`), and on a 429 waits 65 seconds and tries again, up to 3 times. Each retry is logged as "bws: Bitwarden is rate-limiting this machine account (429 Too Many Requests); retry N of 3 in 65 seconds", so `journalctl -u dixie-backup` (or the unit concerned) shows how often it happens. `dixie-public-health.service` allows 6 minutes, enough for three waits, and the backup now runs at 2:45 AM, clear of the health check's 10-minute marks (decision 0070). If a run still fails after three retries, run it again by hand a few minutes later (`sudo systemctl start dixie-backup`) and check whether something else is calling Bitwarden in a loop. The helper's behavior is tested by `tools/test-bws.sh`.
 
 ### "jq: error … Bitwarden secret NAME: expected 1, found 0"
 

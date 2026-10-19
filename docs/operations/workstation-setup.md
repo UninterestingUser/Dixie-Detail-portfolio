@@ -4,7 +4,7 @@ summary: How the owner's Fedora workstation is set up to work on the repository 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [operations, workstation, fedora, git, claude-code, tests, podman]
 related: [docs/decisions/0043-workstation-git-over-https.md, docs/decisions/0045-development-made-up-values.md, docs/operations/deploying-changes.md]
 ---
@@ -35,11 +35,12 @@ tools/run-tests.sh
 
 The test command does the same thing on the workstation and on GitHub Actions, which runs it on every pull request:
 
-1. Builds a test image from the same Python base and requirements as the production app, plus pytest.
-2. Starts a throwaway PostgreSQL 18 database, the same image as the server's, held in memory with no port open on the workstation.
-3. Runs pytest with the development settings, `app/dixie/settings_dev.py`. Every value in that file is made up; no Bitwarden sign-in is needed (decision 0045).
-4. Builds the production image and fails if it contains the development settings.
-5. Removes the database, pass or fail. The run ends with `run-tests: PASS`.
+1. Tests the ops scripts' Bitwarden helper, `ops/lib/bws.sh`, against a fake `bws` (`tools/test-bws.sh`, which needs `jq`): one Bitwarden call per run, and the wait-and-retry on "429 Too Many Requests".
+2. Builds a test image from the same Python base and requirements as the production app, plus pytest.
+3. Starts a throwaway PostgreSQL 18 database, the same image as the server's, held in memory with no port open on the workstation.
+4. Runs pytest with the development settings, `app/dixie/settings_dev.py`. Every value in that file is made up; no Bitwarden sign-in is needed (decision 0045).
+5. Builds the production image and fails if it contains the development settings.
+6. Removes the database, pass or fail. The run ends with `run-tests: PASS`.
 
 Arguments go to pytest, for example `tools/run-tests.sh -k health -v`. The first run downloads the Python and PostgreSQL images, which takes a few minutes; later runs take seconds. Python does not need to be installed for the tests, because they run inside the container.
 

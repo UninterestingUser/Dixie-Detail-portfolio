@@ -94,3 +94,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0067](0067-color-tells-identical-vehicles-apart.md) | 2026-10-18 | booking | An optional color tells a returning customer's identical vehicles apart | accepted |
 | [0068](0068-control-app-https-static-and-sign-in.md) | 2026-10-18 | control-app | The control app learns HTTPS from Caddy, serves its own static files and needs sign-in on every page | accepted |
 | [0069](0069-booking-staffing-and-publishing-in-the-control-app.md) | 2026-10-18 | control-app | How the control app books, re-prices, staffs and publishes | accepted |
+| [0070](0070-nightly-backup-at-2-45.md) | 2026-10-18 | backups | The nightly backup runs at 2:45 AM, clear of the public health check | accepted |

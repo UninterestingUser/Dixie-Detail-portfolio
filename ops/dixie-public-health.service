@@ -15,4 +15,5 @@ EnvironmentFile=/srv/dixie-detail/.env
 LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
 UMask=0077
 ExecStart=/srv/dixie-detail/ops/public-health.sh
-TimeoutStartSec=3min
+# Room for three 65-second waits if Bitwarden is rate-limiting (ops/lib/bws.sh).
+TimeoutStartSec=6min
