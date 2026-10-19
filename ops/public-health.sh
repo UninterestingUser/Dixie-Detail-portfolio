@@ -26,9 +26,7 @@ if ! printf '%s' "$body" | jq -e '.status == "ok"' >/dev/null 2>&1; then
 fi
 
 # Fetched only after a good answer, and kept in memory for this run.
-token=$(bws_token)
-json=$(bws_project_secrets "$token" "$BWS_PROJECT_ID")
-unset token
-hc_url=$(bws_value "$json" HEALTHCHECKS_PUBLIC_URL)
-unset json
+bws_load "$BWS_PROJECT_ID"
+hc_url=$(bws_get HEALTHCHECKS_PUBLIC_URL)
+bws_forget
 hc_ping "$hc_url" ""

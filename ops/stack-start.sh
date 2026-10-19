@@ -8,6 +8,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=lib/bws.sh
 . ops/lib/bws.sh
 
 : "${CREDENTIALS_DIRECTORY:?run this from dixie-stack.service}"
@@ -25,14 +26,13 @@ umask 077
 rm -rf -- "$secrets_dir"
 mkdir -p "$secrets_dir"/{db,app,tunnel}
 
-token=$(<"$CREDENTIALS_DIRECTORY/bws-token")
-json=$(bws_project_secrets "$token" "$BWS_PROJECT_ID")
-unset token
+# One Bitwarden call for every secret, retried if Bitwarden is rate-limiting.
+bws_load "$BWS_PROJECT_ID"
 
 # put FILE BITWARDEN_KEY UID
 put() {
 	local file="$secrets_dir/$1"
-	bws_value "$json" "$2" >"$file"
+	bws_get "$2" >"$file"
 	chown "$3:0" "$file"
 	chmod 0400 "$file"
 }
@@ -41,7 +41,7 @@ put db/postgres_password      POSTGRES_PASSWORD       "$DB_UID"
 put app/postgres_password     POSTGRES_PASSWORD       "$APP_UID"
 put app/django_secret_key     DJANGO_SECRET_KEY       "$APP_UID"
 put tunnel/cloudflared_token  CLOUDFLARE_TUNNEL_TOKEN "$TUNNEL_UID"
-unset json
+bws_forget
 
 # Recreate every container so each mounts the files just written. A container
 # left from the last run would still hold the old ones.
