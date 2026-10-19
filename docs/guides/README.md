@@ -30,7 +30,6 @@ Running the server itself (deploying, backups, monitoring) is covered in [../ope
 | Guide | Written in |
 | --- | --- |
 | Resolving a quiet-matching flag | Phase 3 |
-| Booking a maintenance plan or a repeating series | Phase 3 |
 | Closing a day or taking a holiday | Phase 3 |
 | Approving an out-of-area address | Phase 3 |
 | Reviewing new vehicle models in the queue | Phase 2 |

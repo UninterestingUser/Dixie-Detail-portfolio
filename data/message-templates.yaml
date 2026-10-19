@@ -1,7 +1,7 @@
 meta:
   title: Text message templates
   summary: Seed wording for each automated text, the consent each one requires, and the automatic STOP, HELP and START replies.
-  updated: 2026-10-13
+  updated: 2026-10-18
   status: planned
   explained_in: docs/reference/text-messages.md
   note: Seed wording for Phase 4. The owner edits live templates in the control app. Every message starts with "Dixie Detail:". Placeholders are in braces.
@@ -38,7 +38,7 @@ templates:
   - key: updated_estimate
     consent: appointment
     sent: Optional, when a pricebook change alters a booked job's price
-    text: null   # wording to be written in Phase 1 or 4
+    text: null   # wording to be written in Phase 4, when texts are built
 
 automatic_replies:
   STOP: "Dixie Detail: You are unsubscribed and will receive no more texts from us. Reply START to resubscribe."
