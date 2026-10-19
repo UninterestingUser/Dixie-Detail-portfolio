@@ -4,7 +4,7 @@ summary: The home server's hardware and folders, the four containers of the Phas
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [server, docker, systemd, infrastructure]
 related: [docs/architecture/network-and-access.md, docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/deploying-changes.md]
 ---
@@ -71,7 +71,7 @@ The `app` container applies database migrations every time it starts, before the
 | --- | --- | --- |
 | `dixie-stack.service` | Runs `ops/stack-start.sh`: loads the Bitwarden token, fetches the secrets, writes them to in-memory files and recreates and starts every container of the Compose stack. A one-shot unit that stays "active (exited)"; stopping it runs `docker compose down` | At boot, and on `systemctl restart dixie-stack` |
 | `dixie-backup.service` | Runs `ops/backup.sh`: dumps PostgreSQL to the RAID, sends it to Google Drive with restic, applies retention, pings Healthchecks | Triggered by `dixie-backup.timer` |
-| `dixie-backup.timer` | Starts the backup | 2:30 AM Eastern every night; 3:30 AM on the Sunday clocks spring forward, when 2:30 AM does not exist. A run missed while the server was off happens at the next boot |
+| `dixie-backup.timer` | Starts the backup | 2:45 AM Eastern every night, clear of the public health check's 10-minute marks (decision 0070); 3:45 AM on the Sunday clocks spring forward, when 2:45 AM does not exist. A run missed while the server was off happens at the next boot |
 | `dixie-public-health.service` | Runs `ops/public-health.sh`: fetches the public health address through Cloudflare and pings Healthchecks on success | Triggered by `dixie-public-health.timer` |
 | `dixie-public-health.timer` | Starts the public check | Every 10 minutes |
 

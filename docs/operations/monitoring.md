@@ -4,7 +4,7 @@ summary: What the two Healthchecks.io checks watch, what to do when an alert ema
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-18
 tags: [operations, monitoring, healthchecks, alerts]
 related: [docs/architecture/backups-and-monitoring.md, docs/operations/troubleshooting.md]
 ---
@@ -27,7 +27,7 @@ While the server is down, the future website and its prices stay up on Cloudflar
 
 ## When the "nightly backup" alert arrives
 
-The 2:30 AM backup failed or did not run. Read `journalctl -u dixie-backup.service --no-pager | tail -30` and look up the error in [troubleshooting.md](troubleshooting.md). Then run the backup by hand: `sudo systemctl start dixie-backup.service`.
+The 2:45 AM backup failed or did not run. Read `journalctl -u dixie-backup.service --no-pager | tail -30` and look up the error in [troubleshooting.md](troubleshooting.md). Then run the backup by hand: `sudo systemctl start dixie-backup.service`.
 
 ## Testing the alerts
 

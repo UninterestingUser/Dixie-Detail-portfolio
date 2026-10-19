@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nightly backup. Run by dixie-backup.service (dixie-backup.timer, 2:30 AM).
+# Nightly backup. Run by dixie-backup.service (dixie-backup.timer, 2:45 AM).
 #
 # 1. Dumps PostgreSQL from the running db container to
 #    $BACKUP_DIR/daily/dixie-detail-YYYY-MM-DD.dump, and links the month's

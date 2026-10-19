@@ -4,7 +4,7 @@ summary: How the database is backed up every night to the RAID and to Google Dri
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [backups, restic, rclone, monitoring, healthchecks]
 related: [docs/operations/backups-and-restore.md, docs/operations/monitoring.md, docs/decisions/0027-backups-to-google-drive.md, docs/decisions/0039-healthchecks-monitoring.md]
 ---
@@ -15,7 +15,7 @@ The database is the business, so it is copied every night to two places. The RAI
 
 ## What runs every night
 
-`dixie-backup.timer` starts `dixie-backup.service` at 2:30 AM Eastern. On the Sunday clocks spring forward, 2:30 AM does not exist, so the timer runs the backup at 3:30 AM that day instead. A run missed while the server was off happens at the next boot. The service runs `ops/backup.sh`, which:
+`dixie-backup.timer` starts `dixie-backup.service` at 2:45 AM Eastern, between the public health check's 10-minute runs, so the two never call Bitwarden in the same minute ([decision 0070](../decisions/0070-nightly-backup-at-2-45.md)). On the Sunday clocks spring forward, 2:45 AM does not exist, so the timer runs the backup at 3:45 AM that day instead. A run missed while the server was off happens at the next boot. The service runs `ops/backup.sh`, which:
 
 1. Dumps the PostgreSQL database from the running `db` container, in PostgreSQL's custom format, and reads the dump back with `pg_restore --list` before keeping it as `/mnt/raid/Backups/dixie-detail/daily/dixie-detail-YYYY-MM-DD.dump`. A failed dump leaves no partial file behind.
 2. Keeps the first dump of each month as `/mnt/raid/Backups/dixie-detail/monthly/dixie-detail-YYYY-MM.dump`, a hard link to the daily file, so it takes no extra space.

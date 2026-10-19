@@ -4,7 +4,7 @@ summary: How to confirm the nightly backup ran, run one by hand, test a restore,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [operations, backups, restore, restic]
 related: [docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md]
 ---
@@ -15,7 +15,7 @@ The design is in [../architecture/backups-and-monitoring.md](../architecture/bac
 
 ## Confirm the nightly backup ran
 
-- Healthchecks.io emails the owner if the nightly backup check misses its 2:30 AM run by more than 2 hours. No email means it ran.
+- Healthchecks.io emails the owner if the nightly backup check misses its 2:45 AM run by more than 2 hours. No email means it ran.
 - On the server, `systemctl list-timers | grep dixie-backup` shows the last and next run.
 - `journalctl -u dixie-backup.service --no-pager | tail -20` shows the last run's output, ending with "snapshot … saved" and the retention summary.
 - The `dixie-detail-backups` folder in Google Drive shows recent changes, and `/mnt/raid/Backups/dixie-detail/daily` holds today's dump.
