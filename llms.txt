@@ -45,6 +45,8 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Deploying changes](docs/operations/deploying-changes.md)
 - [Importing the Baserow and Setmore records](docs/operations/importing-baserow.md)
 - [Troubleshooting](docs/operations/troubleshooting.md)
+- [Phase 0 foundations runbook](docs/operations/phase-0-foundations-runbook.md): how the server was built, usable to rebuild it
+- [Phase 1 runbook](docs/operations/phase-1-core-data-runbook.md): historical record of how Phase 1 was run
 - [Publishing the public portfolio copy](docs/operations/publishing-the-portfolio.md)
 
 ## Conventions

@@ -11,7 +11,7 @@ related: [docs/reference/control-app.md, docs/guides/finding-a-customer.md, docs
 
 # Installing the control app on a phone or computer
 
-The control app is a private web page on the home server that can be installed like an app. It opens only on devices connected to the business's Tailscale network, and everyone signs in with their own account. Its address is `https://` followed by the server's tailnet name, the first name in `DJANGO_ALLOWED_HOSTS`; [control-app.md](../reference/control-app.md) gives it in full.
+The control app is a private web page on the home server that can be installed like an app. It opens only on devices connected to the business's Tailscale network, and everyone signs in with their own account. Its address is `https://` followed by the server's tailnet name. To find the name, look at the first name in `DJANGO_ALLOWED_HOSTS` in the server's `.env`, or run `sudo tailscale serve status` on the server, which prints the full `https://` address. Tailscale must be on for the address to open. [control-app.md](../reference/control-app.md) gives it in full.
 
 ## Step 1: Get an account
 
