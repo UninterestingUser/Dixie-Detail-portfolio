@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-14):** Phase 0 (Foundations) is complete; its restore test passed on 2026-10-14. Phase 1 (Core data and control app) is under way, with the data model built. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-10-18):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is next. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 

@@ -4,7 +4,7 @@ summary: The structure, design direction and search-ranking safeguards for the n
 audience: [owner, developer]
 visibility: internal
 status: planned
-updated: 2026-10-13
+updated: 2026-10-18
 tags: [website, seo, design, astro, phase-3]
 related: [docs/reference/booking-flow.md, docs/decisions/0002-astro-on-cloudflare.md, docs/decisions/0031-website-design-direction.md]
 ---
@@ -46,4 +46,4 @@ No redesign can guarantee rankings.
 
 ## How content stays current
 
-Service pages get their prices and descriptions when the site is built. Publishing a pricebook change in the control app triggers a rebuild through a Cloudflare Pages deploy hook, live within a few minutes. The booking flow always reads live prices from the public API.
+Service pages will get their prices and descriptions when the site is built. Publishing a pricebook change in the control app, which works since Phase 1, will also trigger a rebuild through a Cloudflare Pages deploy hook, live within a few minutes. The booking flow will always read live prices from the public API.

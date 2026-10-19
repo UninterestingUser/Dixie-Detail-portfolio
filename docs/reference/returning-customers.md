@@ -11,7 +11,7 @@ related: [docs/decisions/0034-quiet-customer-matching.md, docs/decisions/0067-co
 
 # Returning customers and quiet matching
 
-Returning customers are matched quietly by phone number when a booking is submitted. The booking flow looks the same to everyone, and nothing from a customer's record is ever shown on the website. This is the owner's decision of 2026-10-11, built in Phases 1 and 3.
+Returning customers are matched quietly by phone number when a booking is submitted. The booking flow looks the same to everyone, and nothing from a customer's record is ever shown on the website. This is the owner's decision of 2026-10-11. Phase 1 built the record that holds each flagged difference; the matching, the flags and the screen to resolve them come with website booking in Phase 3, and the steps below describe how they will work.
 
 ## How quiet matching works
 

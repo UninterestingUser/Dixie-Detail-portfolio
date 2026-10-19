@@ -4,7 +4,7 @@ summary: The parts of the Dixie Detail business system, how they connect, how da
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-18
 tags: [architecture, overview]
 related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-access.md, docs/architecture/integrations.md, docs/overview/project-goals.md]
 ---
@@ -40,9 +40,9 @@ flowchart TB
 
 | Component | Choice | Why | Status |
 | --- | --- | --- | --- |
-| Database | PostgreSQL | One relational store for all business data. Free, mature, simple to back up | Running, empty |
-| Core app | Django (Python) | Logins, permissions, migrations and an admin screen for every table come built in | Running, health page only |
-| Control app | Web app served by the core app | Runs in Firefox on Fedora and installs to the Pixel's home screen; nothing to install per machine | Planned (Phase 1) |
+| Database | PostgreSQL | One relational store for all business data. Free, mature, simple to back up | Running |
+| Core app | Django (Python) | Logins, permissions, migrations and an admin screen for every table come built in | Running: the pricebook, pricing engine and control app (Phase 1) |
+| Control app | Web app served by the core app | Runs in a browser on Fedora and installs to the Pixel's home screen; nothing to install per machine | Running (Phase 1) |
 | Reverse proxy | Caddy | Gives the app two separate doors, one private and one public | Running |
 | Private access | Tailscale, with `tailscale serve` | Already in use by the owner; the control app is never on the public internet | Running |
 | Public access | Cloudflare Tunnel | Outbound-only connection: no open ports, no static IP | Running |
