@@ -4,7 +4,7 @@ summary: The step-by-step procedure that built the server foundation in Phase 0,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-19
 tags: [operations, runbook, phase-0, rebuild]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/operations/deploying-changes.md, docs/operations/workstation-setup.md]
 ---
@@ -144,7 +144,7 @@ Add the tailnet host name to `DJANGO_ALLOWED_HOSTS` in `.env`, as a bare name, t
 
 1. Connect the server to Google Drive: `sudo apt install -y rclone restic`, then `rclone config`, new remote `gdrive`, type Google Drive; press Enter to leave client_id, client_secret and service_account_file blank; scope "Access to files created by rclone only"; No to advanced config; No to auto config. Run the `rclone authorize "drive" …` command it prints on the Fedora machine, sign in with the business account and paste the result back. No to Shared Drive. Then choose "Set configuration password", generate one in Bitwarden, save it as `RCLONE_CONFIG_PASS`, and enter it. Check with `rclone lsd gdrive:` (note the colon).
 2. Generate the backup password in Bitwarden and save it as `RESTIC_PASSWORD`. Also keep a copy in the Bitwarden password vault, and a sealed paper copy stored away from the server.
-3. Claude Code built the backups from this request: dump PostgreSQL to `/mnt/raid/Backups/dixie-detail` (14 daily, 12 monthly), send the dumps with restic to `rclone:gdrive:dixie-detail-backups`, load the Bitwarden token like `dixie-stack.service` and fetch the two passwords only while running, a service and 2:30 AM timer, a restore-test script, and Healthchecks pings.
+3. Claude Code built the backups from this request: dump PostgreSQL to `/mnt/raid/Backups/dixie-detail` (14 daily, 12 monthly), send the dumps with restic to `rclone:gdrive:dixie-detail-backups`, load the Bitwarden token like `dixie-stack.service` and fetch the two passwords only while running, a service and nightly timer, a restore-test script, and Healthchecks pings. The timer now runs at 2:45 AM Eastern, 3:45 AM on the spring-forward Sunday (decision 0070); it ran at 2:30 AM until 2026-10-18.
 4. Merge, pull, add the new settings to `.env` (`BACKUP_DIR=/mnt/raid/Backups/dixie-detail`, `RESTIC_REPOSITORY=rclone:gdrive:dixie-detail-backups` and `RCLONE_CONFIG`, the path to the rclone config), and create the restic repository once (see [backups-and-restore.md](backups-and-restore.md)).
 5. Install the units and run a backup:
 
