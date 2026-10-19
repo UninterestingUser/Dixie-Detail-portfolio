@@ -2,7 +2,7 @@
 
 The booking, scheduling, pricing and back-office system for Dixie Detail LLC, a one-person mobile vehicle detailing business in southeast Tennessee. One PostgreSQL database is the single source of truth for customers, vehicles, appointments, prices, payments, staff and bookkeeping. A private control app runs the business, and a fast public website will show live prices and take bookings.
 
-**Status (October 2026):** Phase 0 (foundations) is done and running on the home server. Phase 1 (core data and control app) is under way: the data model for all nine business areas, the pricebook and pricing engine, the import of the earlier records, and the control app's screens for customers, jobs, staff and the pricebook are built. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
+**Status (October 2026):** Phase 0 (foundations) and Phase 1 (core data and control app) are done. The home server runs the database and the control app, with the pricebook, the pricing engine, the imported job history and screens for customers, jobs, staff and the pricebook. Phase 2 (vehicle catalog) is next. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
 
 **About the public copy.** The working repository is private. A public copy is published from it with [tools/publish-portfolio.sh](tools/publish-portfolio.sh), which rewrites every commit to replace server addresses and a few private details with placeholders. Everything else, including the full commit history, is as built.
 

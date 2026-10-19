@@ -14,13 +14,15 @@ phases:
     note: Everything but the restore test was done on 2026-10-13; the restore test was deferred until the database had tables and passed on 2026-10-14
   - number: 1
     name: Core data and control app
-    status: in_progress
-    progress:
+    status: done
+    completed: 2026-10-18
+    note: The owner confirmed on 2026-10-18 that the done test passed. The returning-customer review queue moved to Phase 3 with quiet matching, because only website bookings raise its flags
+    built:
       - Development setup and automated tests (pull request #14)
       - Data model for all nine areas built, with migrations and change history (2026-10-14)
       - Plan review applied, decisions 0056 to 0062 (pull request #18)
       - "Step 3: pricebook loaded from data/ (load_pricebook), pricing engine, time on site, quote record and pricebook versioning; the tests check all 90 cells of the price matrix"
-      - "Step 4: Baserow and Setmore import (import_baserow), a dry run by default, keyed on Baserow ids; not yet run on the server"
+      - "Step 4: Baserow and Setmore import (import_baserow), a dry run by default, keyed on Baserow ids; can be run again with fresh exports until launch"
       - "Control app shell and customer screens: phone-first and installable, sign-in over the tailnet address, customer search by name or phone, customer pages, adding and editing customers and vehicles"
       - "Control app job, staff and pricebook screens: day and week schedule, booking with a live price, maintenance series, final price; staff authorization and assign-staff control; pricebook drafts, publishing and affected-job choices (decisions 0061 and 0069)"
     plan_review_2026_10_17:     # decisions 0056 to 0062
@@ -36,13 +38,14 @@ phases:
       - Bitwarden secret DEPLOY_KEY renamed to DEPLOY_SSH_KEY (2026-10-13)
   - number: 2
     name: Vehicle catalog
-    status: planned
+    status: next
     scope_from_plan_review: [classification rules as data, per-model and per-vehicle overrides, preview before saving, vehicle class settings, vPIC Canadian specifications]
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3
     name: Scheduling and website
     status: planned
     scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
+    moved_from_phase_1: [returning-customer review queue, with quiet matching]
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4
     name: Texts, alerts and payments
