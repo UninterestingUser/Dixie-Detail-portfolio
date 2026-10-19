@@ -10,12 +10,14 @@ phases:
     name: Foundations
     status: done
     completed: 2026-10-14
+    runbook: docs/operations/phase-0-foundations-runbook.md
     done_when: A backup has been restored successfully and the server answers through the tunnel
     note: Everything but the restore test was done on 2026-10-13; the restore test was deferred until the database had tables and passed on 2026-10-14
   - number: 1
     name: Core data and control app
     status: done
     completed: 2026-10-18
+    runbook: docs/operations/phase-1-core-data-runbook.md   # historical, as executed
     note: The owner confirmed on 2026-10-18 that the done test passed. The returning-customer review queue moved to Phase 3 with quiet matching, because only website bookings raise its flags
     built:
       - Development setup and automated tests (pull request #14)
@@ -70,8 +72,13 @@ later_add_ons:              # not scheduled
     what: Native Android companion app using Android geofencing (about 150 m around each job address)
     decision: "0062"
 
-owner_actions_open:
+owner_actions_open:        # answers and checks only the owner can give
+  # Carried over from the Phase 1 runbook; none blocks Phase 2.
+  - Before Phase 2's classification rules are settled - whether to change how vehicles are priced (a factor beyond vehicle class, size variant and condition), cheapest to settle before the booking flow is built
+  - Before Phase 3 - confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056)
+  - Before Phase 3 - the accountant's view on Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, docs/reference/sales-tax.md)
+  - Before Phase 3 - short descriptions in the owner's own words for each service and condition level, for the website
+  - Before Phase 3 - collect the Google Business Profile link for the website footer (data/business.yaml)
+  # Before Phase 4 (docs/reference/payments.md).
   - Stripe account check and Tap to Pay test
   - Confirm Venmo and Cash App accounts are business profiles
-  - Collect the Google Business Profile link for the footer
-  - Accountant check on Georgia sales and income tax for the out-of-area customer

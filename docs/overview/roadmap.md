@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-18
 tags: [roadmap, phases, status]
-related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/decisions/README.md]
+related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/decisions/README.md]
 ---
 
 # Roadmap and phase status
@@ -17,7 +17,7 @@ The booking path ships first because it earns money; the back-office features fo
 
 **Phase 0 is complete** (2026-10-14). The server runs the stack under systemd, the control app answers over Tailscale, the public health page answers through the Cloudflare Tunnel, nightly backups reach the RAID and Google Drive, both Healthchecks.io checks are green, and the restore test passed.
 
-**Phase 1 is complete.** The owner confirmed on 2026-10-18 that its done test passed: the pricebook in the app matches the price matrix cell for cell, and the imported history is searchable. Phase 1 built:
+**Phase 1 is complete.** The owner ran the acceptance test on 2026-10-18 and every item passed: the pricebook in the app matches the price matrix cell for cell, five random customers and every booked job check out against Baserow, and the restore test passes with real data. How the phase was run, step by step, is kept in the historical [Phase 1 runbook](../operations/phase-1-core-data-runbook.md). Phase 1 built:
 
 - The data model for all nine areas, with change history ([../architecture/data-model.md](../architecture/data-model.md)).
 - The pricebook load (`load_pricebook`), the pricing engine, time on site, the quote record and pricebook versioning ([../reference/pricing.md](../reference/pricing.md)).
@@ -29,6 +29,19 @@ The returning-customer review queue, listed for Phase 1 in the first plan, moved
 **Phase 2, the vehicle catalog, is next.**
 
 Phase 1 started with two carry-overs from Phase 0, both done: `DEPLOY_REMOTE` and `DEPLOY_BRANCH` are in the server's `.env` and `ops/deploy.sh` works (confirmed by the owner 2026-10-17; the deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY` on 2026-10-13), and the restore test passed on 2026-10-14. Two more were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
+
+## Owner actions still open
+
+Answers and checks only the owner can give, including those carried over from Phase 1. None blocks Phase 2. The list is kept in [data/phases.yaml](../../data/phases.yaml) under `owner_actions_open`.
+
+| Needed before | Action |
+| --- | --- |
+| Phase 2's classification rules are settled | Decide whether to change how vehicles are priced, with a factor beyond vehicle class, size variant and condition. It is cheapest to settle before the booking flow is built |
+| Phase 3 | Confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056) |
+| Phase 3 | Ask the accountant about Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, [sales-tax.md](../reference/sales-tax.md)) |
+| Phase 3 | Write short descriptions, in the owner's own words, of each service and condition level for the website |
+| Phase 3 | Collect the Google Business Profile link for the website footer ([data/business.yaml](../../data/business.yaml)) |
+| Phase 4 | Confirm the Stripe account is in the business's name and run a small Tap to Pay test; confirm the Venmo and Cash App accounts are business profiles ([payments.md](../reference/payments.md)) |
 
 ## Where the plan review of 2026-10-17 lands
 

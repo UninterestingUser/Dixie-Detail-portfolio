@@ -4,7 +4,7 @@ summary: The step-by-step procedure that built the server foundation in Phase 0,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-19
+updated: 2026-10-18
 tags: [operations, runbook, phase-0, rebuild]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/operations/deploying-changes.md, docs/operations/workstation-setup.md]
 ---
