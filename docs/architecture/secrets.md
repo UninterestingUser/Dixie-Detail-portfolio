@@ -4,7 +4,7 @@ summary: How every key, password and token is kept in Bitwarden Secrets Manager,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-14
+updated: 2026-10-18
 tags: [security, secrets, bitwarden, systemd]
 related: [data/configuration.yaml, docs/decisions/0028-secrets-in-bitwarden.md, docs/decisions/0041-backup-password-paper-copy.md, docs/operations/secrets-management.md]
 ---
@@ -26,7 +26,7 @@ The owner's rule: every key, password and token lives in Bitwarden Secrets Manag
 3. The script writes each secret to `/run/dixie-stack/secrets`, an in-memory folder only root can open, as one file per container that needs it. Each file belongs to the user that container runs as, and only that user can read it. Compose mounts the files into the containers at `/run/secrets/<name>`, and the containers' environment holds only the file paths, such as `POSTGRES_PASSWORD_FILE`. Secrets are never passed as Docker environment variables, because Docker saves those in its configuration files on disk.
 4. Every start recreates all the containers, so they always mount the files just written. When the unit stops, systemd deletes `/run/dixie-stack`.
 
-Scripts look secrets up by name in that list, through the shared helper `ops/lib/bws.sh`; by hand, the same lookup is `bws secret list | jq -r '.[] | select(.key=="NAME") | .value'`. `bws secret get` needs a secret's ID, not its name. A name in the code must match the name in Bitwarden exactly, capitals included; a missing name stops the script with "Bitwarden secret NAME: expected 1, found 0".
+Scripts look secrets up by name in that list, through the shared helper `ops/lib/bws.sh`: each run fetches the list once with `bws_load` and reads every secret it needs from that one result with `bws_get`, and when Bitwarden is rate-limiting the machine account ("429 Too Many Requests") it waits 65 seconds and tries again, up to 3 times, logging each retry; by hand, the same lookup is `bws secret list | jq -r '.[] | select(.key=="NAME") | .value'`. `bws secret get` needs a secret's ID, not its name. A name in the code must match the name in Bitwarden exactly, capitals included; a missing name stops the script with "Bitwarden secret NAME: expected 1, found 0".
 
 ## Secrets used outside the stack
 

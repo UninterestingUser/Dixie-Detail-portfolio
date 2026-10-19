@@ -26,13 +26,13 @@ restic_settings_from_env_file() {
 }
 
 # restic_load_secrets PROJECT_ID
-# Sets restic_password and rclone_config_pass from Bitwarden.
+# Sets restic_password and rclone_config_pass from Bitwarden, with one call
+# through bws_load.
 restic_load_secrets() {
-	local token json
-	token=$(bws_token)
-	json=$(bws_project_secrets "$token" "$1")
-	restic_password=$(bws_value "$json" RESTIC_PASSWORD)
-	rclone_config_pass=$(bws_value "$json" RCLONE_CONFIG_PASS)
+	bws_load "$1" || return
+	restic_password=$(bws_get RESTIC_PASSWORD)
+	rclone_config_pass=$(bws_get RCLONE_CONFIG_PASS)
+	bws_forget
 }
 
 run_restic() {

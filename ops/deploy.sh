@@ -27,11 +27,9 @@ branch=$(setting DEPLOY_BRANCH)
 server_url=$(setting BWS_SERVER_URL)
 [[ -z $server_url ]] || export BWS_SERVER_URL="$server_url"
 
-token=$(bws_token)
-json=$(bws_project_secrets "$token" "$project_id")
-unset token
-key=$(bws_value "$json" DEPLOY_SSH_KEY)
-unset json
+bws_load "$project_id"
+key=$(bws_get DEPLOY_SSH_KEY)
+bws_forget
 
 eval "$(ssh-agent -s)" >/dev/null
 trap 'ssh-agent -k >/dev/null' EXIT

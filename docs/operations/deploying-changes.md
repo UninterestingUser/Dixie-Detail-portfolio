@@ -4,7 +4,7 @@ summary: The routine for getting a merged pull request onto the server, and what
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-17
+updated: 2026-10-18
 tags: [operations, deploy, git, systemd]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/reference/configuration.md]
 ---
@@ -56,7 +56,7 @@ Lines starting with `<` are missing from `.env`. Add them with `nano .env`. Reme
 If the pull request names new secrets, create them in the Bitwarden web app, in the Dixie Detail project, with exactly the names the code uses. To list every secret name the scripts ask for:
 
 ```bash
-grep -ohE 'bws_(optional_)?value "\$json" [A-Z][A-Z0-9_]+|^put [^ ]+ +[A-Z][A-Z0-9_]+' /srv/dixie-detail/ops/*.sh /srv/dixie-detail/ops/lib/*.sh | awk '{print $NF}' | sort -u
+grep -ohE '^[^#]*bws_get(_optional)? [A-Z][A-Z0-9_]+|^put [^ ]+ +[A-Z][A-Z0-9_]+' /srv/dixie-detail/ops/*.sh /srv/dixie-detail/ops/lib/*.sh | awk '{print $NF}' | sort -u
 ```
 
 ## Step 5: Install new or changed systemd units

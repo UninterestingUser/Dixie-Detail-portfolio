@@ -34,13 +34,12 @@ SNAPSHOT_FILE=dixie-detail.dump
 
 # If this fails there is no ping URL either; Healthchecks reports the
 # missing ping when the grace time runs out.
-token=$(bws_token)
-json=$(bws_project_secrets "$token" "$BWS_PROJECT_ID")
-unset token
-restic_password=$(bws_value "$json" RESTIC_PASSWORD)
-rclone_config_pass=$(bws_value "$json" RCLONE_CONFIG_PASS)
-hc_url=$(bws_optional_value "$json" HEALTHCHECKS_BACKUP_URL)
-unset json
+# One Bitwarden call for all three, retried if Bitwarden is rate-limiting.
+bws_load "$BWS_PROJECT_ID"
+restic_password=$(bws_get RESTIC_PASSWORD)
+rclone_config_pass=$(bws_get RCLONE_CONFIG_PASS)
+hc_url=$(bws_get_optional HEALTHCHECKS_BACKUP_URL)
+bws_forget
 
 # keep_newest DIR N: delete all but the newest N dumps in DIR. Names sort by date.
 keep_newest() {
