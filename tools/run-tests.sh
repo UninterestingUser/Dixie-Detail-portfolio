@@ -3,6 +3,8 @@
 # pytest in a container built from the production Python image, against a
 # throwaway PostgreSQL database that lives in memory and is removed afterwards.
 # Then check that the production image cannot load the development settings.
+# First, the ops scripts' Bitwarden helper is tested with a fake bws
+# (tools/test-bws.sh, which needs jq).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 # Uses Podman, or Docker where Podman is not installed. CONTAINER_ENGINE=docker
@@ -19,6 +21,9 @@ db=dixie-test-db-$$
 
 cleanup() { "$engine" rm -f "$db" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
+
+echo "run-tests: testing the Bitwarden helper (ops/lib/bws.sh)"
+"$repo/tools/test-bws.sh" >/dev/null || { "$repo/tools/test-bws.sh"; exit 1; }
 
 echo "run-tests: building the test image"
 "$engine" build -q -t dixie-app-test:local -f "$repo/app/Dockerfile.test" "$repo/app" >/dev/null
