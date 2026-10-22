@@ -1,0 +1,13 @@
+id,year,make,model,baseModel,VClass,drive,pv2,lv2,pv4,lv4,hpv,hlv,trany,displ
+41122,2019,Toyota,RAV4,RAV4,Small Sport Utility Vehicle 2WD,Front-Wheel Drive,0,0,0,0,0,0,Automatic (S8),2.5
+41126,2019,Toyota,RAV4 AWD,RAV4,Small Sport Utility Vehicle 4WD,All-Wheel Drive,0,0,0,0,0,0,Automatic (S8),2.5
+41307,2019,Toyota,RAV4 Hybrid AWD,RAV4,Small Sport Utility Vehicle 4WD,All-Wheel Drive,0,0,0,0,0,0,Automatic (variable gear ratios),2.5
+40605,2019,Toyota,Camry LE/SE,Camry,Midsize Cars,Front-Wheel Drive,0,0,100,14,0,0,Automatic (S8),2.5
+40720,2019,Toyota,Camry Hybrid LE,Camry,Midsize Cars,Front-Wheel Drive,0,0,100,15,0,0,Automatic (AV-S6),2.5
+40100,2019,Honda,Civic 2Dr,Civic,Compact Cars,Front-Wheel Drive,83,12,0,0,0,0,Manual 6-spd,2.0
+40101,2019,Honda,Civic 4Dr,Civic,Midsize Cars,Front-Wheel Drive,0,0,97,15,0,0,Automatic (variable gear ratios),2.0
+40102,2019,Honda,Civic 5Dr,Civic,Large Cars,Front-Wheel Drive,0,0,0,0,97,26,Automatic (variable gear ratios),1.5
+41015,2019,Ford,F150 Pickup 2WD,F150,Standard Pickup Trucks 2WD,Rear-Wheel Drive,0,0,0,0,0,0,Automatic (S10),3.3
+41028,2019,Ford,F150 Pickup 4WD,F150,Standard Pickup Trucks 4WD,Part-time 4-Wheel Drive,0,0,0,0,0,0,Automatic (S10),3.5
+39000,2018,Toyota,RAV4,RAV4,Small Sport Utility Vehicle 2WD,Front-Wheel Drive,0,0,0,0,0,0,Automatic (S6),2.5
+39999,,Toyota,Mystery,Mystery,Midsize Cars,Front-Wheel Drive,0,0,0,0,0,0,Automatic (S6),2.5

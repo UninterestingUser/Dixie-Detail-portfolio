@@ -4,7 +4,7 @@ summary: Every outside service the system uses or will use, what it does for the
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 tags: [integrations, services]
 related: [data/integrations.yaml, data/configuration.yaml, docs/overview/running-costs.md]
 ---
@@ -24,7 +24,7 @@ Every outside service connects to the core app, never straight to the database. 
 
 ## Connected in later phases
 
-- **EPA FuelEconomy.gov and NHTSA vPIC (Phase 2).** Free government vehicle data: year, make and model menus, EPA size classes, the heavy trucks the EPA leaves out, and, from vPIC's Canadian vehicle specifications, curb weight and dimensions per trim for the classification rules. See [../reference/vehicle-classification.md](../reference/vehicle-classification.md). RockAuto is not used: it has no public API and scraping it may breach its terms.
+- **EPA FuelEconomy.gov and NHTSA vPIC (Phase 2, in progress).** Free government vehicle data: year, make and model menus, EPA size classes, the heavy trucks the EPA leaves out, motorcycle models, and, from vPIC's Canadian vehicle specifications, curb weight and dimensions per trim for the classification rules. The `import_vehicle_data` command loads them into the vehicle catalog, caching each download and pausing between vPIC calls; see [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md) and [../reference/vehicle-classification.md](../reference/vehicle-classification.md). RockAuto is not used: it has no public API and scraping it may breach its terms.
 - **Google Workspace calendars (Phase 3).** Two calendars, Jobs and Time Off, shared with a Google service account: edit on Jobs, read on Time Off. The service account's JSON key is the Bitwarden secret `GOOGLE_SERVICE_ACCOUNT_JSON`, read into memory; there is no key file on disk. Workspace may need one admin setting changed to allow sharing with the service account. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
 - **Google Maps Platform (Phase 3).** Address suggestions on the booking form (Places Autocomplete) and traffic-aware drive times (Routes). Usage is expected to stay inside the free monthly allowance. The billing account is approved; it must sit on the same Google Cloud project as the calendar service account.
 - **Census Bureau geocoder and Tennessee Department of Revenue (Phase 3).** Turn a service address into coordinates and then into a tax jurisdiction and rate. See [../reference/sales-tax.md](../reference/sales-tax.md).

@@ -2,6 +2,7 @@
 (dixie.settings_dev). Nothing here is secret or differs between the two.
 """
 
+import os
 from pathlib import Path
 
 # The repository's data/ folder: the price matrix and the launch values the
@@ -9,6 +10,11 @@ from pathlib import Path
 # compose.yaml and tools/run-tests.sh mount it read-only at /srv/data, beside
 # the app at /srv/app.
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+
+# Where import_vehicle_data caches what it downloads, so a rerun does not fetch
+# again. Outside the repository: on the server, a host folder mounted here
+# into the one-off container (docs/operations/importing-vehicle-data.md).
+VEHICLE_DATA_CACHE_DIR = Path(os.environ.get("VEHICLE_DATA_CACHE_DIR", "/srv/vehicle-data"))
 
 INSTALLED_APPS = [
     # The Django admin, for superusers only (decision 0046).

@@ -1,0 +1,6 @@
+{"Count":4,"Message":"Results returned successfully","Results":[
+{"Specs":[{"Name":"Make","Value":"TOYOTA"},{"Name":"Model","Value":"RAV4 FWD LE 4DR SUV"},{"Name":"MYR","Value":""},{"Name":"OL","Value":"180.7087"},{"Name":"OW","Value":"72.8346"},{"Name":"OH","Value":"67.0"},{"Name":"WB","Value":"105.9055"},{"Name":"CW","Value":"3370.1"}]},
+{"Specs":[{"Name":"Make","Value":"TOYOTA"},{"Name":"Model","Value":"RAV4 AWD LE \/ XLE 4DR SUV"},{"Name":"MYR","Value":""},{"Name":"OL","Value":"180.7087"},{"Name":"OW","Value":"72.8346"},{"Name":"OH","Value":"66.9291"},{"Name":"WB","Value":"105.9055"},{"Name":"CW","Value":"3489.9135"}]},
+{"Specs":[{"Name":"Make","Value":"TOYOTA"},{"Name":"Model","Value":"CAMRY 4DR SEDAN LE"},{"Name":"MYR","Value":""},{"Name":"OL","Value":"192.1"},{"Name":"OW","Value":"72.4"},{"Name":"OH","Value":"56.9"},{"Name":"WB","Value":"111.2"},{"Name":"CW","Value":"3296.7"}]},
+{"Specs":[{"Name":"Make","Value":"TOYOTA"},{"Name":"Model","Value":"86 2DR COUPE"},{"Name":"MYR","Value":""},{"Name":"OL","Value":"166.7"},{"Name":"OW","Value":"69.9"},{"Name":"OH","Value":"50.6"},{"Name":"WB","Value":"101.2"},{"Name":"CW","Value":"2776.0"}]}
+]}

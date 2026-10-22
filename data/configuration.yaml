@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-18
+  updated: 2026-10-22
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -56,6 +56,13 @@ settings:
     example: https://api.dixiedetail.com/health
     used_by: ops/public-health.sh
     phase: 0
+  - name: VEHICLE_DATA_CACHE_DIR
+    example: /srv/vehicle-data
+    purpose: The folder in the app container where import_vehicle_data caches its downloads, so a rerun does not fetch again
+    default: /srv/vehicle-data, set in app/dixie/settings_base.py
+    lives_in: not .env; the one-off import container mounts the host folder /srv/dixie-vehicle-data at the default path (see paths below)
+    used_by: python manage.py import_vehicle_data
+    phase: 2
   - name: GOOGLE_CALENDAR_JOBS_ID
     phase: 3
   - name: GOOGLE_CALENDAR_TIME_OFF_ID
@@ -163,3 +170,10 @@ paths:
     holds_personal_data: true
     used_by: python manage.py import_baserow (docs/operations/importing-baserow.md)
     phase: 1
+  - name: Vehicle data download cache
+    host: /srv/dixie-vehicle-data
+    container: /srv/vehicle-data
+    purpose: The EPA, vPIC and Canadian specifications files import_vehicle_data downloads, kept between runs (setting VEHICLE_DATA_CACHE_DIR); outside the repository, owned by uid 10001, mounted read-write into a one-off app container; safe to delete
+    holds_personal_data: false
+    used_by: python manage.py import_vehicle_data (docs/operations/importing-vehicle-data.md)
+    phase: 2
