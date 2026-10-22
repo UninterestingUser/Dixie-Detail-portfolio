@@ -4,9 +4,9 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 tags: [data-model, database, phase-1]
-related: [docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
+related: [docs/reference/vehicle-catalog.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
 
 # Data model
@@ -58,7 +58,9 @@ The `customers` and `vehicles` apps.
 - **Consent** holds one answer to a text consent question: appointment or follow-up, yes or no, the number, where it was given (web form, phone, text reply or import) and the wording version. Answers are never edited. A STOP reply adds a "no", so the latest answer counts and the whole history stays. See [../reference/text-messages.md](../reference/text-messages.md).
 - **Vehicle class** is a group of vehicles that share prices, with a note of what its size variant measures, such as doors, seat rows or cab style. Each class also records its price basis: the fixed price list, the only one built, which leaves room for another way of pricing, such as per foot of length (decision 0060). There are six at launch, listed in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 - **Size variant** is one size within a vehicle class, such as "two doors" or "three rows", with the number used in the price matrix's size column. A class with no size variants, such as motorcycles, has a single price per service.
-- **Vehicle model** holds a make and model over a range of years, with its vehicle class, and either the size variant every vehicle of that model has or a flag to ask the customer. Phase 2 fills these from EPA and NHTSA data.
+- **Vehicle model** is a make and model a customer picks, such as Toyota RAV4, over a range of model years, with its vehicle type (car, truck or van, or motorcycle), its vehicle class, either the size variant every vehicle of that model has or a flag to ask the customer, and where it came from (EPA, NHTSA or the owner). The vehicle data import fills these and never changes one whose source is the owner ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071).
+- **Model-year facts** are one source's facts about one model year of a vehicle model: the EPA size classes, drives, body styles and the source's vehicle types as lists, and passenger and luggage volume, GVWR, curb weight, length, width, height and wheelbase as a lowest and highest value across the source's rows, with the source's own ids and when the record was first and last seen. Each source (EPA, vPIC, the Canadian specifications or the owner) has its own record, so no source overwrites another, and no import touches the owner's.
+- **Vehicle data import run** records one run of the vehicle data import for one source: start, end, whether it was a dry run, its counts and its result.
 - **Vehicle** belongs to a customer, with year, make, model, color, vehicle class and size variant. It is named with its color wherever it is listed or picked, as in "2019 Honda Accord, silver" (decision 0067). Any of those may be missing on older records. The vehicle is kept and its missing details are listed to fill in. A size variant counts as missing only when the class has size variants.
 
 **Vehicle classes and size variants are records, not choices in code.** Adding, renaming or retiring one is done in the database and needs no code change or migration. A new class gets its prices in the next pricebook version. Nothing is deleted: a retired class or size variant is kept for history, cannot be priced again, and every past job keeps the name and size it was booked under.

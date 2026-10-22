@@ -1,7 +1,7 @@
 meta:
   title: Vehicle classes
   summary: The six vehicle classes that set prices, each class's settings (what the size variant measures, online booking, photo card) and the EPA size classes that map to them.
-  updated: 2026-10-17
+  updated: 2026-10-22
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: The launch set. In the database, vehicle classes and their size variants are records the owner can add, rename or retire without a code change (docs/architecture/data-model.md); update this file when the set changes.
@@ -63,7 +63,7 @@ classification:            # decision 0060; built in Phase 2
   booking_input: year, make and model (VINs are not used for pricing)
 
 fallback: Vehicles not in the data (for example pre-1984 classics) choose from six photo cards, one per class
-not_classed: Motorcycles are kept as past records with no class; they are not on the price list, and may become a vehicle class later, from vPIC's motorcycle makes
+not_classed: Motorcycles are in the vehicle catalog from Phase 2 Step 1 (vehicle type motorcycle, from vPIC, shown in the booking form's year, make and model lists) but have no class; they are not on the price list, and may become a vehicle class later
 possible_future_classes:
   - {name: Motorcycles, source: "NHTSA vPIC motorcycle makes"}
   - {name: RVs and oversized vans, booking: ask for a quote, priced: by hand}

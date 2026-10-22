@@ -7,8 +7,8 @@ area: backups
 status: accepted
 audience: [owner, developer]
 visibility: restricted
-updated: 2026-10-18
-supersedes: []
+updated: 2026-10-22
+supersedes: [docs/decisions/0027-backups-to-google-drive.md]
 superseded_by: []
 related: [ops/dixie-backup.timer, docs/architecture/backups-and-monitoring.md, docs/operations/troubleshooting.md, docs/decisions/0027-backups-to-google-drive.md]
 ---

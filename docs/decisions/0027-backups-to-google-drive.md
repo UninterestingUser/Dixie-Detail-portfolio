@@ -4,18 +4,18 @@ title: "Nightly backups to the RAID and to Google Drive with restic"
 summary: "Nightly dumps go to the RAID, and an encrypted restic copy goes to the owner's Google Workspace Drive through rclone."
 date: 2026-10-13
 area: backups
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: restricted
-updated: 2026-10-13
+updated: 2026-10-22
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0070-nightly-backup-at-2-45.md]
 related: [docs/architecture/backups-and-monitoring.md]
 ---
 
 # 0027: Nightly backups to the RAID and to Google Drive with restic
 
-**Status:** accepted · **Date:** 2026-10-13 · **Area:** backups
+**Status:** superseded by [0070](0070-nightly-backup-at-2-45.md) for the backup time · **Date:** 2026-10-13 · **Area:** backups
 
 ## Context
 

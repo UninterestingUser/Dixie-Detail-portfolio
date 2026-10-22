@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps. Record 0063 keeps the working repository private and publishes a rewritten public copy as a portfolio. Record 0064 lets the app read the repository's data/ folder, mounted read-only. Record 0065 makes the condition level lengthen the service time. Record 0066 sets how imported payments are kept out of the GnuCash export.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps. Record 0063 keeps the working repository private and publishes a rewritten public copy as a portfolio. Record 0064 lets the app read the repository's data/ folder, mounted read-only. Record 0065 makes the condition level lengthen the service time. Record 0066 sets how imported payments are kept out of the GnuCash export. Record 0071 sets how the vehicle catalog keeps each source's facts per model year (Phase 2 Step 1).
 
 ## Open points
 
@@ -51,7 +51,7 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0024](0024-google-maps-platform.md) | 2026-10-07 | maps | Google Maps Platform for address suggestions and drive times | accepted |
 | [0025](0025-sales-tax-by-service-address.md) | 2026-10-07 | tax | Sales tax added on top at the service address's rate | accepted |
 | [0026](0026-carrier-registration-timing.md) | 2026-10-08 | texting | Submit text registration when the new booking form is public | accepted |
-| [0027](0027-backups-to-google-drive.md) | 2026-10-13 | backups | Nightly backups to the RAID and to Google Drive with restic | accepted |
+| [0027](0027-backups-to-google-drive.md) | 2026-10-13 | backups | Nightly backups to the RAID and to Google Drive with restic | superseded by [0070](0070-nightly-backup-at-2-45.md) |
 | [0028](0028-secrets-in-bitwarden.md) | 2026-10-13 | security | Every secret lives in Bitwarden Secrets Manager | accepted |
 | [0029](0029-vehicle-data-from-epa-and-nhtsa.md) | 2026-10-07 | vehicles | Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC | accepted |
 | [0030](0030-two-text-consents.md) | 2026-10-07 | texting | Two separate text consents: appointment and follow-up | accepted |
@@ -95,3 +95,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0068](0068-control-app-https-static-and-sign-in.md) | 2026-10-18 | control-app | The control app learns HTTPS from Caddy, serves its own static files and needs sign-in on every page | accepted |
 | [0069](0069-booking-staffing-and-publishing-in-the-control-app.md) | 2026-10-18 | control-app | How the control app books, re-prices, staffs and publishes | accepted |
 | [0070](0070-nightly-backup-at-2-45.md) | 2026-10-18 | backups | The nightly backup runs at 2:45 AM, clear of the public health check | accepted |
+| [0071](0071-vehicle-facts-per-model-year-and-source.md) | 2026-10-22 | vehicles | Vehicle facts are kept per model year and per source | accepted |

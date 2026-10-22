@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-18):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is next. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-10-22):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, is built. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 
@@ -65,6 +65,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Sales tax](reference/sales-tax.md) | How sales tax is added at the rate for the customer's service address, how the rate is found and kept current, how approved out-of-area addresses are treated, and how collected tax is tracked until remitted. | current |
 | [Scheduling, calendars and time-to-leave alerts](reference/scheduling-and-calendars.md) | The scheduling settings and the one availability check that decide which days and start times are open, time on site, the calendar sync and conflict rules, time-to-leave alerts and arrival taps. | current |
 | [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the two kinds of consent each one needs, the exact consent wording, automatic STOP and HELP replies, and the carrier registration plan. | current |
+| [Vehicle catalog](reference/vehicle-catalog.md) | The years, makes and models the system knows, the facts it keeps about each model year from the EPA, NHTSA vPIC and the Canadian specifications, and how the import keeps them current without overwriting the owner. | current |
 | [Vehicle classification](reference/vehicle-classification.md) | How a customer's year, make and model will be turned into a vehicle class and size variant, using free EPA and NHTSA data, owner-editable classification rules, overrides and a review queue. | planned |
 | [Website and SEO](reference/website-and-seo.md) | The structure, design direction and search-ranking safeguards for the new Astro website that replaces WordPress at launch. | planned |
 
@@ -75,6 +76,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Running and checking backups, and restoring](operations/backups-and-restore.md) | How to confirm the nightly backup ran, run one by hand, test a restore, and recover the database from the RAID or from Google Drive. | current |
 | [Deploying changes to the server](operations/deploying-changes.md) | The routine for getting a merged pull request onto the server, and what to restart, copy or add afterwards depending on what changed. | current |
 | [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
+| [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, and add a make. | current |
 | [Monitoring and alerts](operations/monitoring.md) | What the two Healthchecks.io checks watch, what to do when an alert email arrives, and how to test the alerts. | current |
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
 | [Phase 1 core data and control app runbook](operations/phase-1-core-data-runbook.md) | The runbook that built Phase 1 (data model, pricebook and pricing engine, Baserow import, control app) as executed from 2026-10-14 to 2026-10-18, kept as a historical record. | historical |
@@ -96,7 +98,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 70 records as of 2026-10-18, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 71 records as of 2026-10-22, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

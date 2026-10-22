@@ -1,0 +1,5 @@
+{"Count":4,"Message":"Results returned successfully","SearchCriteria":"Make:Ford | ModelYear:2019 | VehicleType:truck","Results":[
+{"Make_ID":460,"Make_Name":"FORD","Model_ID":1801,"Model_Name":"F-150","VehicleTypeId":3,"VehicleTypeName":"Truck"},
+{"Make_ID":460,"Make_Name":"FORD","Model_ID":1805,"Model_Name":"F-250","VehicleTypeId":3,"VehicleTypeName":"Truck"},
+{"Make_ID":460,"Make_Name":"FORD","Model_ID":1806,"Model_Name":"F-350","VehicleTypeId":3,"VehicleTypeName":"Truck"},
+{"Make_ID":460,"Make_Name":"FORD","Model_ID":3608,"Model_Name":"Transit","VehicleTypeId":3,"VehicleTypeName":"Truck"}]}
