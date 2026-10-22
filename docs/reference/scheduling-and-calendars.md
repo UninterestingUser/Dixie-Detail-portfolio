@@ -4,9 +4,9 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
@@ -28,7 +28,7 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 | Setup time before each job | 30 minutes for one person, divided by the number of people on the job |
 | Breakdown time after each job | 30 minutes for one person, divided by the number of people on the job |
 | Jobs per day | 1 |
-| Services that can share a day | Monthly Maintenance, up to 2 a day |
+| Services that can share a day | Monthly Maintenance and Motorcycle Detail, each up to 2 a day (decision 0072) |
 | Gap before a later job the same day | Drive time between the two addresses, at least 30 minutes |
 | Round a later job's start up to | 15 minutes (proposed in decision 0022; the owner has not confirmed it yet) |
 | Buffer around a timed Time Off event | 0 minutes |
@@ -67,7 +67,7 @@ The availability check assumes one crew working one job at a time. Two crews on 
 
 ## Daily capacity at launch
 
-At launch each day takes one job, whatever its length. The only jobs that can share a day are two Monthly Maintenance jobs. Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
+At launch each day takes one job, whatever its length. The only jobs that can share a day are Monthly Maintenance and Motorcycle Detail jobs: two Monthly Maintenance, two Motorcycle Detail, or one of each (decision 0072). Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
 
 New patterns need only settings. Afternoon slots: add 13:00 to the start times, set jobs per day to 2 and let the shorter services share a day. Two regular jobs a day: set jobs per day to 2 and let every service share a day.
 

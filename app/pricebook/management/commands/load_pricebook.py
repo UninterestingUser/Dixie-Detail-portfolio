@@ -6,9 +6,14 @@ hours are one-person service hours without setup and breakdown (decision
 0058). Maintenance plans are stored as derived price rules, not prices, after
 checking that their rows in the matrix agree with the rule.
 
-Running it again changes nothing: once version 1 exists, the command only
-reports whether it still matches the data files. A later change is a new
-draft, published with an effective date (pricebook-changes.md).
+Once version 1 exists, running it again changes no price. It adds any
+vehicle class, size variant or service the data files have and the database
+does not, fills in a class's photo card where it has none, and compares the
+matrix with the latest published version. Cells the matrix has and that
+version does not, such as a new service's prices, go into a new draft for the
+owner to publish from the control app; a cell that differs is reported and
+nothing is changed. Any other change is a draft made in the control app,
+published with an effective date (pricebook-changes.md).
 """
 
 import csv
@@ -30,6 +35,7 @@ SERVICE_KINDS = {
     "add-on": Service.Kind.ADD_ON,
     "maintenance plan": Service.Kind.MAINTENANCE_PLAN,
 }
+BOOKING = {"online": VehicleClass.Booking.ONLINE, "ask for a quote": VehicleClass.Booking.QUOTE}
 MAINTENANCE_PERCENT_KEYS = {
     "Quarterly Maintenance": "quarterly_percent_of_full_detail",
     "Monthly Maintenance": "monthly_percent_of_full_detail",
@@ -66,9 +72,8 @@ class Command(BaseCommand):
         rules = read_yaml("pricing-rules.yaml")
         matrix = read_matrix()
 
-        version = PricebookVersion.objects.filter(number=1).first()
-        if version is not None:
-            self.report_existing(version, matrix, rules)
+        if PricebookVersion.objects.filter(number=1).exists():
+            self.update_existing(classes, services, matrix)
             return
 
         with transaction.atomic():
@@ -87,19 +92,39 @@ class Command(BaseCommand):
         )
 
     def load_classes(self, classes):
+        """Add the classes and size variants the database lacks, with their
+        settings. An existing class keeps the owner's settings; only a
+        missing photo card is filled in. Returns what was added."""
+        added = []
         for order, entry in enumerate(classes):
-            vehicle_class, _ = VehicleClass.objects.get_or_create(
+            vehicle_class, created = VehicleClass.objects.get_or_create(
                 name=entry["name"],
-                defaults={"size_variant_measures": entry["size_variant_measures"], "sort_order": order},
+                defaults={
+                    "size_variant_measures": entry["size_variant_measures"],
+                    "sort_order": order,
+                    "booking": BOOKING[entry["booking"]],
+                    "photo_card": entry["photo_card"],
+                },
             )
-            for value, label in entry.get("size_variants", {}).items():
-                SizeVariant.objects.get_or_create(
+            if created:
+                added.append(f"vehicle class {vehicle_class}")
+            elif not vehicle_class.photo_card:
+                vehicle_class.photo_card = entry["photo_card"]
+                vehicle_class.save()
+                added.append(f"photo card for {vehicle_class}")
+            for value, label in (entry.get("size_variants") or {}).items():
+                _, created = SizeVariant.objects.get_or_create(
                     vehicle_class=vehicle_class, value=int(value), defaults={"label": label}
                 )
+                if created:
+                    added.append(f"size variant {value} of {vehicle_class}")
+        return added
 
     def load_services(self, services):
+        """Add the services the database lacks. Returns their names."""
+        added = []
         for entry in services["services"]:
-            Service.objects.get_or_create(
+            service, created = Service.objects.get_or_create(
                 name=entry["name"],
                 defaults={
                     "kind": SERVICE_KINDS[entry["kind"]],
@@ -109,6 +134,8 @@ class Command(BaseCommand):
                     "default_crew_size": entry.get("default_crew", 1),
                 },
             )
+            if created:
+                added.append(f"service {service}")
         for entry in services["custom_lines"]:
             Service.objects.get_or_create(
                 name=entry["name"], defaults={"kind": Service.Kind.CUSTOM, "description": entry.get("use", "")}
@@ -117,6 +144,7 @@ class Command(BaseCommand):
             Service.objects.get_or_create(
                 name=entry["name"], defaults={"kind": Service.Kind.MAIN, "on_price_list": False}
             )
+        return added
 
     def load_rules(self, version, rules):
         crew = rules["crew"]
@@ -185,8 +213,57 @@ class Command(BaseCommand):
                 )
         return count
 
-    def report_existing(self, version, matrix, rules):
-        differences = []
+    def update_existing(self, classes, services, matrix):
+        """Version 1 exists: add what the database lacks, and put matrix
+        cells the latest published version lacks into a new draft."""
+        latest = PricebookVersion.objects.filter(status=PricebookVersion.Status.PUBLISHED).order_by("-number").first()
+        with transaction.atomic():
+            added = self.load_classes(classes) + self.load_services(services)
+            missing, differences = self.compare(latest, matrix)
+            if differences:
+                for difference in differences:
+                    self.stderr.write(f"  {difference}")
+                raise CommandError(
+                    f"Pricebook version {latest.number} differs from the data files in {len(differences)} place(s)."
+                    " Nothing was changed. Make the change as a new pricebook draft."
+                )
+            draft = None
+            if missing:
+                open_draft = PricebookVersion.objects.filter(status=PricebookVersion.Status.DRAFT).first()
+                if open_draft is not None:
+                    raise CommandError(
+                        f"The data files have {len(missing)} price(s) that version {latest.number} lacks, and draft"
+                        f" version {open_draft.number} is open. Publish or discard it, then run load_pricebook again."
+                        " Nothing was changed."
+                    )
+                draft = PricebookVersion.new_draft(notes="New prices from data/price-matrix.csv, added by load_pricebook.")
+                self.add_cells(draft, missing)
+        for line in added:
+            self.stdout.write(f"Added {line}.")
+        if draft is not None:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Draft version {draft.number} holds the {len(missing)} price(s) that version {latest.number} lacks:"
+                )
+            )
+            for row in missing:
+                self.stdout.write(f"  {self.cell(row)}: ${row['price']}, {row['hours']} hours")
+            self.stdout.write("Publish it from the control app's pricebook page, with an effective date.")
+        elif not added:
+            self.stdout.write(
+                f"Pricebook version {latest.number} is already loaded and matches the data files. Nothing was changed."
+            )
+        else:
+            self.stdout.write(f"Pricebook version {latest.number} matches the data files; no price was changed.")
+
+    @staticmethod
+    def cell(row):
+        size = f" size {row['size_variant']}" if row["size_variant"] is not None else ""
+        return f"{row['service']} / {row['vehicle_class']}{size}"
+
+    def compare(self, version, matrix):
+        """(cells the version lacks, differences) between it and the matrix."""
+        missing, differences = [], []
         for row in matrix:
             try:
                 vehicle_class = VehicleClass.objects.get(name=row["vehicle_class"])
@@ -194,20 +271,38 @@ class Command(BaseCommand):
                     vehicle_class.size_variants.get(value=row["size_variant"]) if row["size_variant"] else None
                 )
                 found = base_price(version, Service.objects.get(name=row["service"]), vehicle_class, size_variant)
-            except (NotPriced, Service.DoesNotExist, VehicleClass.DoesNotExist, SizeVariant.DoesNotExist):
-                differences.append(f"not in version 1: {row}")
+            except NotPriced:
+                missing.append(row)
+                continue
+            except (Service.DoesNotExist, VehicleClass.DoesNotExist, SizeVariant.DoesNotExist) as error:
+                differences.append(f"{self.cell(row)}: {error}")
                 continue
             if (found.price, found.one_person_service_hours) != (row["price"], row["hours"]):
                 differences.append(
-                    f"{row['service']} / {row['vehicle_class']} size {row['size_variant']}: version 1 has"
-                    f" ${found.price} and {found.one_person_service_hours} hours, the file ${row['price']}"
-                    f" and {row['hours']} hours"
+                    f"{self.cell(row)}: version {version.number} has ${found.price} and"
+                    f" {found.one_person_service_hours} hours, the file ${row['price']} and {row['hours']} hours"
                 )
-        if differences:
-            for difference in differences:
-                self.stderr.write(f"  {difference}")
+        return missing, differences
+
+    def add_cells(self, draft, rows):
+        derived = {rule.service_id for rule in DerivedPriceRule.objects.filter(version=draft)}
+        for row in rows:
+            service = Service.objects.get(name=row["service"])
+            vehicle_class = VehicleClass.objects.get(name=row["vehicle_class"])
+            size_variant = vehicle_class.size_variants.get(value=row["size_variant"]) if row["size_variant"] else None
+            if service.pk not in derived:
+                Price.objects.create(
+                    version=draft,
+                    service=service,
+                    vehicle_class=vehicle_class,
+                    size_variant=size_variant,
+                    price=row["price"],
+                    one_person_service_hours=row["hours"],
+                )
+        # A maintenance plan's new cell follows its rule from the base service's new cell.
+        missing, differences = self.compare(draft, rows)
+        if missing or differences:
             raise CommandError(
-                f"Pricebook version 1 already exists and differs from the data files in {len(differences)} place(s)."
-                " Nothing was changed. Make the change as a new pricebook draft."
+                "These cells do not follow from the draft's rules: "
+                + "; ".join([self.cell(row) for row in missing] + differences)
             )
-        self.stdout.write("Pricebook version 1 is already loaded and matches the data files. Nothing was changed.")

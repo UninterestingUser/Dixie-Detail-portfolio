@@ -1,21 +1,21 @@
 ---
 title: Vehicle catalog
-summary: The years, makes and models the system knows, the facts it keeps about each model year from the EPA, NHTSA vPIC and the Canadian specifications, and how the import keeps them current without overwriting the owner.
+summary: The years, makes and models the system knows, the facts it keeps per model year from the EPA, NHTSA vPIC, the Canadian specifications and the third-row list, and how imports never overwrite the owner.
 audience: [owner, developer]
 visibility: internal
 status: current
 updated: 2026-10-22
 tags: [vehicles, catalog, phase-2]
-related: [docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/reference/vehicle-classification.md, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
+related: [docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
 ---
 
 # Vehicle catalog
 
-The vehicle catalog is the list of vehicle models a customer can pick by year, make and model, with the facts about each model year that the classification rules will read ([vehicle-classification.md](vehicle-classification.md)). It is loaded by the `import_vehicle_data` command ([../operations/importing-vehicle-data.md](../operations/importing-vehicle-data.md)) and follows [decision 0071](../decisions/0071-vehicle-facts-per-model-year-and-source.md).
+The vehicle catalog is the list of vehicle models a customer can pick by year, make and model, with the facts about each model year that the classification rules read ([vehicle-classification.md](vehicle-classification.md)). It is loaded by the `import_vehicle_data` command ([../operations/importing-vehicle-data.md](../operations/importing-vehicle-data.md)) and follows [decision 0071](../decisions/0071-vehicle-facts-per-model-year-and-source.md).
 
 ## A vehicle model is what a customer picks
 
-A **vehicle model** is one make and model, such as "Toyota RAV4", with the first and last model year it covers. A vehicle class and size rule apply to a vehicle model. Each vehicle model has a vehicle type: "car, truck or van", or "motorcycle". Motorcycles are shown in the same year, make and model lists as cars, and have no vehicle class yet.
+A **vehicle model** is one make and model, such as "Toyota RAV4", with the first and last model year it covers. Each of its model years gets a vehicle class and size variant from the classification rules and overrides ([vehicle-classification.md](vehicle-classification.md)). Each vehicle model has a vehicle type: "car, truck or van", or "motorcycle". Motorcycles are shown in the same year, make and model lists as cars, and are in the Motorcycles vehicle class ([decision 0072](../decisions/0072-motorcycles-class.md)).
 
 The EPA's base model is the model name, so "RAV4 AWD" and "RAV4 Hybrid AWD" are both the RAV4. Names are matched across sources on capitals and digits only, so the EPA's "F150" and vPIC's "F-150" are the same vehicle model. A motorcycle and a car of the same name are different vehicle models.
 
@@ -23,7 +23,7 @@ The owner can split one make and model into several vehicle models by year range
 
 ## Model-year facts are kept per source
 
-Each source keeps its own **model-year facts** record for each model year it lists, such as the EPA's record for the 2019 Toyota RAV4. One source never overwrites another. A source lists a model year several times (the EPA once per engine and transmission, the Canadian specifications once per trim), so each fact is gathered across those rows:
+Each source keeps its own **model-year facts** record for each model year it lists, such as the EPA's record for the 2019 Toyota RAV4. The third-row list, [data/third-row-seating.yaml](../../data/third-row-seating.yaml), is a source too: `classify_vehicles` writes its seat rows for each catalog model year it covers, replacing the last run's. One source never overwrites another. A source lists a model year several times (the EPA once per engine and transmission, the Canadian specifications once per trim), so each fact is gathered across those rows:
 
 | Fact | Kept as | Units | From |
 | --- | --- | --- | --- |
@@ -32,6 +32,8 @@ Each source keeps its own **model-year facts** record for each model year it lis
 | Body styles | Two-door, four-door, hatchback, or "unknown" | | EPA |
 | Passenger and luggage volume | Lowest and highest | cubic feet | EPA |
 | Source vehicle type | vPIC's own types, such as Truck or Motorcycle | | vPIC |
+| Cab styles | Regular, extended and crew, from the trim names, such as "DOUBLE CAB" or "SUPERCREW" | | Canadian specifications |
+| Seat rows | The numbers of seat rows sold: [2], [3], or [2, 3] for an optional third row | | The third-row list; NHTSA has none loaded |
 | GVWR | Lowest and highest | pounds | No source yet; for the owner or a later source |
 | Curb weight | Lowest and highest | pounds | Canadian specifications |
 | Length, width, height, wheelbase | Lowest and highest | inches, to a tenth | Canadian specifications |
@@ -46,7 +48,7 @@ The EPA has no door field. The EPA lists passenger and luggage volume separately
 
 - **EPA FuelEconomy.gov** gives every car, SUV, van and light pickup from 1984 to the next model year.
 - **NHTSA vPIC** fills the gaps for the truck and van makes listed in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml), chiefly pickups and vans over 8,500 lb GVWR such as the F-250, Silverado HD and Sprinter. A vPIC model that the EPA already has under another spelling is matched to it; the rest are added with source NHTSA. vPIC also gives the motorcycle models for the motorcycle makes listed there.
-- **The Canadian specifications** add curb weight and dimensions to models already in the catalog. They never add a model.
+- **The Canadian specifications** add curb weight, dimensions and pickups' cab styles to models already in the catalog. They never add a model. A trim name's cab words are read as regular (REG CAB, SINGLE CAB), extended (SUPERCAB, DOUBLE CAB, KING CAB, QUAD CAB and the like) or crew (CREW CAB, SUPERCREW, CREWMAX, MEGA CAB).
 
 ## How Canadian rows are matched
 

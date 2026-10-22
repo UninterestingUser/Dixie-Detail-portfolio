@@ -150,8 +150,7 @@ class VpicImportTests(CachedFixtures, TestCase):
 
     def test_motorcycles_are_marked_and_other_vpic_makes_rejected(self):
         report = self.run_import(["vpic"])["vpic"]
-        fat_boy = model("Harley-Davidson", "Fat Boy", VehicleModel.VehicleType.MOTORCYCLE)
-        self.assertEqual(fat_boy.vehicle_class, None)
+        model("Harley-Davidson", "Fat Boy", VehicleModel.VehicleType.MOTORCYCLE)  # found as a motorcycle
         self.assertIn("Harley-Davidson Fat Boy (2019-2019, motorcycle)", report.added_models)
         self.assertFalse(VehicleModel.objects.filter(model="Sample Chopper").exists())
         self.assertEqual(len(report.rejected), 1)

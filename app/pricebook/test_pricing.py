@@ -74,7 +74,7 @@ class LoadPricebookTests(PricebookTestCase):
 
     def test_every_cell_of_the_price_matrix_matches_the_database(self):
         rows = read_matrix()
-        self.assertEqual(len(rows), 90)
+        self.assertEqual(len(rows), 91)
         for row in rows:
             vehicle_class = self.vehicle_class(row["vehicle_class"])
             size_variant = vehicle_class.size_variants.get(value=row["size_variant"]) if row["size_variant"] else None
@@ -88,7 +88,7 @@ class LoadPricebookTests(PricebookTestCase):
         maintenance = Service.objects.filter(kind=Service.Kind.MAINTENANCE_PLAN)
         self.assertFalse(Price.objects.filter(version=self.version, service__in=maintenance).exists())
         self.assertEqual(DerivedPriceRule.objects.filter(version=self.version).count(), 2)
-        self.assertEqual(Price.objects.filter(version=self.version).count(), 90 - 22)
+        self.assertEqual(Price.objects.filter(version=self.version).count(), 91 - 22)
 
     def test_running_it_again_changes_nothing(self):
         counts = [model.objects.count() for model in (Price, Price.history.model, Service, VehicleClass)]
@@ -144,7 +144,8 @@ class PricingEngineTests(PricebookTestCase):
 
     def test_headlight_restoration_takes_2_5_hours_on_site_for_one_person(self):
         headlights = self.service("Headlight Restoration")
-        for vehicle_class in VehicleClass.objects.all():
+        # Every class but Motorcycles, whose only service is Motorcycle Detail.
+        for vehicle_class in VehicleClass.objects.exclude(name="Motorcycles"):
             job = price_job(headlights, vehicle_class)
             with self.subTest(vehicle_class=vehicle_class):
                 self.assertEqual(job.total_before_tax, Decimal("95.00"))
@@ -201,9 +202,8 @@ class PricingEngineTests(PricebookTestCase):
             price_job(self.service("Full Detail"), self.vehicle_class("Crossovers & Wagons"), size_variant=self.size("Crossovers & Wagons", 2))
 
     def test_a_missing_combination_cannot_be_priced(self):
-        motorcycles = VehicleClass.objects.create(name="Motorcycles")
         with self.assertRaises(NotPriced):
-            price_job(self.service("Full Detail"), motorcycles, condition_level=1)
+            price_job(self.service("Full Detail"), self.vehicle_class("Motorcycles"), condition_level=1)
         # An add-on is priced by size, so it needs one.
         with self.assertRaises(NotPriced):
             price_job(

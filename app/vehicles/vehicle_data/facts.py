@@ -3,13 +3,15 @@ rows: a set of values for each listed fact and a range for each measured one."""
 
 from collections import defaultdict
 
-LISTED = ("epa_size_classes", "drives", "body_styles", "source_vehicle_types")
+LISTED = ("epa_size_classes", "drives", "body_styles", "source_vehicle_types", "cab_styles", "seat_rows")
 MEASURED = (
     "passenger_volume", "luggage_volume", "gvwr", "curb_weight", "length", "width", "height", "wheelbase",
 )
 # Every VehicleModelYear field an import writes, in the order compared.
 FACT_FIELDS = LISTED + tuple(f"{name}_{end}" for name in MEASURED for end in ("min", "max")) + ("source_ids",)
 BODY_STYLES = ("two-door", "four-door", "hatchback", "unknown")
+CAB_STYLES = ("regular", "extended", "crew")
+ORDER = {"body_styles": BODY_STYLES, "cab_styles": CAB_STYLES}
 
 
 class Facts:
@@ -44,7 +46,7 @@ class Facts:
         values = {}
         for name in LISTED:
             found = self.listed.get(name, ())
-            values[name] = sorted(found, key=BODY_STYLES.index) if name == "body_styles" else sorted(found)
+            values[name] = sorted(found, key=ORDER[name].index) if name in ORDER else sorted(found)
         for name in MEASURED:
             values[f"{name}_min"], values[f"{name}_max"] = self.ranges.get(name, (None, None))
         ids = sorted(self.ids)
