@@ -4,7 +4,7 @@ summary: The routine for getting a merged pull request onto the server, and what
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-18
+updated: 2026-10-22
 tags: [operations, deploy, git, systemd]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/reference/configuration.md]
 ---
@@ -111,7 +111,7 @@ The first deploy that includes the pricing engine leaves the pricebook empty. Lo
 sudo docker exec dixie-app-1 python manage.py load_pricebook
 ```
 
-It loads `data/price-matrix.csv`, `data/services.yaml`, `data/pricing-rules.yaml` and the vehicle classes from `data/vehicle-classes.yaml` as pricebook version 1, effective that day, and prints how many prices it stored. Running it again changes nothing: it only reports whether version 1 still matches the files. A later price change is a new pricebook draft, not an edit to the files followed by a reload. See [../reference/pricebook-changes.md](../reference/pricebook-changes.md).
+It loads `data/price-matrix.csv`, `data/services.yaml`, `data/pricing-rules.yaml` and the vehicle classes from `data/vehicle-classes.yaml` as pricebook version 1, effective that day, and prints how many prices it stored. Running it again changes no published price. It adds any vehicle class, size variant or service the files have and the database does not, fills in a class's photo card where it has none, and compares the matrix with the latest published version: cells that version lacks, such as a new service's prices, go into a new draft to publish from the control app, and a cell that differs is reported with nothing changed. Motorcycle Detail was added this way ([classifying-vehicles.md](classifying-vehicles.md#adding-motorcycle-detail-to-the-price-list)). A later price change is a new pricebook draft, not an edit to the files followed by a reload. See [../reference/pricebook-changes.md](../reference/pricebook-changes.md).
 
 To price a job from the terminal, without storing anything:
 

@@ -6,7 +6,7 @@ visibility: restricted
 status: current
 updated: 2026-10-22
 tags: [operations, import, vehicles, epa, vpic, phase-2]
-related: [docs/reference/vehicle-catalog.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
+related: [docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
 ---
 
 # Importing the vehicle data
@@ -60,7 +60,7 @@ The report has one section per source:
 - **Model years added, changed and unchanged.** A model year is the source's facts about one model in one year.
 - **Owner's models: facts recorded, model left alone.** Models with source "owner" that the source also lists. Their name and years are never changed.
 - **Files downloaded and from the cache.**
-- **Models added** (vPIC only): every pickup, van and motorcycle model vPIC added that the EPA does not have. Some are commercial trucks or an EPA model under another name; the review queue in a later step handles them.
+- **Models added** (vPIC only): every pickup, van and motorcycle model vPIC added that the EPA does not have. Some are commercial trucks or an EPA model under another name; the classification review queue holds those no rule settles ([classifying-vehicles.md](classifying-vehicles.md)).
 - **Canadian rows not matched to a model, left for the owner.** Each row, with the reason: no catalog model begins the name, two match equally, or the name goes on with a series number such as 2500HD. These are listed, not guessed.
 - **Rejected.** Rows that could not be used, with the reason: an EPA row with no model year, a vPIC make not in the list for the make asked for, or a Canadian row with no weight or dimensions.
 
@@ -93,3 +93,7 @@ sudo docker compose run --rm --no-deps -v /srv/dixie-vehicle-data:/srv/vehicle-d
 ```
 
 Then run it again without `--dry-run`; the files are already fresh in the cache. A rerun changes only what the sources changed, never anything with source "owner", and keeps the model years a source no longer lists, with the date it last listed them.
+
+## After the import
+
+The import loads facts; it does not change any vehicle class. Run `classify_vehicles` afterwards so new and changed model years are classified ([classifying-vehicles.md](classifying-vehicles.md)).

@@ -39,13 +39,13 @@ services:
     url: https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip
     plan: Free, no key
   - name: NHTSA vPIC
-    purpose: Makes and models the EPA leaves out (heavy pickups and vans) and motorcycle models, from GetModelsForMakeYear; door and seat data later
+    purpose: Makes and models the EPA leaves out (heavy pickups and vans) and motorcycle models, from GetModelsForMakeYear; no seat-row data yet (its seat-row fields are per VIN)
     phase: 2
     status: In progress; import_vehicle_data --source vpic, for the makes in data/vehicle-data-import.yaml (Phase 2 Step 1)
     url: https://vpic.nhtsa.dot.gov/api/vehicles/
     plan: Free, no key; rate-limited, so the import pauses between calls and retries 429 and 5xx answers
   - name: NHTSA vPIC Canadian vehicle specifications
-    purpose: Curb weight, overall length, width, height and wheelbase per trim, for the classification rules (GetCanadianVehicleSpecifications)
+    purpose: Curb weight, overall length, width, height and wheelbase per trim, and pickups' cab styles from the trim names, for the classification rules (GetCanadianVehicleSpecifications)
     phase: 2
     status: In progress; import_vehicle_data --source canada attaches them to matching catalog models and lists the rest (Phase 2 Step 1). Checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
     url: https://vpic.nhtsa.dot.gov/api/vehicles/
