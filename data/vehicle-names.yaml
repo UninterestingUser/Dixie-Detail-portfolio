@@ -1,0 +1,137 @@
+meta:
+  title: Vehicle names
+  summary: The names customers know for each vehicle model - the EPA base models split into separate nameplates, the other spellings each source uses for one vehicle, and the make spellings - used by the import, the third-row list and vehicle matching.
+  updated: 2026-10-22
+  status: current
+  explained_in: docs/reference/vehicle-catalog.md
+  note: >-
+    Names are compared on capitals and digits only, so "F150" and "F-150" are already the same
+    name; list only spellings that differ in more than that. Edit this file to add a nameplate or a
+    spelling; the next import_vehicle_data run splits or merges the catalog models and lists each
+    change in its report.
+
+# Another source's spelling of a make, then the catalog's.
+make_aliases:
+  RAM TRUCKS: Ram
+
+# The EPA groups its rows by base model, which can hold several vehicles a
+# customer knows apart, such as the Santa Fe and the Santa Fe Sport. A row of
+# the base model whose EPA model name contains one of a nameplate's phrases,
+# as whole words, belongs to that nameplate ("Range Rover Sport" also matches
+# "New Range Rover Sport P360 MHEV"); the rest stay with the base model.
+nameplates:
+  - make: Hyundai
+    base_model: Santa Fe
+    split:
+      - {name: Santa Fe Sport, when: [Santa Fe Sport]}
+      - {name: Santa Fe XL, when: [Santa Fe XL]}
+  - make: Jeep
+    base_model: Grand Cherokee
+    split:
+      - {name: Grand Cherokee L, when: [Grand Cherokee L]}
+  - make: Jeep
+    base_model: Wagoneer
+    split:
+      - {name: Wagoneer S, when: [Wagoneer S]}      # the two-row electric Wagoneer S, from 2024
+  - make: Volkswagen
+    base_model: Atlas
+    split:
+      - {name: Atlas Cross Sport, when: [Atlas Cross Sport]}
+  - make: Lexus
+    base_model: RX
+    split:
+      - {name: RX 350L, when: [RX 350 L]}
+      - {name: RX 450hL, when: [RX 450h L]}
+  - make: Mitsubishi
+    base_model: Outlander
+    split:
+      - {name: Outlander Sport, when: [Outlander Sport]}
+      - {name: Outlander PHEV, when: [Outlander PHEV]}
+  - make: Buick
+    base_model: Encore
+    split:
+      - {name: Encore GX, when: [Encore GX]}
+  - make: Land Rover
+    base_model: Range Rover
+    split:
+      - {name: Range Rover Sport, when: [Range Rover Sport]}
+      - {name: Range Rover Velar, when: [Range Rover Velar]}
+      - {name: Range Rover Evoque, when: [Range Rover Evoque]}
+  - make: Land Rover
+    base_model: Defender
+    split:
+      - {name: Defender 90, when: [Defender 90]}
+      - {name: Defender 110, when: [Defender 110]}
+      - {name: Defender 130, when: [Defender 130]}
+  - make: Land Rover
+    base_model: Discovery
+    split:
+      - {name: Discovery Sport, when: [Discovery Sport]}
+  - make: GMC
+    base_model: Yukon
+    split:
+      - {name: Yukon XL, when: [XL]}                # "Yukon XL 1500 4WD", "Yukon C1500 XL 2WD"
+  - make: Cadillac
+    base_model: Escalade
+    split:
+      - {name: Escalade ESV, when: [ESV]}
+      - {name: Escalade EXT, when: [Ext]}           # the Escalade pickup
+  - make: Lincoln
+    base_model: Navigator
+    split:
+      - {name: Navigator L, when: [Navigator L]}
+  - make: Ford
+    base_model: Expedition
+    split:
+      - {name: Expedition EL, when: [Expedition EL]}
+      - {name: Expedition MAX, when: [Expedition MAX]}
+  - make: Mercedes-Benz
+    base_model: EQE
+    split:
+      - {name: EQE SUV, when: [SUV]}                # "EQE 350 4matic (SUV)"
+  - make: Mercedes-Benz
+    base_model: EQS
+    split:
+      - {name: EQS SUV, when: [SUV]}
+  - make: Chevrolet
+    base_model: Silverado
+    split:
+      - {name: Silverado HD, when: [Silverado 2500, Silverado 3500]}
+  - make: GMC
+    base_model: Sierra
+    split:
+      - {name: Sierra HD, when: [Sierra 2500, Sierra 3500]}
+  - make: Chevrolet
+    base_model: Suburban
+    split:
+      - {name: Suburban HD, when: [Suburban 2500]}
+
+# One vehicle, one name: the name customers know, then the other spellings
+# the sources use for it. The import merges catalog models that are one
+# vehicle; the third-row list and vehicle matching look names up here too.
+aliases:
+  - {make: Ford, name: F-150, also: [F-150 Lightning]}
+  - {make: Ford, name: F-250, also: [F-250 Super Duty]}
+  - {make: Ford, name: F-350, also: [F-350 Super Duty]}
+  - {make: Jeep, name: Wrangler, also: [Wrangler/TJ]}
+  - {make: Mercedes-Benz, name: ML, also: [ML-Class, M-Class]}
+  - {make: Mercedes-Benz, name: GL, also: [GL-Class]}
+  - {make: Mercedes-Benz, name: GLA, also: [GLA-Class]}
+  - {make: Mercedes-Benz, name: GLB, also: [GLB-Class]}
+  - {make: Mercedes-Benz, name: GLC, also: [GLC-Class]}
+  - {make: Mercedes-Benz, name: GLE, also: [GLE-Class]}
+  - {make: Mercedes-Benz, name: GLK, also: [GLK-Class]}
+  - {make: Mercedes-Benz, name: GLS, also: [GLS-Class]}
+  - {make: Mercedes-Benz, name: EQB, also: [EQB-Class]}
+  - {make: Mercedes-Benz, name: EQE SUV, also: [EQE-Class SUV]}
+  - {make: Mercedes-Benz, name: EQS SUV, also: [EQS-Class SUV]}
+  - {make: Mazda, name: Mazda2, also: ["2"]}
+  - {make: Mazda, name: Mazda3, also: ["3"]}
+  - {make: Mazda, name: Mazda5, also: ["5"]}
+  - {make: Mazda, name: Mazda6, also: ["6"]}
+  - {make: Chevrolet, name: Captiva Sport, also: [Captiva]}
+  - {make: Chevrolet, name: Traverse, also: [Traverse Limited]}
+  - {make: Chevrolet, name: Silverado HD, also: [Silverado 2500HD, Silverado 3500HD, Silverado 2500 HD, Silverado 3500 HD]}
+  - {make: GMC, name: Sierra HD, also: [Sierra 2500HD, Sierra 3500HD, Sierra 2500 HD, Sierra 3500 HD, C2500 Sierra, K2500 Sierra]}
+  - {make: Toyota, name: RAV4 Prime, also: [RAV4 Prime (PHEV)]}
+  - {make: Land Rover, name: Range Rover Evoque, also: [Evoque]}

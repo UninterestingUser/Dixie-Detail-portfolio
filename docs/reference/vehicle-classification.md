@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-22
 tags: [vehicles, classification, phase-2]
-related: [docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
+related: [docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
 ---
 
 # Vehicle classification
@@ -28,7 +28,7 @@ EPA size classes split pickups (from 2008) and SUVs (from 2013) into small and s
 
 ## Classification rules are data
 
-Classification is an ordered list of rules ([decision 0060](../decisions/0060-vehicle-classification-rules-are-data.md)). Each rule is a record with a position, a name, its conditions, the vehicle class it gives, and whether it is active. For each model year the active rules are tried from the lowest position up, and the first whose conditions all hold gives the class. The launch rules are in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) and are seeded once, on the first run of `classify_vehicles`; after that the rules in the database are the owner's, edited in the Django admin until a control-app screen exists. A rule's conditions are checked when it is saved there.
+Classification is an ordered list of rules ([decision 0060](../decisions/0060-vehicle-classification-rules-are-data.md)). Each rule is a record with a position, a name, its conditions, the vehicle class it gives, and whether it is active. For each model year the active rules are tried from the lowest position up, and the first whose conditions all hold gives the class. The launch rules and model overrides are in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml). Each one `classify_vehicles` creates from the file remembers the entry it came from, and each run brings an unedited one in step with the file, adds a new entry and removes one taken out of the file. One the owner has edited or deleted is left alone and listed in the report, and the owner's own rules are never touched ([decision 0074](../decisions/0074-nameplates-aliases-and-majority.md)). Rules are edited in the Django admin until a control-app screen exists, and a rule's conditions are checked when it is saved there.
 
 A rule's conditions map a fact to what it must be. For example, "EPA small SUV weighing over 4,500 lb → Midsize SUVs" is:
 
@@ -42,6 +42,7 @@ A rule's conditions map a fact to what it must be. For example, "EPA small SUV w
 | --- | --- | --- |
 | `vehicle_type` | A list: `vehicle` (car, truck or van) or `motorcycle` | The vehicle model |
 | `make`, `model` | A list of names. A model matches a name it is or begins with in whole words, so "ProMaster" matches "ProMaster 2500". Names are compared on capitals and digits only | The vehicle model |
+| `model_word` | A list of words or phrases the model's name contains as whole words, such as `HD`, `2500` or `Super Duty` | The vehicle model |
 | `year` | `{"from": 2013, "to": 2019}`, either end optional | The model year |
 | `epa_size_class`, `drive`, `body_style` | A list of values | EPA |
 | `cab_style` | A list: `regular`, `extended`, `crew` | Canadian specifications |
@@ -55,43 +56,47 @@ In a list, `none` matches a model year that no source gives a value for, such as
 
 ### How a condition is tested
 
-- **Every trim must match.** The catalog keeps each fact as a set or a range across a model year's trims, so a condition holds when it holds for all of them: all of the model year's EPA size classes are in the list, or its whole curb weight range is over the threshold. It fails when it holds for none.
+- **Most of the rows decide.** Each source's record keeps how its rows spread across each fact: the EPA's engines and transmissions, the Canadian trims. A condition holds when at least two-thirds of a model year's rows meet it, such as 8 of 10 Silverado rows listed as standard pickups, and fails when two-thirds do not. In between, the model year waits in the review queue with the split, such as "3 of 6 rows (50%) meet it". The share is `rule_settings.majority_share` in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) ([decision 0074](../decisions/0074-nameplates-aliases-and-majority.md)). A record with no spread, such as the owner's own figures, is decided on its whole set or range.
+- **Seat rows are not trims** but what was sold, so an optional third row ([2, 3]) does not meet `seat_rows: [3]`, and never sends a model year to the queue.
 - **A fact no source gives fails** the condition. An older SUV with no curb weight matches neither weight rule.
 - **The owner's own figures come first.** Where the owner has recorded a fact for a model year, it is used and nothing else is read. Otherwise every source that gives the fact is read, and they must agree, except seat rows, which come from the third-row list first and NHTSA only where the list has nothing.
 
 ### The launch rules
 
-The launch rules start from the EPA size class and add weight, dimension and name rules for the known mismatches, in this order:
+The launch rules start from the EPA size class and add weight, dimension, seat-row and name rules for the known mismatches, in this order:
 
 1. **Motorcycles:** every model with vehicle type motorcycle ([decision 0072](../decisions/0072-motorcycles-class.md)).
 2. **Full-size vans the EPA leaves out**, by name (Express, Savana, Transit, Sprinter, ProMaster and others) with no EPA size class → Fullsize SUVs & Minivans.
-3. **Heavy pickups the EPA leaves out:** a vPIC truck with no EPA size class, such as the F-250, Silverado HD and Ram 2500 → Fullsize Trucks.
-4. **Older minivans** the EPA lists as station wagons or special purpose vehicles, by name (Caravan, Odyssey, Sienna and others) → Fullsize SUVs & Minivans.
-5. **Standard SUVs longer than 215 inches**, such as the Yukon XL and Escalade ESV → Fullsize SUVs & Minivans.
-6. **Small SUVs over 4,500 lb** → Midsize SUVs.
-7. **Older SUVs over 4,500 lb** and 8. **up to 4,500 lb**: before 2013 the EPA does not split SUVs into small and standard, so curb weight decides between Midsize SUVs and Crossovers & Wagons.
-9. to 14. **The EPA mapping:** car classes to Coupes & Sedans, small SUVs and station wagons to Crossovers & Wagons, small pickups to Light Pickups & Offroad, standard SUVs to Midsize SUVs, minivans and vans to Fullsize SUVs & Minivans, and standard pickups to Fullsize Trucks.
+3. **Heavy pickups the EPA leaves out:** a vPIC truck with no EPA size class whose name has a heavy-duty series (2500, 3500, HD, Super Duty, F-250 and the others listed in the rule), such as the F-250, Silverado HD and Ram 2500 → Fullsize Trucks. Minivans and light trucks vPIC lists as trucks, such as the Astro, Caravan, Dakota and Explorer Sport Trac, are not caught.
+4. **Heavy pickups over 8,500 lb GVWR** the EPA leaves out → Fullsize Trucks. No source gives GVWR yet; the owner's own figures can.
+5. **Older minivans** the EPA lists as station wagons or special purpose vehicles, by name (Caravan, Odyssey, Sienna, Astro, Lumina APV and others) → Fullsize SUVs & Minivans.
+6. **Standard SUVs longer than 215 inches** → Fullsize SUVs & Minivans.
+7. **Three-row SUVs:** a model year the third-row list marks "always", in any SUV class (small, standard, or the older sport utility and special purpose classes), is a three-row Midsize SUV. The Palisade, Telluride, CX-9, CX-90, Highlander, Pilot, Atlas and MDX keep one price whether the EPA calls a year small or standard. Minivans and models with an override are not affected.
+8. **Small SUVs over 4,500 lb** → Midsize SUVs.
+9. **Older SUVs over 4,500 lb** and 10. **up to 4,500 lb**: from 1999 to 2012 the EPA lists SUVs as "Sport Utility Vehicle" without small and standard, so curb weight decides between Midsize SUVs and Crossovers & Wagons.
+11. **Special purpose SUVs over 4,500 lb** and 12. **up to 4,500 lb**: the same for the EPA's special purpose class, up to 2009 only. Until 1998 it held SUVs; from 2010 it holds vans, some pickup trims (such as 2024 to 2026 Silverado and Sierra rows) and a few crossovers.
+13. to 18. **The EPA mapping:** car classes to Coupes & Sedans, small SUVs and station wagons to Crossovers & Wagons, small pickups to Light Pickups & Offroad, standard SUVs to Midsize SUVs, minivans and vans to Fullsize SUVs & Minivans, and standard pickups to Fullsize Trucks.
 
 Trucks above the 350 series stay in Fullsize Trucks, and full-size and fleet vans in Fullsize SUVs & Minivans, until an Oversized Vans & Trucks class exists.
 
 ## Overrides win over the rules
 
-- **A model override** beats every rule, such as Jeep Wrangler to Light Pickups & Offroad, and Suburban, Expedition and Sequoia to Fullsize SUVs & Minivans (the launch overrides, seeded with the launch rules). It covers the model's years from one year to another, or all of them; one for some years beats one for the whole model. It sets the class and either fixes the size variant, always asks it, or leaves it to the facts as for any vehicle of the class. Each records who set it, when, and an optional note.
+- **A model override** beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. The launch overrides price the full-size SUVs with the Suburban, in Fullsize SUVs & Minivans: the Chevrolet Suburban, Suburban HD and Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Jeep Wagoneer, Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia, and the Jeep Grand Wagoneer from 2022 only (the 1984 to 1991 Grand Wagoneer is a different vehicle). It covers the model's years from one year to another, or all of them; one for some years beats one for the whole model. It sets the class and either fixes the size variant, always asks it, or leaves it to the facts as for any vehicle of the class. Each records who set it, when, and an optional note.
 - **A vehicle override** covers one customer's lifted or modified vehicle: the vehicle's own class and size variant, with who set them, when, and an optional note. It beats the model override and the rules.
 
-`classify_vehicles` never changes an override, a customer's vehicle, or anything with source "owner".
+`classify_vehicles` never changes an override the owner set or edited, a customer's vehicle, or anything with source "owner".
 
 ## The review queue
 
 A model year goes to the review queue instead of going live when:
 
 - **no rule matches** it;
-- **its trims straddle a rule's condition**, such as a curb weight range from 4,300 to 4,700 lb against "over 4,500 lb", or EPA size classes in two classes, such as a model sold as a sedan and a wagon; or
+- **its rows have no clear majority** on a rule's condition, such as a model sold as a sedan and a wagon in equal numbers, or a curb weight range from 4,300 to 4,700 lb against "over 4,500 lb" with no spread of trims to go by; or
 - **two sources disagree** about a fact the rule tests.
 
 The queue names the rule and the reason. The owner settles a model year with a model override (the model "straddles a threshold", decision 0060) or a new rule, and the next run of `classify_vehicles` takes it out of the queue. A model year that was live and enters the queue, for example after new data, keeps its earlier class while it waits; a new one has no class, and the booking form shows the photo cards.
 
-On the full EPA table with the 2024 vPIC and Canadian data, the launch rules leave 2,418 of 12,672 model years in the queue. Most are SUVs from before 2013 with no curb weight yet, and models the EPA lists in two size classes, such as the 2WD and 4WD Highlander either side of 6,000 lb GVWR.
+On the full EPA table with the 2024 vPIC and Canadian data, the launch rules leave 1,777 of 12,872 model years in the queue (2,418 before decision 0074). Most are models sold as cars and station wagons with no clear majority, and SUVs from before 2010, which the third-row list does not cover and which have no curb weight yet.
 
 ## A rule change is previewed before it is applied
 
@@ -108,7 +113,7 @@ Each model year stores its size variant, or that the customer is asked. Each veh
 
 ### The third-row list
 
-[data/third-row-seating.yaml](../../data/third-row-seating.yaml) lists each crossover and midsize SUV by make, the names it was sold under and a model year range. Each run of `classify_vehicles` loads it as the third-row list's own model-year facts, one per catalog model year the range covers, replacing the last run's. Its makes and models are matched to the catalog on capitals and digits only, as the import matches names, with the import's make aliases. A row that matches no catalog model, or none of the model's catalog years, is listed in the report instead of guessed. On the 2024 data, 28 of 187 rows matched no model, mostly where the EPA writes the name differently, such as "GLE-Class" for the Mercedes-Benz GLE, or lists several models as one, such as the Land Rover "Range Rover".
+[data/third-row-seating.yaml](../../data/third-row-seating.yaml) lists each crossover and midsize SUV by make, the names it was sold under and a model year range. Each run of `classify_vehicles` loads it as the third-row list's own model-year facts, one per catalog model year the range covers, replacing the last run's. Its makes and models are matched to the catalog by the names in [data/vehicle-names.yaml](../../data/vehicle-names.yaml), as the import matches them ([vehicle-catalog.md](vehicle-catalog.md#names-customers-know)). A row that matches no catalog model, or none of the model's catalog years, is listed in the report instead of guessed. With the nameplates and aliases, every one of the list's 187 rows matches a catalog model on the 2024 data; 28 did not before.
 
 ## Settings each vehicle class carries
 
@@ -123,7 +128,7 @@ Each vehicle class carries its own settings: what its size variant measures (doo
 - the class's **price basis** and the model's **vehicle type**;
 - **how the answer was reached**: a rule, a model override, a vehicle override (when a customer's vehicle is given), or the review queue.
 
-A year before 1984 (the first year of the catalog, in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml)), a model not in the catalog, and a model year waiting in the review queue with no class all return the **photo cards** instead: seven cards, one per vehicle class, Motorcycles among them, for the customer to choose from.
+The make and model are matched by the names in [data/vehicle-names.yaml](../../data/vehicle-names.yaml), so "GLE-Class" finds the GLE; matching customers' vehicles to the catalog will use the same lookup. A year before 1984 (the first year of the catalog, in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml)), a model not in the catalog, and a model year waiting in the review queue with no class all return the **photo cards** instead: seven cards, one per vehicle class, Motorcycles among them, for the customer to choose from.
 
 ## Guarding against a wrong class
 

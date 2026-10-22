@@ -29,7 +29,8 @@ from vehicles.models import (
     VehicleModelYear,
 )
 
-from .rules import ModelYear, Outcome, test_rule
+from .rules import ModelYear, Outcome, parse_share, test_rule
+from .seed import read_data
 
 Method = ModelYearClassification.Method
 Measures = VehicleClass.Measures
@@ -106,7 +107,13 @@ def size_for(vehicle_class, model_year, variants):
     return None, True
 
 
-def classify_model_year(model_year, rules, overrides, variants):
+def majority_share(data_dir=None):
+    """The share of a model year's rows that decides a condition, from
+    data/vehicle-classes.yaml (two-thirds at launch)."""
+    return parse_share(read_data("vehicle-classes.yaml", data_dir)["rule_settings"]["majority_share"])
+
+
+def classify_model_year(model_year, rules, overrides, variants, share=1):
     """The Result for one model year: rules sorted by position, overrides
     those of its model."""
     override = next((found for found in overrides if found.covers(model_year.year)), None)
@@ -119,7 +126,7 @@ def classify_model_year(model_year, rules, overrides, variants):
             size, ask = size_for(override.vehicle_class, model_year, variants)
         return Result(override.vehicle_class, size, ask, Method.OVERRIDE, override=override)
     for rule in rules:
-        tested = test_rule(model_year, rule.conditions)
+        tested = test_rule(model_year, rule.conditions, share)
         if tested.outcome == Outcome.HOLDS:
             size, ask = size_for(rule.vehicle_class, model_year, variants)
             return Result(rule.vehicle_class, size, ask, Method.RULE, rule=rule)
@@ -143,9 +150,11 @@ def catalog_model_years():
     return [ModelYear(models[model_id], year, found) for (model_id, year), found in sorted(rows.items())]
 
 
-def classify_catalog(rules=None, overrides=None, model_years=None):
+def classify_catalog(rules=None, overrides=None, model_years=None, share=None):
     """{(model id, year): (ModelYear, Result)} for the whole catalog. rules
-    and overrides default to those saved; pass a proposed set to preview it."""
+    and overrides default to those saved; pass a proposed set to preview it.
+    share defaults to the majority share in data/vehicle-classes.yaml."""
+    share = majority_share() if share is None else share
     if rules is None:
         rules = ClassificationRule.objects.select_related("vehicle_class")
     if overrides is None:
@@ -162,7 +171,7 @@ def classify_catalog(rules=None, overrides=None, model_years=None):
     return {
         (model_year.vehicle_model.pk, model_year.year): (
             model_year,
-            classify_model_year(model_year, rules, by_model.get(model_year.vehicle_model.pk, []), variants),
+            classify_model_year(model_year, rules, by_model.get(model_year.vehicle_model.pk, []), variants, share),
         )
         for model_year in model_years
     }
@@ -305,6 +314,10 @@ def apply(results):
             counts["model years unchanged"] += 1
     ModelYearClassification.objects.bulk_create(created, batch_size=BATCH)
     ModelYearClassification.objects.bulk_update(updated, fields, batch_size=BATCH)
+    # A model year the catalog no longer has, such as one moved to a nameplate, loses its classification.
+    gone = [row.pk for key, row in stored.items() if key not in results]
+    ModelYearClassification.objects.filter(pk__in=gone).delete()
+    counts["model years no longer in the catalog"] += len(gone)
 
     asks = set(
         ModelYearClassification.objects.filter(ask_size=True, vehicle_class__isnull=False).values_list(

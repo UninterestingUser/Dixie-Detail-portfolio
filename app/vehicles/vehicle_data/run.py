@@ -17,7 +17,7 @@ from django.utils import timezone
 from vehicles.models import VehicleDataImportRun, VehicleModel, VehicleModelYear
 
 from . import canada, epa, vpic
-from .catalog import Catalog, group_by_model_year, place, write
+from .catalog import Catalog, group_by_model_year, merge_duplicates, place, write
 
 SOURCES = ("epa", "vpic", "canada")
 Source = VehicleModelYear.Source
@@ -33,6 +33,9 @@ class SourceReport:
     message: str = ""
     counts: Counter = field(default_factory=Counter)
     added_models: list = field(default_factory=list)
+    # Base models split into nameplates, and models merged or renamed, by data/vehicle-names.yaml.
+    split: list = field(default_factory=list)
+    merged: list = field(default_factory=list)
     unmatched: list = field(default_factory=list)
     rejected: list = field(default_factory=list)
 
@@ -44,11 +47,13 @@ class SourceReport:
         self.rejected.append(text)
 
 
-def store(keyed_facts, source, model_source, report):
+def store(keyed_facts, source, model_source, report, config):
     """Write facts keyed by (vehicle type, make, model, year), adding the
-    models the catalog does not have."""
+    models the catalog does not have, after merging the models that are one
+    vehicle."""
     reason = f"{Source(source).label} import"
-    catalog = Catalog()
+    report.merged.extend(merge_duplicates(config.names, reason))
+    catalog = Catalog(config.names)
     placed = place(catalog, keyed_facts, model_source)
     catalog.save_new(reason)
     write(source, group_by_model_year(placed), report, catalog.new, reason)
@@ -56,11 +61,11 @@ def store(keyed_facts, source, model_source, report):
 
 
 def write_epa(collected, report, config):
-    store(collected, Source.EPA, VehicleModel.Source.EPA, report)
+    store(collected, Source.EPA, VehicleModel.Source.EPA, report, config)
 
 
 def write_vpic(collected, report, config):
-    for vehicle_model in store(collected, Source.VPIC, VehicleModel.Source.NHTSA, report):
+    for vehicle_model in store(collected, Source.VPIC, VehicleModel.Source.NHTSA, report, config):
         kind = ", motorcycle" if vehicle_model.vehicle_type == VehicleModel.VehicleType.MOTORCYCLE else ""
         report.added_models.append(
             f"{vehicle_model.make} {vehicle_model.model} ({vehicle_model.year_from}-{vehicle_model.year_to}{kind})"
@@ -68,7 +73,8 @@ def write_vpic(collected, report, config):
 
 
 def write_canada(collected, report, config):
-    grouped = canada.facts_by_model_year(collected, report, config.canada_make_names)
+    report.merged.extend(merge_duplicates(config.names, "Canadian specifications import"))
+    grouped = canada.facts_by_model_year(collected, report, config.names)
     write(Source.CANADA, grouped, report, reason="Canadian specifications import")
 
 

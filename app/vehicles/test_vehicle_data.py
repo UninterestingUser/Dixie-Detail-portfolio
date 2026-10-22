@@ -20,6 +20,7 @@ from vehicles.models import VehicleDataImportRun, VehicleModel, VehicleModelYear
 from vehicles.vehicle_data import canada
 from vehicles.vehicle_data.config import Config, QueryMake, load_config
 from vehicles.vehicle_data.fetch import FetchError, Fetcher
+from vehicles.vehicle_data.names import Names
 from vehicles.vehicle_data.run import run
 
 FIXTURES = Path(__file__).parent / "test_files" / "vehicle_data"
@@ -38,7 +39,6 @@ CONFIG = Config(
     truck_makes=(QueryMake("Ford", frozenset({"FORD"})),),
     motorcycle_makes=(QueryMake("Harley-Davidson", frozenset({"HARLEY-DAVIDSON"})),),
     canada_units="US",
-    canada_make_names={},
 )
 
 
@@ -214,7 +214,7 @@ class CanadaImportTests(CachedFixtures, TestCase):
         grouped = canada.facts_by_model_year(rows, report)
         self.assertEqual(grouped, {})
         report.reject.assert_called_once()
-        grouped = canada.facts_by_model_year(rows, report, {"RAM TRUCKS": "Ram"})
+        grouped = canada.facts_by_model_year(rows, report, Names.from_data({"make_aliases": {"RAM TRUCKS": "Ram"}}))
         self.assertEqual(grouped[(ram.pk, 2024)].values()["curb_weight_max"], 5170)
 
 
@@ -397,7 +397,7 @@ class ConfigTests(SimpleTestCase):
         self.assertIn("Harley-Davidson", [make.name for make in config.motorcycle_makes])
         self.assertEqual(len(config.motorcycle_makes), 16)
         self.assertIn("RAM", next(make for make in config.truck_makes if make.name == "Ram").vpic_names)
-        self.assertEqual(config.canada_make_names["RAM TRUCKS"], "Ram")
+        self.assertEqual(config.names.make_key("RAM TRUCKS"), "RAM")
         self.assertGreater(config.pause_seconds, 0)
 
     def test_the_cache_is_outside_the_repository(self):

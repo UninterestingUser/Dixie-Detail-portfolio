@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-22
 tags: [vehicles, catalog, phase-2]
-related: [docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
+related: [docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
 ---
 
 # Vehicle catalog
@@ -17,7 +17,17 @@ The vehicle catalog is the list of vehicle models a customer can pick by year, m
 
 A **vehicle model** is one make and model, such as "Toyota RAV4", with the first and last model year it covers. Each of its model years gets a vehicle class and size variant from the classification rules and overrides ([vehicle-classification.md](vehicle-classification.md)). Each vehicle model has a vehicle type: "car, truck or van", or "motorcycle". Motorcycles are shown in the same year, make and model lists as cars, and are in the Motorcycles vehicle class ([decision 0072](../decisions/0072-motorcycles-class.md)).
 
-The EPA's base model is the model name, so "RAV4 AWD" and "RAV4 Hybrid AWD" are both the RAV4. Names are matched across sources on capitals and digits only, so the EPA's "F150" and vPIC's "F-150" are the same vehicle model. A motorcycle and a car of the same name are different vehicle models.
+A motorcycle and a car of the same name are different vehicle models.
+
+## Names customers know
+
+A vehicle model is named the way customers know it, from [data/vehicle-names.yaml](../../data/vehicle-names.yaml) ([decision 0074](../decisions/0074-nameplates-aliases-and-majority.md)):
+
+- **The EPA's base model is the model name,** so "RAV4 AWD" and "RAV4 Hybrid AWD" are both the RAV4.
+- **Except where a base model holds several nameplates.** The EPA files the Santa Fe Sport and Santa Fe XL under the Santa Fe, the Range Rover Sport, Velar and Evoque under the Range Rover, and the Grand Cherokee L, Atlas Cross Sport, RX 350L and 450hL, Outlander Sport and PHEV, Encore GX, Defender 90, 110 and 130, Yukon XL, Escalade ESV, Navigator L, Expedition MAX and EL, and the EQE and EQS SUVs the same way. The nameplate list splits each: an EPA row whose model name contains a nameplate's phrase, as whole words, belongs to that nameplate, and the rest stay with the base model. The EPA's model names are not used whole, because they carry trims, engines and packages ("GLE350 4matic", "F150 2.7L 2WD GVWR>6649 LBS").
+- **One vehicle, one name.** Names are matched across sources on capitals and digits only, so the EPA's "F150" and vPIC's "F-150" are the same. The alias list adds the spellings that differ in more than that, and gives the name shown: "GLE" for the EPA's and vPIC's "GLE-Class", "F-150" for "F150" and "F-150 Lightning", "Wrangler" for "Wrangler/TJ", "ML" for "ML-Class" and "M-Class", "Mazda5" for the EPA's "5". It also holds the make spellings, such as RAM TRUCKS for Ram in the Canadian specifications.
+
+The import, the third-row list and the booking lookup all use these names, and so will matching customers' vehicles to the catalog. When the file changes, the next import merges the catalog models that are now one vehicle and splits the base models, and lists each merge, rename and split in its report. A merge keeps the owner's model, with its name, where there is one, and moves every model year, override and customer's vehicle to the model kept. A model year a split moves to a nameplate leaves the base model, and overrides stay on the model they were set for.
 
 The owner can split one make and model into several vehicle models by year range, such as two generations with different vehicle classes. The import then files each model year under the vehicle model whose range holds it.
 
@@ -38,7 +48,7 @@ Each source keeps its own **model-year facts** record for each model year it lis
 | Curb weight | Lowest and highest | pounds | Canadian specifications |
 | Length, width, height, wheelbase | Lowest and highest | inches, to a tenth | Canadian specifications |
 
-Each record also keeps the source's own ids (EPA vehicle ids, vPIC make and model ids, or the Canadian trim names) and when it was first and last seen. A record the source stops listing is kept, and its "last seen" date shows when the source last listed it.
+Each record also keeps the source's own ids (EPA vehicle ids, vPIC make and model ids, or the Canadian trim names), how its rows spread across each fact (rows per EPA size class, each trim's curb weight), which the classification rules use to go by the majority, and when it was first and last seen. A record the source stops listing is kept, and its "last seen" date shows when the source last listed it.
 
 ## How body styles are worked out
 
