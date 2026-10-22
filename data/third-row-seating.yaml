@@ -1,0 +1,976 @@
+meta:
+  title: Third-row seating seed list
+  summary: Which crossovers and midsize SUVs sold in the US since 2010 have a third row always, optionally, or never. Seeds the third-row flag in Phase 2, Step 2.
+  updated: 2026-10-22
+  status: current
+  explained_in: docs/reference/vehicle-classification.md
+  note: >-
+    Prepared from manufacturer and review information and checked by the owner.
+    always = three rows, never asked; never = two rows, never asked; optional = the booking form asks.
+    When in doubt a model is optional, because one extra question is better than a wrong price.
+    Models are matched to the catalog by make and model name, with the alias list for spelling
+    differences; a name with a slash lists the names the model was sold under. Years are model years,
+    and last_year empty means still sold. A model in the catalog and not in this list falls back to
+    NHTSA data where it has any, then to optional.
+models:
+  - make: "Acura"
+    models: ["MDX"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Acura"
+    models: ["RDX"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Acura"
+    models: ["ZDX"]
+    first_year: 2010
+    last_year:
+    third_row: never
+    note: "2010-2013 and the 2024 EV"
+  - make: "Audi"
+    models: ["Q3"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Audi"
+    models: ["Q5"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Audi"
+    models: ["Q7"]
+    first_year: 2010
+    last_year: 2015
+    third_row: optional
+    note: "first generation; seven seats on some trims"
+  - make: "Audi"
+    models: ["Q7"]
+    first_year: 2017
+    last_year:
+    third_row: always
+  - make: "Audi"
+    models: ["Q8"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Audi"
+    models: ["e-tron", "Q8 e-tron"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Audi"
+    models: ["Q4 e-tron"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X1"]
+    first_year: 2013
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X2"]
+    first_year: 2018
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X3"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X4"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X5"]
+    first_year: 2010
+    last_year:
+    third_row: optional
+    note: "third row is an option in every generation"
+  - make: "BMW"
+    models: ["X6"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "BMW"
+    models: ["X7"]
+    first_year: 2019
+    last_year:
+    third_row: always
+  - make: "BMW"
+    models: ["iX"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Buick"
+    models: ["Enclave"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Buick"
+    models: ["Encore"]
+    first_year: 2013
+    last_year:
+    third_row: never
+  - make: "Buick"
+    models: ["Encore GX"]
+    first_year: 2020
+    last_year:
+    third_row: never
+  - make: "Buick"
+    models: ["Envision"]
+    first_year: 2016
+    last_year:
+    third_row: never
+  - make: "Buick"
+    models: ["Envista"]
+    first_year: 2024
+    last_year:
+    third_row: never
+  - make: "Cadillac"
+    models: ["SRX"]
+    first_year: 2010
+    last_year: 2016
+    third_row: never
+  - make: "Cadillac"
+    models: ["XT4"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Cadillac"
+    models: ["XT5"]
+    first_year: 2017
+    last_year:
+    third_row: never
+  - make: "Cadillac"
+    models: ["XT6"]
+    first_year: 2020
+    last_year:
+    third_row: always
+  - make: "Cadillac"
+    models: ["Lyriq"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Cadillac"
+    models: ["Vistiq"]
+    first_year: 2026
+    last_year:
+    third_row: always
+  - make: "Chevrolet"
+    models: ["Blazer"]
+    first_year: 2019
+    last_year:
+    third_row: never
+    note: "also Blazer EV"
+  - make: "Chevrolet"
+    models: ["Captiva Sport"]
+    first_year: 2012
+    last_year: 2015
+    third_row: never
+  - make: "Chevrolet"
+    models: ["Equinox"]
+    first_year: 2010
+    last_year:
+    third_row: never
+    note: "also Equinox EV"
+  - make: "Chevrolet"
+    models: ["Trailblazer"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Chevrolet"
+    models: ["Traverse"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Chevrolet"
+    models: ["Trax"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Dodge"
+    models: ["Durango"]
+    first_year: 2011
+    last_year:
+    third_row: optional
+    note: "third row on most trims, not all"
+  - make: "Dodge"
+    models: ["Journey"]
+    first_year: 2010
+    last_year: 2020
+    third_row: optional
+    note: "third row was a package"
+  - make: "Ford"
+    models: ["Bronco"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Ford"
+    models: ["Bronco Sport"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Ford"
+    models: ["Edge"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Ford"
+    models: ["Escape"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Ford"
+    models: ["Explorer"]
+    first_year: 2011
+    last_year:
+    third_row: always
+  - make: "Ford"
+    models: ["Flex"]
+    first_year: 2010
+    last_year: 2019
+    third_row: always
+  - make: "Ford"
+    models: ["Mustang Mach-E"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Genesis"
+    models: ["GV60"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Genesis"
+    models: ["GV70"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Genesis"
+    models: ["GV80"]
+    first_year: 2021
+    last_year:
+    third_row: optional
+  - make: "GMC"
+    models: ["Acadia"]
+    first_year: 2010
+    last_year: 2016
+    third_row: always
+  - make: "GMC"
+    models: ["Acadia"]
+    first_year: 2017
+    last_year: 2023
+    third_row: optional
+    note: "five-seat trims existed"
+  - make: "GMC"
+    models: ["Acadia"]
+    first_year: 2024
+    last_year:
+    third_row: always
+  - make: "GMC"
+    models: ["Terrain"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Honda"
+    models: ["CR-V"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Honda"
+    models: ["Crosstour"]
+    first_year: 2012
+    last_year: 2015
+    third_row: never
+  - make: "Honda"
+    models: ["Element"]
+    first_year: 2010
+    last_year: 2011
+    third_row: never
+  - make: "Honda"
+    models: ["HR-V"]
+    first_year: 2016
+    last_year:
+    third_row: never
+  - make: "Honda"
+    models: ["Passport"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Honda"
+    models: ["Pilot"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Honda"
+    models: ["Prologue"]
+    first_year: 2024
+    last_year:
+    third_row: never
+  - make: "Hyundai"
+    models: ["Ioniq 5"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Hyundai"
+    models: ["Ioniq 9"]
+    first_year: 2026
+    last_year:
+    third_row: always
+  - make: "Hyundai"
+    models: ["Kona"]
+    first_year: 2018
+    last_year:
+    third_row: never
+  - make: "Hyundai"
+    models: ["Palisade"]
+    first_year: 2020
+    last_year:
+    third_row: always
+  - make: "Hyundai"
+    models: ["Santa Fe"]
+    first_year: 2010
+    last_year: 2012
+    third_row: optional
+  - make: "Hyundai"
+    models: ["Santa Fe"]
+    first_year: 2013
+    last_year: 2018
+    third_row: always
+    note: "the long Santa Fe; the shorter one was the Santa Fe Sport"
+  - make: "Hyundai"
+    models: ["Santa Fe Sport"]
+    first_year: 2013
+    last_year: 2018
+    third_row: never
+  - make: "Hyundai"
+    models: ["Santa Fe XL"]
+    first_year: 2019
+    last_year: 2019
+    third_row: always
+  - make: "Hyundai"
+    models: ["Santa Fe"]
+    first_year: 2019
+    last_year: 2023
+    third_row: never
+  - make: "Hyundai"
+    models: ["Santa Fe"]
+    first_year: 2024
+    last_year:
+    third_row: always
+    note: "third row standard from the 2024 redesign"
+  - make: "Hyundai"
+    models: ["Tucson"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Hyundai"
+    models: ["Venue"]
+    first_year: 2020
+    last_year:
+    third_row: never
+  - make: "Hyundai"
+    models: ["Veracruz"]
+    first_year: 2010
+    last_year: 2012
+    third_row: always
+  - make: "Infiniti"
+    models: ["JX35", "QX60"]
+    first_year: 2013
+    last_year:
+    third_row: always
+  - make: "Infiniti"
+    models: ["EX", "QX50", "QX55"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Infiniti"
+    models: ["FX", "QX70"]
+    first_year: 2010
+    last_year: 2017
+    third_row: never
+  - make: "Jeep"
+    models: ["Cherokee"]
+    first_year: 2014
+    last_year: 2023
+    third_row: never
+  - make: "Jeep"
+    models: ["Commander"]
+    first_year: 2010
+    last_year: 2010
+    third_row: always
+  - make: "Jeep"
+    models: ["Compass"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Jeep"
+    models: ["Grand Cherokee"]
+    first_year: 2010
+    last_year:
+    third_row: never
+    note: "two rows; the three-row one is the Grand Cherokee L"
+  - make: "Jeep"
+    models: ["Grand Cherokee L"]
+    first_year: 2021
+    last_year:
+    third_row: always
+  - make: "Jeep"
+    models: ["Liberty"]
+    first_year: 2010
+    last_year: 2012
+    third_row: never
+  - make: "Jeep"
+    models: ["Patriot"]
+    first_year: 2010
+    last_year: 2017
+    third_row: never
+  - make: "Jeep"
+    models: ["Renegade"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["Borrego"]
+    first_year: 2010
+    last_year: 2011
+    third_row: optional
+  - make: "Kia"
+    models: ["EV6"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["EV9"]
+    first_year: 2024
+    last_year:
+    third_row: always
+  - make: "Kia"
+    models: ["Niro"]
+    first_year: 2017
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["Seltos"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["Sorento"]
+    first_year: 2011
+    last_year: 2020
+    third_row: optional
+    note: "five-seat base trims"
+  - make: "Kia"
+    models: ["Sorento"]
+    first_year: 2021
+    last_year:
+    third_row: always
+  - make: "Kia"
+    models: ["Soul"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["Sportage"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Kia"
+    models: ["Telluride"]
+    first_year: 2020
+    last_year:
+    third_row: always
+  - make: "Land Rover"
+    models: ["Defender 90"]
+    first_year: 2020
+    last_year:
+    third_row: never
+  - make: "Land Rover"
+    models: ["Defender 110"]
+    first_year: 2020
+    last_year:
+    third_row: optional
+    note: "five, six or seven seats"
+  - make: "Land Rover"
+    models: ["Defender 130"]
+    first_year: 2023
+    last_year:
+    third_row: always
+  - make: "Land Rover"
+    models: ["Discovery"]
+    first_year: 2017
+    last_year:
+    third_row: optional
+  - make: "Land Rover"
+    models: ["Discovery Sport"]
+    first_year: 2015
+    last_year:
+    third_row: optional
+    note: "small optional third row"
+  - make: "Land Rover"
+    models: ["LR2"]
+    first_year: 2010
+    last_year: 2015
+    third_row: never
+  - make: "Land Rover"
+    models: ["LR4"]
+    first_year: 2010
+    last_year: 2016
+    third_row: optional
+  - make: "Land Rover"
+    models: ["Range Rover Evoque"]
+    first_year: 2012
+    last_year:
+    third_row: never
+  - make: "Land Rover"
+    models: ["Range Rover Sport"]
+    first_year: 2014
+    last_year: 2022
+    third_row: optional
+  - make: "Land Rover"
+    models: ["Range Rover Sport"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Land Rover"
+    models: ["Range Rover Velar"]
+    first_year: 2018
+    last_year:
+    third_row: never
+  - make: "Lexus"
+    models: ["GX"]
+    first_year: 2010
+    last_year:
+    third_row: optional
+    note: "third row on some trims"
+  - make: "Lexus"
+    models: ["NX"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Lexus"
+    models: ["RX"]
+    first_year: 2010
+    last_year:
+    third_row: never
+    note: "the three-row one is the RX L"
+  - make: "Lexus"
+    models: ["RX 350L", "RX 450hL"]
+    first_year: 2018
+    last_year: 2022
+    third_row: always
+  - make: "Lexus"
+    models: ["RZ"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Lexus"
+    models: ["TX"]
+    first_year: 2024
+    last_year:
+    third_row: always
+  - make: "Lexus"
+    models: ["UX"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Lincoln"
+    models: ["Aviator"]
+    first_year: 2020
+    last_year:
+    third_row: always
+  - make: "Lincoln"
+    models: ["MKC", "Corsair"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Lincoln"
+    models: ["MKT"]
+    first_year: 2010
+    last_year: 2019
+    third_row: always
+  - make: "Lincoln"
+    models: ["MKX", "Nautilus"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-3"]
+    first_year: 2016
+    last_year: 2021
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-30"]
+    first_year: 2020
+    last_year:
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-5"]
+    first_year: 2013
+    last_year:
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-50"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-7"]
+    first_year: 2010
+    last_year: 2012
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-70"]
+    first_year: 2025
+    last_year:
+    third_row: never
+  - make: "Mazda"
+    models: ["CX-9"]
+    first_year: 2010
+    last_year: 2023
+    third_row: always
+  - make: "Mazda"
+    models: ["CX-90"]
+    first_year: 2024
+    last_year:
+    third_row: always
+  - make: "Mazda"
+    models: ["Mazda5"]
+    first_year: 2010
+    last_year: 2015
+    third_row: always
+    note: "small six-seat wagon"
+  - make: "Mercedes-Benz"
+    models: ["EQB"]
+    first_year: 2022
+    last_year:
+    third_row: optional
+  - make: "Mercedes-Benz"
+    models: ["EQE SUV"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Mercedes-Benz"
+    models: ["EQS SUV"]
+    first_year: 2023
+    last_year:
+    third_row: optional
+  - make: "Mercedes-Benz"
+    models: ["GL", "GLS"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Mercedes-Benz"
+    models: ["GLA"]
+    first_year: 2015
+    last_year:
+    third_row: never
+  - make: "Mercedes-Benz"
+    models: ["GLB"]
+    first_year: 2020
+    last_year:
+    third_row: optional
+  - make: "Mercedes-Benz"
+    models: ["GLC"]
+    first_year: 2016
+    last_year:
+    third_row: never
+  - make: "Mercedes-Benz"
+    models: ["GLE"]
+    first_year: 2016
+    last_year: 2019
+    third_row: never
+  - make: "Mercedes-Benz"
+    models: ["GLE"]
+    first_year: 2020
+    last_year:
+    third_row: optional
+  - make: "Mercedes-Benz"
+    models: ["GLK"]
+    first_year: 2010
+    last_year: 2015
+    third_row: never
+  - make: "Mercedes-Benz"
+    models: ["ML"]
+    first_year: 2010
+    last_year: 2015
+    third_row: never
+  - make: "Mitsubishi"
+    models: ["Eclipse Cross"]
+    first_year: 2018
+    last_year:
+    third_row: never
+  - make: "Mitsubishi"
+    models: ["Endeavor"]
+    first_year: 2010
+    last_year: 2011
+    third_row: never
+  - make: "Mitsubishi"
+    models: ["Outlander"]
+    first_year: 2010
+    last_year: 2021
+    third_row: optional
+    note: "seven seats on most trims, not all"
+  - make: "Mitsubishi"
+    models: ["Outlander"]
+    first_year: 2022
+    last_year:
+    third_row: always
+  - make: "Mitsubishi"
+    models: ["Outlander PHEV"]
+    first_year: 2018
+    last_year: 2022
+    third_row: never
+  - make: "Mitsubishi"
+    models: ["Outlander PHEV"]
+    first_year: 2023
+    last_year:
+    third_row: always
+  - make: "Mitsubishi"
+    models: ["Outlander Sport"]
+    first_year: 2011
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Ariya"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Juke"]
+    first_year: 2011
+    last_year: 2017
+    third_row: never
+  - make: "Nissan"
+    models: ["Kicks"]
+    first_year: 2018
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Murano"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Pathfinder"]
+    first_year: 2010
+    last_year:
+    third_row: always
+  - make: "Nissan"
+    models: ["Rogue"]
+    first_year: 2010
+    last_year: 2013
+    third_row: never
+  - make: "Nissan"
+    models: ["Rogue"]
+    first_year: 2014
+    last_year: 2016
+    third_row: optional
+    note: "third row was a package"
+  - make: "Nissan"
+    models: ["Rogue"]
+    first_year: 2017
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Rogue Sport", "Rogue Select"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Nissan"
+    models: ["Xterra"]
+    first_year: 2010
+    last_year: 2015
+    third_row: never
+  - make: "Rivian"
+    models: ["R1S"]
+    first_year: 2022
+    last_year:
+    third_row: always
+  - make: "Subaru"
+    models: ["Ascent"]
+    first_year: 2019
+    last_year:
+    third_row: always
+  - make: "Subaru"
+    models: ["Crosstrek"]
+    first_year: 2013
+    last_year:
+    third_row: never
+  - make: "Subaru"
+    models: ["Forester"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Subaru"
+    models: ["Outback"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Subaru"
+    models: ["Solterra"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Subaru"
+    models: ["Tribeca"]
+    first_year: 2010
+    last_year: 2014
+    third_row: optional
+    note: "five or seven seats"
+  - make: "Tesla"
+    models: ["Model X"]
+    first_year: 2016
+    last_year:
+    third_row: optional
+    note: "five, six or seven seats"
+  - make: "Tesla"
+    models: ["Model Y"]
+    first_year: 2020
+    last_year: 2020
+    third_row: never
+  - make: "Tesla"
+    models: ["Model Y"]
+    first_year: 2021
+    last_year:
+    third_row: optional
+    note: "seven-seat option in some years, back in the US for 2026"
+  - make: "Toyota"
+    models: ["4Runner"]
+    first_year: 2010
+    last_year:
+    third_row: optional
+    note: "third row on some trims"
+  - make: "Toyota"
+    models: ["bZ4X", "bZ"]
+    first_year: 2023
+    last_year:
+    third_row: never
+  - make: "Toyota"
+    models: ["C-HR"]
+    first_year: 2018
+    last_year: 2022
+    third_row: never
+  - make: "Toyota"
+    models: ["Corolla Cross"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Toyota"
+    models: ["FJ Cruiser"]
+    first_year: 2010
+    last_year: 2014
+    third_row: never
+  - make: "Toyota"
+    models: ["Grand Highlander"]
+    first_year: 2024
+    last_year:
+    third_row: always
+  - make: "Toyota"
+    models: ["Highlander"]
+    first_year: 2010
+    last_year: 2013
+    third_row: optional
+  - make: "Toyota"
+    models: ["Highlander"]
+    first_year: 2014
+    last_year:
+    third_row: always
+  - make: "Toyota"
+    models: ["Land Cruiser"]
+    first_year: 2010
+    last_year: 2021
+    third_row: always
+  - make: "Toyota"
+    models: ["Land Cruiser"]
+    first_year: 2024
+    last_year:
+    third_row: never
+    note: "two rows in the US"
+  - make: "Toyota"
+    models: ["RAV4"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Toyota"
+    models: ["Venza"]
+    first_year: 2010
+    last_year:
+    third_row: never
+    note: "2010-2015 and 2021-2024"
+  - make: "Volkswagen"
+    models: ["Atlas"]
+    first_year: 2018
+    last_year:
+    third_row: always
+  - make: "Volkswagen"
+    models: ["Atlas Cross Sport"]
+    first_year: 2020
+    last_year:
+    third_row: never
+  - make: "Volkswagen"
+    models: ["ID.4"]
+    first_year: 2021
+    last_year:
+    third_row: never
+  - make: "Volkswagen"
+    models: ["Taos"]
+    first_year: 2022
+    last_year:
+    third_row: never
+  - make: "Volkswagen"
+    models: ["Tiguan"]
+    first_year: 2010
+    last_year: 2017
+    third_row: never
+  - make: "Volkswagen"
+    models: ["Tiguan"]
+    first_year: 2018
+    last_year: 2024
+    third_row: optional
+    note: "third row on front-wheel-drive models, optional with all-wheel drive"
+  - make: "Volkswagen"
+    models: ["Tiguan"]
+    first_year: 2025
+    last_year:
+    third_row: never
+  - make: "Volkswagen"
+    models: ["Touareg"]
+    first_year: 2010
+    last_year: 2017
+    third_row: never
+  - make: "Volvo"
+    models: ["EX30"]
+    first_year: 2025
+    last_year:
+    third_row: never
+  - make: "Volvo"
+    models: ["EX90"]
+    first_year: 2025
+    last_year:
+    third_row: always
+  - make: "Volvo"
+    models: ["XC40", "EX40", "C40"]
+    first_year: 2019
+    last_year:
+    third_row: never
+  - make: "Volvo"
+    models: ["XC60"]
+    first_year: 2010
+    last_year:
+    third_row: never
+  - make: "Volvo"
+    models: ["XC90"]
+    first_year: 2010
+    last_year: 2014
+    third_row: optional
+  - make: "Volvo"
+    models: ["XC90"]
+    first_year: 2016
+    last_year:
+    third_row: always

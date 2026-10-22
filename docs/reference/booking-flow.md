@@ -4,9 +4,9 @@ summary: The seven steps a customer follows on the website to book a job, how th
 audience: [owner, staff, developer]
 visibility: internal
 status: planned
-updated: 2026-10-18
+updated: 2026-10-22
 tags: [booking, website, estimate-card, phase-3]
-related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
+related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0072-motorcycles-class.md, docs/reference/vehicle-classification.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
 
 # Customer booking flow
@@ -17,9 +17,9 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 
 ## The seven steps
 
-1. **Vehicle.** Year, then make, then model. A banner confirms the vehicle class, such as "Crossover identified", with that class's starting price. A doors, cab or third-row question appears only when the vehicle data cannot settle the size variant. An optional Color box comes last; it is used only to tell a returning customer's identical vehicles apart and never changes the price ([decision 0067](../decisions/0067-color-tells-identical-vehicles-apart.md)).
-2. **Condition.** Three cards with plain descriptions. The first adds nothing, the second 10% and the third 20%.
-3. **Service and add-ons.** Service cards show prices already adjusted for class, size and condition. Add-ons are tick boxes with their added price. Maintenance plans never appear here.
+1. **Vehicle.** Year, then make, then model. A banner confirms the vehicle class, such as "Crossover identified", with that class's starting price. A doors, cab or third-row question appears only when the vehicle data cannot settle the size variant. Motorcycle models appear in the same year, make and model lists as cars, each with a small "Motorcycle" label, so a Honda Gold Wing and a Honda Accord are easy to tell apart; a motorcycle is in the Motorcycles class, with no size question ([decision 0072](../decisions/0072-motorcycles-class.md)). A vehicle not in the lists, such as a pre-1984 classic, is chosen from seven photo cards, one per vehicle class, Motorcycles among them. The class, size and question come from one lookup on the server ([vehicle-classification.md](vehicle-classification.md#the-lookup)). An optional Color box comes last; it is used only to tell a returning customer's identical vehicles apart and never changes the price ([decision 0067](../decisions/0067-color-tells-identical-vehicles-apart.md)).
+2. **Condition.** Three cards with plain descriptions. The first adds nothing, the second 10% and the third 20%. A motorcycle skips this step: Motorcycle Detail is a flat price.
+3. **Service and add-ons.** Service cards show prices already adjusted for class, size and condition. Add-ons are tick boxes with their added price. Maintenance plans never appear here. A motorcycle is offered only Motorcycle Detail, with no add-ons.
 4. **Location.** The service address, validated as the customer types (see below). It is checked against the service area and sets the sales tax rate, with a reminder that water and power are needed.
 5. **Date and time.** Only the days and start times the availability check offers. The start times come from that weekday's start-times setting (8:00, 8:30 and 9:00 AM on every open day at launch), and a start time is shown only when the whole time on site fits. See [scheduling-and-calendars.md](scheduling-and-calendars.md).
 6. **Details.** Name, mobile number, preferred payment method, and two unchecked consent checkboxes: appointment texts and follow-up texts. Nothing is charged.

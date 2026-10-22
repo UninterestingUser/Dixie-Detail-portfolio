@@ -1,7 +1,7 @@
 meta:
   title: Service catalog
   summary: Every service Dixie Detail sells or has sold, what its price depends on, whether condition applies, and who can book it. Prices themselves are in price-matrix.csv.
-  updated: 2026-10-17
+  updated: 2026-10-22
   status: current
   explained_in: docs/reference/pricing.md
   prices_in: data/price-matrix.csv
@@ -41,6 +41,14 @@ services:
     price_varies_by: []
     condition_applies: false
     booked_by: [customer, owner]
+  - name: Motorcycle Detail        # decision 0072
+    kind: main
+    price_varies_by: [vehicle_class]
+    offered_for: [Motorcycles]   # the only class it is priced for, and the only service priced for Motorcycles
+    condition_applies: false
+    add_ons: none                # no add-on is priced for Motorcycles
+    booked_by: [customer, owner]
+    description: A motorcycle detailed at one flat price, with no condition level and no add-ons
   - name: Carpet Extraction
     kind: add-on
     price_varies_by: [size_variant]

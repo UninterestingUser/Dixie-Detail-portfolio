@@ -1,6 +1,7 @@
 """vPIC's GetCanadianVehicleSpecifications: curb weight, length, width,
 height and wheelbase per trim, by model year and make, attached to the
-matching catalog models. It never adds a model.
+matching catalog models, with the cab style a pickup's trim name gives
+("TACOMA DOUBLE CAB L/BOX 2WD"). It never adds a model.
 
 A Canadian row names the model and trim together, such as "RAV4 AWD LE / XLE
 4DR SUV". It matches the catalog model of that make and year whose whole name,
@@ -33,6 +34,14 @@ SPECS = {"CW": "curb_weight", "OL": "length", "OW": "width", "OH": "height", "WB
 # such as the 159 of "PROMASTER 2500 159 IN. WB" are not series numbers.
 SERIES = re.compile(r"^(?:(?:\d|\d{1,2}[05]0)(?:HD)?|HD)$")
 TENTH = Decimal("0.1")
+# Cab styles as the trim names write them: one word, or a word before CAB.
+CAB_WORDS = {"SUPERCAB": "extended", "SUPERCREW": "crew", "CREWCAB": "crew", "CREWMAX": "crew"}
+BEFORE_CAB = {
+    "REG": "regular", "REGULAR": "regular", "SINGLE": "regular", "STANDARD": "regular",
+    "SUPER": "extended", "EXT": "extended", "EXTENDED": "extended", "XTRA": "extended", "EXTRA": "extended",
+    "KING": "extended", "ACCESS": "extended", "QUAD": "extended", "DOUBLE": "extended", "CLUB": "extended",
+    "CREW": "crew", "MEGA": "crew",
+}
 
 
 def spec_url(base, year, make, units):
@@ -44,6 +53,18 @@ def words(name):
     """A model name as words of capitals and digits: "CR-V EX/L" ->
     ["CRV", "EX", "L"]."""
     return [word for word in (name_key(part) for part in re.split(r"[\s/]+", name)) if word]
+
+
+def cab_style(trim):
+    """regular, extended or crew from a trim name as words(), or None."""
+    for index, word in enumerate(trim):
+        if word in CAB_WORDS:
+            return CAB_WORDS[word]
+        if word == "CAB" and index and trim[index - 1] in BEFORE_CAB:
+            return BEFORE_CAB[trim[index - 1]]
+        if word == "CREW" and index and trim[index - 1] == "SUPER":
+            return "crew"
+    return None
 
 
 def measure(name, text):
@@ -135,12 +156,14 @@ def facts_by_model_year(rows, report, make_names=None):
         if all(value is None for value in values.values()):
             report.reject(f"{label}: no weight or dimensions")
             continue
-        model_id, why = match(options.get((name_key(make), year), {}), words(trim))
+        trim_words = words(trim)
+        model_id, why = match(options.get((name_key(make), year), {}), trim_words)
         if model_id is None:
             report.unmatched.append(f"{label}: {why}")
             continue
         facts = grouped.setdefault((model_id, year), Facts())
         for name, value in values.items():
             facts.measure(name, value)
+        facts.add("cab_styles", cab_style(trim_words))
         facts.ids.add(trim)
     return grouped

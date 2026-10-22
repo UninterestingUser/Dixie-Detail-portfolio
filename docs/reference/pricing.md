@@ -4,18 +4,18 @@ summary: How every price is built from the price matrix, what size variants mean
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 tags: [pricing, pricebook, crew, quote]
-related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
+related: [docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
 
-These rules are settled business policy. Since Phase 1 Step 3 the pricebook is in the database, loaded once by the `load_pricebook` command, and one module, the pricing engine (`app/pricebook/pricing.py`), applies these rules; the booking flow uses it from Phase 3. The numbers live in [data/price-matrix.csv](../../data/price-matrix.csv) and [data/pricing-rules.yaml](../../data/pricing-rules.yaml); this page explains them.
+These rules are settled business policy. Since Phase 1 Step 3 the pricebook is in the database, loaded by the `load_pricebook` command (once loaded, it changes no published price and puts any new cells of the matrix, such as a new service's prices, into a draft for the owner to publish), and one module, the pricing engine (`app/pricebook/pricing.py`), applies these rules; the booking flow uses it from Phase 3. The numbers live in [data/price-matrix.csv](../../data/price-matrix.csv) and [data/pricing-rules.yaml](../../data/pricing-rules.yaml); this page explains them.
 
 ## The price matrix is the only price source
 
-The owner's price matrix holds 90 prices across 10 services, each with its one-person service time. It supersedes every price on the old website; for example, Headlight Restoration is $95, not the $80 the old site showed. No price is ever hard-coded, and the final price is always calculated on the server.
+The owner's price matrix holds 91 prices across 11 services, each with its one-person service time. It supersedes every price on the old website; for example, Headlight Restoration is $95, not the $80 the old site showed. No price is ever hard-coded, and the final price is always calculated on the server.
 
 A price is looked up by three things together: service, vehicle class and size variant. A combination missing from the matrix does not exist, and the pricing engine refuses to price it. A service that ignores the size variant, such as Exterior Only, has one price per vehicle class, used whatever the size variant.
 
@@ -40,6 +40,7 @@ The matrix's size column holds 1, 2 or 3. What it measures depends on the vehicl
 | Midsize SUVs | Seat rows, from the same per-model flag | Only for an optional third row |
 | Fullsize SUVs & Minivans | Always 3 | Never |
 | Light Pickups & Offroad, Fullsize Trucks | Cab style: regular cab = 1, extended or crew cab = 2 | As a cab question, unless the model has only one cab style |
+| Motorcycles | Nothing: one price, no size variant | Never |
 
 Exterior Only, both paint corrections and Headlight Restoration ignore the size variant. How the system sets the size variant from the vehicle is in [vehicle-classification.md](vehicle-classification.md).
 
@@ -51,7 +52,7 @@ How two promotions on one job combine has not been set by the owner. Until it is
 
 ## Condition adjustment
 
-The customer picks one of three condition levels with plain descriptions. The first adds nothing, the second adds 10% and the third adds 20% of the base price of Full Detail, Interior Only or Exterior Only, rounded to the whole dollar. On a $280 Full Detail that is $28 or $56. The condition adjustment never applies to add-ons, paint correction, headlights or maintenance plans.
+The customer picks one of three condition levels with plain descriptions. The first adds nothing, the second adds 10% and the third adds 20% of the base price of Full Detail, Interior Only or Exterior Only, rounded to the whole dollar. On a $280 Full Detail that is $28 or $56. The condition adjustment never applies to add-ons, paint correction, headlights, maintenance plans or Motorcycle Detail.
 
 ## Condition lengthens the service time
 
@@ -61,6 +62,10 @@ A dirtier vehicle takes longer as well as costing more ([decision 0065](../decis
 - **Nothing else is lengthened.** Add-ons, maintenance plans, and setup and breakdown never change with condition.
 - **Rounded once.** The add-on hours are added, the two-person factor is applied, and the service time is rounded to the nearest 15 minutes once, at the end. Time on site follows from that service time.
 - Examples: a two-door Coupes & Sedans Full Detail at the third level is 3 + 0.6 = 3.6 hours, rounded to 3.5 hours of service and 4.5 hours on site. A two-person 2-row Midsize SUV Full Detail at the third level is (5.5 + 1.1) × 0.60 = 3.96 hours, rounded to 4 hours of service and 4.5 hours on site. The three levels follow the Armstrong booking template to start, described in the owner's own words.
+
+## Motorcycles have one service at one price
+
+Motorcycles are a vehicle class with one price and no size variant ([decision 0072](../decisions/0072-motorcycles-class.md)). Their only service is **Motorcycle Detail**, offered only for Motorcycles: a flat $100, with no condition level and no add-ons, whatever condition the motorcycle is in. It is one person and 1 hour of service time, which is 2 hours on site with the 30-minute setup and breakdown. Like Monthly Maintenance, up to two can be booked on one day. Sales tax applies as usual.
 
 ## Maintenance plans are priced from Full Detail
 

@@ -1,7 +1,7 @@
 meta:
   title: Booking and scheduling rules
   summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
-  updated: 2026-10-18
+  updated: 2026-10-22
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
   note: >-
@@ -45,6 +45,7 @@ time_on_site_rounding_minutes: 15    # nearest
 jobs_per_day: 1
 services_sharing_a_day:
   - {service: Monthly Maintenance, max_per_day: 2}
+  - {service: Motorcycle Detail, max_per_day: 2}     # the same as Monthly Maintenance; one of each can also share a day (decision 0072)
 gap_between_jobs:
   rule: a later job starts no earlier than the earlier job's end (after breakdown) plus the drive time between the two addresses
   minimum_minutes: 30
