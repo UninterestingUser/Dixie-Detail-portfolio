@@ -57,13 +57,23 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Service time.** The time spent working on the vehicle, without setup and breakdown. The price matrix holds one-person service time; two people take 60% of it, rounded to the nearest 15 minutes. The pricing engine returns service time.
 
-**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as motorcycles, and then has a single price per service.
+**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as Motorcycles, and then has a single price per service.
 
 **Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
 
-**Vehicle class.** A group of vehicles that share prices. There are six at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+**Vehicle class.** A group of vehicles that share prices. There are seven at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks; Motorcycles. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
-**Vehicle model.** A make and model a customer picks, such as Toyota RAV4, over a range of model years. A vehicle class applies to a vehicle model. Its vehicle type is "car, truck or van" or "motorcycle"; motorcycles are in the same year, make and model lists but have no vehicle class. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
+**Vehicle model.** A make and model a customer picks, such as Toyota RAV4, over a range of model years. A vehicle class applies to a vehicle model. Its vehicle type is "car, truck or van" or "motorcycle"; motorcycles are in the same year, make and model lists, labeled, and in the Motorcycles class. Each of its model years gets a vehicle class from the classification rules. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
+
+**Classification rule.** One rule of the ordered list that gives a model year its vehicle class: conditions on stored facts, such as "EPA small SUV weighing over 4,500 lb", and the class it gives. The first rule whose conditions all hold wins. See [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
+
+**Model override.** The owner's vehicle class for a vehicle model, or some of its years, which beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. A **vehicle override** is the same for one customer's vehicle, such as a lifted truck, and beats both.
+
+**Photo card.** One card per vehicle class, with a picture and caption, that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are seven.
+
+**Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner adds a rule or a model override. Not the same as the returning-customer match flags.
+
+**Third-row list.** [data/third-row-seating.yaml](../../data/third-row-seating.yaml), the owner-approved list of which crossovers and midsize SUVs have a third row always, optionally or never, by model year. Optional is asked in the booking form.
 
 ## Booking and scheduling terms
 
