@@ -27,7 +27,7 @@ Motorcycles joined the vehicle catalog in Phase 2 Step 1 (decision 0071), shown 
 2. **A classification rule sends every catalog model with vehicle type motorcycle to it.** It is the first launch rule, so no EPA or weight rule can catch a motorcycle.
 3. **One service, Motorcycle Detail,** offered only for Motorcycles and the only service priced for Motorcycles: a flat $100 in the price matrix, with no condition level and no add-ons.
 4. **Its time:** one person, 1 hour of service time, which is 2 hours on site with the 30-minute setup and breakdown (decision 0058).
-5. **Up to two a day,** the same jobs-per-day setting as Monthly Maintenance, in `services_sharing_a_day` in `data/booking-rules.yaml`.
+5. **Up to two a day,** the same jobs-per-day setting as Monthly Maintenance, in `services_sharing_a_day` in `data/booking-rules.yaml`. A Motorcycle Detail and a Monthly Maintenance can share a day (confirmed by the owner on 2026-10-22).
 6. **Sales tax applies as usual,** and the owner, as a manager, is authorized for it like every service (decision 0061).
 
 ## Alternatives considered

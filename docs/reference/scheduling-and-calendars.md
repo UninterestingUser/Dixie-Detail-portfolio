@@ -67,7 +67,7 @@ The availability check assumes one crew working one job at a time. Two crews on 
 
 ## Daily capacity at launch
 
-At launch each day takes one job, whatever its length. The only jobs that can share a day are Monthly Maintenance and Motorcycle Detail jobs, up to two of each service (decision 0072). Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
+At launch each day takes one job, whatever its length. The only jobs that can share a day are Monthly Maintenance and Motorcycle Detail jobs: two Monthly Maintenance, two Motorcycle Detail, or one of each (decision 0072). Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
 
 New patterns need only settings. Afternoon slots: add 13:00 to the start times, set jobs per day to 2 and let the shorter services share a day. Two regular jobs a day: set jobs per day to 2 and let every service share a day.
 
