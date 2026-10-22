@@ -62,6 +62,18 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 **Cause:** the command ran outside `/srv/dixie-detail`.
 **Fix:** `cd /srv/dixie-detail` first, or use the container name with plain `docker`, such as `docker stop dixie-cloudflared-1`.
 
+## Vehicle data import
+
+### import_vehicle_data: "The download cache /srv/vehicle-data (setting VEHICLE_DATA_CACHE_DIR) is missing or cannot be written"
+
+**Cause:** the one-off container was started without the cache folder mounted, or the host folder is not owned by the app container's user (uid 10001). The app container's own file system is read-only.
+**Fix:** create the host folder with `sudo mkdir -p /srv/dixie-vehicle-data && sudo chown 10001:10001 /srv/dixie-vehicle-data`, and start the command with `-v /srv/dixie-vehicle-data:/srv/vehicle-data`, as in [importing-vehicle-data.md](importing-vehicle-data.md).
+
+### The vehicle import rejects rows from a make it was asked for
+
+**Cause:** vPIC and the Canadian specifications match make names loosely and spell some differently. Found on 2026-10-22: asking vPIC for KTM also returns KTMMEX, asking for Indian also returns PERFORMANCE INDIAN, and the Canadian specifications call Ram "RAM TRUCKS", so every Ram row was rejected until `canada.make_names` mapped it.
+**Fix:** check the rejected make. If it belongs, add it to the make's `vpic_names`, or for a Canadian spelling to `canada.make_names`, in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml), merge, deploy and run the import again. The cached files are reused, so nothing is downloaded again.
+
 ## systemd units and timers
 
 ### "Unit dixie-stack.service does not exist" or "cp: cannot stat 'ops/systemd/…'"

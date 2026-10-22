@@ -1,0 +1,72 @@
+meta:
+  title: Vehicle data import
+  summary: What import_vehicle_data asks NHTSA vPIC for (the truck, van and motorcycle makes, the model years) and how politely it asks.
+  updated: 2026-10-22
+  status: current
+  explained_in: docs/operations/importing-vehicle-data.md
+  note: The sources' addresses are in data/integrations.yaml. Edit this file to add a make; the next import picks it up with no code change.
+
+# Model years loaded from every source: from this year to the next model
+# year (this calendar year plus one), because next year's models are on sale
+# from the middle of this one. The EPA's file starts at 1984.
+year_from: 1984
+
+vpic:
+  # Seconds to wait between two vPIC calls, and how a 429 or 5xx answer is
+  # retried: up to `retries` more times, waiting backoff_seconds, then twice
+  # that, and so on (or longer if vPIC's Retry-After header asks for it).
+  pause_seconds: 1
+  retries: 4
+  backoff_seconds: 5
+
+  # Gap fill: the pickups and vans the EPA leaves out, chiefly those over
+  # 8,500 lb GVWR (2500 and 3500 series, Super Duty, Sprinter, Transit,
+  # ProMaster). Each make is asked for every vehicle type below and every
+  # model year. Models the EPA already has are matched to it, not added again.
+  truck_vehicle_types: [truck, multipurpose passenger vehicle (mpv)]
+  # vPIC matches the make name loosely ("indian" also returns "PERFORMANCE
+  # INDIAN"), so each make lists the vPIC make names to accept. Anything else
+  # is listed as rejected in the import's report. `name` is how the make is
+  # written in the catalog when the EPA does not already have it.
+  truck_makes:
+    - {name: Chevrolet, vpic_names: [CHEVROLET]}
+    - {name: Dodge, vpic_names: [DODGE]}
+    - {name: Ford, vpic_names: [FORD]}
+    - {name: GMC, vpic_names: [GMC]}
+    - {name: Mercedes-Benz, vpic_names: [MERCEDES-BENZ]}
+    - {name: Nissan, vpic_names: [NISSAN]}
+    - {name: Ram, vpic_names: [RAM]}
+    - {name: Toyota, vpic_names: [TOYOTA]}
+
+  # Motorcycles, asked for vehicle type motorcycle. Each model is stored with
+  # vehicle type motorcycle and shown in the same year, make and model lists
+  # as cars. Motorcycles have no vehicle class yet (data/vehicle-classes.yaml).
+  motorcycle_makes:
+    - {name: Harley-Davidson, vpic_names: [HARLEY-DAVIDSON]}
+    - {name: Honda, vpic_names: [HONDA]}
+    - {name: Yamaha, vpic_names: [YAMAHA]}
+    - {name: Kawasaki, vpic_names: [KAWASAKI]}
+    - {name: Suzuki, vpic_names: [SUZUKI]}
+    - {name: BMW, vpic_names: [BMW]}
+    - {name: Ducati, vpic_names: [DUCATI]}
+    - {name: Triumph, vpic_names: [TRIUMPH]}
+    # vPIC also lists a make KTMMEX; it is left out until checked.
+    - {name: KTM, vpic_names: [KTM]}
+    - {name: Indian, vpic_names: [INDIAN MOTORCYCLE]}
+    - {name: Aprilia, vpic_names: [APRILIA]}
+    - {name: Moto Guzzi, vpic_names: [MOTO GUZZI]}
+    - {name: Royal Enfield, vpic_names: [ROYAL ENFIELD]}
+    - {name: Husqvarna, vpic_names: [HUSQVARNA]}
+    - {name: Victory, vpic_names: [VICTORY]}
+    - {name: Zero, vpic_names: [ZERO MOTORCYCLES]}
+
+canada:
+  # GetCanadianVehicleSpecifications is asked once per make and model year
+  # the catalog already holds (cars, trucks and vans, not motorcycles), in US
+  # units: pounds and inches. Paced like the other vPIC calls.
+  units: US
+  # Where the Canadian specifications spell a make differently from the
+  # catalog: their name, then the catalog's. Rows from any other make than
+  # the one asked for are listed as rejected.
+  make_names:
+    RAM TRUCKS: Ram

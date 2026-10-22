@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-18
+  updated: 2026-10-22
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -40,7 +40,9 @@ phases:
       - Bitwarden secret DEPLOY_KEY renamed to DEPLOY_SSH_KEY (2026-10-13)
   - number: 2
     name: Vehicle catalog
-    status: next
+    status: in progress
+    built:
+      - "Step 1: vehicle data import (import_vehicle_data) from the EPA, NHTSA vPIC (gap fill and motorcycles) and the Canadian specifications, with facts per model year and source (decision 0071)"
     scope_from_plan_review: [classification rules as data, per-model and per-vehicle overrides, preview before saving, vehicle class settings, vPIC Canadian specifications]
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3

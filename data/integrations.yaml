@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-10-17
+  updated: 2026-10-22
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -33,17 +33,22 @@ services:
     status: In use; two checks
     plan: Free
   - name: EPA FuelEconomy.gov
-    purpose: Year, make, model and size class
+    purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984
     phase: 2
-    status: Not started
+    status: In progress; import_vehicle_data --source epa loads the whole table (Phase 2 Step 1)
+    url: https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip
+    plan: Free, no key
   - name: NHTSA vPIC
-    purpose: Makes and models the EPA leaves out; door and seat data
+    purpose: Makes and models the EPA leaves out (heavy pickups and vans) and motorcycle models, from GetModelsForMakeYear; door and seat data later
     phase: 2
-    status: Not started
+    status: In progress; import_vehicle_data --source vpic, for the makes in data/vehicle-data-import.yaml (Phase 2 Step 1)
+    url: https://vpic.nhtsa.dot.gov/api/vehicles/
+    plan: Free, no key; rate-limited, so the import pauses between calls and retries 429 and 5xx answers
   - name: NHTSA vPIC Canadian vehicle specifications
     purpose: Curb weight, overall length, width, height and wheelbase per trim, for the classification rules (GetCanadianVehicleSpecifications)
     phase: 2
-    status: Not started; checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
+    status: In progress; import_vehicle_data --source canada attaches them to matching catalog models and lists the rest (Phase 2 Step 1). Checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
+    url: https://vpic.nhtsa.dot.gov/api/vehicles/
   - name: Google Workspace Calendar
     purpose: Jobs and Time Off calendars
     phase: 3
