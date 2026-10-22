@@ -2,8 +2,9 @@
 out, and motorcycle models, for the makes in data/vehicle-data-import.yaml.
 
 One call per make, model year and vehicle type. A model the EPA already has
-under another spelling ("F-150" for the EPA's "F150") is matched to it; the
-rest are added with source NHTSA.
+under another spelling ("F-150" for the EPA's "F150", or "GLE-Class" by
+data/vehicle-names.yaml) is matched to it; the rest are added with source
+NHTSA.
 """
 
 import json
@@ -71,6 +72,7 @@ def collect(fetcher, config, report, log):
             if not model:
                 report.reject(f"vPIC {year} {make.name}: a model with no name (model id {result.get('Model_ID')})")
                 continue
+            model = config.names.model(make.name, model)
             facts = found.setdefault((vehicle_type, make.name, model, year), Facts(id_fields=("make_id", "model_id")))
             facts.add("source_vehicle_types", (result.get("VehicleTypeName") or "").strip())
             if result.get("Make_ID") is not None and result.get("Model_ID") is not None:

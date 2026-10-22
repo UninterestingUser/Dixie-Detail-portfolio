@@ -219,6 +219,13 @@ class VehicleModelYear(models.Model):
         help_text="The source's own ids for the rows behind this one: EPA vehicle ids,"
         " vPIC make and model ids, or the Canadian specifications' trim names.",
     )
+    distribution = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="How the source's rows spread across each fact: rows per value for a listed fact,"
+        ' such as {"epa_size_classes": {"Small Sport Utility Vehicle 2WD": 4}}, and each row\'s value'
+        " for a measured one, so a rule can go by what most rows say.",
+    )
     first_seen = models.DateTimeField(default=timezone.now)
     last_seen = models.DateTimeField(default=timezone.now, help_text="The last import that found this row.")
 
@@ -263,6 +270,7 @@ class ClassificationRule(models.Model):
     {"epa_size_class": ["Small Sport Utility Vehicle 4WD"], "curb_weight": {"over": 4500}};
     the facts and their forms are in vehicles.classification.rules.FACTS.
     A saved change takes effect when classify_vehicles next applies the rules.
+    The launch rules come from data/vehicle-classes.yaml (classification.seed).
     """
 
     position = models.PositiveSmallIntegerField(help_text="Rules are tried from the lowest position up.")
@@ -271,6 +279,10 @@ class ClassificationRule(models.Model):
     vehicle_class = models.ForeignKey(VehicleClass, on_delete=models.PROTECT, related_name="+")
     active = models.BooleanField(default=True)
     note = models.TextField(blank=True)
+    # A launch rule's entry in data/vehicle-classes.yaml as it was last
+    # applied, so classify_vehicles keeps an unedited launch rule in step
+    # with the file. Empty for the owner's own rules.
+    seeded_from = models.JSONField(null=True, blank=True, editable=False)
 
     history = HistoricalRecords()
 
@@ -309,6 +321,8 @@ class ModelOverride(models.Model):
     )
     set_at = models.DateTimeField(default=timezone.now)
     note = models.TextField(blank=True)
+    # As for ClassificationRule: the launch override's entry as last applied.
+    seeded_from = models.JSONField(null=True, blank=True, editable=False)
 
     history = HistoricalRecords()
 

@@ -44,6 +44,7 @@ phases:
     built:
       - "Step 1: vehicle data import (import_vehicle_data) from the EPA, NHTSA vPIC (gap fill and motorcycles) and the Canadian specifications, with facts per model year and source (decision 0071)"
       - "Step 2: classification (classify_vehicles and the classify() lookup): ordered rules and per-model and per-vehicle overrides applied per model year, size variants by doors, cab style and the third-row list, the preview and the review queue; the Motorcycles class with Motorcycle Detail at $100 (decisions 0072 and 0073)"
+      - "Step 2 follow-up: nameplates and one name per vehicle (data/vehicle-names.yaml), the full-size SUV overrides, the three-row rule, decisions by a two-thirds majority of rows, narrowed heavy-pickup and older-SUV rules, and launch rules that follow the data file (decision 0074)"
     scope_from_plan_review: [classification rules as data, per-model and per-vehicle overrides, preview before saving, vehicle class settings, vPIC Canadian specifications]
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3

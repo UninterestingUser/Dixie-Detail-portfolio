@@ -4,7 +4,7 @@ meta:
   updated: 2026-10-22
   status: current
   explained_in: docs/operations/importing-vehicle-data.md
-  note: The sources' addresses are in data/integrations.yaml. Edit this file to add a make; the next import picks it up with no code change.
+  note: The sources' addresses are in data/integrations.yaml, and the names customers know, with each source's other spellings, in data/vehicle-names.yaml. Edit this file to add a make; the next import picks it up with no code change.
 
 # Model years loaded from every source: from this year to the next model
 # year (this calendar year plus one), because next year's models are on sale
@@ -66,7 +66,6 @@ canada:
   # units: pounds and inches. Paced like the other vPIC calls.
   units: US
   # Where the Canadian specifications spell a make differently from the
-  # catalog: their name, then the catalog's. Rows from any other make than
-  # the one asked for are listed as rejected.
-  make_names:
-    RAM TRUCKS: Ram
+  # catalog, such as RAM TRUCKS for Ram, is in data/vehicle-names.yaml
+  # (make_aliases). Rows from any other make than the one asked for are
+  # listed as rejected.
