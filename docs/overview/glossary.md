@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -62,6 +62,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 **Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
 
 **Vehicle class.** A group of vehicles that share prices. There are six at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+
+**Vehicle model.** A make and model a customer picks, such as Toyota RAV4, over a range of model years. A vehicle class applies to a vehicle model. Its vehicle type is "car, truck or van" or "motorcycle"; motorcycles are in the same year, make and model lists but have no vehicle class. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
 
 ## Booking and scheduling terms
 
@@ -160,6 +162,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 **Healthchecks check.** A monitor on Healthchecks.io that emails the owner when the server stops checking in.
 
 **Machine account.** The Bitwarden Secrets Manager identity the server uses to read secrets. Its access token is the one secret the server stores, encrypted.
+
+**Model-year facts.** One source's facts about one model year of a vehicle model, such as the EPA's size classes and volumes for the 2019 Toyota RAV4, kept as lists and as lowest and highest values across the source's rows. Each source, and the owner, has its own record. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
 
 **Private door.** The control app's entrance: Caddy on 127.0.0.1:8000, published to the tailnet with `tailscale serve`.
 

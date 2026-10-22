@@ -1,0 +1,4 @@
+{"Count":3,"Message":"Results returned successfully","SearchCriteria":"Make:Harley-Davidson | ModelYear:2019 | VehicleType:motorcycle","Results":[
+{"Make_ID":3888,"Make_Name":"HARLEY-DAVIDSON","Model_ID":8502,"Model_Name":"Fat Boy","VehicleTypeId":1,"VehicleTypeName":"Motorcycle"},
+{"Make_ID":3888,"Make_Name":"HARLEY-DAVIDSON","Model_ID":8515,"Model_Name":"Street Glide","VehicleTypeId":1,"VehicleTypeName":"Motorcycle"},
+{"Make_ID":9999,"Make_Name":"HARLEY-DAVIDSON CUSTOM SAMPLE","Model_ID":99001,"Model_Name":"Sample Chopper","VehicleTypeId":1,"VehicleTypeName":"Motorcycle"}]}

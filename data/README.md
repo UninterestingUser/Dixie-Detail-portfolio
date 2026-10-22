@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-10-22
 ---
 
 # Data files
@@ -18,6 +18,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels, maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Seed for pricebook settings |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The six vehicle classes, their size variants and settings, and the classification rules design | Seed and reference |
 | [booking-rules.yaml](booking-rules.yaml) | Launch values of the scheduling settings: open days, hours, start times, notice, setup and breakdown, capacity, gaps, calendar sync timing, alert timing | Seed for scheduling settings |
+| [vehicle-data-import.yaml](vehicle-data-import.yaml) | The truck, van and motorcycle makes the vehicle data import asks vPIC for, the model years, the pacing, and Canadian make names | Read by `import_vehicle_data` |
 | [service-area.yaml](service-area.yaml) | Counties, out-of-area policy, tax sourcing | Seed and reference |
 | [configuration.yaml](configuration.yaml) | Every setting and secret name | Reference; kept in step with `.env.example` |
 | [integrations.yaml](integrations.yaml) | Outside services and their status | Reference |
