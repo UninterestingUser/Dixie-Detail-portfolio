@@ -7,9 +7,9 @@ meta:
   note: >-
     The launch set. In the database, vehicle classes and their size variants are records the owner
     can add, rename or retire without a code change (docs/architecture/data-model.md); load_pricebook
-    creates the classes and their settings from this file. classify_vehicles seeds the launch rules
-    and model overrides from this file on its first run; after that the live rules and overrides are
-    in the database, edited by the owner, and this file is updated when the launch set changes.
+    creates the classes and their settings from this file. classify_vehicles creates the launch rules
+    and model overrides from this file and keeps each in step with it, except those the owner has
+    edited or deleted in the database; the owner's own rules and overrides are never touched.
 
 classes:
   - name: Coupes & Sedans
@@ -50,7 +50,7 @@ classes:
     photo_card: Full-size SUVs, minivans and vans
     customer_asked: Never
     epa_size_classes: minivans and vans
-    overrides_in: [Chevrolet Suburban, Ford Expedition, Toyota Sequoia]
+    overrides_in: [Chevrolet Suburban and Suburban HD, Chevrolet Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Jeep Wagoneer, Jeep Grand Wagoneer (from 2022), Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia]
   - name: Fullsize Trucks
     size_variant_measures: cab style
     size_variants: {1: regular cab, 2: extended or crew cab}
@@ -72,12 +72,20 @@ class_settings:            # decision 0060; on each vehicle class record, edited
   booking: [online, ask for a quote]
   photo_card: the caption of the class's card, shown when a vehicle is not in the catalog
 
+# How a rule's condition is decided when a model year's rows (the EPA's
+# engines and transmissions, the Canadian trims) disagree: by what at least
+# this share of them say. Below it either way, the model year waits in the
+# review queue with the split. 1 would need every row to agree.
+rule_settings:
+  majority_share: "2/3"
+
 # The launch rules, tried in this order; the first whose conditions all hold
 # gives the class (decision 0060). The facts a condition can test and their
 # forms are in docs/reference/vehicle-classification.md. "none" matches a
 # model year that no source gives a value for, such as a vPIC truck the EPA
 # does not list. Weights are curb weights in pounds and lengths are in inches,
-# from the Canadian specifications.
+# from the Canadian specifications. classify_vehicles keeps each launch rule
+# in step with this file unless the owner has edited or deleted it.
 launch_rules:
   - name: Motorcycles
     class: Motorcycles
@@ -92,10 +100,20 @@ launch_rules:
       A model name matches when the catalog name is it or begins with it, so ProMaster covers ProMaster 2500.
   - name: Heavy pickups the EPA leaves out
     class: Fullsize Trucks
-    conditions: {epa_size_class: [none], source_vehicle_type: [Truck]}
+    conditions:
+      epa_size_class: [none]
+      source_vehicle_type: [Truck]
+      # The heavy-duty series a model's name contains, as whole words.
+      model_word: [HD, Super Duty, "2500", "3500", "4500", "5500", 2500HD, 3500HD, C2500, K2500, C3500, K3500,
+                   F-250, F-350, F-450, F-550, F-600, F-650, F-750]
     note: >-
       The 2500 and 3500 series, Super Duty and HD pickups from NHTSA vPIC. Trucks above the 350 series
-      stay here until an Oversized Vans & Trucks class exists.
+      stay here until an Oversized Vans & Trucks class exists. Light trucks the EPA leaves out in some
+      years, such as the Dakota, are not caught and wait in the review queue.
+  - name: Heavy pickups over 8,500 lb GVWR the EPA leaves out
+    class: Fullsize Trucks
+    conditions: {epa_size_class: [none], source_vehicle_type: [Truck], gvwr: {over: 8500}}
+    note: No source gives GVWR yet; the owner's own figures can.
   - name: Minivans the EPA lists as station wagons or special purpose vehicles
     class: Fullsize SUVs & Minivans
     conditions:
@@ -108,7 +126,20 @@ launch_rules:
     conditions:
       epa_size_class: [Standard Sport Utility Vehicle 2WD, Standard Sport Utility Vehicle 4WD]
       length: {over: 215}
-    note: Extended-length SUVs such as the Yukon XL, Escalade ESV and Expedition MAX, alongside the Suburban override.
+    note: Extended-length SUVs, alongside the model overrides for the Suburban, Yukon XL, Escalade ESV and others.
+  - name: Three-row SUVs
+    class: Midsize SUVs
+    conditions:
+      seat_rows: [3]
+      epa_size_class: [Small Sport Utility Vehicle 2WD, Small Sport Utility Vehicle 4WD,
+                       Standard Sport Utility Vehicle 2WD, Standard Sport Utility Vehicle 4WD,
+                       Sport Utility Vehicle - 2WD, Sport Utility Vehicle - 4WD, Special Purpose Vehicle,
+                       Special Purpose Vehicle 2WD, Special Purpose Vehicle 4WD, Special Purpose Vehicles,
+                       Special Purpose Vehicles/2wd, Special Purpose Vehicles/4wd]
+    note: >-
+      A model year the third-row list marks "always", in any SUV class, is a three-row Midsize SUV, so
+      models such as the Highlander, Pilot and Telluride keep one price whether the EPA calls a year
+      small or standard. Minivans and models with an override are not affected.
   - name: Small SUVs over 4,500 lb
     class: Midsize SUVs
     conditions:
@@ -117,17 +148,33 @@ launch_rules:
   - name: Older SUVs over 4,500 lb
     class: Midsize SUVs
     conditions:
-      epa_size_class: &older_suvs [Sport Utility Vehicle - 2WD, Sport Utility Vehicle - 4WD, Special Purpose Vehicle,
-                                   Special Purpose Vehicle 2WD, Special Purpose Vehicle 4WD, Special Purpose Vehicles,
-                                   Special Purpose Vehicles/2wd, Special Purpose Vehicles/4wd]
+      epa_size_class: &sport_utility [Sport Utility Vehicle - 2WD, Sport Utility Vehicle - 4WD]
+      year: {to: 2012}
       curb_weight: {over: 4500}
-    note: Before 2013 the EPA does not split SUVs into small and standard, so their curb weight decides.
+    note: From 1999 to 2012 the EPA does not split SUVs into small and standard, so their curb weight decides.
   - name: Older SUVs up to 4,500 lb
     class: Crossovers & Wagons
     conditions:
-      epa_size_class: *older_suvs
+      epa_size_class: *sport_utility
+      year: {to: 2012}
       curb_weight: {up_to: 4500}
     note: An older SUV with no curb weight matches neither rule and waits in the review queue.
+  - name: Special purpose SUVs over 4,500 lb
+    class: Midsize SUVs
+    conditions:
+      epa_size_class: &special_purpose [Special Purpose Vehicle, Special Purpose Vehicle 2WD, Special Purpose Vehicle 4WD,
+                                        Special Purpose Vehicles, Special Purpose Vehicles/2wd, Special Purpose Vehicles/4wd]
+      year: {to: 2009}
+      curb_weight: {over: 4500}
+    note: >-
+      Until 1998, and in a few later years, the EPA lists SUVs as special purpose vehicles. From 2010 it uses
+      the class for vans, some pickup trims and a few crossovers, so the rule stops at 2009.
+  - name: Special purpose SUVs up to 4,500 lb
+    class: Crossovers & Wagons
+    conditions:
+      epa_size_class: *special_purpose
+      year: {to: 2009}
+      curb_weight: {up_to: 4500}
   - name: EPA car classes
     class: Coupes & Sedans
     conditions:
@@ -155,20 +202,39 @@ launch_rules:
       epa_size_class: [Standard Pickup Trucks, Standard Pickup Trucks 2WD, Standard Pickup Trucks 4WD,
                        Standard Pickup Trucks/2wd]
 
-# The launch model overrides, which beat every rule (decision 0060).
+# The launch model overrides, which beat every rule (decision 0060). A model
+# is matched by the names in data/vehicle-names.yaml. year_from and year_to,
+# when given, limit an override to those model years.
 model_overrides:
   - {make: Jeep, model: Wrangler, class: Light Pickups & Offroad, note: "Priced with the light pickups, by cab style"}
   - {make: Chevrolet, model: Suburban, class: Fullsize SUVs & Minivans, note: "The EPA lists it as a standard SUV"}
   - {make: Ford, model: Expedition, class: Fullsize SUVs & Minivans, note: "The EPA lists it as a standard SUV"}
   - {make: Toyota, model: Sequoia, class: Fullsize SUVs & Minivans, note: "The EPA lists it as a standard SUV"}
+  # Full-size SUVs priced with the Suburban.
+  - {make: Chevrolet, model: Tahoe, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Chevrolet, model: Suburban HD, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: GMC, model: Yukon, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: GMC, model: Yukon XL, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Cadillac, model: Escalade, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Cadillac, model: Escalade ESV, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Lincoln, model: Navigator, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Lincoln, model: Navigator L, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Nissan, model: Armada, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Infiniti, model: QX56, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Infiniti, model: QX80, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Jeep, model: Wagoneer, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Jeep, model: Grand Wagoneer, year_from: 2022, class: Fullsize SUVs & Minivans,
+     note: "Full-size SUV from 2022, priced with the Suburban; the 1984 to 1991 Grand Wagoneer is a different vehicle"}
+  - {make: Ford, model: Expedition MAX, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Ford, model: Expedition EL, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
 
 classification:            # decision 0060; built in Phase 2 Step 2 (decision 0073)
   method: ordered list of owner-editable rules on stored facts; the first match wins
   stored: per model year, by classify_vehicles
-  facts: [vehicle type, make, model, model year, EPA size class, drive, body style, cab style, seat rows, vPIC vehicle type, GVWR, curb weight, length, width, height, wheelbase, passenger volume, luggage volume]
+  facts: [vehicle type, make, model, model name words, model year, EPA size class, drive, body style, cab style, seat rows, vPIC vehicle type, GVWR, curb weight, length, width, height, wheelbase, passenger volume, luggage volume]
   example_rule: "EPA small SUV weighing over 4,500 lb -> Midsize SUVs"
   overrides: [per model (beats every rule), per vehicle (one customer's lifted or modified vehicle; beats both)]
-  review_queue: [no rule matches, sources disagree on a fact a rule tests, the trims straddle a rule's condition]
+  review_queue: [no rule matches, sources disagree on a fact a rule tests, no clear majority of a model year's rows on a rule's condition (rule_settings.majority_share)]
   rule_change: previewed with every model year that would change class or size (classify_vehicles --dry-run); applies to new quotes only
   booking_input: year, make and model (VINs are not used for pricing)
   third_row_seating: data/third-row-seating.yaml first, then NHTSA where it has data; optional or unknown is asked

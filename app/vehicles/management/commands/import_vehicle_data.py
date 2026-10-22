@@ -22,7 +22,7 @@ from vehicles.vehicle_data.run import SOURCES, run
 COUNTS = (
     "models added", "models changed", "models unchanged",
     "model years added", "model years changed", "model years unchanged",
-    "owner's models: facts recorded, model left alone",
+    "owner's models: facts recorded, model left alone", "model years moved to another model",
     "files downloaded", "files from the cache",
 )
 
@@ -71,6 +71,8 @@ class Command(BaseCommand):
             if report.message:
                 write(f"  Stopped: {report.message}")
             sections = (
+                ("Base models split into nameplates", report.split),
+                ("Models merged or renamed: one vehicle, one name", report.merged),
                 ("Models added", report.added_models),
                 ("Canadian rows not matched to a model, left for the owner", report.unmatched),
                 ("Rejected", report.rejected),

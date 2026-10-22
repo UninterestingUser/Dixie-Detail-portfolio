@@ -6,7 +6,7 @@ visibility: restricted
 status: current
 updated: 2026-10-22
 tags: [operations, import, vehicles, epa, vpic, phase-2]
-related: [docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
+related: [docs/reference/vehicle-catalog.md, data/vehicle-names.yaml, docs/operations/classifying-vehicles.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
 ---
 
 # Importing the vehicle data
@@ -59,7 +59,10 @@ The report has one section per source:
 - **Models added, changed and unchanged.** A model is changed when one of its model years from this source was added or changed, or its year range moved.
 - **Model years added, changed and unchanged.** A model year is the source's facts about one model in one year.
 - **Owner's models: facts recorded, model left alone.** Models with source "owner" that the source also lists. Their name and years are never changed.
+- **Model years moved to another model:** a model year that a nameplate split moved, such as a Santa Fe Sport year once filed under the Santa Fe.
 - **Files downloaded and from the cache.**
+- **Base models split into nameplates** (EPA only): every EPA base model split by [data/vehicle-names.yaml](../../data/vehicle-names.yaml), with the years of each nameplate, such as "Hyundai Santa Fe: Santa Fe Sport (2013-2018), Santa Fe XL (2019-2019) split out".
+- **Models merged or renamed:** every catalog model folded into another because the names file says they are one vehicle, such as "merged Mercedes-Benz EQB-Class (2024-2024, NHTSA) into Mercedes-Benz EQB", and every model renamed to the name customers know. Two owner records for the same model year cannot be merged; that model is listed as left for the owner.
 - **Models added** (vPIC only): every pickup, van and motorcycle model vPIC added that the EPA does not have. Some are commercial trucks or an EPA model under another name; the classification review queue holds those no rule settles ([classifying-vehicles.md](classifying-vehicles.md)).
 - **Canadian rows not matched to a model, left for the owner.** Each row, with the reason: no catalog model begins the name, two match equally, or the name goes on with a series number such as 2500HD. These are listed, not guessed.
 - **Rejected.** Rows that could not be used, with the reason: an EPA row with no model year, a vPIC make not in the list for the make asked for, or a Canadian row with no weight or dimensions.
@@ -80,7 +83,16 @@ Each run of each source, dry or real, is recorded with its start, end, counts an
 
 ## Adding a make or a vPIC make name
 
-The makes vPIC is asked for are listed in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml), each with the vPIC make names to accept, because vPIC matches names loosely: asking for "indian" also returns "PERFORMANCE INDIAN". When the report rejects a vPIC make that belongs, such as KTMMEX for KTM, add it to that make's `vpic_names`. When the Canadian specifications spell a make differently from the catalog, as they write "RAM TRUCKS" for Ram, add it under `canada.make_names`. Either change goes in a pull request; the next run picks it up with no code change.
+The makes vPIC is asked for are listed in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml), each with the vPIC make names to accept, because vPIC matches names loosely: asking for "indian" also returns "PERFORMANCE INDIAN". When the report rejects a vPIC make that belongs, such as KTMMEX for KTM, add it to that make's `vpic_names`. When the Canadian specifications spell a make differently from the catalog, as they write "RAM TRUCKS" for Ram, add it under `make_aliases` in [data/vehicle-names.yaml](../../data/vehicle-names.yaml). Either change goes in a pull request; the next run picks it up with no code change.
+
+## Adding a nameplate or a spelling
+
+[data/vehicle-names.yaml](../../data/vehicle-names.yaml) holds the names customers know ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md#names-customers-know)):
+
+- **A nameplate** splits an EPA base model, such as the Santa Fe Sport out of the Santa Fe: under `nameplates`, the make, the EPA base model, and each nameplate with the phrases its EPA model names contain.
+- **An alias** joins another spelling of one vehicle to the name shown, such as "GLE-Class" to "GLE": under `aliases`, the make, the name and the other spellings. Spellings that differ only in spaces, hyphens or capitals are already the same name.
+
+After the change is deployed, run the import (from the cache, with no `--refresh`); its report lists each split, merge and rename. Then run `classify_vehicles`.
 
 ## Rerunning with fresh data
 

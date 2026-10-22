@@ -69,6 +69,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Model override.** The owner's vehicle class for a vehicle model, or some of its years, which beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. A **vehicle override** is the same for one customer's vehicle, such as a lifted truck, and beats both.
 
+**Nameplate.** A vehicle customers know by its own name, such as the Santa Fe Sport, that the EPA files under another base model, such as the Santa Fe. The catalog splits these out with [data/vehicle-names.yaml](../../data/vehicle-names.yaml), which also lists the other spellings of one vehicle, such as "GLE-Class" for the GLE.
+
 **Photo card.** One card per vehicle class, with a picture and caption, that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are seven.
 
 **Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner adds a rule or a model override. Not the same as the returning-customer match flags.

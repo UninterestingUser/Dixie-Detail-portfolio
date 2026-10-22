@@ -3,21 +3,21 @@ vehicle catalog (docs/reference/vehicle-classification.md).
 
   python manage.py classify_vehicles [--dry-run]
 
-First it seeds the launch rules and model overrides from
-data/vehicle-classes.yaml if there are no rules yet, and loads the
-third-row list, data/third-row-seating.yaml. With --dry-run it prints the
+First it brings the launch rules and model overrides in step with
+data/vehicle-classes.yaml (leaving alone any the owner edited or deleted)
+and loads the third-row list, data/third-row-seating.yaml. With --dry-run it prints the
 preview, every model year whose class or size would change or that would
 enter or leave the review queue, and changes nothing. It never changes a
 model override, a customer's vehicle, or anything with source "owner".
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from vehicles.classification.engine import apply, changes, classify_catalog
-from vehicles.classification.seed import SeedError, SeedReport, seed_launch_set, sync_seat_list
+from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
 from vehicles.models import VehicleModel
 
 
@@ -59,7 +59,7 @@ class Command(BaseCommand):
         seeded = SeedReport()
         with transaction.atomic():
             try:
-                seed_launch_set(seeded)
+                sync_launch_set(seeded)
                 sync_seat_list(seeded)
             except SeedError as error:
                 raise CommandError(str(error)) from error
@@ -73,10 +73,11 @@ class Command(BaseCommand):
     def print_report(self, dry_run, seeded, results, found, counts):
         write = self.stdout.write
         write("DRY RUN: nothing was changed. Run again without --dry-run to apply it." if dry_run else "APPLIED: the classifications were saved.")
-        if seeded.rules_seeded:
-            write(f"\nLaunch set seeded from data/vehicle-classes.yaml: {seeded.rules_seeded} rules, {seeded.overrides_seeded} model overrides")
-            for line in seeded.unmatched_overrides:
-                write(f"  Override not seeded: {line}")
+        write(f"\nLaunch rules and overrides (data/vehicle-classes.yaml): {len(seeded.launch_set):,} changes")
+        for line in seeded.launch_set:
+            write(f"  {line}")
+        for line in seeded.unmatched_overrides:
+            write(f"  Override not applied: {line}")
 
         write("\nThird-row seating list (data/third-row-seating.yaml)")
         for name in ("model years added", "model years changed", "model years unchanged", "model years removed"):
@@ -95,6 +96,21 @@ class Command(BaseCommand):
             for name, count in counts.items():
                 write(f"  {name}: {count:,}")
 
+        write("\nModel years by class and size (classified ones; the review queue is listed below)")
+        by_class = Counter()
+        by_size = Counter()
+        for _, result in results.values():
+            if result.in_review:
+                continue
+            by_class[result.vehicle_class.name, result.vehicle_class.sort_order] += 1
+            size = "ask" if result.ask_size else (result.size_variant.label if result.size_variant else "one price")
+            by_size[result.vehicle_class.name, size] += 1
+        for (name, _), count in sorted(by_class.items(), key=lambda item: item[0][1]):
+            write(f"  {name}: {count:,}")
+            for (class_name, size), sized in sorted(by_size.items()):
+                if class_name == name:
+                    write(f"    {size}: {sized:,}")
+
         rows = []
         for change in found:
             detail = f"{describe(change.old_class, change.old_size)} -> {describe(change.new_class, change.new_size)}"
@@ -105,6 +121,21 @@ class Command(BaseCommand):
             rows.append((change.vehicle_model, change.year, f"{detail} ({change.because})"))
         write(f"\n{'Would change' if dry_run else 'Changed'} ({len(found):,} model years)")
         for line in spans(rows):
+            write(f"  {line}")
+
+        classes = defaultdict(list)
+        for model_year, result in results.values():
+            if not result.in_review:
+                classes[model_year.vehicle_model.pk].append((model_year.year, result.vehicle_class.name, model_year.vehicle_model))
+        mixed = []
+        for found in classes.values():
+            if len({name for _, name, _ in found}) > 1:
+                vehicle_model = found[0][2]
+                prefix = f"{vehicle_model.make} {vehicle_model.model} "
+                parts = [line[len(prefix):] for line in spans([(model, year, name) for year, name, model in found])]
+                mixed.append(f"{prefix.strip()}: " + "; ".join(parts))
+        write(f"\nModels whose years are in different classes, for the owner to look at ({len(mixed):,})")
+        for line in sorted(mixed):
             write(f"  {line}")
 
         waiting = [

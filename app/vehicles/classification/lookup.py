@@ -12,7 +12,7 @@ active vehicle class.
 from dataclasses import dataclass, field
 
 from vehicles.models import ModelYearClassification, VehicleClass, VehicleModel
-from vehicles.vehicle_data.catalog import name_key
+from vehicles.vehicle_data.names import load_names
 
 from .seed import read_data
 
@@ -97,20 +97,21 @@ def photo_cards():
 
 
 def find_model(year, make, model, vehicle_type=None):
-    """The catalog model of this make and name whose years hold the year. A
-    car is preferred to a motorcycle of the same name unless vehicle_type says."""
-    candidates = VehicleModel.objects.filter(make__iexact=make.strip())
-    if not candidates.exists():
-        make_key = name_key(make)
-        spellings = {found for found in VehicleModel.objects.values_list("make", flat=True).distinct() if name_key(found) == make_key}
-        candidates = VehicleModel.objects.filter(make__in=spellings)
+    """The catalog model of this make and name whose years hold the year,
+    matched by the names in data/vehicle-names.yaml, so "GLE-Class" finds the
+    GLE. A car is preferred to a motorcycle of the same name unless
+    vehicle_type says. Matching a customer's vehicle to the catalog uses this too."""
+    names = load_names()
+    make_key = names.make_key(make)
+    spellings = {found for found in VehicleModel.objects.values_list("make", flat=True).distinct() if names.make_key(found) == make_key}
+    candidates = VehicleModel.objects.filter(make__in=spellings)
     if vehicle_type:
         candidates = candidates.filter(vehicle_type=vehicle_type)
-    model_key = name_key(model)
+    model_key = names.model_key(make, model)
     found = [
         vehicle_model
         for vehicle_model in candidates
-        if name_key(vehicle_model.model) == model_key
+        if names.model_key(vehicle_model.make, vehicle_model.model) == model_key
         and (vehicle_model.year_from or year) <= year <= (vehicle_model.year_to or year)
     ]
     found.sort(key=lambda vehicle_model: (vehicle_model.vehicle_type != VehicleModel.VehicleType.VEHICLE, vehicle_model.pk))

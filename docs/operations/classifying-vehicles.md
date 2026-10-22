@@ -6,7 +6,7 @@ visibility: restricted
 status: current
 updated: 2026-10-22
 tags: [operations, vehicles, classification, phase-2]
-related: [docs/reference/vehicle-classification.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
+related: [docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
 ---
 
 # Classifying the vehicle catalog
@@ -17,9 +17,9 @@ The `classify_vehicles` command applies the classification rules and overrides t
 python manage.py classify_vehicles [--dry-run]
 ```
 
-Each run first loads the third-row list, [data/third-row-seating.yaml](../../data/third-row-seating.yaml). The first run also seeds the launch rules and model overrides from [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml); later runs leave the rules and overrides in the database as they are. `--dry-run` does all of it inside a transaction that is rolled back, and prints the preview.
+Each run first brings the launch rules and model overrides in step with [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml): it adds a new entry, updates one you have not edited, and removes one taken out of the file. One you edited or deleted in the database is left alone, and your own rules and overrides are never touched. Then it loads the third-row list, [data/third-row-seating.yaml](../../data/third-row-seating.yaml). `--dry-run` does all of it inside a transaction that is rolled back, and prints the preview.
 
-It never changes a model override, a customer's vehicle, or anything with source "owner".
+It never changes an override you set or edited, a customer's vehicle, or anything with source "owner".
 
 ## Before the first run
 
@@ -43,11 +43,13 @@ sudo docker compose run --rm --no-deps app python manage.py classify_vehicles --
 
 ## Step 2: Read the report
 
-- **Launch set seeded** (first run only): how many rules and model overrides, and any override whose model is not in the catalog.
+- **Launch rules and overrides:** each rule or override added, updated or removed to follow the file, each one kept because you edited or deleted it, and any override whose model is not in the catalog.
 - **Third-row seating list:** model years added, changed, unchanged and removed, and the rows not matched to the catalog, each with the reason. These are left for the owner, not guessed.
 - **Model years:** how many are classified by a rule, by a model override, and wait in the review queue, and how many ask the customer the size.
+- **Model years by class and size:** the classified model years in each vehicle class, and within it by size variant or "ask".
 - **Would change:** every model year whose class or size would change, or that would enter or leave the review queue, joined into year ranges, with the old and new values and the rule or override responsible. On the first run that is every model year.
-- **Waiting in the review queue:** each model year no rule settles, with the reason: no rule matches, its trims straddle a rule's condition, or its sources disagree.
+- **Models whose years are in different classes:** each model with its year ranges and their classes, such as "Toyota Highlander: 2013: Crossovers & Wagons; 2014-2026: Midsize SUVs", for you to look at when the job history is checked (Phase 2 Step 4).
+- **Waiting in the review queue:** each model year no rule settles, with the reason: no rule matches, its rows have no clear majority on a rule's condition (the split is shown, such as "3 of 6 rows (50%) meet it"), or its sources disagree.
 
 ## Step 3: Apply
 
