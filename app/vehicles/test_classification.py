@@ -280,12 +280,12 @@ class ReviewQueueTests(ClassificationTestCase):
         result = self.result(straddler)
         self.assertTrue(result.in_review)
         self.assertEqual(result.rule, self.heavy)
-        self.assertIn("straddle the curb weight condition", result.reasons[0])
+        self.assertIn("split on the curb weight condition: its range, 4300 to 4700, spans it", result.reasons[0])
 
     def test_trims_straddle_two_epa_size_classes(self):
         bronco = add_model("Ford", "Bronco")
         add_facts(bronco, epa_size_classes=["Small Sport Utility Vehicle 4WD", "Standard Sport Utility Vehicle 4WD"])
-        self.assertIn("straddle the EPA size class condition", self.result(bronco).reasons[0])
+        self.assertIn("split on the EPA size class condition: 1 of 2 rows (50%) meet it", self.result(bronco).reasons[0])
 
     def test_two_sources_disagree_on_a_fact_a_rule_uses(self):
         disputed = add_model("Test", "Disputed")
@@ -489,18 +489,20 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
     def test_a_dry_run_prints_the_preview_and_changes_nothing(self):
         output = self.command("--dry-run")
         self.assertIn("DRY RUN", output)
-        self.assertIn("Toyota RAV4 2019: no class -> Crossovers & Wagons (two rows) (rule 100: EPA small SUVs and station wagons)", output)
+        self.assertIn("Toyota RAV4 2019: no class -> Crossovers & Wagons (two rows) (rule 140: EPA small SUVs and station wagons)", output)
         self.assertFalse(ModelYearClassification.objects.exists())
         self.assertFalse(ClassificationRule.objects.exists())
         self.assertFalse(VehicleModelYear.objects.filter(source=Source.SEAT_LIST).exists())
 
-    def test_a_rerun_changes_nothing_and_seeds_only_once(self):
+    def test_a_rerun_changes_nothing_and_a_deleted_launch_rule_is_not_added_again(self):
         self.command()
         rules = ClassificationRule.objects.count()
         self.assertEqual(rules, len(read_data("vehicle-classes.yaml")["launch_rules"]))
+        self.assertIn("Launch rules and overrides (data/vehicle-classes.yaml): 0 changes", self.command("--dry-run"))
         ClassificationRule.objects.filter(name="Motorcycles").delete()
         output = self.command()
         self.assertEqual(ClassificationRule.objects.count(), rules - 1)
+        self.assertIn("not added again: launch rule Motorcycles, which you deleted", output)
         self.assertIn("Fat Boy 2019: Motorcycles (one price) -> Motorcycles (one price), enters the review queue", output)
 
     def test_it_never_changes_an_override_a_customer_vehicle_or_an_owner_record(self):
@@ -541,6 +543,7 @@ class ThirdRowListTests(ClassificationTestCase):
         self.data = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.data)
         shutil.copy(settings.DATA_DIR / "vehicle-data-import.yaml", self.data)
+        shutil.copy(settings.DATA_DIR / "vehicle-names.yaml", self.data)
         self.highlander = add_model("Toyota", "Highlander", year_from=2012, year_to=2014)
         for year in (2012, 2013, 2014):
             add_facts(self.highlander, year=year, epa_size_classes=SMALL_SUVS)

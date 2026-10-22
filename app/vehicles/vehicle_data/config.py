@@ -1,12 +1,15 @@
 """The import's settings, read from data/: the sources' addresses from
-integrations.yaml and the makes, model years and pacing from
-vehicle-data-import.yaml."""
+integrations.yaml, the makes, model years and pacing from
+vehicle-data-import.yaml, and the names customers know from
+vehicle-names.yaml."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 from django.conf import settings
 from django.utils import timezone
+
+from .names import Names, load_names
 
 EPA = "EPA FuelEconomy.gov"
 VPIC = "NHTSA vPIC"
@@ -36,7 +39,7 @@ class Config:
     truck_makes: tuple
     motorcycle_makes: tuple
     canada_units: str
-    canada_make_names: dict
+    names: Names = field(default_factory=Names)
 
     @property
     def years(self):
@@ -70,5 +73,5 @@ def load_config(data_dir=None, today=None):
         truck_makes=query_makes(vpic["truck_makes"]),
         motorcycle_makes=query_makes(vpic["motorcycle_makes"]),
         canada_units=rules["canada"]["units"],
-        canada_make_names=dict(rules["canada"].get("make_names") or {}),
+        names=load_names(data_dir),
     )

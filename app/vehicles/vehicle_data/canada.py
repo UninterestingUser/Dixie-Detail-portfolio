@@ -21,6 +21,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from vehicles.models import VehicleModel, VehicleModelYear
 
 from .catalog import name_key
+from .names import Names, words
 from .facts import Facts
 from .fetch import slug
 from .vpic import PACE, check_results
@@ -47,12 +48,6 @@ BEFORE_CAB = {
 def spec_url(base, year, make, units):
     make = urllib.parse.quote(make, safe="")
     return f"{base}GetCanadianVehicleSpecifications/?year={year}&make={make}&model=&units={units}&format=json"
-
-
-def words(name):
-    """A model name as words of capitals and digits: "CR-V EX/L" ->
-    ["CRV", "EX", "L"]."""
-    return [word for word in (name_key(part) for part in re.split(r"[\s/]+", name)) if word]
 
 
 def cab_style(trim):
@@ -137,10 +132,10 @@ def match(options, trim):
     return model_id, None
 
 
-def facts_by_model_year(rows, report, make_names=None):
-    """make_names maps a Canadian make name to the catalog's, such as RAM
-    TRUCKS to Ram (data/vehicle-data-import.yaml)."""
-    make_names = {name_key(canadian): name_key(make) for canadian, make in (make_names or {}).items()}
+def facts_by_model_year(rows, report, names=None):
+    """names spells a Canadian make the catalog's way, such as RAM TRUCKS as
+    Ram (data/vehicle-names.yaml)."""
+    names = names or Names()
     options = catalog_years()
     grouped = {}
     for make, year, specs in rows:
@@ -149,7 +144,7 @@ def facts_by_model_year(rows, report, make_names=None):
         if not trim:
             report.reject(f"Canadian specifications {year} {make}: a row with no model name")
             continue
-        if make_names.get(name_key(row_make), name_key(row_make)) != name_key(make):
+        if names.make_key(row_make) != names.make_key(make):
             report.reject(f"{label}: returned when asking for {make}")
             continue
         values = {name: measure(name, specs.get(code)) for code, name in SPECS.items()}
@@ -157,7 +152,7 @@ def facts_by_model_year(rows, report, make_names=None):
             report.reject(f"{label}: no weight or dimensions")
             continue
         trim_words = words(trim)
-        model_id, why = match(options.get((name_key(make), year), {}), trim_words)
+        model_id, why = match(options.get((names.make_key(make), year), {}), trim_words)
         if model_id is None:
             report.unmatched.append(f"{label}: {why}")
             continue

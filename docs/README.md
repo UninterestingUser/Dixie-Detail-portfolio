@@ -99,7 +99,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 73 records as of 2026-10-22, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 74 records as of 2026-10-22, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

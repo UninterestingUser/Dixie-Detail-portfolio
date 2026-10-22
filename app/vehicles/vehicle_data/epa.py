@@ -2,7 +2,9 @@
 
 The table has one row per engine and transmission of a model year. The
 catalog's model is the EPA's base model ("RAV4" for "RAV4 AWD" and "RAV4
-Hybrid AWD"), the name a customer knows, and each model year keeps the facts
+Hybrid AWD"), except where data/vehicle-names.yaml splits a base model into
+the nameplates customers know ("Santa Fe Sport" out of the Santa Fe) or
+names it another way ("F-150" for "F150"). Each model year keeps the facts
 of all its rows: every size class and drive, the body styles, and the range
 of passenger and luggage volume.
 """
@@ -10,10 +12,12 @@ of passenger and luggage volume.
 import csv
 import io
 import zipfile
+from collections import defaultdict
 
 from vehicles.models import VehicleModel
 
 from .facts import Facts
+from .names import Names
 
 VEHICLE = VehicleModel.VehicleType.VEHICLE
 CACHE_NAME = "epa/vehicles.csv.zip"
@@ -44,13 +48,16 @@ def volume(text):
         return 0
 
 
-def read(body, years, report):
+def read(body, years, report, names=None):
     """{(vehicle type, make, model, year): Facts} for every model year in years."""
+    names = names or Names()
     found = {}
+    splits = defaultdict(lambda: defaultdict(set))
     for line, row in enumerate(rows(body), start=2):
         where = f"EPA line {line} (id {row.get('id') or '?'})"
         make = (row.get("make") or "").strip()
-        model = (row.get("baseModel") or "").strip() or (row.get("model") or "").strip()
+        base = (row.get("baseModel") or "").strip() or (row.get("model") or "").strip()
+        model = names.nameplate(make, base, (row.get("model") or "").strip()) if base else base
         try:
             year = int(row.get("year") or "")
         except ValueError:
@@ -62,6 +69,9 @@ def read(body, years, report):
         if year not in years:
             report.counts["EPA rows outside the model years, skipped"] += 1
             continue
+        if model != base:
+            splits[(make, base)][model].add(year)
+        model = names.model(make, model)
         facts = found.setdefault((VEHICLE, make, model, year), Facts())
         facts.add("epa_size_classes", (row.get("VClass") or "").strip())
         facts.add("drives", (row.get("drive") or "").strip())
@@ -76,9 +86,12 @@ def read(body, years, report):
     for facts in found.values():
         if not facts.listed["body_styles"]:
             facts.add("body_styles", "unknown")
+    for (make, base), plates in sorted(splits.items()):
+        parts = ", ".join(f"{plate} ({min(years)}-{max(years)})" for plate, years in sorted(plates.items()))
+        report.split.append(f"{make} {base}: {parts} split out (data/vehicle-names.yaml)")
     return found
 
 
 def collect(fetcher, config, report, log):
     body = fetcher.get(config.epa_url, CACHE_NAME, check=check_zip)
-    return read(body, config.years, report)
+    return read(body, config.years, report, config.names)
