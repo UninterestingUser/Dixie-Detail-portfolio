@@ -1,0 +1,91 @@
+{% extends "control/base.html" %}
+{% block title %}Approvals{% endblock %}
+{% block content %}
+<h1>Approvals</h1>
+{% include "control/_catalog_nav.html" %}
+<p class="help">Every model in the job history, the spot-check list, every model whose years are in different classes and every model approved before, each with its year ranges. Approve each range, or change it to another class, which sets a model override for exactly those years. A later change to the rules or overrides that alters an approved range clears its approval, and the model shows here again.</p>
+
+<p><strong>{{ approved }} of {{ total }} model{{ total|pluralize }} approved.</strong></p>
+
+<form method="get" class="filters">
+  <div class="field"><label for="show-filter">Show</label>
+    <select id="show-filter" name="show">{% for value, label in shows %}<option value="{{ value }}"{% if value == show %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="reason-filter">Listed for</label>
+    <select id="reason-filter" name="reason"><option value="">Every reason</option>{% for value in reasons %}<option value="{{ value }}"{% if value == reason %} selected{% endif %}>{{ value|capfirst }}</option>{% endfor %}</select></div>
+  <button type="submit">Filter</button>
+</form>
+
+<p class="muted">{{ shown }} model{{ shown|pluralize }}.</p>
+
+{% if page.object_list %}
+<ul class="list">
+  {% for item in page.object_list %}
+  {% with model=item.vehicle_model %}
+  <li class="card">
+    <div class="card-head">
+      <a href="{% url 'catalog' %}?model_id={{ model.pk }}"><strong>{{ model.make }} {{ model.model }}</strong></a>
+      {% if item.approved %}<span class="sub ok">Approved</span>{% endif %}
+    </div>
+    {% for text in item.reasons %}<span class="sub">{{ text|capfirst }}</span>{% endfor %}
+    <ul class="list" style="margin-top: 8px">
+      {% for found in item.ranges %}
+      <li class="panel">
+        <strong>{{ found.years }}</strong>:
+        {% if found.vehicle_class %}{{ found.vehicle_class }}, size {{ found.size }}{% if found.measures %} (by {{ found.measures }}){% endif %}{% else %}no class yet{% endif %}
+        <span class="sub">How: {{ found.how }}</span>
+        {% if found.in_review %}<span class="sub warn">Waiting in the review queue; change it to settle it.</span>{% endif %}
+        {% if found.approval %}
+          <span class="sub ok">Approved by {{ found.approval.approved_by|default:"someone" }} on {{ found.approval.approved_at|date:"M j, Y g:i A" }}{% if found.approval.note %}: {{ found.approval.note }}{% endif %}</span>
+        {% elif found.cleared %}
+          <span class="sub warn">Approved on {{ found.cleared.approved_at|date:"M j, Y" }}, cleared on {{ found.cleared.cleared_at|date:"M j, Y" }}{% if found.cleared.cleared_by %} by: {{ found.cleared.cleared_by.summary }}{% endif %}</span>
+        {% endif %}
+        {% if can_edit and not found.approval %}
+        <form method="post" action="{% url 'approval-act' %}" class="stack" style="margin-top: 8px">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ here }}">
+          <div class="field"><label for="note-{{ found.target|slugify }}">Note <span class="muted">(optional)</span></label><input id="note-{{ found.target|slugify }}" name="note-{{ found.target }}" maxlength="500"></div>
+          <div class="button-row">
+            {% if found.can_approve %}<button type="submit" name="do" value="approve:{{ found.target }}" class="primary">Approve</button>{% endif %}
+          </div>
+          <details class="panel">
+            <summary>Change</summary>
+            <div class="stack">
+              <div class="field"><label for="class-{{ found.target|slugify }}">Vehicle class</label>
+                <select id="class-{{ found.target|slugify }}" name="class-{{ found.target }}">{% for vehicle_class in classes %}<option value="{{ vehicle_class.pk }}"{% if vehicle_class.pk == found.vehicle_class.pk %} selected{% endif %}>{{ vehicle_class }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="size-{{ found.target|slugify }}">Size</label>
+                <select id="size-{{ found.target|slugify }}" name="size-{{ found.target }}">{% for value, label in sizes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+              <button type="submit" name="do" value="change:{{ found.target }}">Save and approve {{ found.years }}</button>
+            </div>
+          </details>
+        </form>
+        {% endif %}
+      </li>
+      {% empty %}
+      <li class="muted">Not classified yet: run classify_vehicles.</li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% endwith %}
+  {% endfor %}
+</ul>
+
+{% if page.has_other_pages %}
+<nav class="pager" aria-label="Pages">
+  {% if page.has_previous %}<a class="button" href="?show={{ show }}&amp;reason={{ reason|urlencode }}&amp;page={{ page.previous_page_number }}">‹ Previous</a>{% endif %}
+  <span class="muted" style="align-self: center; text-align: center">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="button" href="?show={{ show }}&amp;reason={{ reason|urlencode }}&amp;page={{ page.next_page_number }}">Next ›</a>{% endif %}
+</nav>
+{% endif %}
+{% if not can_edit %}<p class="help">Only a manager can approve or change.</p>{% endif %}
+{% else %}
+  <p class="notice">{% if show == "waiting" %}Nothing waits for approval{% else %}No model here{% endif %}{% if reason %} with these filters{% endif %}.</p>
+{% endif %}
+
+{% if missing %}
+<section aria-labelledby="missing-heading">
+  <h2 id="missing-heading">Spot-check entries not in the catalog</h2>
+  <p class="help">Each needs its spelling in data/vehicle-names.yaml, or a change to data/approval-spot-checks.yaml.</p>
+  <ul>{% for entry in missing %}<li>{{ entry.make }} {{ entry.model }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

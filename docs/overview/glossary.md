@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -72,6 +72,12 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 **Nameplate.** A vehicle customers know by its own name, such as the Santa Fe Sport, that the EPA files under another base model, such as the Santa Fe. The catalog splits these out with [data/vehicle-names.yaml](../../data/vehicle-names.yaml), which also lists the other spellings of one vehicle, such as "GLE-Class" for the GLE.
 
 **Photo card.** One card per vehicle class, with a picture and caption, that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are seven.
+
+**Approval list.** The control app's **Approvals** screen, where the owner approves the class of each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model whose years are in different classes. A later change that alters an approved range clears its approval (decision 0079).
+
+**Differences screen.** The control app's **Differences** screen, listing each customer's vehicle whose own class or size differs from the catalog's, with three choices: keep the imported class as the vehicle's own override, take the catalog's, or give every vehicle of the model that class (decision 0077).
+
+**Trim words.** The words, such as "LE", "XLT" or "Crew Cab", that `link_vehicles` may leave off the end of a customer's model name when it links the vehicle to the catalog, listed in [data/vehicle-names.yaml](../../data/vehicle-names.yaml).
 
 **Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner settles them: a **review queue decision** (accept the suggested class, pick another, or send it to the photo cards), a rule or a model override. Not the same as the returning-customer match flags.
 
