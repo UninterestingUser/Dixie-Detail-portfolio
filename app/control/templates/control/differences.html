@@ -1,0 +1,41 @@
+{% extends "control/base.html" %}
+{% block title %}Differences{% endblock %}
+{% block content %}
+<h1>Differences</h1>
+{% include "control/_catalog_nav.html" %}
+<p class="help">Customers' vehicles whose own class or size, as imported or entered, differs from the catalog's. Nothing changes until you pick one of the three choices. Past jobs keep their prices whatever you pick.</p>
+{% if unlinked %}<p class="muted">{{ unlinked }} vehicle{{ unlinked|pluralize }} {{ unlinked|pluralize:"is,are" }} not linked to the catalog yet; <code>link_vehicles --dry-run</code> on the server lists why.</p>{% endif %}
+
+{% if rows %}
+<p class="muted">{{ rows|length }} vehicle{{ rows|length|pluralize }} differ{{ rows|length|pluralize:"s," }}.</p>
+<ul class="list">
+  {% for row in rows %}
+    {% with difference=row.difference %}{% with vehicle=difference.vehicle %}
+    <li class="card">
+      <strong>{{ vehicle }}</strong>
+      <span class="sub"><a href="{% url 'customer' vehicle.customer_id %}">{{ vehicle.customer }}</a> · vehicle {{ vehicle.pk }} · <a href="{% url 'catalog' %}?model_id={{ vehicle.vehicle_model_id }}&amp;year={{ vehicle.year }}">{{ vehicle.vehicle_model.make }} {{ vehicle.vehicle_model.model }} in the catalog</a></span>
+      <dl class="details">
+        <dt>Imported</dt><dd>{{ difference.imported }}</dd>
+        <dt>Catalog</dt><dd><strong>{{ difference.catalog }}</strong>{% if difference.stored.in_review %} <span class="warn">(waiting in the review queue)</span>{% endif %}</dd>
+        <dt>Differs in</dt><dd>{{ difference.kind }}</dd>
+      </dl>
+      {% if can_edit %}
+      <form method="post" action="{% url 'difference-act' vehicle.pk %}" class="stack" style="margin-top: 8px">
+        {% csrf_token %}
+        <div class="field"><label for="note-{{ vehicle.pk }}">Note for the history <span class="muted">(optional)</span></label><input id="note-{{ vehicle.pk }}" name="note" maxlength="500" placeholder="Such as lifted, or a long-bed conversion"></div>
+        <div class="button-row">
+          <button type="submit" name="do" value="keep">Keep imported: this vehicle only</button>
+          <button type="submit" name="do" value="accept" class="primary">Accept the catalog's</button>
+          <button type="submit" name="do" value="model">Every {{ row.span }} {{ vehicle.vehicle_model.model }}: {{ vehicle.vehicle_class }}</button>
+        </div>
+      </form>
+      {% endif %}
+    </li>
+    {% endwith %}{% endwith %}
+  {% endfor %}
+</ul>
+{% if not can_edit %}<p class="help">Only a manager can settle differences.</p>{% endif %}
+{% else %}
+  <p class="notice">No linked vehicle differs from the catalog.</p>
+{% endif %}
+{% endblock %}

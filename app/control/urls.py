@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import appointment_views, catalog_views, pricebook_views, staff_views, views
+from . import approval_views, appointment_views, catalog_views, pricebook_views, staff_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -56,6 +56,11 @@ urlpatterns = [
     path("catalog/queue/", catalog_views.review_queue, name="review-queue"),
     path("catalog/queue/act/", catalog_views.review_act, name="review-act"),
     path("vehicles/<int:pk>/class/", catalog_views.vehicle_override, name="vehicle-override"),
+    # Customers' vehicles against the catalog, and the approval list (decision 0077).
+    path("catalog/differences/", approval_views.differences, name="differences"),
+    path("catalog/differences/<int:pk>/", approval_views.difference_act, name="difference-act"),
+    path("catalog/approvals/", approval_views.approval_list, name="approvals"),
+    path("catalog/approvals/act/", approval_views.approval_act, name="approval-act"),
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("sw.js", views.service_worker, name="service-worker"),
     path("offline/", views.offline, name="offline"),

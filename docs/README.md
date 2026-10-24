@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-23):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, Step 2, classification, and Step 3, the control app's catalog screens, are built. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-10-24):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, Step 2, classification, Step 3, the control app's catalog screens, and Step 4, linking customers' vehicles with the differences screen and the approval list, are built. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 
@@ -77,6 +77,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Deploying changes to the server](operations/deploying-changes.md) | The routine for getting a merged pull request onto the server, and what to restart, copy or add afterwards depending on what changed. | current |
 | [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
 | [Classifying the vehicle catalog](operations/classifying-vehicles.md) | How to run classify_vehicles on the server to apply the classification rules and overrides to the vehicle catalog, read its preview and review queue, change a rule or override, and add the Motorcycle Detail price. | current |
+| [Linking customers' vehicles to the catalog](operations/linking-vehicles.md) | How to run link_vehicles on the server to link each customer's vehicle to its catalog model, read its report, add spellings, and settle what it finds on the differences screen and the approval list. | current |
 | [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, and add a make. | current |
 | [Monitoring and alerts](operations/monitoring.md) | What the two Healthchecks.io checks watch, what to do when an alert email arrives, and how to test the alerts. | current |
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
@@ -84,7 +85,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
 | [Publishing the public portfolio copy](operations/publishing-the-portfolio.md) | How the owner publishes and updates the public copy of this private repository, with every commit rewritten to hide server addresses and private details, and what to do when the publish script stops. | current |
 | [Troubleshooting](operations/troubleshooting.md) | Known problems with the server, stack, backups and tools, each with the exact symptom, the cause and the fix, collected from Phase 0 onward. | current |
-| [Using the catalog screens](operations/using-the-catalog-screens.md) | A short guide to the control app's Catalog tab - looking a vehicle up, test prices, overrides, the rules and their preview, class settings, the review queue and each model's history. | current |
+| [Using the catalog screens](operations/using-the-catalog-screens.md) | A short guide to the control app's Catalog tab - lookup and test prices, overrides, rules and their preview, class settings, the review queue, differences, approvals and each model's history. | current |
 | [Workstation setup](operations/workstation-setup.md) | How the owner's Fedora workstation is set up to work on the repository with Git, the GitHub CLI and Claude Code, without storing secrets in plaintext. | current |
 
 ## Guides: day-to-day use
@@ -100,7 +101,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 74 records as of 2026-10-22, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 79 records as of 2026-10-24, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

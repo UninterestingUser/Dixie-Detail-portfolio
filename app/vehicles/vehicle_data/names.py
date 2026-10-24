@@ -1,7 +1,8 @@
 """The names customers know, from data/vehicle-names.yaml: make spellings,
-EPA base models split into nameplates, and the other spellings of one
-vehicle. Used by the import, the third-row list and vehicle matching, so
-every part of the system calls a vehicle the same thing.
+EPA base models split into nameplates, the other spellings of one vehicle,
+and the trim words a customer's model name may carry. Used by the import,
+the third-row list and link_vehicles, so every part of the system calls a
+vehicle the same thing.
 """
 
 import re
@@ -41,6 +42,7 @@ class Names:
     make_aliases: dict = field(default_factory=dict)  # make key -> catalog make key
     aliases: dict = field(default_factory=dict)  # (make key, model key) -> the name shown
     nameplates: dict = field(default_factory=dict)  # (make key, base model key) -> [Nameplate]
+    trim_words: frozenset = frozenset()  # each a word as words() gives it
 
     @classmethod
     def from_data(cls, data):
@@ -57,6 +59,7 @@ class Names:
                 Nameplate(split["name"], tuple(tuple(words(phrase)) for phrase in split["when"]))
                 for split in entry["split"]
             ]
+        names.trim_words = frozenset(word for phrase in data.get("trim_words") or [] for word in words(str(phrase)))
         return names
 
     def make_key(self, make):
@@ -78,6 +81,16 @@ class Names:
             if any(contains(found, phrase) for phrase in plate.when):
                 return plate.name
         return base_model
+
+    def nameplate_words(self, make, model):
+        """Every word the nameplates split from this model use, such as
+        {"SPORT", "XL"} for the Santa Fe, which a trim word never drops."""
+        found = set()
+        for plate in self.nameplates.get((self.make_key(make), self.model_key(make, model)), ()):
+            found.update(words(plate.name))
+            for phrase in plate.when:
+                found.update(phrase)
+        return found
 
 
 @lru_cache(maxsize=4)

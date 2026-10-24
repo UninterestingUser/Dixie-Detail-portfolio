@@ -1,17 +1,17 @@
 ---
 title: Using the catalog screens
-summary: A short guide to the control app's Catalog tab - looking a vehicle up, test prices, overrides, the rules and their preview, class settings, the review queue and each model's history.
+summary: A short guide to the control app's Catalog tab - lookup and test prices, overrides, rules and their preview, class settings, the review queue, differences, approvals and each model's history.
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [operations, vehicles, classification, control-app, phase-2]
-related: [docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/reference/control-app.md]
+related: [docs/decisions/0079-approval-list.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/reference/control-app.md]
 ---
 
 # Using the catalog screens
 
-The **Catalog** tab in the control app is where the owner sees and settles how vehicles are classified ([decision 0076](../decisions/0076-catalog-screens-in-the-control-app.md)). It has four screens, linked along its top: **Look up**, **Review queue**, **Rules** and **Classes**. Everyone signed in can look; only a manager (the owner) can change anything, and the screens hide the controls from anyone else. How classification works is in [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
+The **Catalog** tab in the control app is where the owner sees and settles how vehicles are classified ([decision 0076](../decisions/0076-catalog-screens-in-the-control-app.md)). It has six screens, linked along its top: **Look up**, **Review queue**, **Rules**, **Differences**, **Approvals** and **Classes**. Everyone signed in can look; only a manager (the owner) can change anything, and the screens hide the controls from anyone else. How classification works is in [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
 
 ## Look up a vehicle
 
@@ -59,9 +59,30 @@ Each model year shows why it is there, the facts that matter, the class it keeps
 
 A decision applies at once and stays until you clear it on the model's screen. A model override for the year beats it.
 
+## Differences
+
+**Differences** lists each customer's vehicle, linked to the catalog by `link_vehicles` ([linking-vehicles.md](linking-vehicles.md)), whose own class or size, as imported or entered, differs from the catalog's. Each shows both, the customer, and a link to the model's screen ([decision 0077](../decisions/0077-linking-vehicles-to-the-catalog.md)). Pick one of three, with an optional note:
+
+- **Keep imported: this vehicle only** makes the vehicle's class its own override, for a lifted or modified vehicle. It beats the catalog from then on.
+- **Accept the catalog's** gives the vehicle the catalog's class, and the catalog's size when it fixes one.
+- **Every 2014 to 2019 RAV4: Midsize SUVs** (the years and class shown are the vehicle's) sets a model override for the years the catalog classes alike around this vehicle's year. A class that differed takes its size from the facts; a size that differed is fixed for those years. Other vehicles of the model in those years may then differ, and show here.
+
+Past jobs keep their prices whichever you pick. A vehicle that no longer differs leaves the list.
+
+## Approvals
+
+**Approvals** is where Phase 2 is signed off ([decision 0079](../decisions/0079-approval-list.md)). It lists every model in the job history, every model on the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml), every model whose years are in different classes, and every model approved before, with how many are approved. It shows the models still waiting; **Show** picks approved ones or all, and **Listed for** filters by why a model is there.
+
+Each model shows once, as its year ranges: the years in a row with the same class, size and **How**. For each range:
+
+- **Approve** records it as it stands, with your name, the time and an optional note.
+- **Change** picks another class and size, sets a model override for exactly those years, and approves the result.
+
+A range waiting in the review queue can only be changed. When a later change to a rule, an override, the third-row flag, a queue decision or a class setting alters an approved range, by its years, class, size or how, the approval is cleared and the model shows again, saying which change cleared it. Spot-check entries the catalog does not have are listed at the bottom.
+
 ## History
 
-Every change to a rule, an override, the third-row flag, a class setting or a queue decision is logged with who made it and when, and so is each `classify_vehicles` run. A model's screen lists, under **History**, every change that reached it, with the years it changed from one class or size to another. **Rules** shows the latest rule, class and run changes.
+Every change to a rule, an override, the third-row flag, a class setting, a queue decision, a vehicle's class or an approval is logged with who made it and when, and so is each `classify_vehicles` and `link_vehicles` run. A model's screen lists, under **History**, every change that reached it, with the years it changed from one class or size to another. **Rules** shows the latest rule, class and run changes.
 
 ## When something looks wrong
 

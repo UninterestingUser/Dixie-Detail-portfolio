@@ -4,7 +4,7 @@ summary: How customers, vehicles, appointments, payments and staff are imported 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-24
 tags: [migration, import, baserow, setmore, phase-1]
 related: [docs/operations/importing-baserow.md, docs/decisions/0036-baserow-import.md, docs/decisions/0051-baserow-ids-kept-on-import.md, docs/decisions/0066-imported-payments-already-in-the-books.md, docs/reference/returning-customers.md, docs/architecture/data-model.md]
 ---
@@ -23,7 +23,7 @@ The source files are the owner's exports: the Baserow Customers, Vehicles, Appoi
 | --- | --- |
 | 104 customers | Imported with the agreed corrections. Customers without a phone number are kept |
 | Second contacts | Four second contacts are added to existing customers, as listed in the corrections file. The Setmore-only contacts it lists as not imported are skipped |
-| 128 vehicles | Imported as they are. Missing year, make or model is flagged to fill in at the next visit. Two motorcycles come over as past records with no vehicle class |
+| 128 vehicles | Imported as they are. Missing year, make or model is flagged to fill in at the next visit. Two motorcycles come over as past records with no vehicle class. `link_vehicles` later links each vehicle to the catalog and fills a missing class ([../operations/linking-vehicles.md](../operations/linking-vehicles.md)) |
 | 174 completed jobs (from 2025-05-22) | Kept as history at the price actually charged, with promotions and notes |
 | 10 booked jobs (through 2026-12-11) | Carried over as live appointments. One prepaid job imports as already paid |
 | Payments | From the Bookkeeping table, already in GnuCash, so never exported again |
@@ -46,7 +46,7 @@ The source files are the owner's exports: the Baserow Customers, Vehicles, Appoi
 - **Seat rows.** Seating such as "2 Rows" sets the vehicle's size variant where its vehicle class has that size.
 - **Prices.** A job's lines add up to the price actually charged: the services at Baserow's list price (all of it on the first service line, since Baserow does not split it by service), any promotion as its own line, then a price adjustment line, with a reason, for any override, so the total is the Final Price. A promotion a past job used is created inactive if it does not exist yet, for the owner to check.
 - **No-charge jobs.** A completed job with a Final Price of $0 is a no-charge job with a reason, not an unpaid one.
-- **Motorcycles** and jobs with no service recorded import as a custom line at the price charged, because motorcycles were not on the price list when those jobs were done. The Motorcycles class added in Phase 2 (decision 0072) does not change them.
+- **Motorcycles** and jobs with no service recorded import as a custom line at the price charged, because motorcycles were not on the price list when those jobs were done. The Motorcycles class added in Phase 2 (decision 0072) did not change them, but `link_vehicles` gives the two motorcycle jobs the Motorcycles class and the Motorcycle Detail service, with their amounts and payments as imported ([decision 0078](../decisions/0078-imported-motorcycle-jobs-get-their-class.md)). A rerun of the import makes them custom lines again, until `link_vehicles` runs again.
 - **Hours.** Hours (`h:mm`) is the job's whole time on site. Setup and breakdown are split from it by the crew size, using the launch values, and the rest is service time. Jobs with no Hours keep no times.
 - **Payments.** Payments, tips and payment methods come from Bookkeeping. Customer Paid includes the tip, so the payment is Customer Paid less the tip. A negative tip is written `'-$5`. Cash.App is Cash App direct to the owner's $cashtag.
 - **Split payments.** A payment listing two methods, such as "Cash,Venmo", is one payment recorded as split between the two; the split amounts were never recorded (decision 0066).

@@ -487,7 +487,8 @@ def group_changes(found):
 
 @transaction.atomic
 def record(kind, summary, found=(), user=None, vehicle_model=None):
-    """Log one change, with each model year it changed."""
+    """Log one change, with each model year it changed, and clear every
+    approval whose year range it altered."""
     change = ClassificationChange.objects.create(
         kind=kind, summary=summary, made_by=user if getattr(user, "pk", None) else None, vehicle_model=vehicle_model
     )
@@ -504,6 +505,10 @@ def record(kind, summary, found=(), user=None, vehicle_model=None):
         ],
         batch_size=BATCH,
     )
+    # An approval on the approval list whose year range this altered shows again.
+    from .approvals import clear_changed
+
+    clear_changed(change)
     return change
 
 
