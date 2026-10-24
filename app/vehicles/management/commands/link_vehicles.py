@@ -4,12 +4,16 @@
   python manage.py link_vehicles [--dry-run]
 
 Each vehicle is matched by year, make and model with the names in
-data/vehicle-names.yaml. A match sets the vehicle's catalog model and fills
-a missing class or size variant from the catalog; a class the vehicle
-already has never changes here, and differences wait for the owner on the
+data/vehicle-names.yaml, or by make and model alone when it has no year. A
+match sets the vehicle's catalog model and fills a missing class or size
+variant from the catalog (not with no year: the class depends on it); a
+class the vehicle already has never changes here, and differences wait for the owner on the
 control app's differences screen. The imported motorcycle jobs get the
 Motorcycles class and the Motorcycle Detail service, with their amounts and
-payments as imported (decision 0078). With --dry-run it prints the report
+payments as imported (decision 0078), and a vehicle of a make that sells
+only motorcycles gets the Motorcycles class (decision 0080). Every unlinked
+vehicle with a make and model gets a name check: whether the name would
+match once a year is known. With --dry-run it prints the report
 and changes nothing. The report names vehicles by id, year, make, model and
 color only, never by customer.
 """
@@ -17,7 +21,7 @@ color only, never by customer.
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from vehicles.linking import catalog_label, describe, describe_model, link_vehicles
+from vehicles.linking import catalog_label, describe, describe_model, link_vehicles, own_label
 from vehicles.models import VehicleModel
 
 
@@ -55,6 +59,15 @@ class Command(BaseCommand):
                 line += " (linked before)"
             write(line)
 
+        write(f"\nLinked, year unknown ({len(report.year_unknown):,} vehicles: by make and model; each keeps its class, and its year is to fill in at the next visit)")
+        for linked in report.year_unknown:
+            line = f"  {describe(linked.vehicle)} -> {describe_model(linked.vehicle_model)}; keeps {own_label(linked.vehicle)}"
+            if linked.dropped:
+                line += f"; trim words left off: {' '.join(linked.dropped)}"
+            if linked.before:
+                line += " (linked before)"
+            write(line)
+
         write(f"\nNot found ({len(report.not_found):,} vehicles, left unlinked)")
         for vehicle, found in report.not_found:
             write(f"  {describe(vehicle)}: {found.reason}")
@@ -87,6 +100,13 @@ class Command(BaseCommand):
             write(f"  {describe(vehicle)}: {why}")
 
         class_name, service_name, price = report.motorcycle
+        write(
+            f"\nGiven the {class_name} class with no catalog year to go by ({len(report.motorcycles_by_make):,} vehicles:"
+            " a make that sells only motorcycles, or a motorcycle model with no year)"
+        )
+        for vehicle in report.motorcycles_by_make:
+            write(f"  {describe(vehicle)}")
+
         write(f"\nImported motorcycle jobs ({len(report.motorcycle_jobs):,}): the {class_name} class and the {service_name} service; amounts and payments stay as imported")
         for job in report.motorcycle_jobs:
             state = "done before" if job.done else ("to give" if dry_run else "given")
@@ -96,3 +116,7 @@ class Command(BaseCommand):
             write(f"\nNot linked and with no vehicle class ({len(report.unlinked_classless):,} vehicles; a motorcycle here needs a spelling in data/vehicle-names.yaml)")
             for vehicle in report.unlinked_classless:
                 write(f"  {describe(vehicle)}")
+
+        write(f"\nName check for unlinked vehicles ({len(report.name_checks):,}: would the name match once a year is known?)")
+        for vehicle, text in report.name_checks:
+            write(f"  {describe(vehicle)}: {text}")
