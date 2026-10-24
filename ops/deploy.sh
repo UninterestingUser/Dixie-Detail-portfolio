@@ -20,29 +20,36 @@ ops_dir=$(cd "$(dirname "$0")" && pwd)
 cd "$DIXIE_DIR"
 [[ -f .env ]] || { echo "deploy.sh: $DIXIE_DIR/.env is missing; copy .env.example" >&2; exit 1; }
 
-project_id=$(setting BWS_PROJECT_ID)
-remote=$(setting DEPLOY_REMOTE)
-branch=$(setting DEPLOY_BRANCH)
-: "${project_id:?set BWS_PROJECT_ID in .env}" "${remote:?set DEPLOY_REMOTE in .env}" "${branch:=main}"
-server_url=$(setting BWS_SERVER_URL)
-[[ -z $server_url ]] || export BWS_SERVER_URL="$server_url"
+# Bash reads a script from the file it opened as it goes, so after the pull
+# the rest of this run would still be the old deploy.sh: a new timer would be
+# installed but not enabled. The pull therefore ends by starting the pulled
+# deploy.sh, which skips straight to the steps after it.
+if [[ -z ${DIXIE_DEPLOY_PULLED:-} ]]; then
+	project_id=$(setting BWS_PROJECT_ID)
+	remote=$(setting DEPLOY_REMOTE)
+	branch=$(setting DEPLOY_BRANCH)
+	: "${project_id:?set BWS_PROJECT_ID in .env}" "${remote:?set DEPLOY_REMOTE in .env}" "${branch:=main}"
+	server_url=$(setting BWS_SERVER_URL)
+	[[ -z $server_url ]] || export BWS_SERVER_URL="$server_url"
 
-bws_load "$project_id"
-key=$(bws_get DEPLOY_SSH_KEY)
-bws_forget
+	bws_load "$project_id"
+	key=$(bws_get DEPLOY_SSH_KEY)
+	bws_forget
 
-eval "$(ssh-agent -s)" >/dev/null
-trap 'ssh-agent -k >/dev/null' EXIT
-printf '%s\n' "$key" | ssh-add -q -t 300 -
-unset key
+	eval "$(ssh-agent -s)" >/dev/null
+	trap 'ssh-agent -k >/dev/null' EXIT
+	printf '%s\n' "$key" | ssh-add -q -t 300 -
+	unset key
 
-# The agent holds the only key. GitHub's host keys are pinned in the repo.
-export GIT_SSH_COMMAND="ssh -F none -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$ops_dir/github_known_hosts"
-[[ -d .git ]] || git init --quiet --initial-branch="$branch"
-git pull --ff-only "$remote" "$branch"
+	# The agent holds the only key. GitHub's host keys are pinned in the repo.
+	export GIT_SSH_COMMAND="ssh -F none -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$ops_dir/github_known_hosts"
+	[[ -d .git ]] || git init --quiet --initial-branch="$branch"
+	git pull --ff-only "$remote" "$branch"
 
-ssh-agent -k >/dev/null
-trap - EXIT
+	ssh-agent -k >/dev/null
+	trap - EXIT
+	exec env DIXIE_DEPLOY_PULLED=1 "$DIXIE_DIR/ops/deploy.sh"
+fi
 
 # Install or update every unit kept in ops/.
 changed=0
@@ -54,7 +61,11 @@ for unit in ops/*.service ops/*.timer; do
 done
 ((changed == 0)) || systemctl daemon-reload
 systemctl enable --quiet dixie-stack.service
-systemctl enable --quiet --now dixie-backup.timer dixie-public-health.timer dixie-vehicle-refresh.timer
+# Every timer kept in ops/: the backup, the public health check and the
+# vehicle data refresh.
+timers=(ops/*.timer)
+timers=("${timers[@]#ops/}")
+systemctl enable --quiet --now "${timers[@]}"
 
 # The vehicle data download cache, outside the repository, owned by the app
 # container's user (uid 10001, app/Dockerfile), so a rebuilt server needs no
@@ -63,4 +74,19 @@ systemctl enable --quiet --now dixie-backup.timer dixie-public-health.timer dixi
 
 docker compose build --pull
 systemctl restart dixie-stack.service
+
+# Check that every timer is enabled and waiting for its next run.
+systemctl list-timers --all --no-pager "${timers[@]}"
+timers_ok=1
+for timer in "${timers[@]}"; do
+	if ! systemctl is-enabled --quiet "$timer" || ! systemctl is-active --quiet "$timer"; then
+		echo "deploy.sh: $timer is not enabled and active; see docs/operations/troubleshooting.md" >&2
+		timers_ok=0
+	fi
+done
+((timers_ok)) && echo "deploy.sh: all ${#timers[@]} timers enabled and active"
+
 systemctl --no-pager --lines=0 status dixie-stack.service
+
+# A timer that failed the check above fails the deploy.
+((timers_ok))
