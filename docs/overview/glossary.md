@@ -63,6 +63,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Vehicle class.** A group of vehicles that share prices. There are seven at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks; Motorcycles. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
+**Vehicle data refresh.** The monthly reload of the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, followed by classification, on the first Sunday of each month. It adds models and model years and updates facts, but holds in the review queue any class or size change to a model with an override, an approval or customers' jobs (decision 0081). See [../operations/monitoring.md](../operations/monitoring.md).
+
 **Vehicle model.** A make and model a customer picks, such as Toyota RAV4, over a range of model years. A vehicle class applies to a vehicle model. Its vehicle type is "car, truck or van" or "motorcycle"; motorcycles are in the same year, make and model lists, labeled, and in the Motorcycles class. Each of its model years gets a vehicle class from the classification rules. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
 
 **Classification rule.** One rule of the ordered list that gives a model year its vehicle class: conditions on stored facts, such as "EPA small SUV weighing over 4,500 lb", and the class it gives. The first rule whose conditions all hold wins. See [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
@@ -81,7 +83,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Trim words.** The words, such as "LE", "XLT" or "Crew Cab", that `link_vehicles` may leave off the end of a customer's model name when it links the vehicle to the catalog, listed in [data/vehicle-names.yaml](../../data/vehicle-names.yaml).
 
-**Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner settles them: a **review queue decision** (accept the suggested class, pick another, or send it to the photo cards), a rule or a model override. Not the same as the returning-customer match flags.
+**Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, two sources disagree, or the monthly vehicle data refresh held a class change to a model the owner relies on. They do not go live until the owner settles them: a **review queue decision** (accept the suggested class, pick another, or send it to the photo cards), a rule or a model override. Not the same as the returning-customer match flags.
 
 **Third-row list.** [data/third-row-seating.yaml](../../data/third-row-seating.yaml), the owner-approved list of which crossovers and midsize SUVs have a third row always, optionally or never, by model year. Optional is asked in the booking form.
 

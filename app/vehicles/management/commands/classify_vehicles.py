@@ -1,7 +1,7 @@
 """Apply the classification rules and overrides to every model year in the
 vehicle catalog (docs/reference/vehicle-classification.md).
 
-  python manage.py classify_vehicles [--dry-run]
+  python manage.py classify_vehicles [--dry-run] [--refresh]
 
 First it brings the launch rules and model overrides in step with
 data/vehicle-classes.yaml (leaving alone any the owner edited or deleted)
@@ -9,6 +9,10 @@ and loads the third-row list, data/third-row-seating.yaml. With --dry-run it pri
 preview, every model year whose class or size would change or that would
 enter or leave the review queue, and changes nothing. It never changes a
 model override, a customer's vehicle, or anything with source "owner".
+
+With --refresh, as the monthly refresh runs it, a model year whose class or
+size would change is held in the review queue instead when its model has a
+model override, an approval or customers' jobs (classification.guard).
 """
 
 from collections import Counter, defaultdict
@@ -17,6 +21,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from vehicles.classification.engine import apply, change_detail, changes, classify_catalog, record, year_spans, years_text
+from vehicles.classification.guard import hold
 from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
 from vehicles.models import ClassificationChange, VehicleModel
 
@@ -32,8 +37,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true", help="Print the preview and change nothing.")
+        parser.add_argument(
+            "--refresh",
+            action="store_true",
+            help="As the monthly refresh: hold class changes to models with an override, an approval or jobs in the review queue.",
+        )
 
-    def handle(self, *args, dry_run, **options):
+    def handle(self, *args, dry_run, refresh, **options):
         if not VehicleModel.objects.exists():
             raise CommandError("The vehicle catalog is empty: run import_vehicle_data first.")
         seeded = SeedReport()
@@ -44,15 +54,21 @@ class Command(BaseCommand):
             except SeedError as error:
                 raise CommandError(str(error)) from error
             results = classify_catalog()
+            held = hold(results) if refresh else []
             found = changes(results)
             counts = None if dry_run else apply(results)
             if dry_run:
                 transaction.set_rollback(True)
             else:
-                record(ClassificationChange.Kind.RUN, f"classify_vehicles applied the rules: {len(found):,} model years changed", found)
-        self.print_report(dry_run, seeded, results, found, counts)
+                summary = f"classify_vehicles applied the rules: {len(found):,} model years changed"
+                if refresh:
+                    summary = f"Monthly refresh: {summary}, {len(held):,} held in the review queue"
+                record(ClassificationChange.Kind.RUN, summary, found)
+        # Kept on the command for refresh_vehicle_data, which runs this one.
+        self.found, self.held = found, held
+        self.print_report(dry_run, seeded, results, found, counts, held if refresh else None)
 
-    def print_report(self, dry_run, seeded, results, found, counts):
+    def print_report(self, dry_run, seeded, results, found, counts, held=None):
         write = self.stdout.write
         write("DRY RUN: nothing was changed. Run again without --dry-run to apply it." if dry_run else "APPLIED: the classifications were saved.")
         write(f"\nLaunch rules and overrides (data/vehicle-classes.yaml): {len(seeded.launch_set):,} changes")
@@ -104,6 +120,11 @@ class Command(BaseCommand):
         write(f"\n{'Would change' if dry_run else 'Changed'} ({len(found):,} model years)")
         for line in spans(rows):
             write(f"  {line}")
+
+        if held is not None:
+            write(f"\nHeld in the review queue: the refresh may not change these on its own ({len(held):,} model years)")
+            for line in spans([(model_year.vehicle_model, model_year.year, f"{old} -> {new}") for model_year, old, new in held]):
+                write(f"  {line}")
 
         classes = defaultdict(list)
         for model_year, result in results.values():

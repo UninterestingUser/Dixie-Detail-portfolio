@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-24
 tags: [operations, vehicles, classification, control-app, phase-2]
-related: [docs/decisions/0079-approval-list.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/reference/control-app.md]
+related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0079-approval-list.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/reference/control-app.md]
 ---
 
 # Using the catalog screens
@@ -48,7 +48,9 @@ Every one of these shows the **preview** first: how many model years of how many
 
 ## The review queue
 
-**Review queue** lists the model years no rule settles, newest model years first, 50 to a page, with a count beside the tab. The schedule (the home screen) says how many wait while the queue is not empty. Filter by **Year** and by **Reason**: no rule matches, the trims split on a condition, or the sources disagree.
+**Review queue** lists the model years no rule settles, newest model years first, 50 to a page, with a count beside the tab. The schedule (the home screen) says how many wait while the queue is not empty, and how the last monthly vehicle data refresh went. Filter by **Year** and by **Reason**: no rule matches, the trims split on a condition, the sources disagree, or held by the monthly refresh.
+
+**Held by the monthly refresh** marks a model year whose class or size the monthly refresh would have changed, on a model with an override, an approval or customers' jobs. Its reason gives the old value and the new one, it keeps the old one meanwhile, and the suggestion is the new one: **Accept** takes it, and picking the old class keeps it. For a model with a model override, change the override instead.
 
 Each model year shows why it is there, the facts that matter, the class it keeps meanwhile if it was live, and a **suggestion**: the class of the rule its trims straddle, or of the model's nearest classified year.
 

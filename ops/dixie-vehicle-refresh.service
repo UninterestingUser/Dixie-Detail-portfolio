@@ -1,0 +1,24 @@
+# Monthly vehicle data refresh; started by dixie-vehicle-refresh.timer.
+# Installed to /etc/systemd/system by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-vehicle-refresh.service
+[Unit]
+Description=Dixie Detail monthly vehicle data refresh
+Wants=network-online.target
+After=network-online.target docker.service dixie-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+# Non-secret settings only.
+EnvironmentFile=/srv/dixie-detail/.env
+# The Bitwarden machine-account token, decrypted into this run's private,
+# in-memory credentials directory, for the Healthchecks ping URL.
+LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+# /run/dixie-vehicle-refresh, on tmpfs, for the run's log. Deleted when the run ends.
+RuntimeDirectory=dixie-vehicle-refresh
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/vehicle-refresh.sh
+Nice=10
+# About 3,500 vPIC calls a second apart, with retries: over an hour.
+TimeoutStartSec=4h

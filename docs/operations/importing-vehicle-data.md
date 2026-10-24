@@ -1,12 +1,12 @@
 ---
 title: Importing the vehicle data
-summary: How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, and add a make.
+summary: How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, add a make, and how the monthly refresh runs it.
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-22
+updated: 2026-10-24
 tags: [operations, import, vehicles, epa, vpic, phase-2]
-related: [docs/reference/vehicle-catalog.md, data/vehicle-names.yaml, docs/operations/classifying-vehicles.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
+related: [docs/operations/monitoring.md, docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/reference/vehicle-catalog.md, data/vehicle-names.yaml, docs/operations/classifying-vehicles.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, data/vehicle-data-import.yaml, data/integrations.yaml, data/configuration.yaml, docs/operations/troubleshooting.md]
 ---
 
 # Importing the vehicle data
@@ -23,14 +23,12 @@ python manage.py import_vehicle_data [--source epa|vpic|canada|all] [--dry-run] 
 
 ## The download cache
 
-Every file the import downloads is kept in the folder named by the setting `VEHICLE_DATA_CACHE_DIR`, `/srv/vehicle-data` in the container by default, so a rerun does not fetch again. On the server that is the host folder `/srv/dixie-vehicle-data`, outside the repository, mounted read-write into the one-off container. Both paths are in [data/configuration.yaml](../../data/configuration.yaml). The cache holds the EPA's zip file and one small JSON file per vPIC call, and can be deleted at any time; the next run downloads again.
+Every file the import downloads is kept in the folder named by the setting `VEHICLE_DATA_CACHE_DIR`, `/srv/vehicle-data` in the container by default, so a rerun does not fetch again. On the server that is the host folder `/srv/dixie-vehicle-data`, outside the repository, mounted read-write into the one-off container. Both paths are in [data/configuration.yaml](../../data/configuration.yaml). The cache holds the EPA's zip file and one small JSON file per vPIC call. Its files can be deleted at any time; the next run downloads again.
 
-Create it once, owned by the app container's user (uid 10001):
+`ops/deploy.sh` creates the folder when it is missing, owned by the app container's user (uid 10001) and readable only by it, so a rebuilt server needs no manual step. To create it without a deploy:
 
 ```bash
-sudo mkdir -p /srv/dixie-vehicle-data
-sudo chown 10001:10001 /srv/dixie-vehicle-data
-sudo chmod 700 /srv/dixie-vehicle-data
+sudo install -d -m 0700 -o 10001 -g 10001 /srv/dixie-vehicle-data
 ```
 
 ## How long a run takes
@@ -40,7 +38,7 @@ The EPA's table is one download of about 2 MB. vPIC is asked once per make, mode
 ## Before the first run
 
 1. The deploy that includes the import has been made and the stack is running. The app applies the new database migration when it starts.
-2. The cache folder exists, as above.
+2. The cache folder exists, as above: a deploy creates it.
 
 ## Step 1: Dry run
 
@@ -94,9 +92,15 @@ The makes vPIC is asked for are listed in [data/vehicle-data-import.yaml](../../
 
 After the change is deployed, run the import (from the cache, with no `--refresh`); its report lists each split, merge and rename. Then run `classify_vehicles`.
 
-## Rerunning with fresh data
+## The monthly refresh
 
-The EPA updates its table as new models are tested, and vPIC adds models through the year. To pick them up:
+The EPA updates its table as new models are tested, and vPIC adds models through the year. `dixie-vehicle-refresh.timer` picks them up on the first Sunday of each month: `ops/vehicle-refresh.sh` runs `refresh_vehicle_data` in a one-off app container with this cache attached, the same container as the commands on this page. That command runs `import_vehicle_data --source all --refresh`, then, if the import succeeded, `classify_vehicles --refresh`, and records the refresh for the control app's home screen. A refresh never changes the class of a model with an override, an approval or customers' jobs; such a change waits in the review queue. The timer, its Healthchecks check and what to do when it fails are in [monitoring.md](monitoring.md), and the rule in [decision 0081](../decisions/0081-monthly-vehicle-data-refresh.md).
+
+To run a refresh by hand, exactly as the timer does: `sudo systemctl start dixie-vehicle-refresh.service`, then follow it with `journalctl -fu dixie-vehicle-refresh.service`.
+
+## Rerunning with fresh data by hand
+
+To look at what fresh data would change before it is written, without waiting for the monthly refresh:
 
 ```bash
 cd /srv/dixie-detail

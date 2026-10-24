@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-24
 tags: [vehicles, catalog, phase-2]
-related: [docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
+related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
 ---
 
 # Vehicle catalog
@@ -26,6 +26,7 @@ A vehicle model is named the way customers know it, from [data/vehicle-names.yam
 - **The EPA's base model is the model name,** so "RAV4 AWD" and "RAV4 Hybrid AWD" are both the RAV4.
 - **Except where a base model holds several nameplates.** The EPA files the Santa Fe Sport and Santa Fe XL under the Santa Fe, the Range Rover Sport, Velar and Evoque under the Range Rover, and the Grand Cherokee L, Atlas Cross Sport, RX 350L and 450hL, Outlander Sport and PHEV, Encore GX, Defender 90, 110 and 130, Yukon XL, Escalade ESV, Navigator L, Expedition MAX and EL, and the EQE and EQS SUVs the same way. The nameplate list splits each: an EPA row whose model name contains a nameplate's phrase, as whole words, belongs to that nameplate, and the rest stay with the base model. The EPA's model names are not used whole, because they carry trims, engines and packages ("GLE350 4matic", "F150 2.7L 2WD GVWR>6649 LBS").
 - **One vehicle, one name.** Names are matched across sources on capitals and digits only, so the EPA's "F150" and vPIC's "F-150" are the same. The alias list adds the spellings that differ in more than that, and gives the name shown: "GLE" for the EPA's and vPIC's "GLE-Class", "F-150" for "F150" and "F-150 Lightning", "Wrangler" for "Wrangler/TJ", "ML" for "ML-Class" and "M-Class", "Mazda5" for the EPA's "5". It also holds the make spellings, such as RAM TRUCKS for Ram in the Canadian specifications.
+- **Names as the maker writes them.** Where a source spells a name with other capitals or spacing in some years, such as the EPA's "350z" for the 2003 to 2009 Nissan 350Z, the alias list gives the maker's spelling, and the import renames the catalog model to it: 350Z, 370Z, LEAF, Bolt, GranTurismo, S-Type, Elise/Exige and F40.
 
 The import, the third-row list, the booking lookup and `link_vehicles`, which links customers' vehicles to the catalog ([vehicle-classification.md](vehicle-classification.md#customers-vehicles-and-the-catalog)), all use these names. `link_vehicles` also reads the file's customer aliases, customers' names for a vehicle the catalog files under another name or make, some for certain years only, and its trim words, such as "LE" or "XLT", which it may leave off a customer's model name. When the file changes, the next import merges the catalog models that are now one vehicle and splits the base models, and lists each merge, rename and split in its report. A merge keeps the owner's model, with its name, where there is one, and moves every model year, override and customer's vehicle to the model kept. A model year a split moves to a nameplate leaves the base model, and overrides stay on the model they were set for.
 
@@ -70,6 +71,10 @@ A row is left for the owner, and listed in the import's report, when no name mat
 
 A vehicle model with source "owner" keeps its make, model and years whatever the sources say; their facts are recorded beside it. A model-year facts record with source "owner" holds the owner's own figures, and no import ever changes it. This holds for every later step that imports vehicle data.
 
+## A model a source stops listing is kept
+
+A model or model year that a source no longer lists is never deleted. Its facts from that source stay, with the date the source last listed them, shown as "Last found" beside each source on the model's screen in the control app. Only a model year that a nameplate split moved to another model leaves its old model.
+
 ## Each import run is recorded
 
-Every run of `import_vehicle_data` records, per source, when it started and ended, whether it was a dry run, its counts (models and model years added, changed and unchanged, unmatched and rejected rows, files downloaded) and whether it succeeded, with the reason when it failed. The monthly refresh will use these records.
+Every run of `import_vehicle_data` records, per source, when it started and ended, whether it was a dry run, its counts (models and model years added, changed and unchanged, unmatched and rejected rows, files downloaded) and whether it succeeded, with the reason when it failed. The monthly refresh, which runs the import with fresh downloads on the first Sunday of each month, is recorded too, with its result and its counts of models added and changed and model years sent to the review queue ([vehicle-classification.md](vehicle-classification.md#the-monthly-refresh)).

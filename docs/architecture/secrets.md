@@ -4,7 +4,7 @@ summary: How every key, password and token is kept in Bitwarden Secrets Manager,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [security, secrets, bitwarden, systemd]
 related: [data/configuration.yaml, docs/decisions/0028-secrets-in-bitwarden.md, docs/decisions/0041-backup-password-paper-copy.md, docs/operations/secrets-management.md]
 ---
@@ -32,6 +32,7 @@ Scripts look secrets up by name in that list, through the shared helper `ops/lib
 
 - **The GitHub deploy key** (`DEPLOY_SSH_KEY`) is loaded by `ops/deploy.sh` into a private `ssh-agent`, with a five-minute limit, only for a pull, then the agent is stopped. No key file sits in `~/.ssh`.
 - **Backups** fetch `RESTIC_PASSWORD`, `RCLONE_CONFIG_PASS` and `HEALTHCHECKS_BACKUP_URL` only while the backup runs. `ops/restore-test.sh` and `ops/restic.sh` fetch the two passwords the same way, decrypting the token with `systemd-creds` because they are run by hand.
+- **The monthly vehicle data refresh** fetches `HEALTHCHECKS_VEHICLE_REFRESH_URL` once at the start of each run. Its one-off app container reads the database password from the stack's in-memory secret files, like every one-off app container.
 - **The public health check** fetches `HEALTHCHECKS_PUBLIC_URL` on each run, only after the health page has answered. rclone's configuration file, which holds the Google sign-in, is itself encrypted with `RCLONE_CONFIG_PASS`.
 - **Workstation Git** uses HTTPS with the GitHub CLI's sign-in kept in the GNOME login keyring, so there is no SSH key or plaintext token on the Fedora machine either.
 

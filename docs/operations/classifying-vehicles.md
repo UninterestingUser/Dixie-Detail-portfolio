@@ -6,7 +6,7 @@ visibility: restricted
 status: current
 updated: 2026-10-24
 tags: [operations, vehicles, classification, phase-2]
-related: [docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
+related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
 ---
 
 # Classifying the vehicle catalog
@@ -14,12 +14,14 @@ related: [docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpu
 The `classify_vehicles` command applies the classification rules and overrides to every model year in the vehicle catalog and saves each one's vehicle class and size variant, which the booking lookup reads ([../reference/vehicle-classification.md](../reference/vehicle-classification.md)). It runs in a one-off app container and takes a few seconds.
 
 ```text
-python manage.py classify_vehicles [--dry-run]
+python manage.py classify_vehicles [--dry-run] [--refresh]
 ```
 
 Each run first brings the launch rules and model overrides in step with [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml): it adds a new entry, updates one you have not edited, and removes one taken out of the file. One you edited or deleted in the database is left alone, and your own rules and overrides are never touched. Then it loads the third-row list, [data/third-row-seating.yaml](../../data/third-row-seating.yaml). `--dry-run` does all of it inside a transaction that is rolled back, and prints the preview.
 
 It never changes an override you set or edited, a review queue decision, a customer's vehicle, or anything with source "owner". Each applied run is logged, and shows in each changed model's history in the control app.
+
+`--refresh` runs it as the monthly refresh does ([decision 0081](../decisions/0081-monthly-vehicle-data-refresh.md)): a model year whose class or size would change is held in the review queue instead, keeping its class, when its model has a model override, an approval on the approval list or customers' jobs. The report then lists the held model years, with the old and new values. Without `--refresh`, the command applies every change, as you see it in the dry run. The monthly refresh runs this for you after reloading the data ([monitoring.md](monitoring.md)).
 
 Day to day, rules, overrides, class settings and the review queue are changed in the control app's **Catalog** tab, which applies each change itself ([using-the-catalog-screens.md](using-the-catalog-screens.md)). Run this command after the catalog is reloaded, or when the data files change. A run that alters a year range you approved on the approval list clears that approval. Customers' vehicles are linked to the catalog by a separate command ([linking-vehicles.md](linking-vehicles.md)).
 
