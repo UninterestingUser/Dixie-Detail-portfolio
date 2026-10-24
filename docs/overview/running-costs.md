@@ -4,7 +4,7 @@ summary: What the finished system costs to run each month, item by item, with th
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-10-24
 tags: [costs, budget]
 related: [data/integrations.yaml, docs/architecture/integrations.md]
 ---
@@ -25,7 +25,7 @@ The fixed monthly cost of the finished system is the phone service plus Google W
 | Cloudflare (DNS, Tunnel, website hosting) | 0 | 2026-10-07 | Free plan |
 | Bitwarden Secrets Manager | Existing | 2026-10-13 | Already used by the owner |
 | Tailscale | Existing | 2026-10-07 | Already used by the owner |
-| Healthchecks.io | 0 | 2026-10-12 | Free plan, 20 checks; two are used |
+| Healthchecks.io | 0 | 2026-10-12 | Free plan, 20 checks; three are used |
 | Off-site backups in Google Drive | 0 | 2026-10-13 | Uses Workspace storage already paid for; dumps are a few megabytes |
 | Stripe | Per transaction, no monthly fee | From memory | Roughly 2.9% plus 30 cents for an online card payment; confirm on Stripe's pricing page |
 | Government data (EPA, NHTSA, Census, Tennessee Revenue), GnuCash | 0 | 2026-10-07 | Free sources and free software |

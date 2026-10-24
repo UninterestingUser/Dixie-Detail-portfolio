@@ -105,3 +105,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0078](0078-imported-motorcycle-jobs-get-their-class.md) | 2026-10-24 | migration | The two imported motorcycle jobs get the Motorcycles class and the Motorcycle Detail service, with their amounts as imported | accepted |
 | [0079](0079-approval-list.md) | 2026-10-24 | vehicles | The approval list: models in the job history, a spot-check list and mixed-class models, approved by year range and cleared by any change | accepted |
 | [0080](0080-link-vehicles-follow-up.md) | 2026-10-24 | vehicles | Vehicles with no year link by make and model, customer aliases can hold for some years, and motorcycle-only makes give the Motorcycles class | accepted |
+| [0081](0081-monthly-vehicle-data-refresh.md) | 2026-10-24 | vehicles | The vehicle data is refreshed on the first Sunday of each month, and a refresh never changes the class of a model the owner relies on | accepted |

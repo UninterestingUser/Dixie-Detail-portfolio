@@ -263,6 +263,55 @@ class VehicleDataImportRun(models.Model):
         return f"{self.get_source_display()} {kind} {self.started_at:%Y-%m-%d %H:%M}: {self.result}"
 
 
+class VehicleDataRefresh(models.Model):
+    """One monthly vehicle data refresh (refresh_vehicle_data, run by
+    dixie-vehicle-refresh.timer): import_vehicle_data from every source with
+    fresh downloads, then classify_vehicles --refresh. The control app's home
+    screen shows the latest; each source's own run is a VehicleDataImportRun."""
+
+    class Result(models.TextChoices):
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+
+    started_at = models.DateTimeField()
+    finished_at = models.DateTimeField()
+    result = models.CharField(max_length=10, choices=Result.choices)
+    models_added = models.PositiveIntegerField(default=0)
+    models_changed = models.PositiveIntegerField(default=0, help_text="Models with a model year added or changed, or a year range moved.")
+    sent_to_queue = models.PositiveIntegerField(default=0, help_text="Model years that entered the review queue.")
+    held = models.PositiveIntegerField(
+        default=0, help_text="Model years whose class or size the refresh would have changed, held in the review queue."
+    )
+    message = models.TextField(blank=True, help_text="Why a failed refresh stopped.")
+
+    class Meta:
+        ordering = ["-started_at"]
+        verbose_name_plural = "vehicle data refreshes"
+
+    def __str__(self):
+        return f"Vehicle data refresh {self.started_at:%Y-%m-%d %H:%M}: {self.result}"
+
+    @property
+    def counts_text(self):
+        """"12 models added, 340 changed, 7 model years sent to the review queue (3 class changes held)"."""
+        text = (
+            f"{self.models_added:,} model{'s' if self.models_added != 1 else ''} added, {self.models_changed:,} changed,"
+            f" {self.sent_to_queue:,} model year{'s' if self.sent_to_queue != 1 else ''} sent to the review queue"
+        )
+        if self.held:
+            text += f" ({self.held:,} class change{'s' if self.held != 1 else ''} held)"
+        return text
+
+    @property
+    def summary(self):
+        """The one line the Healthchecks ping and the journal show."""
+        if self.result == self.Result.SUCCEEDED:
+            return f"Vehicle data refresh succeeded: {self.counts_text}."
+        # One line, however many lines the error had.
+        message = " ".join(self.message.split()) or "no reason recorded"
+        return f"Vehicle data refresh failed: {message.rstrip('.')}. So far: {self.counts_text}."
+
+
 class ClassificationRule(models.Model):
     """One rule of the ordered list that gives a model year its vehicle class
     (decision 0060). The first active rule, by position, whose conditions all
@@ -400,6 +449,9 @@ class ModelYearClassification(models.Model):
         NO_RULE = "no_rule", "No rule matches"
         SPLIT = "split", "Trims split on a condition"
         DISAGREE = "disagree", "Sources disagree"
+        # The monthly refresh would have changed the class or size of a model
+        # with an override, an approval or customers' jobs (decision 0081).
+        HELD = "held", "Held by the monthly refresh"
 
     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.PROTECT, related_name="classifications")
     year = models.PositiveSmallIntegerField()

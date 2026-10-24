@@ -17,7 +17,7 @@ from customers.models import Customer
 from pricebook.pricing import PricingError, price_job
 from staff.authorization import CrewError, assign_crew, auto_assign, staff_choices, uncovered_services, job_services, user_is_manager
 from staff.models import Assignment, StaffMember
-from vehicles.models import ModelYearClassification
+from vehicles.models import ModelYearClassification, VehicleDataRefresh
 
 from .forms import AppointmentForm, FinalPriceForm
 
@@ -50,6 +50,8 @@ def schedule_day(request):
         "appointments": day_appointments(day, day),
         # The home screen says when model years wait in the review queue (decision 0076).
         "queue_count": ModelYearClassification.objects.filter(in_review=True).count(),
+        # And, beside it, how the last monthly vehicle data refresh went (decision 0081).
+        "last_refresh": VehicleDataRefresh.objects.first(),
     }
     return render(request, "control/schedule_day.html", context)
 

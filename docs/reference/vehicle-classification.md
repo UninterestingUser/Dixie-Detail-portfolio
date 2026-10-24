@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-10-24
 tags: [vehicles, classification, phase-2]
-related: [docs/decisions/0080-link-vehicles-follow-up.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0078-imported-motorcycle-jobs-get-their-class.md, docs/decisions/0079-approval-list.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
+related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0080-link-vehicles-follow-up.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0078-imported-motorcycle-jobs-get-their-class.md, docs/decisions/0079-approval-list.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
 ---
 
 # Vehicle classification
@@ -97,11 +97,23 @@ A model year goes to the review queue instead of going live when:
 
 - **no rule matches** it;
 - **its rows have no clear majority** on a rule's condition, such as a model sold as a sedan and a wagon in equal numbers, or a curb weight range from 4,300 to 4,700 lb against "over 4,500 lb" with no spread of trims to go by; or
-- **two sources disagree** about a fact the rule tests.
+- **two sources disagree** about a fact the rule tests; or
+- **the monthly refresh held it**: the refresh would have changed the class or size of a model the owner relies on (see [The monthly refresh](#the-monthly-refresh)).
 
-The queue names the rule and the reason, files it under one of the three reasons for filtering, and suggests a class: the class of the rule its trims straddle, or of the model's nearest classified year, with the size its facts give. The owner settles a model year from the control app's review queue, one at a time or many at once: accept the suggestion, pick another class and size, or send it to the photo cards. A model override (the model "straddles a threshold", decision 0060) or a new rule settles it too. A model year that was live and enters the queue, for example after new data, keeps its earlier class while it waits; a new one has no class, and the booking form shows the photo cards.
+The queue names the rule and the reason, files it under one of the four reasons for filtering, and suggests a class: the class of the rule its trims straddle, or of the model's nearest classified year, with the size its facts give. The owner settles a model year from the control app's review queue, one at a time or many at once: accept the suggestion, pick another class and size, or send it to the photo cards. A model override (the model "straddles a threshold", decision 0060) or a new rule settles it too. A model year that was live and enters the queue, for example after new data, keeps its earlier class while it waits; a new one has no class, and the booking form shows the photo cards.
 
 On the full EPA table with the 2024 vPIC and Canadian data, the launch rules leave 1,777 of 12,872 model years in the queue (2,418 before decision 0074). Most are models sold as cars and station wagons with no clear majority, and SUVs from before 2010, which the third-row list does not cover and which have no curb weight yet.
+
+## The monthly refresh
+
+On the first Sunday of each month, `dixie-vehicle-refresh.timer` reloads the vehicle data from the EPA, vPIC and the Canadian specifications with fresh downloads, then runs `classify_vehicles --refresh` ([decision 0081](../decisions/0081-monthly-vehicle-data-refresh.md), [../operations/monitoring.md](../operations/monitoring.md)).
+
+- **What the refresh changes on its own:** it adds new models and model years, which go live when the rules classify them cleanly; the rest wait in the review queue as usual, and a year the EPA has not published yet takes its model's nearest classified year. It updates facts, and changes the class of a model nothing protects.
+- **What the refresh never changes:** the vehicle class or size variant of a model year that is already live, when its model has a model override, an approval on the approval list, or customers' jobs (every model in the approval list's job history). That model year goes to the review queue under "Held by the monthly refresh" and keeps its class meanwhile. The reason gives the old and the new class and size, such as "the monthly refresh would change this from Crossovers & Wagons (two rows) to Midsize SUVs (two rows) (rule 140: ...); held because it is in the job history", and the suggestion is the new one. **Accept** takes the new class; picking the old one keeps it. For a model with a model override, change the override, which beats a queue decision.
+- **A held model year stays held** until the owner settles it, even after the hold has cleared the model's approval. It leaves the queue by itself only if the facts change back.
+- **Nothing is deleted.** A model or model year a source stops listing is kept, with the date the source last listed it ([vehicle-catalog.md](vehicle-catalog.md#a-model-a-source-stops-listing-is-kept)).
+
+The hold applies only to the refresh. A rule, override or class setting changed in the control app, and `classify_vehicles` run by hand, apply the rules as they are, because the owner sees the preview first.
 
 ## A rule change is previewed before it is applied
 
@@ -151,7 +163,7 @@ Phase 2 is done when the owner approves the class for every model on the control
 
 The customer sees the class with a "not right?" link, the owner sees the vehicle on every booking, and each correction becomes a rule or an override. The booking form shows these from Phase 3. When the owner corrects a vehicle's size on a job, the model's record will be updated, from Phase 3. Before launch the owner approves the classes for every model in the job history on the approval list.
 
-EPA size classes are coarser for older SUVs, so those lean more on the rules and overrides. A monthly job will re-pull the sources and reclassify (Phase 2 Step 5): new model years the rules classify cleanly go live, those the EPA has not published yet take their model's nearest classified year, and the rest wait in the review queue.
+EPA size classes are coarser for older SUVs, so those lean more on the rules and overrides. The monthly refresh re-pulls the sources and reclassifies, and never changes the class of a model the owner relies on without asking ([The monthly refresh](#the-monthly-refresh)).
 
 ## Possible future vehicle classes
 
