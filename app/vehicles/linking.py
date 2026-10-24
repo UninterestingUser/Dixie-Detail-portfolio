@@ -39,7 +39,7 @@ from vehicles.classification.approvals import range_of, size_rule
 from vehicles.classification.engine import class_label, record
 from vehicles.classification.seed import read_data
 from vehicles.models import ClassificationChange, ModelYearClassification, Vehicle, VehicleClass, VehicleModel
-from vehicles.vehicle_data.names import load_names, name_key, words
+from vehicles.vehicle_data.names import full_name, load_names, name_key, words
 
 Kind = ClassificationChange.Kind
 LINKED = "linked"
@@ -138,7 +138,7 @@ def match(catalog, year, make, model):
         aliases = names.customer_alias(make, name)
         if aliases:
             if year is None and any(alias.year_from or alias.year_to for alias in aliases):
-                means = " or ".join(f"the {alias.catalog_make} {alias.catalog_model} {alias.years}" for alias in aliases)
+                means = " or ".join(f"the {alias.catalog_name} {alias.years}" for alias in aliases)
                 reasons.append(f"{make} {name} means {means}, so the year decides")
                 break
             alias = aliases[0] if year is None else next((alias for alias in aliases if alias.covers(year)), None)
@@ -147,9 +147,9 @@ def match(catalog, year, make, model):
         named = catalog.named(*lookup)
         if not named:
             if lookup != (make, name):
-                reasons.append(f"{make} {name} means the {' '.join(lookup)}, which the catalog does not have")
+                reasons.append(f"{make} {name} means the {full_name(*lookup)}, which the catalog does not have")
             continue
-        shown = f"{named[0].make} {named[0].model}"
+        shown = full_name(named[0].make, named[0].model)
         left_words = [word for part in left for word in words(part)]
         blocked = [part for part in left if not set(words(part)) <= names.trim_words]
         plates = set(left_words) & names.nameplate_words(*lookup)

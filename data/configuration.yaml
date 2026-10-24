@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-23
+  updated: 2026-10-24
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -116,6 +116,11 @@ secrets:
     used_by: ops/public-health.sh
     note: Required; the check fails without it
     phase: 0
+  - name: HEALTHCHECKS_VEHICLE_REFRESH_URL
+    purpose: Ping address for the vehicle data refresh check (docs/operations/monitoring.md)
+    used_by: ops/vehicle-refresh.sh
+    note: Optional; without it the monthly refresh runs with no pings
+    phase: 2
   - name: GOOGLE_SERVICE_ACCOUNT_JSON
     purpose: Service account key for the two calendars, read into memory
     phase: 3
@@ -173,7 +178,7 @@ paths:
   - name: Vehicle data download cache
     host: /srv/dixie-vehicle-data
     container: /srv/vehicle-data
-    purpose: The EPA, vPIC and Canadian specifications files import_vehicle_data downloads, kept between runs (setting VEHICLE_DATA_CACHE_DIR); outside the repository, owned by uid 10001, mounted read-write into a one-off app container; safe to delete
+    purpose: The EPA, vPIC and Canadian specifications files import_vehicle_data downloads, kept between runs (setting VEHICLE_DATA_CACHE_DIR); outside the repository, owned by uid 10001, mounted read-write into a one-off app container; created by ops/deploy.sh when missing; safe to delete
     holds_personal_data: false
-    used_by: python manage.py import_vehicle_data (docs/operations/importing-vehicle-data.md)
+    used_by: python manage.py import_vehicle_data (docs/operations/importing-vehicle-data.md) and the monthly refresh, ops/vehicle-refresh.sh
     phase: 2

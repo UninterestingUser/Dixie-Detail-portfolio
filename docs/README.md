@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-24):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, Step 2, classification, Step 3, the control app's catalog screens, and Step 4, linking customers' vehicles with the differences screen and the approval list, are built. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-10-24):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, Step 2, classification, Step 3, the control app's catalog screens, Step 4, linking customers' vehicles with the differences screen and the approval list, and Step 5, the monthly vehicle data refresh, are built. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 
@@ -46,7 +46,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Outside services and integrations](architecture/integrations.md) | Every outside service the system uses or will use, what it does for the business, which phase connects it, and how it talks to the core app. | current |
 | [Network and access](architecture/network-and-access.md) | How staff reach the private control app over Tailscale, how the public reaches only the health page and booking API through the Cloudflare Tunnel, and which host names the app accepts. | current |
 | [Secrets architecture](architecture/secrets.md) | How every key, password and token is kept in Bitwarden Secrets Manager, how the server holds one encrypted token, and how secrets reach containers without touching disk. | current |
-| [Server and Docker stack](architecture/server-and-stack.md) | The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it. | current |
+| [Server and Docker stack](architecture/server-and-stack.md) | The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it and refresh the vehicle data. | current |
 | [System overview](architecture/system-overview.md) | The parts of the Dixie Detail business system, how they connect, how data moves between them, and the principles every part follows. | current |
 
 ## Reference: business rules and behavior
@@ -78,8 +78,8 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
 | [Classifying the vehicle catalog](operations/classifying-vehicles.md) | How to run classify_vehicles on the server to apply the classification rules and overrides to the vehicle catalog, read its preview and review queue, change a rule or override, and add the Motorcycle Detail price. | current |
 | [Linking customers' vehicles to the catalog](operations/linking-vehicles.md) | How to run link_vehicles on the server to link each customer's vehicle to its catalog model, read its report, add spellings, and settle what it finds on the differences screen and the approval list. | current |
-| [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, and add a make. | current |
-| [Monitoring and alerts](operations/monitoring.md) | What the two Healthchecks.io checks watch, what to do when an alert email arrives, and how to test the alerts. | current |
+| [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, add a make, and how the monthly refresh runs it. | current |
+| [Monitoring and alerts](operations/monitoring.md) | What the three Healthchecks.io checks watch, the monthly vehicle data refresh and its timer, what to do when an alert email arrives, and how to test the alerts. | current |
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
 | [Phase 1 core data and control app runbook](operations/phase-1-core-data-runbook.md) | The runbook that built Phase 1 (data model, pricebook and pricing engine, Baserow import, control app) as executed from 2026-10-14 to 2026-10-18, kept as a historical record. | historical |
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
@@ -101,7 +101,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 80 records as of 2026-10-24, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 81 records as of 2026-10-24, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

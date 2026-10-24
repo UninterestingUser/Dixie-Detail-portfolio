@@ -1,0 +1,18 @@
+# Runs dixie-vehicle-refresh.service on the first Sunday of each month at
+# 4:15 AM Eastern, plus a random delay of up to 15 minutes, so it is never on
+# a business day and well clear of the 2:45 AM backup (decision 0081). A 429
+# from Bitwarden, if the public health check calls it in the same minute, is
+# retried (ops/lib/bws.sh). 4:15 AM exists every day of the year: clocks
+# change at 2 AM.
+#
+# No Persistent=: a refresh missed while the server was off waits for the next
+# month instead of running at boot on a business day. Run it by hand instead.
+[Unit]
+Description=Dixie Detail vehicle data refresh, first Sunday of each month
+
+[Timer]
+OnCalendar=Sun *-*-01..07 04:15:00 America/New_York
+RandomizedDelaySec=15min
+
+[Install]
+WantedBy=timers.target

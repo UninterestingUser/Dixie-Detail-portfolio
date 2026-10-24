@@ -1,12 +1,12 @@
 ---
 title: Server and Docker stack
-summary: The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it.
+summary: The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it and refresh the vehicle data.
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-18
+updated: 2026-10-24
 tags: [server, docker, systemd, infrastructure]
-related: [docs/architecture/network-and-access.md, docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/deploying-changes.md]
+related: [docs/architecture/network-and-access.md, docs/architecture/backups-and-monitoring.md, docs/architecture/secrets.md, docs/operations/deploying-changes.md, docs/operations/monitoring.md]
 ---
 
 # Server and Docker stack
@@ -41,6 +41,7 @@ Other services already run on this server, such as a FileBrowser container publi
 | `/etc/credstore.encrypted/dixie-bws-token.cred` | The encrypted Bitwarden machine-account token |
 | `/etc/systemd/system/dixie-*.{service,timer}` | Installed copies of the unit files from `ops/` |
 | `/run/dixie-stack/secrets` | The stack's secret files, in memory, only while `dixie-stack.service` is active. See [secrets.md](secrets.md) |
+| `/srv/dixie-vehicle-data` | The vehicle data import's download cache, owned by the app container's user (uid 10001); created by `ops/deploy.sh` when missing, and safe to delete. See [../operations/importing-vehicle-data.md](../operations/importing-vehicle-data.md) |
 
 ## The four containers
 
@@ -74,6 +75,8 @@ The `app` container applies database migrations every time it starts, before the
 | `dixie-backup.timer` | Starts the backup | 2:45 AM Eastern every night, clear of the public health check's 10-minute marks (decision 0070); 3:45 AM on the Sunday clocks spring forward, when 2:45 AM does not exist. A run missed while the server was off happens at the next boot |
 | `dixie-public-health.service` | Runs `ops/public-health.sh`: fetches the public health address through Cloudflare and pings Healthchecks on success | Triggered by `dixie-public-health.timer` |
 | `dixie-public-health.timer` | Starts the public check | Every 10 minutes |
+| `dixie-vehicle-refresh.service` | Runs `ops/vehicle-refresh.sh`: reloads the vehicle data from every source and reclassifies, holding class changes the owner relies on in the review queue, and pings Healthchecks | Triggered by `dixie-vehicle-refresh.timer` |
+| `dixie-vehicle-refresh.timer` | Starts the vehicle data refresh | The first Sunday of each month at 4:15 AM Eastern, plus up to 15 minutes at random (decision 0081). A run missed while the server was off is not made up at boot |
 
 The stack unit reads `/srv/dixie-detail/.env` as an environment file and loads the token with `LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred`.
 
@@ -82,14 +85,15 @@ The stack unit reads `/srv/dixie-detail/.env` as an environment file and loads t
 | Script | Purpose |
 | --- | --- |
 | `ops/stack-start.sh` | Fetch secrets from Bitwarden, write them to `/run/dixie-stack/secrets`, and recreate and start every container |
-| `ops/deploy.sh` | Pull `DEPLOY_BRANCH` from `DEPLOY_REMOTE` with the deploy key from Bitwarden, install any new or changed unit files, enable the stack and both timers, rebuild the app image and restart the stack; run with `sudo` |
+| `ops/deploy.sh` | Pull `DEPLOY_BRANCH` from `DEPLOY_REMOTE` with the deploy key from Bitwarden, install any new or changed unit files, enable the stack and the three timers, create the vehicle data cache folder if it is missing, rebuild the app image and restart the stack; run with `sudo` |
 | `ops/backup.sh` | Nightly dump, off-site copy, retention and Healthchecks pings |
 | `ops/restore-test.sh` | Restore the newest Drive snapshot into a throwaway PostgreSQL container and check it; run with `sudo` |
 | `ops/restic.sh` | Run any restic command against the Drive repository with the passwords loaded, such as `init`, `snapshots` or `check`; run with `sudo` |
 | `ops/public-health.sh` | The 10-minute public-path check |
+| `ops/vehicle-refresh.sh` | The monthly vehicle data refresh in a one-off app container, with Healthchecks pings ([../operations/monitoring.md](../operations/monitoring.md)) |
 | `ops/lib/bws.sh` | Shared Bitwarden helpers: load the token, fetch the project's secrets, look one up by name |
 | `ops/lib/restic.sh` | Shared restic settings and passwords for `backup.sh`, `restore-test.sh` and `restic.sh` |
-| `ops/lib/healthchecks.sh` | Shared Healthchecks ping, used by `backup.sh` and `public-health.sh` |
+| `ops/lib/healthchecks.sh` | Shared Healthchecks ping, used by `backup.sh`, `public-health.sh` and `vehicle-refresh.sh` |
 | `ops/lib/settings.sh` | Reads `.env` for scripts run by hand |
 | `ops/github_known_hosts` | GitHub's SSH host keys, pinned so `deploy.sh` never trusts an unknown host |
 

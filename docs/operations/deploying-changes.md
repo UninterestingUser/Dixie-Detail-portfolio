@@ -4,7 +4,7 @@ summary: The routine for getting a merged pull request onto the server, and what
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-22
+updated: 2026-10-24
 tags: [operations, deploy, git, systemd]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/reference/configuration.md]
 ---
@@ -25,7 +25,7 @@ Read the pull request description first. Note any new settings, secret names, or
 sudo /srv/dixie-detail/ops/deploy.sh
 ```
 
-It loads the deploy key `DEPLOY_SSH_KEY` from Bitwarden into a private `ssh-agent`, pulls `DEPLOY_BRANCH` from `DEPLOY_REMOTE` (both in `.env`) with fast-forward only, and stops the agent. It then installs any new or changed `.service` and `.timer` files from `ops/`, enables `dixie-stack.service`, `dixie-backup.timer` and `dixie-public-health.timer`, rebuilds the app image and restarts the stack. It needs `BWS_PROJECT_ID`, `BWS_SERVER_URL`, `DEPLOY_REMOTE` and `DEPLOY_BRANCH` in `.env`. Phase 0 did not use it; check its first run closely.
+It loads the deploy key `DEPLOY_SSH_KEY` from Bitwarden into a private `ssh-agent`, pulls `DEPLOY_BRANCH` from `DEPLOY_REMOTE` (both in `.env`) with fast-forward only, and stops the agent. It then installs any new or changed `.service` and `.timer` files from `ops/`, enables `dixie-stack.service`, `dixie-backup.timer`, `dixie-public-health.timer` and `dixie-vehicle-refresh.timer`, creates the vehicle data cache folder `/srv/dixie-vehicle-data` if it is missing, rebuilds the app image and restarts the stack. It needs `BWS_PROJECT_ID`, `BWS_SERVER_URL`, `DEPLOY_REMOTE` and `DEPLOY_BRANCH` in `.env`. Phase 0 did not use it; check its first run closely.
 
 **By hand.** Phase 0 pulled with these commands, run one line at a time. The first line asks for your password; if you paste several lines at once, the password prompt swallows them.
 

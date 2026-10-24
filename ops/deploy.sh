@@ -54,7 +54,12 @@ for unit in ops/*.service ops/*.timer; do
 done
 ((changed == 0)) || systemctl daemon-reload
 systemctl enable --quiet dixie-stack.service
-systemctl enable --quiet --now dixie-backup.timer dixie-public-health.timer
+systemctl enable --quiet --now dixie-backup.timer dixie-public-health.timer dixie-vehicle-refresh.timer
+
+# The vehicle data download cache, outside the repository, owned by the app
+# container's user (uid 10001, app/Dockerfile), so a rebuilt server needs no
+# manual step. An existing folder is left as it is.
+[[ -d /srv/dixie-vehicle-data ]] || install -d -m 0700 -o 10001 -g 10001 /srv/dixie-vehicle-data
 
 docker compose build --pull
 systemctl restart dixie-stack.service

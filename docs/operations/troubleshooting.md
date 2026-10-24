@@ -4,7 +4,7 @@ summary: Known problems with the server, stack, backups and tools, each with the
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-18
+updated: 2026-10-24
 tags: [operations, troubleshooting, errors]
 related: [docs/operations/deploying-changes.md, docs/operations/backups-and-restore.md, docs/architecture/server-and-stack.md, docs/architecture/secrets.md]
 ---
@@ -67,7 +67,7 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 ### import_vehicle_data: "The download cache /srv/vehicle-data (setting VEHICLE_DATA_CACHE_DIR) is missing or cannot be written"
 
 **Cause:** the one-off container was started without the cache folder mounted, or the host folder is not owned by the app container's user (uid 10001). The app container's own file system is read-only.
-**Fix:** create the host folder with `sudo mkdir -p /srv/dixie-vehicle-data && sudo chown 10001:10001 /srv/dixie-vehicle-data`, and start the command with `-v /srv/dixie-vehicle-data:/srv/vehicle-data`, as in [importing-vehicle-data.md](importing-vehicle-data.md).
+**Fix:** run `sudo /srv/dixie-detail/ops/deploy.sh`, which creates the host folder owned by uid 10001 when it is missing, or fix an existing folder's owner with `sudo chown 10001:10001 /srv/dixie-vehicle-data`. Start the command with `-v /srv/dixie-vehicle-data:/srv/vehicle-data`, as in [importing-vehicle-data.md](importing-vehicle-data.md). The monthly refresh mounts it itself.
 
 ### The vehicle import rejects rows from a make it was asked for
 

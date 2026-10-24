@@ -25,7 +25,7 @@ from vehicles.test_classification import SMALL_SUVS, ClassificationTestCase, add
 from vehicles.test_vehicle_data import CONFIG, no_network, write_epa_zip
 from vehicles.vehicle_data.catalog import merge_duplicates
 from vehicles.vehicle_data.fetch import Fetcher
-from vehicles.vehicle_data.names import Names, load_names
+from vehicles.vehicle_data.names import Names, full_name, load_names
 from vehicles.vehicle_data.run import run
 
 Source = VehicleModelYear.Source
@@ -121,6 +121,45 @@ class AliasTests(SimpleTestCase):
                 self.assertEqual(names.model(make, spelling), expected)
         self.assertEqual(names.model("Toyota", "RAV4"), "RAV4")
         self.assertEqual(names.make_key("RAM TRUCKS"), names.make_key("Ram"))
+
+
+class MakerCapitalsTests(TestCase):
+    """Phase 2 Step 5: names as the maker writes them, through the aliases."""
+
+    def test_each_name_is_shown_as_the_maker_writes_it(self):
+        names = load_names()
+        for make, spelling, expected in (
+            ("Nissan", "350z", "350Z"),
+            ("Nissan", "370z", "370Z"),
+            ("Nissan", "Leaf", "LEAF"),
+            ("Chevrolet", "BOLT", "Bolt"),
+            ("Maserati", "Granturismo", "GranTurismo"),
+            ("Jaguar", "S-type", "S-Type"),
+            ("Lotus", "Elise/exige", "Elise/Exige"),
+            ("Ferrari", "F 40", "F40"),
+        ):
+            with self.subTest(spelling=spelling):
+                self.assertEqual(names.model(make, spelling), expected)
+        # A name that differs in more than capitals and spaces stays its own model.
+        self.assertEqual(names.model("Chevrolet", "Bolt EV"), "Bolt EV")
+
+    def test_the_import_renames_a_model_spelled_as_the_source_spells_it(self):
+        call_command("load_pricebook", stdout=io.StringIO())
+        add_model("Nissan", "350z", year_from=2003, year_to=2009)
+        report = import_epa([(2008, "Nissan", "350z Roadster", "350z", "Two Seaters")], years=(2008, 2008))
+        self.assertEqual(models("Nissan"), ["350Z"])
+        self.assertTrue(any(line.startswith("renamed Nissan 350z") and line.endswith("to 350Z") for line in report.merged))
+
+    def test_a_name_never_says_its_make_twice(self):
+        self.assertEqual(full_name("Ram", "1500"), "Ram 1500")
+        self.assertEqual(full_name("Ram", "Ram 1500"), "Ram 1500")
+        self.assertEqual(full_name("Dodge", "Ram 1500"), "Dodge Ram 1500")
+
+    def test_every_customer_alias_names_its_catalog_model_once(self):
+        for aliases in load_names().customer_aliases.values():
+            for alias in aliases:
+                with self.subTest(alias=alias):
+                    self.assertNotIn(f"{alias.catalog_make} {alias.catalog_make}", alias.catalog_name)
 
 
 class SplitImportTests(TestCase):

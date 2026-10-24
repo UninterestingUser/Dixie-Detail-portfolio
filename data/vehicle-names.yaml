@@ -150,6 +150,18 @@ aliases:
   # Spellings customers use, from the job history (link_vehicles).
   - {make: Chevrolet, name: Silverado, also: [Silverado 1500]}
   - {make: GMC, name: Sierra, also: [Sierra 1500]}
+  # The name as the maker writes it, where a source spells it with other
+  # capitals or spacing in some years, such as the EPA's "350z". Names
+  # compare without capitals and spaces, so each entry needs no other
+  # spelling: the import renames the catalog model to the name here.
+  - {make: Nissan, name: 350Z}                      # EPA "350z", 2003-2009
+  - {make: Nissan, name: 370Z}                      # EPA "370z" in 2009
+  - {make: Nissan, name: LEAF}                      # EPA "Leaf" to 2022
+  - {make: Chevrolet, name: Bolt}                   # EPA "BOLT" for 2027
+  - {make: Maserati, name: GranTurismo}             # EPA "Granturismo" from 2024
+  - {make: Jaguar, name: S-Type}                    # EPA "S-type"
+  - {make: Lotus, name: Elise/Exige}                # EPA "Elise/exige" in 2005
+  - {make: Ferrari, name: F40}                      # EPA "F 40" in 1990
 
 # A customer's name for a vehicle that the catalog files under another name,
 # or another make, read by link_vehicles only (decision 0080). `names` are the
@@ -159,11 +171,11 @@ aliases:
 # years: outside them the name means what it says, and with no year recorded
 # the vehicle is left for the owner, because the year decides.
 customer_aliases:
-  - {make: Dodge, names: [Ram, Ram 1500], from: 2011, catalog_make: Ram, catalog_model: Ram 1500}
-  - {make: Dodge, names: [Ram 2500], from: 2011, catalog_make: Ram, catalog_model: Ram 2500}
+  - {make: Dodge, names: [Ram, Ram 1500], from: 2011, catalog_make: Ram, catalog_model: "1500"}
+  - {make: Dodge, names: [Ram 2500], from: 2011, catalog_make: Ram, catalog_model: "2500"}
   - {make: Chevrolet, names: ["2500", 2500HD], catalog_model: Silverado 2500 HD}
   - {make: Lexus, names: [GX550, GX 550], catalog_model: GX}
-  - {make: Mercedes-Benz, names: [CLS 550], catalog_model: CLS}
+  - {make: Mercedes-Benz, names: [CLS 550], catalog_model: CLS-Class}
   - {make: BMW, names: [530i], catalog_model: 5 Series}
   - {make: BMW, names: [650i], catalog_model: 6 Series}
 

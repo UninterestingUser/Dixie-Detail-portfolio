@@ -4,7 +4,7 @@ summary: How the database is backed up every night to the RAID and to Google Dri
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-18
+updated: 2026-10-24
 tags: [backups, restic, rclone, monitoring, healthchecks]
 related: [docs/operations/backups-and-restore.md, docs/operations/monitoring.md, docs/decisions/0027-backups-to-google-drive.md, docs/decisions/0039-healthchecks-monitoring.md]
 ---
@@ -39,12 +39,13 @@ The backup fetches `RESTIC_PASSWORD`, `RCLONE_CONFIG_PASS` and `HEALTHCHECKS_BAC
 
 ## Monitoring with Healthchecks.io
 
-Healthchecks.io emails the owner when something stops checking in. The free plan covers 20 checks with no stated limit on business use; two are used. UptimeRobot was ruled out because its free plan has been non-commercial since October 2024.
+Healthchecks.io emails the owner when something stops checking in. The free plan covers 20 checks with no stated limit on business use; three are used. UptimeRobot was ruled out because its free plan has been non-commercial since October 2024.
 
 | Check | Expected | Grace | What it catches |
 | --- | --- | --- | --- |
 | Nightly backup | Once a day | 2 hours | A backup that failed or never ran |
 | Public address | Every 10 minutes | 5 minutes | The server, its power, the home internet, the tunnel or the app being down |
+| Vehicle data refresh | The first Sunday of each month | 3 hours | A monthly vehicle data refresh that failed or never ran; described in [../operations/monitoring.md](../operations/monitoring.md) |
 
 For the public check, `ops/public-health.sh` on the server itself fetches `https://api.dixiedetail.com/health` every 10 minutes, retrying twice within a run, and pings only when the page answers `{"status":"ok"}`. A Cloudflare error page therefore counts as down. That request goes out to Cloudflare and back in through the tunnel, so a success proves the whole public path works. When anything along it fails, the pings stop and Healthchecks emails the owner. The ping addresses are Bitwarden secrets.
 

@@ -51,7 +51,10 @@ class Command(BaseCommand):
             refresh=refresh,
             log=self.stderr.write,
         )
-        reports = run(SOURCES if source == "all" else (source,), dry_run=dry_run, fetcher=fetcher, config=config, log=self.stderr.write)
+        # Kept on the command for refresh_vehicle_data, which runs this one.
+        self.reports = reports = run(
+            SOURCES if source == "all" else (source,), dry_run=dry_run, fetcher=fetcher, config=config, log=self.stderr.write
+        )
         self.print_report(reports, dry_run)
         failed = [report for report in reports if report.result == VehicleDataImportRun.Result.FAILED]
         if failed:
