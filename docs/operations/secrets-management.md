@@ -4,7 +4,7 @@ summary: Step-by-step procedures for adding, renaming and rotating secrets, re-e
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-13
+updated: 2026-10-23
 tags: [operations, secrets, bitwarden, security]
 related: [docs/architecture/secrets.md, data/configuration.yaml, docs/reference/configuration.md]
 ---
@@ -42,7 +42,7 @@ unset BWS_ACCESS_TOKEN
 
 ## Re-encrypt or replace the server's Bitwarden token
 
-Needed if the machine-account token is rotated, the TPM is reset, or the server is rebuilt. In Bitwarden, create a new access token for machine account `dixie-server`, then on the server run these lines one at a time. After `read -rs BWS_TOKEN` the cursor waits: paste the token and press Enter.
+Needed if the machine-account token is rotated, the TPM is reset, or the server is rebuilt. In Bitwarden, create a new access token for machine account `server` (label it `dixie-server`), then on the server run these lines one at a time. After `read -rs BWS_TOKEN` the cursor waits: paste the token and press Enter.
 
 ```bash
 sudo mkdir -p /etc/credstore.encrypted

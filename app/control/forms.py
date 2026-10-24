@@ -10,7 +10,7 @@ from django.utils import timezone
 from core.fields import format_phone, normalize_phone
 from customers.models import Address, Customer
 from pricebook.models import Service
-from vehicles.models import SizeVariant, Vehicle, VehicleClass
+from vehicles.models import ClassificationRule, SizeVariant, Vehicle, VehicleClass
 
 
 class PhoneInput(forms.TextInput):
@@ -173,3 +173,136 @@ class PublishForm(forms.Form):
         if date < timezone.localdate():
             raise ValidationError("The effective date must be today or later.")
         return date
+
+
+# The vehicle catalog screens (decision 0076).
+
+
+def size_choices(vehicle_classes):
+    """The size choices for an override or queue decision: from the facts,
+    always ask, or one size variant of any of these classes."""
+    choices = [("", "Worked out from the facts"), ("ask", "Always ask the customer")]
+    for size in SizeVariant.objects.filter(vehicle_class__in=vehicle_classes, active=True).select_related("vehicle_class"):
+        choices.append((str(size.pk), f"{size.vehicle_class}: {size.label}"))
+    return choices
+
+
+class SizeChoiceMixin:
+    """A size field whose value is "", "ask" or a size variant's id, checked
+    against the chosen vehicle class, which comes before it in the form.
+    cleaned_data gets size_variant and ask_size."""
+
+    def clean_size(self):
+        cleaned = self.cleaned_data
+        choice, vehicle_class = cleaned.get("size", ""), cleaned.get("vehicle_class")
+        cleaned["size_variant"], cleaned["ask_size"] = None, choice == "ask"
+        if choice and choice != "ask":
+            size = SizeVariant.objects.filter(pk=choice).first()
+            if size is None or vehicle_class is None or size.vehicle_class_id != vehicle_class.pk:
+                self.add_error("size", "Pick a size of the vehicle class above.")
+            cleaned["size_variant"] = size
+        return choice
+
+
+def year_field(label):
+    return forms.IntegerField(required=False, min_value=1900, max_value=2100, label=label, widget=forms.NumberInput(attrs={"inputmode": "numeric"}))
+
+
+class YearRangeMixin:
+    def check_years(self, cleaned):
+        low, high = cleaned.get("year_from"), cleaned.get("year_to")
+        if low is not None and high is not None and low > high:
+            self.add_error("year_to", "The last year comes after the first.")
+
+
+class ModelOverrideForm(SizeChoiceMixin, YearRangeMixin, forms.Form):
+    year_from = year_field("From model year")
+    year_to = year_field("To model year")
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    size = forms.ChoiceField(required=False, label="Size")
+    note = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Why, for the history.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["year_from"].help_text = "Leave both years empty for every year of the model."
+        self.fields["size"].choices = size_choices(VehicleClass.objects.filter(active=True))
+
+    def clean(self):
+        cleaned = super().clean()
+        self.check_years(cleaned)
+        return cleaned
+
+
+class ThirdRowForm(YearRangeMixin, forms.Form):
+    FLAGS = [("always", "Always has a third row"), ("never", "Never has a third row"),
+             ("optional", "Optional: ask the customer"), ("clear", "Clear: use the third-row list and NHTSA")]
+    year_from = year_field("From model year")
+    year_to = year_field("To model year")
+    flag = forms.ChoiceField(choices=FLAGS, label="Third row")
+    note = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Why, for the history.")
+
+    def clean(self):
+        cleaned = super().clean()
+        self.check_years(cleaned)
+        return cleaned
+
+
+class RuleForm(forms.ModelForm):
+    """A rule's name, position, class, note and whether it is active. Its
+    conditions are edited row by row on the same screen."""
+
+    class Meta:
+        model = ClassificationRule
+        fields = ["name", "position", "vehicle_class", "active", "note"]
+        widgets = {
+            "position": forms.NumberInput(attrs={"inputmode": "numeric"}),
+            "note": forms.Textarea(attrs={"rows": 2}),
+        }
+        help_texts = {"position": "Rules are tried from the lowest number up; 75 goes between 70 and 80."}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["vehicle_class"].queryset = VehicleClass.objects.filter(Q(active=True) | Q(pk=self.instance.vehicle_class_id))
+
+
+class VehicleClassSettingsForm(forms.ModelForm):
+    class Meta:
+        model = VehicleClass
+        fields = ["size_variant_measures", "booking", "photo_card"]
+        labels = {"size_variant_measures": "The size variant measures", "photo_card": "Photo card caption"}
+
+
+class VehicleOverrideForm(forms.Form):
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
+    note = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Such as lifted, or a long-bed conversion.")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True).select_related("vehicle_class")
+        self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"
+
+    def clean(self):
+        cleaned = super().clean()
+        size, vehicle_class = cleaned.get("size_variant"), cleaned.get("vehicle_class")
+        if size and vehicle_class and size.vehicle_class_id != vehicle_class.pk:
+            self.add_error("size_variant", "Pick a size of the vehicle class above, or leave it blank.")
+        return cleaned
+
+
+class TestPriceForm(forms.Form):
+    service = forms.ModelChoiceField(queryset=Service.objects.none())
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
+    condition_level = forms.TypedChoiceField(
+        choices=[(1, "1: adds nothing"), (2, "2"), (3, "3")], coerce=int, initial=1, label="Condition level",
+        help_text="Used by Full Detail, Interior Only and Exterior Only.",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["service"].queryset = Service.objects.filter(
+            on_price_list=True, kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN]
+        ).order_by("kind", "name")
+        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True).select_related("vehicle_class")
+        self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"

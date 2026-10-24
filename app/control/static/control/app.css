@@ -125,10 +125,10 @@ button, .button {
 }
 .search-bar input { font-size: 1.1rem; }
 
-/* The tab bar: five large targets along the bottom edge. */
+/* The tab bar: six large targets along the bottom edge. */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, 1fr);
   height: var(--tabbar); padding-bottom: env(safe-area-inset-bottom);
   background: var(--white); border-top: 1px solid var(--line);
 }
@@ -192,3 +192,38 @@ input[type="checkbox"], input[type="radio"] { width: 24px; height: 24px; min-hei
 .table-scroll { overflow-x: auto; }
 .affected { display: grid; gap: 8px; }
 input.short { width: 6rem; display: inline-block; min-height: 40px; padding: 4px 8px; text-align: right; }
+
+/* The vehicle catalog screens. */
+.subnav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.subnav a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--white); color: var(--navy); text-decoration: none; font-weight: 600; }
+.subnav a[aria-current="page"] { background: var(--navy); border-color: var(--navy); color: var(--white); }
+.subnav .badge { margin: 0; }
+.lookup { display: grid; grid-template-columns: 5.5rem 1fr; gap: 10px; }
+.lookup .field:nth-child(3) { grid-column: 1 / -1; }
+.lookup button { grid-column: 1 / -1; }
+@media (min-width: 600px) { .lookup { grid-template-columns: 6rem 1fr 1.5fr auto; align-items: end; } .lookup .field:nth-child(3), .lookup button { grid-column: auto; } }
+.facts { display: grid; gap: 8px; }
+.facts .details { margin: 6px 0 0; font-size: 0.95rem; }
+.years { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); font-size: 0.95rem; }
+.years th, .years td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.years tr[aria-current="true"] { background: #eef1f8; }
+details.panel { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 14px; }
+details.panel > summary { min-height: 48px; display: flex; align-items: center; font-weight: 700; color: var(--navy); cursor: pointer; }
+details.panel[open] { padding-bottom: 14px; }
+.history li { font-size: 0.95rem; }
+.history .lines-list { margin: 4px 0 0; padding-left: 18px; }
+.condition { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: grid; gap: 10px; background: var(--white); }
+.condition[data-kind="listed"] .bounds, .condition[data-kind="model"] .bounds, .condition[data-kind="names"] .bounds,
+.condition[data-kind="model names"] .bounds, .condition[data-kind="model words"] .bounds { display: none; }
+.condition[data-kind="year"] .values, .condition[data-kind="measured"] .values { display: none; }
+.queue-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: start; }
+.queue-item > input[type="checkbox"] { margin-top: 4px; }
+.queue-item .button-row { margin-top: 8px; }
+.queue-item .button-row button { min-height: 44px; padding: 8px 14px; }
+.queue-item .facts-line { font-size: 0.9rem; color: var(--muted); display: block; }
+.queue-bar { position: sticky; bottom: var(--tabbar); z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px -16px 0; padding: 10px 16px; background: var(--paper); border-top: 1px solid var(--line); }
+.queue-bar .count { grid-column: 1 / -1; margin: 0; font-size: 0.95rem; color: var(--muted); }
+.filters { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; margin: 0 0 12px; }
+.change-group summary { font-weight: 600; }
+.change-group ul { margin: 6px 0 0; padding-left: 18px; font-size: 0.9rem; }
+@media (min-width: 900px) { .queue-bar { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; } }

@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import appointment_views, pricebook_views, staff_views, views
+from . import appointment_views, catalog_views, pricebook_views, staff_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -38,6 +38,24 @@ urlpatterns = [
     path("pricebook/<int:number>/save/", pricebook_views.pricebook_save_draft, name="pricebook-save"),
     path("pricebook/<int:number>/discard/", pricebook_views.pricebook_discard_draft, name="pricebook-discard"),
     path("pricebook/<int:number>/publish/", pricebook_views.pricebook_publish, name="pricebook-publish"),
+    # The vehicle catalog (decision 0076).
+    path("catalog/", catalog_views.catalog, name="catalog"),
+    path("catalog/makes/", catalog_views.catalog_makes, name="catalog-makes"),
+    path("catalog/models/", catalog_views.catalog_models, name="catalog-models"),
+    path("catalog/price/", catalog_views.catalog_price, name="catalog-price"),
+    path("catalog/models/<int:pk>/override/", catalog_views.model_override, name="model-override"),
+    path("catalog/models/<int:pk>/third-row/", catalog_views.third_row, name="third-row"),
+    path("catalog/overrides/<int:pk>/clear/", catalog_views.override_clear, name="override-clear"),
+    path("catalog/decisions/<int:pk>/clear/", catalog_views.decision_clear, name="decision-clear"),
+    path("catalog/rules/", catalog_views.rules, name="rules"),
+    path("catalog/rules/new/", catalog_views.rule_form, name="rule-new"),
+    path("catalog/rules/<int:pk>/", catalog_views.rule_form, name="rule-edit"),
+    path("catalog/rules/<int:pk>/action/", catalog_views.rule_action, name="rule-action"),
+    path("catalog/classes/", catalog_views.vehicle_classes, name="vehicle-classes"),
+    path("catalog/classes/<int:pk>/", catalog_views.vehicle_class_form, name="vehicle-class"),
+    path("catalog/queue/", catalog_views.review_queue, name="review-queue"),
+    path("catalog/queue/act/", catalog_views.review_act, name="review-act"),
+    path("vehicles/<int:pk>/class/", catalog_views.vehicle_override, name="vehicle-override"),
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("sw.js", views.service_worker, name="service-worker"),
     path("offline/", views.offline, name="offline"),

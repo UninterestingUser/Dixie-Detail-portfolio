@@ -1,0 +1,176 @@
+{% extends "control/base.html" %}
+{% block title %}{% if vehicle_model %}{{ year }} {{ vehicle_model.make }} {{ vehicle_model.model }}{% else %}Vehicle catalog{% endif %}{% endblock %}
+{% block content %}
+<h1>Vehicle catalog</h1>
+{% include "control/_catalog_nav.html" %}
+
+<form method="get" action="{% url 'catalog' %}" class="lookup" role="search">
+  <div class="field">
+    <label for="year">Year</label>
+    <input id="year" name="year" value="{{ year|default_if_none:'' }}" inputmode="numeric" list="years" autocomplete="off"
+           hx-get="{% url 'catalog-makes' %}" hx-trigger="change" hx-target="#makes" hx-swap="innerHTML">
+    <datalist id="years">{% for found in years %}<option value="{{ found }}"></option>{% endfor %}</datalist>
+  </div>
+  <div class="field">
+    <label for="make">Make</label>
+    <input id="make" name="make" value="{{ make }}" list="makes" autocomplete="off"
+           hx-get="{% url 'catalog-models' %}" hx-trigger="change" hx-include="#year" hx-target="#models" hx-swap="innerHTML">
+    <datalist id="makes">{% for found in makes %}<option value="{{ found }}"></option>{% endfor %}</datalist>
+  </div>
+  <div class="field">
+    <label for="model">Model</label>
+    <input id="model" name="model" value="{{ model_name }}" list="models" autocomplete="off">
+    <datalist id="models">{% for found in models %}<option value="{{ found }}"></option>{% endfor %}</datalist>
+  </div>
+  <button type="submit" class="primary">Look up</button>
+</form>
+<p class="help">Type in each box to narrow its list. Other spellings work too, such as GLE-Class for the GLE.</p>
+
+{% if not_found %}<p class="notice">{{ not_found }}</p>{% endif %}
+
+{% if vehicle_model %}
+<section aria-labelledby="result-heading">
+  <h2 id="result-heading">{{ year }} {{ vehicle_model.make }} {{ vehicle_model.model }}</h2>
+  <div class="card">
+    {% if result.vehicle_class %}
+      <dl class="details">
+        <dt>Vehicle class</dt><dd><strong>{{ result.vehicle_class }}</strong></dd>
+        <dt>Size</dt><dd>{% if result.question %}Asked: “{{ result.question.text }}”{% else %}{{ result_size }}{% endif %}</dd>
+        <dt>Price basis</dt><dd>{{ result.vehicle_class.get_price_basis_display }}</dd>
+        <dt>Booking</dt><dd>{{ result.vehicle_class.get_booking_display }}</dd>
+        <dt>Vehicle type</dt><dd>{{ vehicle_model.get_vehicle_type_display }}</dd>
+        <dt>How</dt><dd>{{ result.because }}</dd>
+      </dl>
+      {% if result.in_review %}<p class="warn">Waiting in the review queue; this earlier class still applies: {{ result.review_reasons|join:"; " }}</p>{% endif %}
+    {% else %}
+      <p><strong>No class.</strong> The customer chooses from the photo cards.</p>
+      <p class="muted">{{ result.because }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section aria-labelledby="facts-heading">
+  <h2 id="facts-heading">Facts for {{ year }}, by source</h2>
+  {% if sources %}
+  <div class="facts">
+    {% for source in sources %}
+      <div class="card">
+        <strong>{{ source.source }}</strong>{% if source.owner %} <span class="badge">Yours</span>{% endif %}
+        {% if source.lines %}
+          <dl class="details">{% for label, text in source.lines %}<dt>{{ label }}</dt><dd>{{ text }}</dd>{% endfor %}</dl>
+        {% else %}<span class="sub">Lists the model year, with no facts a rule uses.</span>{% endif %}
+        {% if not source.owner %}<span class="sub">Last found {{ source.last_seen|date:"M j, Y" }}</span>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}<p class="muted">No source lists this model year.</p>{% endif %}
+</section>
+
+<section aria-labelledby="price-heading">
+  <h2 id="price-heading">Test price</h2>
+  <form class="card stack" hx-post="{% url 'catalog-price' %}" hx-target="#test-price" hx-swap="innerHTML" novalidate>
+    {% csrf_token %}
+    {% for field in price_form %}{% include "control/_field.html" %}{% endfor %}
+    <button type="submit">Price it</button>
+    <div id="test-price" aria-live="polite"></div>
+  </form>
+  <p class="help">From the pricebook in effect today. Nothing is saved.</p>
+</section>
+
+<section aria-labelledby="years-heading">
+  <h2 id="years-heading">Every year of this model</h2>
+  <div class="table-scroll"><table class="years">
+    <thead><tr><th>Year</th><th>Class and size</th><th>How</th></tr></thead>
+    <tbody>
+    {% for row in model_years %}
+      <tr{% if row.year == year %} aria-current="true"{% endif %}>
+        <td><a href="?model_id={{ vehicle_model.pk }}&amp;year={{ row.year }}">{{ row.year }}</a></td>
+        <td>{{ row.label }}{% if row.found.in_review %} <span class="badge status-requested">In review</span>{% endif %}</td>
+        <td class="muted">{{ row.how }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="overrides-heading">
+  <h2 id="overrides-heading">Overrides</h2>
+  {% if overrides or decisions %}
+  <ul class="list">
+    {% for override in overrides %}
+      <li class="card">
+        <strong>Model override, {% if override.year_from or override.year_to %}{{ override.year_from|default:"up" }} to {{ override.year_to|default:"now" }}{% else %}all years{% endif %}</strong>
+        <span class="sub">{{ override.vehicle_class }}, {% if override.size_variant %}{{ override.size_variant.label }}{% elif override.ask_size %}always ask the size{% else %}size from the facts{% endif %}</span>
+        <span class="sub">{% if override.set_by %}Set by {{ override.set_by }}{% else %}Launch override, from data/vehicle-classes.yaml{% endif %}, {{ override.set_at|date:"M j, Y" }}{% if override.note %}: {{ override.note }}{% endif %}</span>
+        {% if can_edit %}
+          <form method="post" action="{% url 'override-clear' override.pk %}">{% csrf_token %}<input type="hidden" name="year" value="{{ year }}"><button type="submit" class="card-action danger">Clear</button></form>
+        {% endif %}
+      </li>
+    {% endfor %}
+    {% for decision in decisions %}
+      <li class="card">
+        <strong>Review queue decision, {{ decision.year }}</strong>
+        <span class="sub">{% if decision.vehicle_class %}{{ decision.vehicle_class }}, {% if decision.size_variant %}{{ decision.size_variant.label }}{% elif decision.ask_size %}always ask the size{% else %}size from the facts{% endif %}{% else %}The photo cards{% endif %}</span>
+        <span class="sub">By {{ decision.decided_by|default:"someone" }}, {{ decision.decided_at|date:"M j, Y" }}{% if decision.note %}: {{ decision.note }}{% endif %}</span>
+        {% if can_edit %}
+          <form method="post" action="{% url 'decision-clear' decision.pk %}">{% csrf_token %}<input type="hidden" name="year" value="{{ year }}"><button type="submit" class="card-action danger">Clear</button></form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">None. The rules decide every year of this model.</p>{% endif %}
+
+  {% if can_edit %}
+  <details class="panel">
+    <summary>Set an override for the class or size</summary>
+    <form method="post" action="{% url 'model-override' vehicle_model.pk %}" class="stack" novalidate>
+      {% csrf_token %}<input type="hidden" name="year" value="{{ year }}">
+      <div class="two">{% with field=override_form.year_from %}{% include "control/_field.html" %}{% endwith %}{% with field=override_form.year_to %}{% include "control/_field.html" %}{% endwith %}</div>
+      {% with field=override_form.vehicle_class %}{% include "control/_field.html" %}{% endwith %}
+      {% with field=override_form.size %}{% include "control/_field.html" %}{% endwith %}
+      {% with field=override_form.note %}{% include "control/_field.html" %}{% endwith %}
+      <p class="help">An override beats every rule. One for the same years replaces it.</p>
+      <button type="submit" class="primary">Save the override</button>
+    </form>
+  </details>
+  <details class="panel">
+    <summary>Set the third-row flag</summary>
+    <form method="post" action="{% url 'third-row' vehicle_model.pk %}" class="stack" novalidate>
+      {% csrf_token %}<input type="hidden" name="year" value="{{ year }}">
+      <div class="two">{% with field=third_row_form.year_from %}{% include "control/_field.html" %}{% endwith %}{% with field=third_row_form.year_to %}{% include "control/_field.html" %}{% endwith %}</div>
+      {% with field=third_row_form.flag %}{% include "control/_field.html" %}{% endwith %}
+      {% with field=third_row_form.note %}{% include "control/_field.html" %}{% endwith %}
+      <p class="help">Recorded as your own seat rows, which come before the third-row list and NHTSA. It sets the size of crossovers and midsize SUVs, and the Three-row SUVs rule.</p>
+      <button type="submit" class="primary">Save the third-row flag</button>
+    </form>
+  </details>
+  {% else %}<p class="help">Only a manager can change overrides.</p>{% endif %}
+</section>
+
+{% if vehicles %}
+<section aria-labelledby="vehicles-heading">
+  <h2 id="vehicles-heading">Customers' vehicles with their own class</h2>
+  <ul class="list">
+    {% for vehicle in vehicles %}
+      <li><a class="row" href="{% url 'vehicle-edit' vehicle.pk %}"><strong>{{ vehicle }}</strong><span class="sub">{{ vehicle.customer }}: {{ vehicle.vehicle_class }}{% if vehicle.size_variant %}, {{ vehicle.size_variant.label }}{% endif %}</span></a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section aria-labelledby="history-heading">
+  <h2 id="history-heading">History</h2>
+  {% if history %}
+  <ul class="list history">
+    {% for entry in history %}
+      <li class="card">
+        <strong>{{ entry.change.get_kind_display }}</strong> · {{ entry.change.made_at|date:"M j, Y g:i A" }} · {{ entry.change.made_by|default:"the system" }}
+        <span class="sub">{{ entry.change.summary }}</span>
+        {% if entry.lines %}<ul class="lines-list">{% for years, detail in entry.lines %}<li>{{ years }}: {{ detail }}</li>{% endfor %}</ul>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No changes recorded for this model yet.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

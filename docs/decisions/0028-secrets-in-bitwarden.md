@@ -7,7 +7,7 @@ area: security
 status: accepted
 audience: [owner, developer]
 visibility: restricted
-updated: 2026-10-13
+updated: 2026-10-23
 supersedes: []
 superseded_by: []
 related: [docs/architecture/secrets.md, data/configuration.yaml]
@@ -23,7 +23,7 @@ The owner uses Bitwarden Secrets Manager for all secrets and wants nothing secre
 
 ## Decision
 
-Project "Dixie Detail" holds every secret; machine account `dixie-server` reads it. The token is encrypted with `systemd-creds --with-key=host+tpm2`. Services load it with `LoadCredentialEncrypted=`, fetch secrets with `bws`, and pass them to containers as in-memory files, never Docker environment variables. `.env` holds settings only.
+Project "Dixie Detail" holds every secret; machine account `server` reads it (named `dixie-server` until 2026-10-23; its access token keeps that label). The token is encrypted with `systemd-creds --with-key=host+tpm2`. Services load it with `LoadCredentialEncrypted=`, fetch secrets with `bws`, and pass them to containers as in-memory files, never Docker environment variables. `.env` holds settings only.
 
 ## Alternatives considered
 

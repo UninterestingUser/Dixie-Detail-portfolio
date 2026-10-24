@@ -2,11 +2,12 @@
 the booking form asks for it by year, make and model.
 
 The answer comes from the model year's saved classification, so a rule
-change reaches bookings only once classify_vehicles applies it. A
-customer's vehicle with its own override beats it. A year before the
-catalog starts, a model not in the catalog, and a model year waiting in the
-review queue with no class yet all fall back to the photo cards, one per
-active vehicle class.
+change reaches bookings only once it is applied, by classify_vehicles or
+the control app. A customer's vehicle with its own override beats it. A
+year before the catalog starts, a model not in the catalog, a model year
+waiting in the review queue with no class yet, and one the owner sent to
+the photo cards all fall back to the photo cards, one per active vehicle
+class.
 """
 
 from dataclasses import dataclass, field
@@ -14,17 +15,31 @@ from dataclasses import dataclass, field
 from vehicles.models import ModelYearClassification, VehicleClass, VehicleModel
 from vehicles.vehicle_data.names import load_names
 
+from .engine import because
 from .seed import read_data
 
 Measures = VehicleClass.Measures
+Method = ModelYearClassification.Method
 
 
 class How:
     RULE = "rule"
     MODEL_OVERRIDE = "model override"
     VEHICLE_OVERRIDE = "vehicle override"
+    QUEUE_DECISION = "review queue decision"
+    # The EPA has not published the year yet, so it takes the class of the
+    # model's nearest classified year.
+    NEAREST_YEAR = "nearest classified year"
     REVIEW_QUEUE = "review queue"
     PHOTO_CARDS = "photo cards"
+
+
+HOW = {
+    Method.RULE: How.RULE,
+    Method.OVERRIDE: How.MODEL_OVERRIDE,
+    Method.DECISION: How.QUEUE_DECISION,
+    Method.CARRIED: How.NEAREST_YEAR,
+}
 
 
 @dataclass(frozen=True)
@@ -74,6 +89,11 @@ class Classification:
     vehicle_model: VehicleModel = None
     rule: object = None
     override: object = None
+    decision: object = None
+    carried_from: int = None
+    # How the answer was reached, in words, such as "rule 140: EPA small
+    # SUVs and station wagons".
+    because: str = ""
     # The model year waits in the review queue; a class it had before still applies.
     in_review: bool = False
     review_reasons: list = field(default_factory=list)
@@ -174,23 +194,38 @@ def classify(year, make, model, answers=None, *, vehicle=None, vehicle_type=None
     if vehicle_model is None:
         return Classification(How.PHOTO_CARDS, photo_cards=photo_cards())
 
+    return stored_classification(vehicle_model, year, answers)
+
+
+def stored_classification(vehicle_model, year, answers=None):
+    """The Classification of one catalog model year, as last applied."""
     stored = (
         ModelYearClassification.objects.filter(vehicle_model=vehicle_model, year=year)
-        .select_related("vehicle_class", "size_variant", "rule", "override")
+        .select_related("vehicle_class", "size_variant", "rule", "override", "decision")
         .first()
     )
+    if stored is not None and stored.method == Method.PHOTO_CARDS:
+        return Classification(
+            How.PHOTO_CARDS,
+            vehicle_model=vehicle_model,
+            vehicle_type=vehicle_model.vehicle_type,
+            decision=stored.decision,
+            because=because(stored),
+            photo_cards=photo_cards(),
+        )
     if stored is None or stored.vehicle_class is None:
+        reasons = stored.review_reasons if stored else ["not classified yet"]
         return Classification(
             How.REVIEW_QUEUE,
             vehicle_model=vehicle_model,
             vehicle_type=vehicle_model.vehicle_type,
             in_review=True,
-            review_reasons=stored.review_reasons if stored else ["not classified yet"],
+            review_reasons=reasons,
+            because="review queue: " + "; ".join(reasons),
             photo_cards=photo_cards(),
         )
-    how = How.MODEL_OVERRIDE if stored.method == ModelYearClassification.Method.OVERRIDE else How.RULE
     result = Classification(
-        how,
+        HOW.get(stored.method, How.RULE),
         stored.vehicle_class,
         stored.size_variant,
         price_basis=stored.vehicle_class.price_basis,
@@ -198,6 +233,9 @@ def classify(year, make, model, answers=None, *, vehicle=None, vehicle_type=None
         vehicle_model=vehicle_model,
         rule=stored.rule,
         override=stored.override,
+        decision=stored.decision,
+        carried_from=stored.carried_from,
+        because=because(stored),
         in_review=stored.in_review,
         review_reasons=stored.review_reasons,
     )

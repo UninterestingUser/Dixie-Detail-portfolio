@@ -71,7 +71,7 @@
       {% for vehicle in vehicles %}
         <li class="card">
           <strong>{{ vehicle }}</strong>
-          <span class="sub">{% if vehicle.vehicle_class %}{{ vehicle.vehicle_class }}{% if vehicle.size_variant %}, {{ vehicle.size_variant.label }}{% endif %}{% else %}No vehicle class{% endif %}</span>
+          <span class="sub">{% if vehicle.vehicle_class %}{{ vehicle.vehicle_class }}{% if vehicle.size_variant %}, {{ vehicle.size_variant.label }}{% endif %}{% else %}No vehicle class{% endif %}{% if vehicle.class_overridden %} <span class="badge">Own class</span>{% endif %}</span>
           {% if vehicle.missing_details %}<span class="sub warn">To fill in: {{ vehicle.missing_details|join:", " }}</span>{% endif %}
           {% if vehicle.notes %}<span class="sub">{{ vehicle.notes }}</span>{% endif %}
           <a class="card-action" href="{% url 'vehicle-edit' vehicle.pk %}">Edit</a>
