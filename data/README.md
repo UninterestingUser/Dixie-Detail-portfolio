@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-24
 ---
 
 # Data files
@@ -17,7 +17,8 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | [services.yaml](services.yaml) | The service catalog | Seed and reference |
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels, maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Seed for pricebook settings |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The seven vehicle classes, their size variants and settings, the launch classification rules and model overrides, and the possible future classes | Read by `load_pricebook` (classes) and kept in step by `classify_vehicles` (launch rules and overrides the owner has not edited) |
-| [vehicle-names.yaml](vehicle-names.yaml) | The names customers know: EPA base models split into nameplates, the other spellings of one vehicle, and make spellings | Read by `import_vehicle_data`, `classify_vehicles` and the booking lookup |
+| [vehicle-names.yaml](vehicle-names.yaml) | The names customers know: EPA base models split into nameplates, the other spellings of one vehicle, make spellings, and the trim words left off a customer's model name | Read by `import_vehicle_data`, `classify_vehicles`, `link_vehicles` and the booking lookup |
+| [approval-spot-checks.yaml](approval-spot-checks.yaml) | The models near a class boundary the owner approves on the approval list, with why each is there | Read by the control app's approval list |
 | [third-row-seating.yaml](third-row-seating.yaml) | Which crossovers and midsize SUVs since 2010 have a third row always, optionally or never, by model year, checked by the owner | Read by `classify_vehicles` on every run |
 | [booking-rules.yaml](booking-rules.yaml) | Launch values of the scheduling settings: open days, hours, start times, notice, setup and breakdown, capacity, gaps, calendar sync timing, alert timing | Seed for scheduling settings |
 | [vehicle-data-import.yaml](vehicle-data-import.yaml) | The truck, van and motorcycle makes the vehicle data import asks vPIC for, the model years, the pacing, and Canadian make names | Read by `import_vehicle_data` |

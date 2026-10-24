@@ -4,7 +4,7 @@ summary: How to run classify_vehicles on the server to apply the classification 
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [operations, vehicles, classification, phase-2]
 related: [docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
 ---
@@ -21,7 +21,7 @@ Each run first brings the launch rules and model overrides in step with [data/ve
 
 It never changes an override you set or edited, a review queue decision, a customer's vehicle, or anything with source "owner". Each applied run is logged, and shows in each changed model's history in the control app.
 
-Day to day, rules, overrides, class settings and the review queue are changed in the control app's **Catalog** tab, which applies each change itself ([using-the-catalog-screens.md](using-the-catalog-screens.md)). Run this command after the catalog is reloaded, or when the data files change.
+Day to day, rules, overrides, class settings and the review queue are changed in the control app's **Catalog** tab, which applies each change itself ([using-the-catalog-screens.md](using-the-catalog-screens.md)). Run this command after the catalog is reloaded, or when the data files change. A run that alters a year range you approved on the approval list clears that approval. Customers' vehicles are linked to the catalog by a separate command ([linking-vehicles.md](linking-vehicles.md)).
 
 ## Before the first run
 
@@ -52,7 +52,7 @@ sudo docker compose run --rm --no-deps app python manage.py classify_vehicles --
 - **Model years:** how many are classified by a rule, by a model override, by a review queue decision, from the nearest classified year (a year the EPA has not published yet), sent to the photo cards, and wait in the review queue, and how many ask the customer the size.
 - **Model years by class and size:** the classified model years in each vehicle class, and within it by size variant or "ask".
 - **Would change:** every model year whose class or size would change, or that would enter or leave the review queue, joined into year ranges, with the old and new values and the rule or override responsible. On the first run that is every model year.
-- **Models whose years are in different classes:** each model with its year ranges and their classes, such as "Toyota Highlander: 2013: Crossovers & Wagons; 2014-2026: Midsize SUVs", for you to look at when the job history is checked (Phase 2 Step 4).
+- **Models whose years are in different classes:** each model with its year ranges and their classes, such as "Toyota Highlander: 2013: Crossovers & Wagons; 2014-2026: Midsize SUVs", for you to look at on the control app's approval list, which lists every one of these models ([using-the-catalog-screens.md](using-the-catalog-screens.md#approvals)).
 - **Waiting in the review queue:** each model year no rule settles, with the reason: no rule matches, its rows have no clear majority on a rule's condition (the split is shown, such as "3 of 6 rows (50%) meet it"), or its sources disagree.
 
 ## Step 3: Apply
