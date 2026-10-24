@@ -111,7 +111,8 @@ def group_by_model_year(placed):
 def write(source, by_model_year, report, new_models=(), reason=""):
     """Write one source's facts, {(model id, year): Facts}, and count what
     was added, changed and unchanged. Rows the source no longer lists are
-    kept; their last_seen shows when it last did."""
+    kept; their last_seen shows when it last did. Returns the ids of the
+    models changed, not counting new_models."""
     now = timezone.now()
     existing = {(row.vehicle_model_id, row.year): row for row in VehicleModelYear.objects.filter(source=source)}
     created, changed, unchanged = [], [], []
@@ -168,6 +169,7 @@ def write(source, by_model_year, report, new_models=(), reason=""):
     report.counts["models changed"] += len(models_changed - new_ids)
     report.counts["models unchanged"] += len(model_ids - new_ids - models_changed)
     report.counts["owner's models: facts recorded, model left alone"] += len(owners)
+    return models_changed - new_ids
 
 
 def _id_key(found):

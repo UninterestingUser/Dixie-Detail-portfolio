@@ -299,7 +299,7 @@ class FollowUpTestCase(LinkTestCase):
         cls.dodge_ram = add_model("Dodge", "Ram 1500", year_from=1994, year_to=2010)
         cls.silverado_hd = add_model("Chevrolet", "Silverado HD", year_from=2015, year_to=2026)
         cls.gx = add_model("Lexus", "GX", year_from=2003, year_to=2026)
-        cls.cls_class = add_model("Mercedes-Benz", "CLS", year_from=2006, year_to=2026)
+        cls.cls_class = add_model("Mercedes-Benz", "CLS-Class", year_from=2006, year_to=2026)
         cls.five = add_model("BMW", "5 Series", year_from=1984, year_to=2026)
         cls.six = add_model("BMW", "6 Series", year_from=1984, year_to=2019)
         cls.mazda6 = add_model("Mazda", "Mazda6", year_from=2003, year_to=2021)
@@ -341,7 +341,8 @@ class FollowUpAliasTests(FollowUpTestCase):
     def test_with_no_year_a_year_limited_alias_is_left_for_the_owner(self):
         found = self.found(None, "Dodge", "Ram 1500")
         self.assertEqual(found.status, NOT_FOUND)
-        self.assertIn("the Ram Ram 1500 from 2011 on, so the year decides", found.reason)
+        self.assertIn("the Ram 1500 from 2011 on, so the year decides", found.reason)
+        self.assertNotIn("Ram Ram", found.reason)
 
     def test_chevrolet_2500_is_the_silverado_hd(self):
         self.assert_links([

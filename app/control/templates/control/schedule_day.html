@@ -4,7 +4,10 @@
 <div class="heading">
   <h1>{% if day == today %}Today, {% endif %}{{ day|date:"l, F j, Y" }}</h1>
 </div>
-{% if queue_count %}<p class="notice"><a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.</p>{% endif %}
+{% if queue_count or last_refresh %}<p class="notice">
+  {% if queue_count %}<a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.{% endif %}
+  {% if last_refresh %}<span class="sub{% if last_refresh.result == 'failed' %} warn{% endif %}">Last vehicle data refresh: {{ last_refresh.started_at|date:"D, M j, g:i A" }}, {{ last_refresh.get_result_display|lower }}{% if last_refresh.result == 'failed' %} ({{ last_refresh.message|truncatechars:160 }}){% endif %}: {{ last_refresh.counts_text }}.</span>{% endif %}
+</p>{% endif %}
 <nav class="pager" aria-label="Days">
   <a class="button" href="?date={{ previous|date:'Y-m-d' }}" aria-label="Previous day">‹ {{ previous|date:"D" }}</a>
   {% if day != today %}<a class="button" href="{% url 'schedule' %}">Today</a>{% endif %}

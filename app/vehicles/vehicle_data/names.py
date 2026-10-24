@@ -19,6 +19,15 @@ def name_key(text):
     return re.sub(r"[^A-Z0-9]", "", (text or "").upper())
 
 
+def full_name(make, model):
+    """Make and model as one name, without saying the make twice: "Ram"
+    and "1500" -> "Ram 1500", and "Ram" and "Ram 1500" -> "Ram 1500" too."""
+    first = (model or "").split(maxsplit=1)[:1]
+    if first and name_key(first[0]) == name_key(make):
+        return model
+    return f"{make} {model}"
+
+
 def words(name):
     """A name as words of capitals and digits: "CR-V EX/L" -> ["CRV", "EX", "L"]."""
     return [word for word in (name_key(part) for part in re.split(r"[\s/()]+", name or "")) if word]
@@ -49,6 +58,10 @@ class CustomerAlias:
 
     def covers(self, year):
         return (self.year_from is None or year >= self.year_from) and (self.year_to is None or year <= self.year_to)
+
+    @property
+    def catalog_name(self):
+        return full_name(self.catalog_make, self.catalog_model)
 
     @property
     def years(self):

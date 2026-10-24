@@ -38,6 +38,10 @@ class SourceReport:
     merged: list = field(default_factory=list)
     unmatched: list = field(default_factory=list)
     rejected: list = field(default_factory=list)
+    # The ids behind "models added" and "models changed", so the monthly
+    # refresh counts a model once however many sources changed it.
+    added_model_ids: set = field(default_factory=set)
+    changed_model_ids: set = field(default_factory=set)
 
     @property
     def label(self):
@@ -56,7 +60,8 @@ def store(keyed_facts, source, model_source, report, config):
     catalog = Catalog(config.names)
     placed = place(catalog, keyed_facts, model_source)
     catalog.save_new(reason)
-    write(source, group_by_model_year(placed), report, catalog.new, reason)
+    report.changed_model_ids |= write(source, group_by_model_year(placed), report, catalog.new, reason)
+    report.added_model_ids |= {vehicle_model.pk for vehicle_model in catalog.new}
     return catalog.new
 
 
@@ -75,7 +80,7 @@ def write_vpic(collected, report, config):
 def write_canada(collected, report, config):
     report.merged.extend(merge_duplicates(config.names, "Canadian specifications import"))
     grouped = canada.facts_by_model_year(collected, report, config.names)
-    write(Source.CANADA, grouped, report, reason="Canadian specifications import")
+    report.changed_model_ids |= write(Source.CANADA, grouped, report, reason="Canadian specifications import")
 
 
 COLLECT = {"epa": epa.collect, "vpic": vpic.collect, "canada": canada.collect}
