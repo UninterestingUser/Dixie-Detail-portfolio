@@ -1,0 +1,6 @@
+<nav class="subnav" aria-label="Catalog">
+  <a href="{% url 'catalog' %}"{% if catalog_here == 'search' %} aria-current="page"{% endif %}>Look up</a>
+  <a href="{% url 'review-queue' %}"{% if catalog_here == 'queue' %} aria-current="page"{% endif %}>Review queue{% if queue_count %} <span class="badge">{{ queue_count }}</span>{% endif %}</a>
+  <a href="{% url 'rules' %}"{% if catalog_here == 'rules' %} aria-current="page"{% endif %}>Rules</a>
+  <a href="{% url 'vehicle-classes' %}"{% if catalog_here == 'classes' %} aria-current="page"{% endif %}>Classes</a>
+</nav>

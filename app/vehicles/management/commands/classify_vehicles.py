@@ -16,35 +16,15 @@ from collections import Counter, defaultdict
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
-from vehicles.classification.engine import apply, changes, classify_catalog
+from vehicles.classification.engine import apply, change_detail, changes, classify_catalog, record, year_spans, years_text
 from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
-from vehicles.models import VehicleModel
+from vehicles.models import ClassificationChange, VehicleModel
 
 
 def spans(rows):
     """[(vehicle model, year, detail)] -> ["Make Model 2019-2024: detail"],
     joining consecutive years of one model with the same detail."""
-    lines = []
-    current = None
-    for vehicle_model, year, detail in sorted(rows, key=lambda row: (row[0].make, row[0].model, row[0].pk, row[1])):
-        if current and current[0].pk == vehicle_model.pk and current[3] == detail and current[2] == year - 1:
-            current[2] = year
-            continue
-        if current:
-            lines.append(current)
-        current = [vehicle_model, year, year, detail]
-    if current:
-        lines.append(current)
-    return [
-        f"{model.make} {model.model} {first}{'' if first == last else f'-{last}'}: {detail}"
-        for model, first, last, detail in lines
-    ]
-
-
-def describe(vehicle_class, size):
-    if vehicle_class is None:
-        return "no class"
-    return f"{vehicle_class} ({size})" if size else str(vehicle_class)
+    return [f"{model.make} {model.model} {years_text(first, last)}: {detail}" for model, first, last, detail in year_spans(rows)]
 
 
 class Command(BaseCommand):
@@ -68,6 +48,8 @@ class Command(BaseCommand):
             counts = None if dry_run else apply(results)
             if dry_run:
                 transaction.set_rollback(True)
+            else:
+                record(ClassificationChange.Kind.RUN, f"classify_vehicles applied the rules: {len(found):,} model years changed", found)
         self.print_report(dry_run, seeded, results, found, counts)
 
     def print_report(self, dry_run, seeded, results, found, counts):
@@ -88,7 +70,14 @@ class Command(BaseCommand):
 
         methods = Counter(result.method for _, result in results.values())
         write(f"\nModel years: {len(results):,}")
-        for method, label in (("rule", "by a rule"), ("override", "by a model override"), ("review", "in the review queue")):
+        for method, label in (
+            ("rule", "by a rule"),
+            ("override", "by a model override"),
+            ("decision", "by a review queue decision"),
+            ("carried", "from the nearest classified year, the EPA not having published it yet"),
+            ("photo_cards", "sent to the photo cards from the review queue"),
+            ("review", "in the review queue"),
+        ):
             write(f"  {label}: {methods.get(method, 0):,}")
         asks = sum(1 for _, result in results.values() if result.ask_size)
         write(f"  the booking form asks the size: {asks:,}")
@@ -100,7 +89,7 @@ class Command(BaseCommand):
         by_class = Counter()
         by_size = Counter()
         for _, result in results.values():
-            if result.in_review:
+            if result.vehicle_class is None:
                 continue
             by_class[result.vehicle_class.name, result.vehicle_class.sort_order] += 1
             size = "ask" if result.ask_size else (result.size_variant.label if result.size_variant else "one price")
@@ -111,21 +100,14 @@ class Command(BaseCommand):
                 if class_name == name:
                     write(f"    {size}: {sized:,}")
 
-        rows = []
-        for change in found:
-            detail = f"{describe(change.old_class, change.old_size)} -> {describe(change.new_class, change.new_size)}"
-            if change.entering_review:
-                detail += ", enters the review queue"
-            elif change.leaving_review:
-                detail += ", leaves the review queue"
-            rows.append((change.vehicle_model, change.year, f"{detail} ({change.because})"))
+        rows = [(change.vehicle_model, change.year, f"{change_detail(change)} ({change.because})") for change in found]
         write(f"\n{'Would change' if dry_run else 'Changed'} ({len(found):,} model years)")
         for line in spans(rows):
             write(f"  {line}")
 
         classes = defaultdict(list)
         for model_year, result in results.values():
-            if not result.in_review:
+            if result.vehicle_class is not None:
                 classes[model_year.vehicle_model.pk].append((model_year.year, result.vehicle_class.name, model_year.vehicle_model))
         mixed = []
         for found in classes.values():

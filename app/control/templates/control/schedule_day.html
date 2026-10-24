@@ -4,6 +4,7 @@
 <div class="heading">
   <h1>{% if day == today %}Today, {% endif %}{{ day|date:"l, F j, Y" }}</h1>
 </div>
+{% if queue_count %}<p class="notice"><a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.</p>{% endif %}
 <nav class="pager" aria-label="Days">
   <a class="button" href="?date={{ previous|date:'Y-m-d' }}" aria-label="Previous day">‹ {{ previous|date:"D" }}</a>
   {% if day != today %}<a class="button" href="{% url 'schedule' %}">Today</a>{% endif %}

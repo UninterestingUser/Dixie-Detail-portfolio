@@ -1,7 +1,7 @@
 meta:
   title: Vehicle classes
   summary: The seven vehicle classes that set prices, each class's settings (what the size variant measures, online booking, photo card), the launch classification rules and model overrides, and the possible future classes.
-  updated: 2026-10-22
+  updated: 2026-10-23
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
@@ -50,7 +50,7 @@ classes:
     photo_card: Full-size SUVs, minivans and vans
     customer_asked: Never
     epa_size_classes: minivans and vans
-    overrides_in: [Chevrolet Suburban and Suburban HD, Chevrolet Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Jeep Wagoneer, Jeep Grand Wagoneer (from 2022), Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia]
+    overrides_in: [Chevrolet Suburban and Suburban HD, Chevrolet Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Jeep Wagoneer and Grand Wagoneer (from 2022), Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia]
   - name: Fullsize Trucks
     size_variant_measures: cab style
     size_variants: {1: regular cab, 2: extended or crew cab}
@@ -67,7 +67,7 @@ classes:
     customer_asked: Never; one price
     vehicle_type: motorcycle      # every catalog model with vehicle type motorcycle, from NHTSA vPIC
 
-class_settings:            # decision 0060; on each vehicle class record, edited in the Django admin until a control-app screen exists
+class_settings:            # decision 0060; on each vehicle class record, edited on the control app's class settings screen (decision 0076)
   size_variant_measures: [doors, cab style, seat rows, none]
   booking: [online, ask for a quote]
   photo_card: the caption of the class's card, shown when a vehicle is not in the catalog
@@ -78,6 +78,13 @@ class_settings:            # decision 0060; on each vehicle class record, edited
 # review queue with the split. 1 would need every row to agree.
 rule_settings:
   majority_share: "2/3"
+  # A model year the EPA has not published yet, such as next year's F-150
+  # that only vPIC lists so far, takes the class and size of the model's
+  # nearest classified year instead of going to the review queue (decision
+  # 0075). It counts as unpublished when the EPA lists earlier years of the
+  # model but not this one, and the year is among the EPA's newest this many
+  # model years, or later. It is classified again when the EPA data arrives.
+  epa_unpublished_years: 2
 
 # The launch rules, tried in this order; the first whose conditions all hold
 # gives the class (decision 0060). The facts a condition can test and their
@@ -222,7 +229,8 @@ model_overrides:
   - {make: Nissan, model: Armada, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
   - {make: Infiniti, model: QX56, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
   - {make: Infiniti, model: QX80, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
-  - {make: Jeep, model: Wagoneer, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
+  - {make: Jeep, model: Wagoneer, year_from: 2022, class: Fullsize SUVs & Minivans,
+     note: "Full-size SUV from 2022, priced with the Suburban; the 1989 to 1990 Wagoneer is the old compact one"}
   - {make: Jeep, model: Grand Wagoneer, year_from: 2022, class: Fullsize SUVs & Minivans,
      note: "Full-size SUV from 2022, priced with the Suburban; the 1984 to 1991 Grand Wagoneer is a different vehicle"}
   - {make: Ford, model: Expedition MAX, class: Fullsize SUVs & Minivans, note: "Full-size SUV, priced with the Suburban"}
@@ -234,8 +242,10 @@ classification:            # decision 0060; built in Phase 2 Step 2 (decision 00
   facts: [vehicle type, make, model, model name words, model year, EPA size class, drive, body style, cab style, seat rows, vPIC vehicle type, GVWR, curb weight, length, width, height, wheelbase, passenger volume, luggage volume]
   example_rule: "EPA small SUV weighing over 4,500 lb -> Midsize SUVs"
   overrides: [per model (beats every rule), per vehicle (one customer's lifted or modified vehicle; beats both)]
+  review_queue_decisions: per model year, from the review queue; beat the rules, and a model override beats them
   review_queue: [no rule matches, sources disagree on a fact a rule tests, no clear majority of a model year's rows on a rule's condition (rule_settings.majority_share)]
-  rule_change: previewed with every model year that would change class or size (classify_vehicles --dry-run); applies to new quotes only
+  rule_change: previewed with every model year that would change class or size (the control app's rule screen, or classify_vehicles --dry-run), applied when the owner confirms; applies to new quotes only
+  not_yet_published: a model year the EPA has not published takes the class of the model's nearest classified year (rule_settings.epa_unpublished_years)
   booking_input: year, make and model (VINs are not used for pricing)
   third_row_seating: data/third-row-seating.yaml first, then NHTSA where it has data; optional or unknown is asked
 

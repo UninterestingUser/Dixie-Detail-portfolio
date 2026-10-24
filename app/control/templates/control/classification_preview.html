@@ -1,0 +1,44 @@
+{% extends "control/base.html" %}
+{% block title %}Preview{% endblock %}
+{% block content %}
+<h1>Preview</h1>
+{% include "control/_catalog_nav.html" %}
+{% if stale %}<p class="notice">The catalog changed since that preview, so it was worked out again. Check it and confirm again.</p>{% endif %}
+<p><strong>{{ summary }}</strong></p>
+<p class="hint">Nothing has changed yet.{% if count %} Confirming changes {{ count }} model year{{ count|pluralize }} of {{ models }} model{{ models|pluralize }}{% if entering %}; {{ entering }} enter{{ entering|pluralize:"s," }} the review queue{% endif %}{% if leaving %}; {{ leaving }} leave{{ leaving|pluralize:"s," }} it{% endif %}.{% elif not booking %} No model year would change class or size.{% endif %}</p>
+
+{% if booking %}
+  <div class="card">
+    <strong>{{ booking.count }} model year{{ booking.count|pluralize }} would be {% if booking.quote %}asked for a quote instead of booked online{% else %}booked online{% endif %}.</strong>
+    {% if booking.lines %}
+    <details class="change-group"><summary>The models</summary>
+      <ul>{% for model, years in booking.lines %}<li>{{ model.make }} {{ model.model }} {{ years }}</li>{% endfor %}{% if booking.more %}<li>and {{ booking.more }} more</li>{% endif %}</ul>
+    </details>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if groups %}
+<ul class="list">
+  {% for group in groups %}
+    <li class="card">
+      <strong>{{ group.old }} → {{ group.new }}</strong>
+      <span class="sub">{{ group.model_years }} model year{{ group.model_years|pluralize }} of {{ group.models }} model{{ group.models|pluralize }}</span>
+      <details class="change-group"><summary>The model years</summary>
+        <ul>{% for model, years, detail in group.lines %}<li>{{ model.make }} {{ model.model }} {{ years }}: {{ detail }}</li>{% endfor %}{% if group.more %}<li>and {{ group.more }} more lines</li>{% endif %}</ul>
+      </details>
+    </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" action="{{ action }}">
+  {% csrf_token %}
+  {% for name, value in posted %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  <input type="hidden" name="fingerprint" value="{{ fingerprint }}">
+  <div class="actions">
+    <button type="submit" name="confirm" value="1" class="primary">Confirm and apply</button>
+    {% if back_to_form %}<button type="submit" name="back" value="1">Back to editing</button>{% else %}<a class="button" href="{{ back }}">Cancel</a>{% endif %}
+  </div>
+</form>
+{% endblock %}

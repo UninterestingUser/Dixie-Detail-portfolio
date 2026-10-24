@@ -1,0 +1,76 @@
+{% extends "control/base.html" %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+{% include "control/_catalog_nav.html" %}
+<p class="help">Model years no rule settles. Each waits here, without going live, until you settle it. A model year that was live keeps its earlier class meanwhile; a new one shows the customer the photo cards.</p>
+
+<form method="get" class="filters">
+  <div class="field"><label for="year-filter">Year</label>
+    <select id="year-filter" name="year"><option value="">All years</option>{% for found in years %}<option value="{{ found }}"{% if found == year %} selected{% endif %}>{{ found }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="reason-filter">Reason</label>
+    <select id="reason-filter" name="reason"><option value="">All reasons</option>{% for value, label in reasons %}<option value="{{ value }}"{% if value == reason %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+  <button type="submit">Filter</button>
+</form>
+
+<p class="muted">{{ total }} model year{{ total|pluralize }}{% if year or reason %} match{{ total|pluralize:"es," }}{% endif %}, newest first.</p>
+
+{% if items %}
+<form method="post" action="{% url 'review-act' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ here }}">
+  {% if can_edit %}<label class="toggle"><span>Pick every model year on this page</span><input type="checkbox" class="pick-all" aria-label="Pick every model year on this page"></label>{% endif %}
+  <ul class="list" style="margin-top: 8px">
+    {% for item in items %}
+      {% with found=item.found %}
+      <li class="card queue-item">
+        {% if can_edit %}<input type="checkbox" name="selected" value="{{ found.pk }}" id="pick-{{ found.pk }}" aria-label="Pick {{ found.year }} {{ found.vehicle_model.make }} {{ found.vehicle_model.model }}">{% else %}<span></span>{% endif %}
+        <div>
+          <a href="{% url 'catalog' %}?model_id={{ found.vehicle_model_id }}&amp;year={{ found.year }}"><strong>{{ found.year }} {{ found.vehicle_model.make }} {{ found.vehicle_model.model }}</strong></a>
+          {% for text in found.review_reasons %}<span class="sub warn">{{ text }}</span>{% endfor %}
+          {% for source, lines in item.facts %}<span class="facts-line">{{ source }}: {% for label, text in lines %}{{ label }} {{ text }}{% if not forloop.last %}; {% endif %}{% endfor %}</span>{% endfor %}
+          {% if item.live %}<span class="sub">Live meanwhile: {{ item.live }}</span>{% endif %}
+          <span class="sub">{% if item.suggestion %}Suggested: <strong>{{ item.suggestion }}</strong>{% else %}No suggestion{% endif %}</span>
+          {% if can_edit %}
+          <div class="button-row">
+            {% if item.suggestion %}<button type="submit" name="do" value="accept:{{ found.pk }}" class="primary">Accept</button>{% endif %}
+            <button type="submit" name="do" value="photo:{{ found.pk }}">Photo cards</button>
+          </div>
+          <details class="panel" style="margin-top: 8px">
+            <summary>Pick another class or set the size</summary>
+            <div class="stack">
+              <div class="field"><label for="class-{{ found.pk }}">Vehicle class</label>
+                <select id="class-{{ found.pk }}" name="class-{{ found.pk }}">{% for vehicle_class in classes %}<option value="{{ vehicle_class.pk }}"{% if vehicle_class.pk == found.suggested_class_id %} selected{% endif %}>{{ vehicle_class }}</option>{% endfor %}</select></div>
+              <div class="field"><label for="size-{{ found.pk }}">Size</label>
+                <select id="size-{{ found.pk }}" name="size-{{ found.pk }}">{% for value, label in sizes %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+              <button type="submit" name="do" value="pick:{{ found.pk }}">Save for {{ found.year }}</button>
+            </div>
+          </details>
+          {% endif %}
+        </div>
+      </li>
+      {% endwith %}
+    {% endfor %}
+  </ul>
+
+  {% if page.has_other_pages %}
+  <nav class="pager" aria-label="Pages">
+    {% if page.has_previous %}<a class="button" href="?year={{ year|default_if_none:'' }}&amp;reason={{ reason }}&amp;page={{ page.previous_page_number }}">‹ Newer</a>{% endif %}
+    <span class="muted" style="align-self: center; text-align: center">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="button" href="?year={{ year|default_if_none:'' }}&amp;reason={{ reason }}&amp;page={{ page.next_page_number }}">Older ›</a>{% endif %}
+  </nav>
+  {% endif %}
+
+  {% if can_edit %}
+  <div class="field"><label for="queue-note">Note for the history <span class="muted">(optional)</span></label><input id="queue-note" name="note" maxlength="500"></div>
+  <div class="queue-bar">
+    <p class="count">For the model years you picked:</p>
+    <button type="submit" name="do" value="accept" class="primary">Accept suggestions</button>
+    <button type="submit" name="do" value="photo">Photo cards</button>
+  </div>
+  {% else %}<p class="help">Only a manager can settle model years.</p>{% endif %}
+</form>
+{% else %}
+  <p class="notice">Nothing waits here{% if year or reason %} with these filters{% endif %}.</p>
+{% endif %}
+{% endblock %}

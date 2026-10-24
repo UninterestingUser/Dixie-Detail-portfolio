@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -99,3 +99,5 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0072](0072-motorcycles-class.md) | 2026-10-22 | pricing | Motorcycles become a vehicle class with one service, Motorcycle Detail at $100 | accepted |
 | [0073](0073-classification-per-model-year.md) | 2026-10-22 | vehicles | Vehicle classification is applied per model year, with straddling and disputed facts sent to review | accepted |
 | [0074](0074-nameplates-aliases-and-majority.md) | 2026-10-22 | vehicles | Models are the nameplates customers know, and a rule goes by most of a model year's rows | accepted |
+| [0075](0075-unpublished-years-and-canadian-nameplates.md) | 2026-10-23 | vehicles | A model year the EPA has not published takes its model's nearest classified year, and Canadian trims split by nameplate | accepted |
+| [0076](0076-catalog-screens-in-the-control-app.md) | 2026-10-23 | control-app | The control app's catalog screens: managers change, a rule or class setting is previewed, every change is logged | accepted |

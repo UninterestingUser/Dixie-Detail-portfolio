@@ -7,4 +7,5 @@ lookup the booking form uses.
 - engine: classifying the whole catalog, the preview and applying it.
 - seed: the launch rules, overrides and third-row list from data/.
 - lookup: classify(year, make, model, answers=None).
+- owner: the owner's changes from the control app, applied and logged.
 """

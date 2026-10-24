@@ -1,0 +1,21 @@
+{% extends "control/base.html" %}
+{% block title %}Vehicle classes{% endblock %}
+{% block content %}
+<h1>Vehicle classes</h1>
+{% include "control/_catalog_nav.html" %}
+<p class="help">Each class's settings: what its size variant measures, whether customers book it online, and its photo card. Prices are on the pricebook screen.</p>
+<ul class="list">
+  {% for row in rows %}
+    {% with vehicle_class=row.vehicle_class %}
+    <li class="card{% if not vehicle_class.active %} faded{% endif %}">
+      <strong>{{ vehicle_class }}</strong>{% if not vehicle_class.active %} <span class="badge">Retired</span>{% endif %}
+      <span class="sub">Size measures: {{ vehicle_class.get_size_variant_measures_display }}{% for size in vehicle_class.size_variants.all %}{% if forloop.first %} ({% endif %}{{ size.value }}: {{ size.label }}{% if forloop.last %}){% else %}; {% endif %}{% endfor %}</span>
+      <span class="sub">{{ vehicle_class.get_booking_display }} · Photo card: {{ vehicle_class.photo_card|default:"(the class name)" }}</span>
+      <span class="sub">{{ row.model_years }} model year{{ row.model_years|pluralize }} in the catalog</span>
+      {% if can_edit %}<a class="card-action" href="{% url 'vehicle-class' vehicle_class.pk %}">Edit</a>{% endif %}
+    </li>
+    {% endwith %}
+  {% endfor %}
+</ul>
+{% if not can_edit %}<p class="help">Only a manager can change class settings.</p>{% endif %}
+{% endblock %}

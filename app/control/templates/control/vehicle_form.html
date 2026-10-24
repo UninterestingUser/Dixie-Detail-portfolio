@@ -11,4 +11,34 @@
     <a class="button" href="{% url 'customer' customer.pk %}">Cancel</a>
   </div>
 </form>
+
+{% if vehicle.pk %}
+<section aria-labelledby="class-override">
+  <h2 id="class-override">Class override</h2>
+  <div class="card">
+    {% if catalog %}
+      <p>The catalog gives the {{ vehicle.year }} {{ vehicle.make }} {{ vehicle.model }}:
+        <strong>{% if catalog.vehicle_class %}{{ catalog.vehicle_class }}{% if catalog.size_variant %}, {{ catalog.size_variant.label }}{% elif catalog.question %}, size asked{% endif %}{% else %}no class (photo cards){% endif %}</strong>.
+        {% if catalog.vehicle_model %}<a href="{% url 'catalog' %}?model_id={{ catalog.vehicle_model.pk }}&amp;year={{ vehicle.year }}">See it in the catalog</a>{% endif %}</p>
+    {% else %}
+      <p class="muted">Fill in the year, make and model to see the catalog's class.</p>
+    {% endif %}
+    {% if vehicle.class_overridden %}
+      <p class="warn">This vehicle has its own class: {{ vehicle.vehicle_class }}{% if vehicle.size_variant %}, {{ vehicle.size_variant.label }}{% endif %}, set by {{ vehicle.class_override_by|default:"someone" }} on {{ vehicle.class_override_at|date:"M j, Y" }}{% if vehicle.class_override_note %}: {{ vehicle.class_override_note }}{% endif %}. It beats the catalog.</p>
+    {% else %}
+      <p class="help">For a lifted or modified vehicle, set its own class. It beats the catalog's class and the model's overrides.</p>
+    {% endif %}
+  </div>
+  {% if can_override %}
+  <form method="post" action="{% url 'vehicle-override' vehicle.pk %}" class="stack" novalidate style="margin-top: 12px">
+    {% csrf_token %}
+    {% for field in override_form %}{% include "control/_field.html" %}{% endfor %}
+    <div class="button-row">
+      <button type="submit" class="primary">{% if vehicle.class_overridden %}Change its own class{% else %}Give it its own class{% endif %}</button>
+      {% if vehicle.class_overridden %}<button type="submit" name="clear" value="1" class="danger">Go back to the catalog's class</button>{% endif %}
+    </div>
+  </form>
+  {% else %}<p class="help">Only a manager can override a vehicle's class.</p>{% endif %}
+</section>
+{% endif %}
 {% endblock %}

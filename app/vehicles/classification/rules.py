@@ -270,20 +270,89 @@ class RuleResult:
     outcome: str
     # The conditions that straddle or whose sources disagree, for the review queue.
     reasons: list
+    # Outcome.STRADDLES or Outcome.DISAGREE for each reason.
+    kinds: list = None
 
 
 def test_rule(model_year, conditions, share=Fraction(1)):
     """Whether a rule's conditions hold, any fails, or the model year must be
     reviewed because a condition straddles or its sources disagree."""
-    reasons = []
+    reasons, kinds = [], []
     for key, wanted in conditions.items():
         tested = test_condition(model_year, key, wanted, share)
         if tested.outcome == Outcome.FAILS:
             return RuleResult(Outcome.FAILS, [])
         if tested.outcome == Outcome.STRADDLES:
             reasons.append(f"its trims split on the {FACTS[key].label} condition: {tested.split}")
+            kinds.append(Outcome.STRADDLES)
         elif tested.outcome == Outcome.DISAGREE:
             reasons.append(f"its sources disagree on the {FACTS[key].label} condition")
+            kinds.append(Outcome.DISAGREE)
     if reasons:
-        return RuleResult(Outcome.STRADDLES, reasons)
+        return RuleResult(Outcome.STRADDLES, reasons, kinds)
     return RuleResult(Outcome.HOLDS, [])
+
+
+# Writing a rule out in plain words, for the control app's rule list and
+# preview: "EPA size class Small Sport Utility Vehicle 2WD or Small Sport
+# Utility Vehicle 4WD and curb weight over 4,500 lb -> Midsize SUVs".
+
+UNITS = {
+    "gvwr": "lb", "curb_weight": "lb", "length": "in", "width": "in", "height": "in", "wheelbase": "in",
+    "passenger_volume": "cu ft", "luggage_volume": "cu ft",
+}
+
+
+def either(values):
+    """["a", "b", "c"] -> "a, b or c"."""
+    values = [str(value) for value in values]
+    return values[0] if len(values) == 1 else f"{', '.join(values[:-1])} or {values[-1]}"
+
+
+def _number(value):
+    return f"{value:,}" if isinstance(value, int) or float(value).is_integer() else str(value)
+
+
+def describe_condition(key, value):
+    """One condition in plain words, such as "curb weight over 4,500 lb"."""
+    fact = FACTS.get(key)
+    if fact is None:
+        return f"{key} {value}"
+    if fact.kind == "year":
+        low, high = value.get("from"), value.get("to")
+        if low is not None and high is not None:
+            return f"model year {low} to {high}"
+        return f"model year {low} or later" if low is not None else f"model year up to {high}"
+    if fact.kind == "measured":
+        unit = UNITS.get(key, "")
+        parts = [f"{word} {_number(value[end])} {unit}".strip() for end, word in (("over", "over"), ("up_to", "up to")) if end in value]
+        return f"{fact.label} {' and '.join(parts)}"
+    values = [str(found) for found in value]
+    named = [found for found in values if found != NONE]
+    if key == "model":
+        return f"model is or begins with {either(named)}"
+    if key == "model_word":
+        return f"model name contains {either(named)}"
+    if key == "seat_rows":
+        return f"{either(named)} seat rows" + (" or none listed" if NONE in values else "")
+    if key == "vehicle_type":
+        labels = dict(VehicleModel.VehicleType.choices)
+        return f"vehicle type {either(labels.get(found, found).lower() for found in named)}"
+    if not named:
+        return f"no {fact.label} listed"
+    return f"{fact.label} {either(named)}" + (" or none listed" if NONE in values else "")
+
+
+def in_order(conditions):
+    """A rule's conditions as (fact, value) in the order of FACTS: what the
+    vehicle is, then its classes, then its measures. The database keeps no
+    order of its own."""
+    order = {key: index for index, key in enumerate(FACTS)}
+    return sorted(conditions.items(), key=lambda item: (order.get(item[0], len(order)), item[0]))
+
+
+def describe_conditions(conditions):
+    """A rule's conditions in plain words, joined with "and"."""
+    if not conditions:
+        return "every model year"
+    return " and ".join(describe_condition(key, value) for key, value in in_order(conditions))

@@ -341,6 +341,41 @@ class ModelOverride(models.Model):
         super().save(*args, **kwargs)
 
 
+class ReviewDecision(models.Model):
+    """The owner's answer to one model year in the review queue: a vehicle
+    class, with its size fixed, always asked or left to the facts as for a
+    model override, or, with no class, the photo cards. A model override
+    covering the year beats it; it beats the rules."""
+
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.PROTECT, related_name="review_decisions")
+    year = models.PositiveSmallIntegerField()
+    # Empty when the customer picks from the photo cards.
+    vehicle_class = models.ForeignKey(VehicleClass, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    size_variant = models.ForeignKey(SizeVariant, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    ask_size = models.BooleanField(default=False, help_text="Always ask the customer the size.")
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    decided_at = models.DateTimeField(default=timezone.now)
+    note = models.TextField(blank=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["vehicle_model", "year"]
+        constraints = [models.UniqueConstraint(fields=["vehicle_model", "year"], name="one_review_decision_per_model_year")]
+
+    def __str__(self):
+        found = self.vehicle_class or "photo cards"
+        return f"{self.year} {self.vehicle_model.make} {self.vehicle_model.model} -> {found}"
+
+    def save(self, *args, **kwargs):
+        if self.vehicle_class_id is None:
+            self.size_variant, self.ask_size = None, False
+        check_size_variant_class(self.size_variant, self.vehicle_class_id)
+        super().save(*args, **kwargs)
+
+
 class ModelYearClassification(models.Model):
     """The vehicle class and size of one model year, as classify_vehicles
     last applied the rules and overrides: what the booking form uses.
@@ -354,18 +389,38 @@ class ModelYearClassification(models.Model):
     class Method(models.TextChoices):
         RULE = "rule", "Rule"
         OVERRIDE = "override", "Model override"
+        DECISION = "decision", "Review queue decision"
+        # A model year the EPA has not published yet takes the class of the
+        # model's nearest classified year (decision 0075).
+        CARRIED = "carried", "Nearest classified year"
+        PHOTO_CARDS = "photo_cards", "Photo cards"
         REVIEW = "review", "Review queue"
+
+    class ReviewKind(models.TextChoices):
+        NO_RULE = "no_rule", "No rule matches"
+        SPLIT = "split", "Trims split on a condition"
+        DISAGREE = "disagree", "Sources disagree"
 
     vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.PROTECT, related_name="classifications")
     year = models.PositiveSmallIntegerField()
     vehicle_class = models.ForeignKey(VehicleClass, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     size_variant = models.ForeignKey(SizeVariant, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     ask_size = models.BooleanField(default=False, help_text="The booking form asks the size.")
-    method = models.CharField(max_length=10, choices=Method.choices)
+    method = models.CharField(max_length=12, choices=Method.choices)
     rule = models.ForeignKey(ClassificationRule, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     override = models.ForeignKey(ModelOverride, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    decision = models.ForeignKey(ReviewDecision, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    carried_from = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="The model year whose class this one takes, while the EPA has not published it."
+    )
     in_review = models.BooleanField(default=False)
     review_reasons = models.JSONField(default=list, blank=True)
+    review_kinds = models.JSONField(default=list, blank=True, help_text="The ReviewKind of each reason, for filtering.")
+    # What the review queue offers to accept with one tap: the class of the
+    # rule the model year straddles, or of the model's nearest classified year.
+    suggested_class = models.ForeignKey(VehicleClass, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    suggested_size_variant = models.ForeignKey(SizeVariant, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    suggested_ask_size = models.BooleanField(default=False)
     classified_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -381,6 +436,55 @@ class ModelYearClassification(models.Model):
     @property
     def live(self):
         return self.vehicle_class_id is not None
+
+
+class ClassificationChange(models.Model):
+    """One change to how vehicles are classified, made in the control app or
+    by a classify_vehicles run: who made it, when, what it was, and each
+    model year whose class or size it changed (its effects), so a model's
+    screen can show every change that reached it."""
+
+    class Kind(models.TextChoices):
+        RULE = "rule", "Rule"
+        OVERRIDE = "override", "Model override"
+        THIRD_ROW = "third_row", "Third-row flag"
+        VEHICLE_OVERRIDE = "vehicle_override", "Vehicle override"
+        CLASS_SETTING = "class_setting", "Class setting"
+        DECISION = "decision", "Review queue decision"
+        RUN = "run", "classify_vehicles run"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    summary = models.TextField()
+    made_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    made_at = models.DateTimeField(default=timezone.now)
+    # The model a model override, third-row flag, vehicle override or queue
+    # decision was for, so it shows on that model's screen even when it
+    # changed no class.
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["-made_at", "-pk"]
+
+    def __str__(self):
+        return f"{self.made_at:%Y-%m-%d %H:%M} {self.get_kind_display()}: {self.summary}"
+
+
+class ClassificationEffect(models.Model):
+    """One model year whose live class or size, or review status, a change
+    changed, with what it was and what it became."""
+
+    change = models.ForeignKey(ClassificationChange, on_delete=models.CASCADE, related_name="effects")
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name="+")
+    year = models.PositiveSmallIntegerField()
+    before = models.CharField(max_length=120)
+    after = models.CharField(max_length=200)
+
+    class Meta:
+        ordering = ["vehicle_model", "year"]
+        indexes = [models.Index(fields=["vehicle_model", "year"])]
+
+    def __str__(self):
+        return f"{self.year} {self.vehicle_model.make} {self.vehicle_model.model}: {self.before} -> {self.after}"
 
 
 class Vehicle(models.Model):
@@ -432,6 +536,12 @@ class Vehicle(models.Model):
         model override and the rules."""
         self.vehicle_class, self.size_variant = vehicle_class, size_variant
         self.class_override_by, self.class_override_at, self.class_override_note = user, timezone.now(), note
+        self.save()
+
+    def clear_override(self):
+        """Go back to the catalog's class. The vehicle's recorded class and
+        size variant stay, and no longer beat the catalog."""
+        self.class_override_by, self.class_override_at, self.class_override_note = None, None, ""
         self.save()
 
     @property
