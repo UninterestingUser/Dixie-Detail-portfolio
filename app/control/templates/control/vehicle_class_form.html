@@ -1,0 +1,15 @@
+{% extends "control/base.html" %}
+{% block title %}{{ vehicle_class }}{% endblock %}
+{% block content %}
+<h1>{{ vehicle_class }}</h1>
+{% include "control/_catalog_nav.html" %}
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  {% for field in form %}{% include "control/_field.html" %}{% endfor %}
+  <p class="help">A change to what the size variant measures, or to online booking, shows its preview first. Size variants and retiring a class are in the Django admin.</p>
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <a class="button" href="{% url 'vehicle-classes' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

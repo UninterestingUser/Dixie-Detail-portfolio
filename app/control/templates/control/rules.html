@@ -1,0 +1,33 @@
+{% extends "control/base.html" %}
+{% block title %}Classification rules{% endblock %}
+{% block content %}
+<h1>Classification rules</h1>
+{% include "control/_catalog_nav.html" %}
+<p class="help">Each model year takes the class of the first active rule, from the top, whose conditions all hold. A model override or a review queue decision beats them. Every change shows its preview first, and applies only when you confirm it.</p>
+{% if can_edit %}<p><a class="button primary" href="{% url 'rule-new' %}">Add a rule</a></p>{% else %}<p class="help">Only a manager can change the rules.</p>{% endif %}
+<ol class="list">
+  {% for row in rows %}
+    <li class="card{% if not row.rule.active %} faded{% endif %}" id="rule-{{ row.rule.pk }}">
+      <div class="card-head"><strong>{{ row.rule.position }}. {{ row.rule.name }}</strong></div>
+      <span class="sub">{{ row.words }}</span>
+      {% if row.rule.note %}<span class="sub">{{ row.rule.note }}</span>{% endif %}
+      <span>{% if not row.rule.active %}<span class="badge">Disabled</span>{% endif %}{% if row.launch %}<span class="badge">{% if row.edited %}Launch rule, edited{% else %}Launch rule{% endif %}</span>{% endif %}</span>
+      {% if can_edit %}
+      <div class="button-row" style="margin-top: 8px">
+        <a class="button" href="{% url 'rule-edit' row.rule.pk %}">Edit</a>
+        <form method="post" action="{% url 'rule-action' row.rule.pk %}">{% csrf_token %}<input type="hidden" name="action" value="up"><button type="submit" aria-label="Move {{ row.rule.name }} up">↑</button></form>
+        <form method="post" action="{% url 'rule-action' row.rule.pk %}">{% csrf_token %}<input type="hidden" name="action" value="down"><button type="submit" aria-label="Move {{ row.rule.name }} down">↓</button></form>
+        <form method="post" action="{% url 'rule-action' row.rule.pk %}">{% csrf_token %}<input type="hidden" name="action" value="toggle"><button type="submit">{% if row.rule.active %}Disable{% else %}Enable{% endif %}</button></form>
+      </div>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ol>
+
+<h2>Recent changes</h2>
+{% if changes %}
+<ul class="list history">
+  {% for change in changes %}<li class="card"><strong>{{ change.get_kind_display }}</strong> · {{ change.made_at|date:"M j, Y g:i A" }} · {{ change.made_by|default:"the system" }}<span class="sub">{{ change.summary }}</span></li>{% endfor %}
+</ul>
+{% else %}<p class="muted">None yet.</p>{% endif %}
+{% endblock %}
