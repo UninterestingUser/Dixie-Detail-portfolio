@@ -452,6 +452,11 @@ class ClassificationChange(models.Model):
         CLASS_SETTING = "class_setting", "Class setting"
         DECISION = "decision", "Review queue decision"
         RUN = "run", "classify_vehicles run"
+        # Phase 2 Step 4: link_vehicles, a customer's vehicle taking the
+        # catalog's class on the differences screen, and the approval list.
+        LINK = "link", "link_vehicles run"
+        VEHICLE_CLASS = "vehicle_class", "Vehicle takes the catalog's class"
+        APPROVAL = "approval", "Approval"
 
     kind = models.CharField(max_length=20, choices=Kind.choices)
     summary = models.TextField()
@@ -487,9 +492,44 @@ class ClassificationEffect(models.Model):
         return f"{self.year} {self.vehicle_model.make} {self.vehicle_model.model}: {self.before} -> {self.after}"
 
 
+class ModelApproval(models.Model):
+    """The owner's approval of one year range of a vehicle model on the
+    approval list: the consecutive model years that share a vehicle class,
+    a size and how they were reached, as they were when approved. A later
+    change that alters the range, its class, its size or how it was reached
+    clears the approval (cleared_at, cleared_by), and the range shows again."""
+
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name="approvals")
+    year_from = models.PositiveSmallIntegerField()
+    year_to = models.PositiveSmallIntegerField()
+    vehicle_class = models.ForeignKey(VehicleClass, on_delete=models.PROTECT, related_name="+")
+    # The size and the "how" line as the approval list showed them, such as
+    # "asked" and "rule 140: EPA small SUVs and station wagons".
+    size = models.CharField(max_length=100)
+    how = models.CharField(max_length=300)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    approved_at = models.DateTimeField(default=timezone.now)
+    note = models.TextField(blank=True)
+    cleared_at = models.DateTimeField(null=True, blank=True)
+    cleared_by = models.ForeignKey(
+        ClassificationChange, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="The change that altered the range and cleared the approval.",
+    )
+
+    class Meta:
+        ordering = ["vehicle_model", "year_from", "-approved_at"]
+
+    def __str__(self):
+        state = "cleared" if self.cleared_at else "approved"
+        return f"{self.vehicle_model.make} {self.vehicle_model.model} {self.year_from}-{self.year_to}: {self.vehicle_class}, {state}"
+
+
 class Vehicle(models.Model):
     """A customer's vehicle. Year, make, model, class and size variant may be
-    missing on older records; they are kept and flagged to fill in."""
+    missing on older records; they are kept and flagged to fill in.
+    link_vehicles links it to its catalog model (vehicles.linking); its own
+    class, as imported or entered, changes only when the owner accepts the
+    catalog's on the differences screen."""
 
     customer = models.ForeignKey(
         "customers.Customer", on_delete=models.PROTECT, related_name="vehicles"

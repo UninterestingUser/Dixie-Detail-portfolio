@@ -4,9 +4,9 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-23
+updated: 2026-10-24
 tags: [data-model, database, phase-1]
-related: [docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
+related: [docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
 
 # Data model
@@ -28,6 +28,7 @@ erDiagram
     VehicleModel ||--o{ ModelOverride : "is overridden by"
     VehicleModel ||--o{ ReviewDecision : "is settled by"
     ClassificationChange ||--o{ ClassificationEffect : "changed"
+    VehicleModel ||--o{ ModelApproval : "is approved by"
     ClassificationRule |o--o{ ModelYearClassification : "gives"
     VehicleClass ||--o{ ModelYearClassification : "is given to"
     VehicleModel |o--o{ Vehicle : "is the model of"
@@ -73,8 +74,9 @@ The `customers` and `vehicles` apps.
 - **Model override** is the owner's vehicle class for a vehicle model, for all its years or a range of them, which beats every rule. It fixes the size variant, always asks it, or leaves it to the facts, and records who set it, when, and a note.
 - **Review queue decision** is the owner's answer to one model year in the review queue: a vehicle class with its size fixed, always asked or from the facts, or the photo cards, with who decided, when and a note. A model override beats it; it beats the rules (decision 0076).
 - **Model-year classification** is a model year's vehicle class and size variant, or that the size is asked, as the rules, overrides and decisions were last applied, with the rule, override or decision behind it, or the year whose class it takes while the EPA has not published it (decision 0075). One waiting in the review queue has the reasons, the kind of each for filtering, and a suggested class and size, and keeps an earlier class while it waits (decision 0073).
-- **Classification change** logs each change to classification, from the control app or a `classify_vehicles` run: its kind, a sentence saying what it was, who made it and when, and the model it was for. Each **classification effect** is one model year it changed, with its class and size before and after, so a model's screen shows every change that reached it (decision 0076).
-- **Vehicle** belongs to a customer, with year, make, model, color, vehicle class and size variant. A per-vehicle override, such as for a lifted vehicle, marks the class and size variant as set by hand, with who set them, when and a note; it beats the model override and the rules. It is named with its color wherever it is listed or picked, as in "2019 Honda Accord, silver" (decision 0067). Any of those may be missing on older records. The vehicle is kept and its missing details are listed to fill in. A size variant counts as missing only when the class has size variants.
+- **Classification change** logs each change to classification, from the control app or a `classify_vehicles` run: its kind, a sentence saying what it was, who made it and when, and the model it was for. Each **classification effect** is one model year it changed, with its class and size before and after, so a model's screen shows every change that reached it (decision 0076). Its kinds include `link_vehicles` runs, a vehicle taking the catalog's class, and approvals (decision 0077).
+- **Model approval** is the owner's approval of one year range of a vehicle model on the approval list: the years, the class, size and "how" line as approved, who approved it and when, and a note. A later change that alters the range clears it, with when and which change (decision 0079).
+- **Vehicle** belongs to a customer, with year, make, model, color, vehicle class and size variant, and the catalog model `link_vehicles` links it to (decision 0077). A per-vehicle override, such as for a lifted vehicle, marks the class and size variant as set by hand, with who set them, when and a note; it beats the model override and the rules. It is named with its color wherever it is listed or picked, as in "2019 Honda Accord, silver" (decision 0067). Any of those may be missing on older records. The vehicle is kept and its missing details are listed to fill in. A size variant counts as missing only when the class has size variants.
 
 **Vehicle classes and size variants are records, not choices in code.** Adding, renaming or retiring one is done in the database and needs no code change or migration. A new class gets its prices in the next pricebook version. Nothing is deleted: a retired class or size variant is kept for history, cannot be priced again, and every past job keeps the name and size it was booked under.
 

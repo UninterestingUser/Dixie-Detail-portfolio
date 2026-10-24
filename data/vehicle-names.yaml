@@ -1,18 +1,24 @@
 meta:
   title: Vehicle names
-  summary: The names customers know for each vehicle model - the EPA base models split into separate nameplates, the other spellings each source uses for one vehicle, and the make spellings - used by the import, the third-row list and vehicle matching.
-  updated: 2026-10-23
+  summary: The names customers know for each vehicle model - the EPA base models split into separate nameplates, the other spellings each source or customer uses for one vehicle, the make spellings, and the trim words left off when a customer's vehicle is matched - used by the import, the third-row list and link_vehicles.
+  updated: 2026-10-24
   status: current
   explained_in: docs/reference/vehicle-catalog.md
   note: >-
     Names are compared on capitals and digits only, so "F150" and "F-150" are already the same
     name; list only spellings that differ in more than that. Edit this file to add a nameplate or a
     spelling; the next import_vehicle_data run splits or merges the catalog models and lists each
-    change in its report.
+    change in its report, and the next link_vehicles run matches customers' vehicles with it. Add a
+    spelling here, never in code.
 
-# Another source's spelling of a make, then the catalog's.
+# Another source's or a customer's spelling of a make, then the catalog's.
 make_aliases:
   RAM TRUCKS: Ram
+  Chevy: Chevrolet
+  Mercedes: Mercedes-Benz
+  Benz: Mercedes-Benz
+  VW: Volkswagen
+  Harley: Harley-Davidson
 
 # The EPA groups its rows by base model, which can hold several vehicles a
 # customer knows apart, such as the Santa Fe and the Santa Fe Sport. A row of
@@ -140,3 +146,121 @@ aliases:
   - {make: GMC, name: Sierra HD, also: [Sierra 2500HD, Sierra 3500HD, Sierra 2500 HD, Sierra 3500 HD, C2500 Sierra, K2500 Sierra]}
   - {make: Toyota, name: RAV4 Prime, also: [RAV4 Prime (PHEV)]}
   - {make: Land Rover, name: Range Rover Evoque, also: [Evoque]}
+  # Spellings customers use, from the job history (link_vehicles).
+  - {make: Chevrolet, name: Silverado, also: [Silverado 1500]}
+  - {make: GMC, name: Sierra, also: [Sierra 1500]}
+
+# Words a customer's vehicle record may carry after the model name, such as
+# "Camry LE", "F150 XLT" or "CR-V EX-L". link_vehicles matches the longest
+# start of the model field that is a catalog model of the make and year, and
+# only when every word after it is on this list. A word that could name a
+# different vehicle stays off it: "Sport", "XL", "L", "Max", "EL", "ESV" and
+# "HD" name nameplates in the list above, and a series number such as 2500
+# names a heavier truck, so "Silverado 2500" is never matched to the
+# Silverado. A vehicle whose leftover words are not all here is listed in the
+# report as not found, with the nearest name, for the owner to add a spelling.
+# A phrase here is read as its words, so "Crew Cab" also lets "Crew" and "Cab"
+# be left off. Even a word on this list is not left off when the model's
+# nameplates above use it, so a "Wagoneer S" is never matched to the Wagoneer.
+trim_words:
+  # Toyota, Lexus, Honda, Acura, Nissan, Infiniti, Subaru, Mazda, Hyundai, Kia
+  - CE
+  - LE
+  - SE
+  - XLE
+  - XSE
+  - SR
+  - SR5
+  - TRD
+  - Off-Road
+  - Pro
+  - DX
+  - LX
+  - EX
+  - EX-L
+  - Si
+  - Elite
+  - S
+  - SV
+  - SL
+  - Premium
+  - Limited
+  - Touring
+  - Platinum
+  - Base
+  - Wilderness
+  - Onyx
+  - GLS
+  - SEL
+  - N Line
+  - Calligraphy
+  - GT-Line
+  - SX
+  - Prestige
+  # Ford, Lincoln
+  - XLT
+  - Lariat
+  - King Ranch
+  - Raptor
+  - Tremor
+  - STX
+  - Titanium
+  - ST
+  - Reserve
+  # General Motors
+  - LS
+  - LT
+  - LTZ
+  - RST
+  - Z71
+  - ZR2
+  - Trail Boss
+  - High Country
+  - Premier
+  - SLE
+  - SLT
+  - AT4
+  - Denali
+  # Stellantis
+  - Laramie
+  - Big Horn
+  - Lone Star
+  - Tradesman
+  - Rebel
+  - Sahara
+  - Rubicon
+  - Unlimited
+  - Latitude
+  - Trailhawk
+  - Overland
+  - Summit
+  - SXT
+  - R/T
+  - GT
+  # Drive, engine, body and cab words
+  - AWD
+  - 4WD
+  - 2WD
+  - FWD
+  - RWD
+  - 4x4
+  - 4x2
+  - Hybrid
+  - V6
+  - V8
+  - Diesel
+  - Crew Cab
+  - Double Cab
+  - Quad Cab
+  - Regular Cab
+  - Extended Cab
+  - SuperCrew
+  - SuperCab
+  - CrewMax
+  - Access Cab
+  - King Cab
+  - Sedan
+  - Coupe
+  - Hatchback
+  - Convertible
+
