@@ -37,12 +37,33 @@ class Nameplate:
     when: tuple  # phrases, each as words()
 
 
+@dataclass(frozen=True)
+class CustomerAlias:
+    """A customer's name for a vehicle the catalog files under another name
+    or make, for the model years from year_from to year_to (either open)."""
+
+    catalog_make: str
+    catalog_model: str
+    year_from: int = None
+    year_to: int = None
+
+    def covers(self, year):
+        return (self.year_from is None or year >= self.year_from) and (self.year_to is None or year <= self.year_to)
+
+    @property
+    def years(self):
+        if self.year_from and self.year_to:
+            return f"from {self.year_from} to {self.year_to}"
+        return f"from {self.year_from} on" if self.year_from else f"up to {self.year_to}" if self.year_to else "in every year"
+
+
 @dataclass
 class Names:
     make_aliases: dict = field(default_factory=dict)  # make key -> catalog make key
     aliases: dict = field(default_factory=dict)  # (make key, model key) -> the name shown
     nameplates: dict = field(default_factory=dict)  # (make key, base model key) -> [Nameplate]
     trim_words: frozenset = frozenset()  # each a word as words() gives it
+    customer_aliases: dict = field(default_factory=dict)  # (make key, model key) -> [CustomerAlias]
 
     @classmethod
     def from_data(cls, data):
@@ -59,6 +80,10 @@ class Names:
                 Nameplate(split["name"], tuple(tuple(words(phrase)) for phrase in split["when"]))
                 for split in entry["split"]
             ]
+        for entry in data.get("customer_aliases") or []:
+            found = CustomerAlias(entry.get("catalog_make", entry["make"]), str(entry["catalog_model"]), entry.get("from"), entry.get("to"))
+            for spelling in entry["names"]:
+                names.customer_aliases.setdefault((names.make_key(entry["make"]), name_key(str(spelling))), []).append(found)
         names.trim_words = frozenset(word for phrase in data.get("trim_words") or [] for word in words(str(phrase)))
         return names
 
@@ -81,6 +106,10 @@ class Names:
             if any(contains(found, phrase) for phrase in plate.when):
                 return plate.name
         return base_model
+
+    def customer_alias(self, make, model):
+        """[CustomerAlias] for a customer's make and model name, or []."""
+        return self.customer_aliases.get((self.make_key(make), name_key(model)), [])
 
     def nameplate_words(self, make, model):
         """Every word the nameplates split from this model use, such as
