@@ -15,7 +15,8 @@ from appointments.models import Appointment, AppointmentLine
 from billing.models import Payment
 from customers.models import Customer
 from vehicles.classification.engine import apply, classify_catalog
-from vehicles.linking import LINKED, NOT_FOUND, SEVERAL, Catalog, link_vehicles, match
+from vehicles.classification import approvals
+from vehicles.linking import LINKED, NOT_FOUND, SEVERAL, Catalog, differences, job_history_models, link_vehicles, match
 from vehicles.models import ClassificationChange, ClassificationRule, Vehicle, VehicleClass, VehicleModel
 from vehicles.test_classification import SMALL_SUVS, ClassificationTestCase, Source, add_facts, add_model
 from vehicles.vehicle_data.names import load_names
@@ -127,8 +128,8 @@ class MatchingTests(LinkTestCase):
         self.assertIn("2015 to 2019, not 2012", found.reason)
 
     def test_missing_details_and_unknown_makes_are_not_found(self):
-        self.assertEqual(self.found(None, "Toyota", "RAV4").reason, "no year recorded")
         self.assertEqual(self.found(2019, "", "RAV4").reason, "no make or model recorded")
+        self.assertEqual(self.found(None, "Toyota", "").reason, "no make or model recorded")
         self.assertIn("make_aliases", self.found(2019, "Chevvy", "Silverado").reason)
 
 
@@ -285,3 +286,223 @@ class MotorcycleJobTests(LinkTestCase):
         self.assertEqual(appointment.lines.get().kind, AppointmentLine.Kind.CUSTOM)
         bike.refresh_from_db()
         self.assertIsNone(bike.vehicle_class)
+
+
+class FollowUpTestCase(LinkTestCase):
+    """The models the owner's first dry run needed (decision 0080)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.ram1500 = add_model("Ram", "1500", year_from=2011, year_to=2026)
+        cls.ram2500 = add_model("Ram", "2500", year_from=2011, year_to=2026)
+        cls.dodge_ram = add_model("Dodge", "Ram 1500", year_from=1994, year_to=2010)
+        cls.silverado_hd = add_model("Chevrolet", "Silverado HD", year_from=2015, year_to=2026)
+        cls.gx = add_model("Lexus", "GX", year_from=2003, year_to=2026)
+        cls.cls_class = add_model("Mercedes-Benz", "CLS", year_from=2006, year_to=2026)
+        cls.five = add_model("BMW", "5 Series", year_from=1984, year_to=2026)
+        cls.six = add_model("BMW", "6 Series", year_from=1984, year_to=2019)
+        cls.mazda6 = add_model("Mazda", "Mazda6", year_from=2003, year_to=2021)
+        cls.expedition_max = add_model("Ford", "Expedition MAX", year_from=2018, year_to=2026)
+        cls.wrangler = add_model("Jeep", "Wrangler", year_from=1987, year_to=2026)
+        cls.sportster = VehicleModel.objects.create(
+            make="Harley-Davidson", model="Sportster", year_from=2015, year_to=2019, vehicle_type=MOTORCYCLE, source=VehicleModel.Source.NHTSA
+        )
+
+    def assert_links(self, cases):
+        for year, make, model, expected in cases:
+            with self.subTest(year=year, make=make, model=model):
+                found = self.found(year, make, model)
+                self.assertEqual((found.status, found.vehicle_model), (LINKED, expected), found.reason)
+
+
+class FollowUpAliasTests(FollowUpTestCase):
+    def test_harley_spellings(self):
+        self.assert_links([
+            (2018, "Harley", "Sportster", self.sportster),
+            (2018, "Harley Davidson", "Sportster", self.sportster),
+            (2018, "harley-davidson", "sportster", self.sportster),
+        ])
+
+    def test_a_dodge_ram_from_2011_is_the_ram_1500_or_2500(self):
+        self.assert_links([
+            (2015, "Dodge", "Ram", self.ram1500),
+            (2011, "Dodge", "Ram 1500", self.ram1500),
+            (2016, "Dodge", "Ram 1500 Laramie Crew Cab", self.ram1500),
+            (2014, "Dodge", "Ram 2500", self.ram2500),
+            (2019, "Ram", "Ram 1500", self.ram1500),
+            (2019, "Ram", "1500 Big Horn", self.ram1500),
+        ])
+
+    def test_before_2011_a_dodge_ram_means_what_it_says(self):
+        self.assert_links([(2009, "Dodge", "Ram 1500", self.dodge_ram)])
+        self.assertEqual(self.found(2010, "Dodge", "Ram 2500").status, NOT_FOUND)
+
+    def test_with_no_year_a_year_limited_alias_is_left_for_the_owner(self):
+        found = self.found(None, "Dodge", "Ram 1500")
+        self.assertEqual(found.status, NOT_FOUND)
+        self.assertIn("the Ram Ram 1500 from 2011 on, so the year decides", found.reason)
+
+    def test_chevrolet_2500_is_the_silverado_hd(self):
+        self.assert_links([
+            (2019, "Chevrolet", "2500", self.silverado_hd),
+            (2019, "Chevy", "2500HD LTZ", self.silverado_hd),
+        ])
+
+    def test_king_ranch_and_392_are_trim_words(self):
+        self.assert_links([
+            (2017, "Ford", "F-150 King Ranch", self.f150),
+            (2021, "Jeep", "Wrangler 392", self.wrangler),
+            (2021, "Jeep", "Wrangler Unlimited Rubicon 392", self.wrangler),
+        ])
+
+    def test_lexus_mercedes_and_bmw_model_numbers(self):
+        self.assert_links([
+            (2024, "Lexus", "GX550", self.gx),
+            (2024, "Lexus", "GX 550", self.gx),
+            (2015, "Mercedes", "CLS 550", self.cls_class),
+            (2018, "BMW", "530i", self.five),
+            (2016, "BMW", "650i", self.six),
+        ])
+
+    def test_mazda_6(self):
+        self.assert_links([
+            (2016, "Mazda", "Mazda 6", self.mazda6),
+            (2016, "Mazda", "Mazda6", self.mazda6),
+            (2016, "Mazda", "6", self.mazda6),
+            (2016, "MAZDA", "mazda 6 touring", self.mazda6),
+        ])
+
+    def test_case_and_spacing_never_matter(self):
+        self.assert_links([
+            (2019, "Toyota", "Rav4", self.rav4),
+            (2019, "toyota", "RAV 4", self.rav4),
+            (2019, "Ford", "Expedition Max", self.expedition_max),
+            (2019, "FORD", "expedition max", self.expedition_max),
+            (2019, "Ford", "ExpeditionMax", self.expedition_max),
+        ])
+
+
+class NoYearTests(FollowUpTestCase):
+    def test_a_vehicle_with_no_year_links_by_make_and_model_and_keeps_its_class(self):
+        three_rows = self.size("Midsize SUVs", 3)
+        vehicle = self.vehicle(None, "Toyota", "Rav4 XLE", self.midsize, three_rows)
+        out = io.StringIO()
+        call_command("link_vehicles", stdout=out)
+        vehicle.refresh_from_db()
+        self.assertEqual((vehicle.vehicle_model, vehicle.vehicle_class, vehicle.size_variant), (self.rav4, self.midsize, three_rows))
+        self.assertEqual(vehicle.missing_details, ["year"])
+        self.assertEqual(differences(), [])
+        text = out.getvalue()
+        self.assertIn("Linked, year unknown (1 vehicles", text)
+        self.assertIn(f"vehicle {vehicle.pk}: Toyota Rav4 XLE -> Toyota RAV4", text)
+        self.assertIn("keeps Midsize SUVs (three rows)", text)
+
+    def test_with_no_year_nothing_is_filled(self):
+        vehicle = self.vehicle(None, "Toyota", "RAV4")
+        report = link_vehicles(apply=True)
+        vehicle.refresh_from_db()
+        self.assertEqual((vehicle.vehicle_model, vehicle.vehicle_class), (self.rav4, None))
+        self.assertEqual([linked.vehicle for linked in report.year_unknown], [vehicle])
+        self.assertEqual(report.linked, [])
+
+    def test_with_no_year_a_name_that_fits_two_models_is_not_linked(self):
+        add_model("Toyota", "Camry", year_from=2020, year_to=2026)
+        vehicle = self.vehicle(None, "Toyota", "Camry")
+        report = link_vehicles(apply=True)
+        vehicle.refresh_from_db()
+        self.assertIsNone(vehicle.vehicle_model)
+        (listed, found), = report.not_found
+        self.assertEqual(listed, vehicle)
+        self.assertIn("the year will tell apart", found.reason)
+
+
+class MotorcycleMakeTests(FollowUpTestCase):
+    def job(self, vehicle, amount, baserow_id):
+        return MotorcycleJobTests.job(self, vehicle, amount, baserow_id)
+
+    def test_the_motorcycle_only_makes_come_from_data(self):
+        catalog = Catalog()
+        for make in ("Harley-Davidson", "Harley Davidson", "Harley", "Indian", "Ducati", "Kawasaki", "Zero"):
+            with self.subTest(make=make):
+                self.assertTrue(catalog.motorcycles_only(make))
+        for make in ("Honda", "BMW", "Suzuki", "Toyota"):
+            with self.subTest(make=make):
+                self.assertFalse(catalog.motorcycles_only(make))
+
+    def test_a_motorcycle_only_make_gets_the_class_with_no_model_or_year(self):
+        bike = self.vehicle(None, "Harley Davidson", "")
+        other = self.vehicle(None, "Honda", "")
+        first, second = self.job(bike, Decimal("100.00"), 11), self.job(bike, Decimal("90.00"), 12)
+        out = io.StringIO()
+        call_command("link_vehicles", stdout=out)
+        bike.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual((bike.vehicle_model, bike.vehicle_class), (None, self.motorcycles))
+        self.assertIsNone(other.vehicle_class)
+        for appointment, amount in ((first, Decimal("100.00")), (second, Decimal("90.00"))):
+            line = appointment.lines.get()
+            self.assertEqual((line.service.name, line.vehicle_class, line.amount), ("Motorcycle Detail", self.motorcycles, amount))
+            self.assertEqual(appointment.payments.get().amount, amount)
+        text = out.getvalue()
+        self.assertIn("Given the Motorcycles class with no catalog year to go by (1 vehicles", text)
+        self.assertEqual(text.count("CHECK: the amount is not $100.00"), 1)
+
+    def test_a_motorcycle_model_with_no_year_gets_the_class(self):
+        bike = self.vehicle(None, "Harley", "Sportster")
+        link_vehicles(apply=True)
+        bike.refresh_from_db()
+        self.assertEqual((bike.vehicle_model, bike.vehicle_class), (self.sportster, self.motorcycles))
+
+    def test_a_motorcycle_make_vehicle_with_a_class_keeps_it(self):
+        bike = self.vehicle(None, "Ducati", "", self.crossover)
+        link_vehicles(apply=True)
+        bike.refresh_from_db()
+        self.assertEqual(bike.vehicle_class, self.crossover)
+
+
+class NameCheckTests(FollowUpTestCase):
+    def test_every_unlinked_vehicle_with_a_name_gets_a_name_check(self):
+        outside = self.vehicle(2012, "Toyota", "RAV4")
+        misspelled = self.vehicle(None, "Toyota", "Ravv4")
+        split = self.vehicle(None, "Dodge", "Ram 1500")
+        nameless = self.vehicle(2019, "Toyota", "")
+        report = link_vehicles(apply=False)
+        checks = dict(report.name_checks)
+        self.assertNotIn(nameless, checks)
+        self.assertTrue(checks[outside].startswith("the name matches Toyota RAV4 (2015-2019"))
+        self.assertTrue(checks[misspelled].startswith("the name matches nothing: no catalog model of this make and name"))
+        self.assertIn("so the year decides", checks[split])
+        out = io.StringIO()
+        call_command("link_vehicles", "--dry-run", stdout=out)
+        self.assertIn("Name check for unlinked vehicles (3:", out.getvalue())
+        self.assertIn(f"vehicle {outside.pk}: 2012 Toyota RAV4: the name matches Toyota RAV4", out.getvalue())
+
+
+class JobHistoryByNameTests(FollowUpTestCase):
+    def appointment(self, vehicle, baserow_id):
+        return Appointment.objects.create(
+            customer=self.customer, vehicle=vehicle, scheduled_start=timezone.make_aware(datetime.datetime(2025, 6, 1, 9)),
+            status=Appointment.Status.COMPLETED, source=Appointment.Source.IMPORT, baserow_id=baserow_id,
+        )
+
+    def test_a_job_history_model_is_listed_whether_or_not_its_vehicles_have_a_year(self):
+        later = add_model("Toyota", "Camry", year_from=2020, year_to=2026)
+        # Not linked: no year, and the name fits both Camry records.
+        self.appointment(self.vehicle(None, "Toyota", "Camry LE"), 21)
+        # Linked with no year.
+        self.appointment(self.vehicle(None, "Honda", "CR-V"), 22)
+        link_vehicles(apply=True)
+        found = job_history_models()
+        self.assertEqual({model_id for model_id in found}, {self.camry.pk, later.pk, self.crv.pk})
+        listed, _ = approvals.approval_list()
+        by_model = {item.vehicle_model: item for item in listed}
+        self.assertIn("job history (1 vehicle)", by_model[later].reasons)
+        # Every year range shows.
+        self.assertEqual([(found.first, found.last) for found in by_model[self.crv].ranges], [(2015, 2019)])
+
+    def test_a_linked_models_siblings_of_the_same_name_are_listed(self):
+        later = add_model("Toyota", "Camry", year_from=2020, year_to=2026)
+        self.appointment(self.vehicle(2016, "Toyota", "Camry"), 23)
+        link_vehicles(apply=True)
+        self.assertEqual(set(job_history_models()), {self.camry.pk, later.pk})

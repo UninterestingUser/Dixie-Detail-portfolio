@@ -4,14 +4,20 @@ catalog's.
 
 A vehicle is matched by its year, make and model with the names in
 data/vehicle-names.yaml: make spellings such as "Chevy", the other spellings
-of one model, and trim words such as "LE" or "XLT" that may follow the model
-name. The longest start of the model field that names a catalog model of
-the make, sold in the vehicle's year, wins, and only when every word after
-it is a trim word. Two catalog models that fit equally are both listed and
-neither is linked: the matcher never guesses.
+of one model, customers' names for a vehicle the catalog files under another
+name or make (some for certain years only, such as a 2015 Dodge Ram, which
+is the Ram 1500), and trim words such as "LE" or "XLT" that may follow the
+model name. Case and spacing never matter. The longest start of the model
+field that names a catalog model of the make, sold in the vehicle's year,
+wins, and only when every word after it is a trim word. A vehicle with no
+year is matched by its make and model alone (decision 0080). Two catalog
+models that fit equally are both listed and neither is linked: the matcher
+never guesses.
 
 Linking sets the vehicle's catalog model and fills a missing vehicle class
-or size variant from the catalog. It never changes a class the vehicle
+or size variant from the catalog; a vehicle with no year keeps the class
+it has, because the class depends on the year. A vehicle of a make that
+sells only motorcycles gets the Motorcycles class, model or no model. It never changes a class the vehicle
 already has: the owner settles each difference on the differences screen
 (keep_imported, accept_catalog, override_model). Past appointments keep
 their lines (decision 0059), except the imported motorcycle jobs
@@ -75,11 +81,33 @@ class Catalog:
         for vehicle_model in VehicleModel.objects.order_by("make", "model", "year_from", "pk"):
             self.by_make[self.names.make_key(vehicle_model.make)].append(vehicle_model)
             self.keys[vehicle_model.pk] = self.names.model_key(vehicle_model.make, vehicle_model.model)
+        # The makes data/vehicle-data-import.yaml marks as selling only motorcycles.
+        self.motorcycle_makes = {
+            self.names.make_key(entry["name"])
+            for entry in read_data("vehicle-data-import.yaml")["vpic"]["motorcycle_makes"]
+            if entry.get("motorcycles_only")
+        }
 
     def named(self, make, model):
-        """Every catalog model of this make and name, all years."""
+        """Every catalog model of this make and name, all years. A name that
+        starts with the make, such as "Ram 1500" for a Ram, is tried without
+        it too."""
+        found = self._named(make, model)
+        parts = tokens(model)
+        if not found and len(parts) > 1 and self.names.make_key(parts[0]) == self.names.make_key(make):
+            found = self._named(make, " ".join(parts[1:]))
+        return found
+
+    def _named(self, make, model):
         key = self.names.model_key(make, model)
         return [found for found in self.by_make.get(self.names.make_key(make), []) if self.keys[found.pk] == key]
+
+    def knows_make(self, make):
+        key = self.names.make_key(make)
+        return bool(self.by_make.get(key)) or any(alias_make == key for alias_make, _ in self.names.customer_aliases)
+
+    def motorcycles_only(self, make):
+        return self.names.make_key(make) in self.motorcycle_makes
 
 
 def sold_in(vehicle_model, year):
@@ -92,32 +120,46 @@ def tokens(model):
 
 
 def match(catalog, year, make, model):
-    """The Match for one year, make and model."""
+    """The Match for one year, make and model. With no year, the name alone
+    decides: SEVERAL when it fits more than one catalog model, which the
+    year would tell apart, and NOT_FOUND when a customer alias for some
+    years only might apply."""
     make, model = (make or "").strip(), (model or "").strip()
     if not make or not model:
         return Match(NOT_FOUND, reason="no make or model recorded")
-    if year is None:
-        return Match(NOT_FOUND, reason="no year recorded")
-    if not catalog.by_make.get(catalog.names.make_key(make)):
+    if not catalog.knows_make(make):
         return Match(NOT_FOUND, reason=f"no catalog make {make!r}; add its spelling to make_aliases in data/vehicle-names.yaml")
+    names = catalog.names
     parts = tokens(model)
     reasons = []
     for end in range(len(parts), 0, -1):
         name, left = " ".join(parts[:end]), parts[end:]
-        named = catalog.named(make, name)
+        lookup = (make, name)
+        aliases = names.customer_alias(make, name)
+        if aliases:
+            if year is None and any(alias.year_from or alias.year_to for alias in aliases):
+                means = " or ".join(f"the {alias.catalog_make} {alias.catalog_model} {alias.years}" for alias in aliases)
+                reasons.append(f"{make} {name} means {means}, so the year decides")
+                break
+            alias = aliases[0] if year is None else next((alias for alias in aliases if alias.covers(year)), None)
+            if alias is not None:
+                lookup = (alias.catalog_make, alias.catalog_model)
+        named = catalog.named(*lookup)
         if not named:
+            if lookup != (make, name):
+                reasons.append(f"{make} {name} means the {' '.join(lookup)}, which the catalog does not have")
             continue
         shown = f"{named[0].make} {named[0].model}"
         left_words = [word for part in left for word in words(part)]
-        blocked = [part for part in left if not set(words(part)) <= catalog.names.trim_words]
-        plates = set(left_words) & catalog.names.nameplate_words(make, name)
+        blocked = [part for part in left if not set(words(part)) <= names.trim_words]
+        plates = set(left_words) & names.nameplate_words(*lookup)
         if blocked or plates:
             # A shorter start leaves these words too, so nothing shorter fits.
             extra = " ".join(blocked or sorted(plates))
             why = "names one of its nameplates" if plates and not blocked else "is not a trim word in data/vehicle-names.yaml"
             reasons.append(f"nearest is the {shown}, but {extra!r} {why}")
             break
-        in_year = [found for found in named if sold_in(found, year)]
+        in_year = named if year is None else [found for found in named if sold_in(found, year)]
         if len(in_year) == 1:
             return Match(LINKED, in_year[0], dropped=left)
         if in_year:
@@ -125,6 +167,46 @@ def match(catalog, year, make, model):
         spans = ", ".join(f"{found.year_from or '?'} to {found.year_to or 'now'}" for found in named)
         reasons.append(f"the catalog has the {shown} for {spans}, not {year}")
     return Match(NOT_FOUND, reason="; ".join(reasons) or "no catalog model of this make and name")
+
+
+def name_check(catalog, make, model):
+    """Whether a vehicle's make and model would match once its year is
+    known, in words, so a spelling problem cannot hide behind a missing or
+    wrong year."""
+    found = match(catalog, None, make, model)
+    if found.status == LINKED:
+        return f"the name matches {describe_model(found.vehicle_model)}"
+    if found.status == SEVERAL:
+        return f"the name matches {len(found.candidates)} catalog models, which the year tells apart: " + "; ".join(
+            describe_model(candidate) for candidate in found.candidates
+        )
+    return f"the name matches nothing: {found.reason}"
+
+
+def is_motorcycle(catalog, vehicle):
+    """Linked to a motorcycle model, or of a make that sells only motorcycles."""
+    if vehicle.vehicle_model is not None and vehicle.vehicle_model.vehicle_type == VehicleModel.VehicleType.MOTORCYCLE:
+        return True
+    return catalog.motorcycles_only(vehicle.make)
+
+
+def job_history_models(catalog=None):
+    """{catalog model id: number of vehicles} for every catalog model with
+    the make and name of a vehicle in the job history, whether or not the
+    vehicle has a year or is linked: the approval list's job history."""
+    catalog = catalog or Catalog()
+    found = defaultdict(set)
+    for vehicle in Vehicle.objects.filter(appointments__isnull=False).distinct().select_related("vehicle_model"):
+        if vehicle.vehicle_model is not None:
+            models = {vehicle.vehicle_model, *catalog.named(vehicle.vehicle_model.make, vehicle.vehicle_model.model)}
+        else:
+            by_name = match(catalog, None, vehicle.make, vehicle.model)
+            if by_name.status == NOT_FOUND and vehicle.year is not None:
+                by_name = match(catalog, vehicle.year, vehicle.make, vehicle.model)
+            models = {by_name.vehicle_model} if by_name.status == LINKED else set(by_name.candidates)
+        for vehicle_model in models:
+            found[vehicle_model.pk].add(vehicle.pk)
+    return {model_id: len(vehicles) for model_id, vehicles in found.items()}
 
 
 # The catalog's class for a vehicle, and how the vehicle's own differs.
@@ -167,8 +249,9 @@ def catalog_label(stored):
 def differs(vehicle, stored):
     """"class" or "size" when the vehicle's own class or size variant differs
     from the catalog's live one, else None. A vehicle with its own override
-    has been settled, and a size the catalog asks is the customer's answer."""
-    if vehicle.class_overridden or vehicle.vehicle_class_id is None:
+    has been settled, a size the catalog asks is the customer's answer, and a
+    vehicle with no year is not compared, because its class depends on the year."""
+    if vehicle.class_overridden or vehicle.vehicle_class_id is None or vehicle.year is None:
         return None
     if stored is None or stored.vehicle_class_id is None:
         return None
@@ -294,13 +377,13 @@ class MotorcycleJob:
         return f"appointment {self.appointment.pk} on {self.appointment.scheduled_start:%Y-%m-%d}, {describe(self.vehicle)}: ${self.amount:,.2f}"
 
 
-def motorcycle_jobs(vehicles, class_name):
+def motorcycle_jobs(catalog, vehicles, class_name):
     """[MotorcycleJob] for the imported appointments of these vehicles that
-    are linked to a motorcycle model and were imported with no class, or
-    have the motorcycle class."""
+    are motorcycles (is_motorcycle) and were imported with no class, or have
+    the motorcycle class."""
     found = []
     for vehicle in vehicles:
-        if vehicle.vehicle_model is None or vehicle.vehicle_model.vehicle_type != VehicleModel.VehicleType.MOTORCYCLE:
+        if not is_motorcycle(catalog, vehicle):
             continue
         if vehicle.vehicle_class is not None and vehicle.vehicle_class.name != class_name:
             continue
@@ -345,6 +428,8 @@ class Linked:
 @dataclass
 class Report:
     linked: list = field(default_factory=list)  # [Linked]
+    # Linked by make and model with no year recorded: the class is kept and not compared.
+    year_unknown: list = field(default_factory=list)  # [Linked]
     not_found: list = field(default_factory=list)  # [(vehicle, Match)]
     several: list = field(default_factory=list)  # [(vehicle, Match)]
     # Linked before to another model than the one that matches now; the link is kept.
@@ -352,20 +437,26 @@ class Report:
     differences: list = field(default_factory=list)  # [Difference]
     # Linked, but the catalog has no live class for the year, or waits in the review queue.
     no_class_yet: list = field(default_factory=list)  # [(vehicle, ModelYearClassification or None)]
+    # Given the Motorcycles class because the make sells only motorcycles, with no catalog model to go by.
+    motorcycles_by_make: list = field(default_factory=list)  # [vehicle]
     motorcycle_jobs: list = field(default_factory=list)  # [MotorcycleJob]
     # Not linked and with no class: a motorcycle the names did not find would be here.
     unlinked_classless: list = field(default_factory=list)  # [vehicle]
+    # Every unlinked vehicle with a make and model: whether the name would match once a year is known.
+    name_checks: list = field(default_factory=list)  # [(vehicle, text)]
     motorcycle: tuple = ()  # (class name, service name, price)
 
 
 @transaction.atomic
 def link_vehicles(apply=False):
     """Match every customer's vehicle to the catalog and, when apply is
-    true, link it, fill what the catalog can fill, and give the imported
-    motorcycle jobs their class and service. A vehicle linked before keeps
-    its link. Returns a Report."""
+    true, link it, fill what the catalog can fill, give motorcycles their
+    class, and give the imported motorcycle jobs their class and service. A
+    vehicle linked before keeps its link. Returns a Report."""
     catalog = Catalog()
     report = Report(motorcycle=motorcycle_names())
+    class_name, service_name, _ = report.motorcycle
+    motorcycles = VehicleClass.objects.get(name=class_name)
     vehicles = list(Vehicle.objects.select_related("vehicle_model", "vehicle_class", "size_variant").order_by("make", "model", "year", "pk"))
     dropped = {}
     for vehicle in vehicles:
@@ -377,42 +468,63 @@ def link_vehicles(apply=False):
         if found.status == LINKED:
             vehicle.vehicle_model = found.vehicle_model
             dropped[vehicle.pk] = found.dropped
+        elif found.status == SEVERAL and vehicle.year is None:
+            found.reason = f"no year recorded, and the name fits {len(found.candidates)} catalog models, which the year will tell apart"
+            report.not_found.append((vehicle, found))
         elif found.status == SEVERAL:
             report.several.append((vehicle, found))
         else:
+            if vehicle.year is None:
+                found.reason = f"no year recorded, and {found.reason}"
             report.not_found.append((vehicle, found))
 
     stored = stored_for(vehicles)
     for vehicle in vehicles:
+        changed = False
+        if vehicle.vehicle_model is not None:
+            before = vehicle.pk not in dropped
+            changed = not before
+            if vehicle.year is None:
+                # The class depends on the year: keep the imported one, and nothing to compare.
+                report.year_unknown.append(Linked(vehicle, vehicle.vehicle_model, dropped.get(vehicle.pk, []), {}, before))
+            else:
+                row = stored.get((vehicle.vehicle_model.pk, vehicle.year))
+                filled = fills(vehicle, row)
+                report.linked.append(Linked(vehicle, vehicle.vehicle_model, dropped.get(vehicle.pk, []), filled, before))
+                if row is None or row.vehicle_class_id is None or row.in_review:
+                    report.no_class_yet.append((vehicle, row))
+                for name, value in filled.items():
+                    setattr(vehicle, name, value)
+                changed = changed or bool(filled)
+                kind = differs(vehicle, row)
+                if kind:
+                    report.differences.append(Difference(vehicle, row, kind))
+        if vehicle.vehicle_class_id is None and is_motorcycle(catalog, vehicle):
+            vehicle.vehicle_class = motorcycles
+            changed = True
+            if vehicle.vehicle_model is None or vehicle.year is None:
+                report.motorcycles_by_make.append(vehicle)
         if vehicle.vehicle_model is None:
             if vehicle.vehicle_class_id is None:
                 report.unlinked_classless.append(vehicle)
-            continue
-        row = stored.get((vehicle.vehicle_model.pk, vehicle.year))
-        before = vehicle.pk not in dropped
-        filled = fills(vehicle, row)
-        report.linked.append(Linked(vehicle, vehicle.vehicle_model, dropped.get(vehicle.pk, []), filled, before))
-        if row is None or row.vehicle_class_id is None or row.in_review:
-            report.no_class_yet.append((vehicle, row))
-        for name, value in filled.items():
-            setattr(vehicle, name, value)
-        if apply and (filled or not before):
+            if vehicle.make.strip() and vehicle.model.strip():
+                report.name_checks.append((vehicle, name_check(catalog, vehicle.make, vehicle.model)))
+        if apply and changed:
             vehicle._change_reason = CHANGE_REASON
             vehicle.save()
-        kind = differs(vehicle, row)
-        if kind:
-            report.differences.append(Difference(vehicle, row, kind))
 
-    class_name, service_name, _ = report.motorcycle
-    report.motorcycle_jobs = motorcycle_jobs([vehicle for vehicle in vehicles if vehicle.vehicle_model is not None], class_name)
+    report.motorcycle_jobs = motorcycle_jobs(catalog, vehicles, class_name)
     if apply:
-        vehicle_class = VehicleClass.objects.get(name=class_name)
         service = Service.objects.get(name=service_name)
         for job in report.motorcycle_jobs:
             if not job.done:
-                give_motorcycle_class(job, vehicle_class, service)
-        newly = sum(1 for linked in report.linked if not linked.before)
+                give_motorcycle_class(job, motorcycles, service)
+        newly = sum(1 for linked in report.linked + report.year_unknown if not linked.before)
         filled = sum(1 for linked in report.linked if linked.filled)
         given = sum(1 for job in report.motorcycle_jobs if not job.done)
-        record(Kind.LINK, f"link_vehicles linked {newly:,} vehicles, filled details on {filled:,} and gave {given:,} imported motorcycle jobs their class and service")
+        record(
+            Kind.LINK,
+            f"link_vehicles linked {newly:,} vehicles, filled details on {filled:,}, gave {len(report.motorcycles_by_make):,}"
+            f" the Motorcycles class by make and gave {given:,} imported motorcycle jobs their class and service",
+        )
     return report

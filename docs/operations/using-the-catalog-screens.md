@@ -67,11 +67,11 @@ A decision applies at once and stays until you clear it on the model's screen. A
 - **Accept the catalog's** gives the vehicle the catalog's class, and the catalog's size when it fixes one.
 - **Every 2014 to 2019 RAV4: Midsize SUVs** (the years and class shown are the vehicle's) sets a model override for the years the catalog classes alike around this vehicle's year. A class that differed takes its size from the facts; a size that differed is fixed for those years. Other vehicles of the model in those years may then differ, and show here.
 
-Past jobs keep their prices whichever you pick. A vehicle that no longer differs leaves the list.
+Past jobs keep their prices whichever you pick. A vehicle that no longer differs leaves the list. A vehicle with no year is not listed: its class depends on the year, so it is compared once the year is filled in.
 
 ## Approvals
 
-**Approvals** is where Phase 2 is signed off ([decision 0079](../decisions/0079-approval-list.md)). It lists every model in the job history, every model on the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml), every model whose years are in different classes, and every model approved before, with how many are approved. It shows the models still waiting; **Show** picks approved ones or all, and **Listed for** filters by why a model is there.
+**Approvals** is where Phase 2 is signed off ([decision 0079](../decisions/0079-approval-list.md)). It lists every model with the make and name of a vehicle in the job history, whether or not the vehicles have a year, every model on the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml), every model whose years are in different classes, and every model approved before, with how many are approved. It shows the models still waiting; **Show** picks approved ones or all, and **Listed for** filters by why a model is there.
 
 Each model shows once, as its year ranges: the years in a row with the same class, size and **How**. For each range:
 

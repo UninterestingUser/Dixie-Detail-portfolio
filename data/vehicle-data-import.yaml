@@ -1,7 +1,7 @@
 meta:
   title: Vehicle data import
   summary: What import_vehicle_data asks NHTSA vPIC for (the truck, van and motorcycle makes, the model years) and how politely it asks.
-  updated: 2026-10-22
+  updated: 2026-10-24
   status: current
   explained_in: docs/operations/importing-vehicle-data.md
   note: The sources' addresses are in data/integrations.yaml, and the names customers know, with each source's other spellings, in data/vehicle-names.yaml. Edit this file to add a make; the next import picks it up with no code change.
@@ -40,25 +40,28 @@ vpic:
 
   # Motorcycles, asked for vehicle type motorcycle. Each model is stored with
   # vehicle type motorcycle and shown in the same year, make and model lists
-  # as cars. Motorcycles have no vehicle class yet (data/vehicle-classes.yaml).
+  # as cars, and goes to the Motorcycles class (data/vehicle-classes.yaml).
+  # motorcycles_only marks a make that sells no cars, trucks or vans in the
+  # US: link_vehicles gives a customer's vehicle of that make the Motorcycles
+  # class even with no model or year recorded (decision 0080).
   motorcycle_makes:
-    - {name: Harley-Davidson, vpic_names: [HARLEY-DAVIDSON]}
+    - {name: Harley-Davidson, vpic_names: [HARLEY-DAVIDSON], motorcycles_only: true}
     - {name: Honda, vpic_names: [HONDA]}
-    - {name: Yamaha, vpic_names: [YAMAHA]}
-    - {name: Kawasaki, vpic_names: [KAWASAKI]}
+    - {name: Yamaha, vpic_names: [YAMAHA], motorcycles_only: true}
+    - {name: Kawasaki, vpic_names: [KAWASAKI], motorcycles_only: true}
     - {name: Suzuki, vpic_names: [SUZUKI]}
     - {name: BMW, vpic_names: [BMW]}
-    - {name: Ducati, vpic_names: [DUCATI]}
-    - {name: Triumph, vpic_names: [TRIUMPH]}
+    - {name: Ducati, vpic_names: [DUCATI], motorcycles_only: true}
+    - {name: Triumph, vpic_names: [TRIUMPH], motorcycles_only: true}
     # vPIC also lists a make KTMMEX; it is left out until checked.
-    - {name: KTM, vpic_names: [KTM]}
-    - {name: Indian, vpic_names: [INDIAN MOTORCYCLE]}
-    - {name: Aprilia, vpic_names: [APRILIA]}
-    - {name: Moto Guzzi, vpic_names: [MOTO GUZZI]}
-    - {name: Royal Enfield, vpic_names: [ROYAL ENFIELD]}
-    - {name: Husqvarna, vpic_names: [HUSQVARNA]}
-    - {name: Victory, vpic_names: [VICTORY]}
-    - {name: Zero, vpic_names: [ZERO MOTORCYCLES]}
+    - {name: KTM, vpic_names: [KTM], motorcycles_only: true}
+    - {name: Indian, vpic_names: [INDIAN MOTORCYCLE], motorcycles_only: true}
+    - {name: Aprilia, vpic_names: [APRILIA], motorcycles_only: true}
+    - {name: Moto Guzzi, vpic_names: [MOTO GUZZI], motorcycles_only: true}
+    - {name: Royal Enfield, vpic_names: [ROYAL ENFIELD], motorcycles_only: true}
+    - {name: Husqvarna, vpic_names: [HUSQVARNA], motorcycles_only: true}
+    - {name: Victory, vpic_names: [VICTORY], motorcycles_only: true}
+    - {name: Zero, vpic_names: [ZERO MOTORCYCLES], motorcycles_only: true}
 
 canada:
   # GetCanadianVehicleSpecifications is asked once per make and model year
