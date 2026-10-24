@@ -1,7 +1,7 @@
 meta:
   title: Vehicle names
   summary: The names customers know for each vehicle model - the EPA base models split into separate nameplates, the other spellings each source uses for one vehicle, and the make spellings - used by the import, the third-row list and vehicle matching.
-  updated: 2026-10-22
+  updated: 2026-10-23
   status: current
   explained_in: docs/reference/vehicle-catalog.md
   note: >-
@@ -19,6 +19,9 @@ make_aliases:
 # the base model whose EPA model name contains one of a nameplate's phrases,
 # as whole words, belongs to that nameplate ("Range Rover Sport" also matches
 # "New Range Rover Sport P360 MHEV"); the rest stay with the base model.
+# The Canadian specifications' trims are split the same way, so the
+# "EQE CLASS 350 4MATIC 4DR SUV" trim's weight goes to the EQE SUV, not the
+# EQE sedan (decision 0075).
 nameplates:
   - make: Hyundai
     base_model: Santa Fe
@@ -123,6 +126,8 @@ aliases:
   - {make: Mercedes-Benz, name: GLK, also: [GLK-Class]}
   - {make: Mercedes-Benz, name: GLS, also: [GLS-Class]}
   - {make: Mercedes-Benz, name: EQB, also: [EQB-Class]}
+  - {make: Mercedes-Benz, name: EQE, also: [EQE-Class, EQE-Class Sedan, EQE Sedan]}
+  - {make: Mercedes-Benz, name: EQS, also: [EQS-Class, EQS-Class Sedan, EQS Sedan]}
   - {make: Mercedes-Benz, name: EQE SUV, also: [EQE-Class SUV]}
   - {make: Mercedes-Benz, name: EQS SUV, also: [EQS-Class SUV]}
   - {make: Mazda, name: Mazda2, also: ["2"]}

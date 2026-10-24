@@ -12,7 +12,7 @@
     <dt>Time on site</dt><dd>{{ stay.total_minutes|duration }} <span class="muted">(setup {{ stay.setup_minutes }} min, breakdown {{ stay.breakdown_minutes }} min)</span></dd>
   </dl>
   {% if job.full_day %}<p class="warn">Full day: consider a second person.</p>{% endif %}
-  <p class="help">From pricebook version {{ job.version.number }}. Sales tax is added from Phase 3.</p>
+  <p class="help">From pricebook version {{ job.version.number }}. Sales tax is added from Phase 3.{% if test_price %} A test price: nothing is saved.{% endif %}</p>
   {% if changes_price %}<p class="warn">Saving re-prices this job from the pricebook. Give a reason below.</p>{% endif %}
 {% else %}
   <p class="muted">Pick the service to see the price.</p>

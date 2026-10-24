@@ -17,10 +17,12 @@ from django.views.decorators.http import require_safe
 from appointments.models import Appointment
 from billing.models import Payment
 from customers.models import Customer
+from staff.authorization import user_is_manager
+from vehicles.classification.lookup import classify
 from vehicles.models import Vehicle
 
 from .context_processors import brand_colors
-from .forms import CustomerForm, VehicleForm
+from .forms import CustomerForm, VehicleForm, VehicleOverrideForm
 from .search import find_customers
 
 
@@ -100,7 +102,18 @@ def vehicle_form(request, customer_pk=None, pk=None):
         saved = form.save()
         messages.success(request, f"Saved {saved}.")
         return redirect("customer", pk=customer.pk)
-    return render(request, "control/vehicle_form.html", {"form": form, "customer": customer, "vehicle": vehicle})
+    context = {"form": form, "customer": customer, "vehicle": vehicle}
+    if vehicle.pk:
+        # The vehicle's own class override, beside what the catalog gives it (decision 0076).
+        context.update(
+            catalog=classify(vehicle.year, vehicle.make, vehicle.model) if vehicle.year and vehicle.make and vehicle.model else None,
+            override_form=VehicleOverrideForm(
+                prefix="override",
+                initial={"vehicle_class": vehicle.vehicle_class, "size_variant": vehicle.size_variant, "note": vehicle.class_override_note},
+            ),
+            can_override=user_is_manager(request.user),
+        )
+    return render(request, "control/vehicle_form.html", context)
 
 
 @require_safe

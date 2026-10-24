@@ -4,16 +4,16 @@ summary: How a year, make and model becomes a vehicle class and size variant, fr
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [vehicles, classification, phase-2]
-related: [docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
+related: [docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
 ---
 
 # Vehicle classification
 
 The customer picks year, make and model, and the system gives one of the seven vehicle classes and, where it can, the size variant, without asking. Booking stays year, make and model: VINs are not used for pricing, because the owner sees a VIN only on site. The classes and their settings are in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml); classes and size variants are records the owner can change (Phase 1).
 
-This is built in Phase 2 Step 2 ([decision 0073](../decisions/0073-classification-per-model-year.md)). The `classify_vehicles` command applies the rules and overrides to every model year in the vehicle catalog ([vehicle-catalog.md](vehicle-catalog.md)) and stores each one's answer; how to run it is in [../operations/classifying-vehicles.md](../operations/classifying-vehicles.md). The booking form reads that stored answer through one lookup, described below; it uses it from Phase 3.
+This is built in Phase 2 Step 2 ([decision 0073](../decisions/0073-classification-per-model-year.md)). The `classify_vehicles` command applies the rules and overrides to every model year in the vehicle catalog ([vehicle-catalog.md](vehicle-catalog.md)) and stores each one's answer; how to run it is in [../operations/classifying-vehicles.md](../operations/classifying-vehicles.md). The booking form reads that stored answer through one lookup, described below; it uses it from Phase 3. Phase 2 Step 3 adds the control app's **Catalog** tab, where the owner looks vehicles up and changes the rules, overrides, class settings and review queue, each applied as it is confirmed ([decision 0076](../decisions/0076-catalog-screens-in-the-control-app.md), [../operations/using-the-catalog-screens.md](../operations/using-the-catalog-screens.md)).
 
 ## Data sources
 
@@ -28,7 +28,7 @@ EPA size classes split pickups (from 2008) and SUVs (from 2013) into small and s
 
 ## Classification rules are data
 
-Classification is an ordered list of rules ([decision 0060](../decisions/0060-vehicle-classification-rules-are-data.md)). Each rule is a record with a position, a name, its conditions, the vehicle class it gives, and whether it is active. For each model year the active rules are tried from the lowest position up, and the first whose conditions all hold gives the class. The launch rules and model overrides are in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml). Each one `classify_vehicles` creates from the file remembers the entry it came from, and each run brings an unedited one in step with the file, adds a new entry and removes one taken out of the file. One the owner has edited or deleted is left alone and listed in the report, and the owner's own rules are never touched ([decision 0074](../decisions/0074-nameplates-aliases-and-majority.md)). Rules are edited in the Django admin until a control-app screen exists, and a rule's conditions are checked when it is saved there.
+Classification is an ordered list of rules ([decision 0060](../decisions/0060-vehicle-classification-rules-are-data.md)). Each rule is a record with a position, a name, its conditions, the vehicle class it gives, and whether it is active. For each model year the active rules are tried from the lowest position up, and the first whose conditions all hold gives the class. The launch rules and model overrides are in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml). Each one `classify_vehicles` creates from the file remembers the entry it came from, and each run brings an unedited one in step with the file, adds a new entry and removes one taken out of the file. One the owner has edited or deleted is left alone and listed in the report, and the owner's own rules are never touched ([decision 0074](../decisions/0074-nameplates-aliases-and-majority.md)). Rules are edited on the control app's rule screen, which writes each rule out in plain words and checks its conditions when it is saved; the Django admin checks them too.
 
 A rule's conditions map a fact to what it must be. For example, "EPA small SUV weighing over 4,500 lb → Midsize SUVs" is:
 
@@ -81,10 +81,15 @@ Trucks above the 350 series stay in Fullsize Trucks, and full-size and fleet van
 
 ## Overrides win over the rules
 
-- **A model override** beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. The launch overrides price the full-size SUVs with the Suburban, in Fullsize SUVs & Minivans: the Chevrolet Suburban, Suburban HD and Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Jeep Wagoneer, Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia, and the Jeep Grand Wagoneer from 2022 only (the 1984 to 1991 Grand Wagoneer is a different vehicle). It covers the model's years from one year to another, or all of them; one for some years beats one for the whole model. It sets the class and either fixes the size variant, always asks it, or leaves it to the facts as for any vehicle of the class. Each records who set it, when, and an optional note.
+- **A model override** beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. The launch overrides price the full-size SUVs with the Suburban, in Fullsize SUVs & Minivans: the Chevrolet Suburban, Suburban HD and Tahoe, GMC Yukon and Yukon XL, Cadillac Escalade and Escalade ESV, Lincoln Navigator and Navigator L, Nissan Armada, Infiniti QX56 and QX80, Ford Expedition, Expedition MAX and Expedition EL, Toyota Sequoia, and the Jeep Wagoneer and Grand Wagoneer from 2022 only (the 1989 to 1990 Wagoneer is the old compact one, and the 1984 to 1991 Grand Wagoneer a different vehicle). It covers the model's years from one year to another, or all of them; one for some years beats one for the whole model. It sets the class and either fixes the size variant, always asks it, or leaves it to the facts as for any vehicle of the class. Each records who set it, when, and an optional note.
 - **A vehicle override** covers one customer's lifted or modified vehicle: the vehicle's own class and size variant, with who set them, when, and an optional note. It beats the model override and the rules.
+- **A review queue decision** settles one model year from the review queue: a class with its size fixed, always asked or from the facts, or the photo cards. A model override covering the year beats it; it beats the rules ([decision 0076](../decisions/0076-catalog-screens-in-the-control-app.md)).
 
-`classify_vehicles` never changes an override the owner set or edited, a customer's vehicle, or anything with source "owner".
+`classify_vehicles` never changes an override the owner set or edited, a review queue decision, a customer's vehicle, or anything with source "owner".
+
+## Model years the EPA has not published yet
+
+NHTSA vPIC lists next year's models, such as the 2027 F-150, RAV4, Highlander and Silverado, months before the EPA publishes them, so they have no EPA size class and no rule would match. Such a model year takes the class and size of the same model's nearest classified year, and the "how" line says so: "from the 2026 model year, rule 180: EPA standard pickups; the EPA has not published this year yet" ([decision 0075](../decisions/0075-unpublished-years-and-canadian-nameplates.md)). It counts as unpublished when it has no EPA facts, the EPA lists earlier years of the model, and it is among the EPA's two newest model years or later (`rule_settings.epa_unpublished_years` in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml)). A model override or queue decision for the year still wins. When the EPA data arrives, the rules classify it again. A model the EPA never lists, such as the F-250, goes by the rules as always, and one with no classified year waits in the review queue.
 
 ## The review queue
 
@@ -94,13 +99,15 @@ A model year goes to the review queue instead of going live when:
 - **its rows have no clear majority** on a rule's condition, such as a model sold as a sedan and a wagon in equal numbers, or a curb weight range from 4,300 to 4,700 lb against "over 4,500 lb" with no spread of trims to go by; or
 - **two sources disagree** about a fact the rule tests.
 
-The queue names the rule and the reason. The owner settles a model year with a model override (the model "straddles a threshold", decision 0060) or a new rule, and the next run of `classify_vehicles` takes it out of the queue. A model year that was live and enters the queue, for example after new data, keeps its earlier class while it waits; a new one has no class, and the booking form shows the photo cards.
+The queue names the rule and the reason, files it under one of the three reasons for filtering, and suggests a class: the class of the rule its trims straddle, or of the model's nearest classified year, with the size its facts give. The owner settles a model year from the control app's review queue, one at a time or many at once: accept the suggestion, pick another class and size, or send it to the photo cards. A model override (the model "straddles a threshold", decision 0060) or a new rule settles it too. A model year that was live and enters the queue, for example after new data, keeps its earlier class while it waits; a new one has no class, and the booking form shows the photo cards.
 
 On the full EPA table with the 2024 vPIC and Canadian data, the launch rules leave 1,777 of 12,872 model years in the queue (2,418 before decision 0074). Most are models sold as cars and station wagons with no clear majority, and SUVs from before 2010, which the third-row list does not cover and which have no curb weight yet.
 
 ## A rule change is previewed before it is applied
 
-Saving a rule or an override changes nothing the customer sees until `classify_vehicles` applies the rules. `classify_vehicles --dry-run` prints the preview: every model year whose class or size variant would change, or that would enter or leave the review queue, with the old and new values and the rule or override responsible. The preview is a function the control app can call with a proposed set of rules and overrides, unsaved, when its rule screen is built. An applied change reaches new quotes only; booked jobs keep their price.
+A rule change on the control app's rule screen (adding, editing, moving, disabling or enabling a rule) shows its preview first: every model year whose class or size variant would change, or that would enter or leave the review queue, grouped by old and new class, with the rule or override responsible. Nothing changes until the owner confirms it; then it is saved and applied to the whole catalog at once. A change to what a class's size variant measures is previewed the same way. A model override, the third-row flag and a queue decision reach one model and apply at once. `classify_vehicles --dry-run` prints the same preview on the server. An applied change reaches new quotes only; booked jobs keep their price.
+
+Every change is logged with who made it, when, and each model year it changed, before and after, and a model's screen shows every change that reached it.
 
 ## How the size variant is set without asking
 
@@ -117,7 +124,7 @@ Each model year stores its size variant, or that the customer is asked. Each veh
 
 ## Settings each vehicle class carries
 
-Each vehicle class carries its own settings: what its size variant measures (doors, cab style, seat rows or none), whether customers book it online or ask for a quote, and its photo card's caption. `load_pricebook` creates the classes with the launch values from [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml); after that they are edited in the Django admin. All seven launch classes are booked online.
+Each vehicle class carries its own settings: what its size variant measures (doors, cab style, seat rows or none), whether customers book it online or ask for a quote, and its photo card's caption. `load_pricebook` creates the classes with the launch values from [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml); after that they are edited on the control app's class settings screen, and size variants in the Django admin. All seven launch classes are booked online.
 
 ## The lookup
 
@@ -126,15 +133,15 @@ Each vehicle class carries its own settings: what its size variant measures (doo
 - the **vehicle class**;
 - the **size variant**, or the **question still to ask**: "Two doors or four doors?", "Regular cab, or extended or crew cab?" or "Does it have a third row of seats?", answered through `answers` (`{"doors": 4}`, `{"cab": "regular"}`, `{"third_row": True}`);
 - the class's **price basis** and the model's **vehicle type**;
-- **how the answer was reached**: a rule, a model override, a vehicle override (when a customer's vehicle is given), or the review queue.
+- **how the answer was reached**: a rule, a model override, a review queue decision, the nearest classified year (a year the EPA has not published yet), a vehicle override (when a customer's vehicle is given), or the review queue, with a sentence saying which.
 
-The make and model are matched by the names in [data/vehicle-names.yaml](../../data/vehicle-names.yaml), so "GLE-Class" finds the GLE; matching customers' vehicles to the catalog will use the same lookup. A year before 1984 (the first year of the catalog, in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml)), a model not in the catalog, and a model year waiting in the review queue with no class all return the **photo cards** instead: seven cards, one per vehicle class, Motorcycles among them, for the customer to choose from.
+The make and model are matched by the names in [data/vehicle-names.yaml](../../data/vehicle-names.yaml), so "GLE-Class" finds the GLE; matching customers' vehicles to the catalog will use the same lookup. A year before 1984 (the first year of the catalog, in [data/vehicle-data-import.yaml](../../data/vehicle-data-import.yaml)), a model not in the catalog, and a model year waiting in the review queue with no class, and one the owner sent to the photo cards, all return the **photo cards** instead: seven cards, one per vehicle class, Motorcycles among them, for the customer to choose from.
 
 ## Guarding against a wrong class
 
 The customer sees the class with a "not right?" link, the owner sees the vehicle on every booking, and each correction becomes a rule or an override. The booking form shows these from Phase 3. When the owner corrects a vehicle's size on a job, the model's record will be updated, from Phase 3. Before launch the owner reviews the classes for every vehicle in the job history.
 
-EPA size classes are coarser for older SUVs, so those lean more on the rules and overrides. A monthly job will re-pull the sources and reclassify (Phase 2 Step 5): new model years the rules classify cleanly go live, and the rest wait in the review queue.
+EPA size classes are coarser for older SUVs, so those lean more on the rules and overrides. A monthly job will re-pull the sources and reclassify (Phase 2 Step 5): new model years the rules classify cleanly go live, those the EPA has not published yet take their model's nearest classified year, and the rest wait in the review queue.
 
 ## Possible future vehicle classes
 

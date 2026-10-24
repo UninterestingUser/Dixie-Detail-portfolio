@@ -9,7 +9,9 @@ in capitals and digits only, begins it and ends where one of its words ends
 ("RAV4"; "3 Series" for "3-SERIES 330i"); the longest such name wins. A row
 that matches none, matches two equally, or goes on with a series number after
 the name ("SILVERADO 2500HD" against "Silverado") is listed for the owner
-instead of guessed.
+instead of guessed. A trim of a model data/vehicle-names.yaml splits into
+nameplates goes to the nameplate its name names, as an EPA row does: "EQE
+CLASS 350 4MATIC 4DR SUV" begins with "EQE" but is the EQE SUV.
 """
 
 import json
@@ -112,9 +114,10 @@ def collect(fetcher, config, report, log):
     return found
 
 
-def match(options, trim):
+def match(options, trim, nameplate=None):
     """(model id, None), or (None, why it is left for the owner). trim is the
-    Canadian name as words()."""
+    Canadian name as words(). nameplate(model name, trim) gives the
+    nameplate a split model's trim belongs to."""
     # Each run of whole words from the start, joined: "3", "3SERIES", ...
     starts = {"".join(trim[:count]): count for count in range(1, len(trim) + 1)}
     hits = [(len(key), model_id, name) for model_id, (key, name) in options.items() if key and key in starts]
@@ -125,6 +128,11 @@ def match(options, trim):
     if len(best) > 1:
         return None, f"matches {' and '.join(name for name, _ in best)} equally"
     name, model_id = best[0]
+    if nameplate is not None:
+        plate = name_key(nameplate(name, trim))
+        found = [other for other, (key, _) in options.items() if key == plate and other != model_id]
+        if found:
+            return found[0], None
     used = starts[name_key(name)]
     following = trim[used] if len(trim) > used else ""
     if SERIES.match(following):
@@ -152,7 +160,11 @@ def facts_by_model_year(rows, report, names=None):
             report.reject(f"{label}: no weight or dimensions")
             continue
         trim_words = words(trim)
-        model_id, why = match(options.get((names.make_key(make), year), {}), trim_words)
+        model_id, why = match(
+            options.get((names.make_key(make), year), {}),
+            trim_words,
+            lambda name, found, make=make: names.nameplate(make, name, " ".join(found)),
+        )
         if model_id is None:
             report.unmatched.append(f"{label}: {why}")
             continue

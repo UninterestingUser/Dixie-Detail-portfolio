@@ -4,7 +4,7 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [roadmap, phases, status]
 related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/decisions/README.md]
 ---
@@ -26,7 +26,7 @@ The booking path ships first because it earns money; the back-office features fo
 
 The returning-customer review queue, listed for Phase 1 in the first plan, moved to Phase 3 with quiet matching: flags are raised only by website bookings, which start in Phase 3. The data model already holds them.
 
-**Phase 2, the vehicle catalog, is in progress.** Step 1, the vehicle data import, is built: the catalog loads from the EPA, NHTSA vPIC and the Canadian specifications, with each source's facts kept per model year ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071). Step 2, classification, is built: ordered rules and overrides give each model year a vehicle class and size variant, with a preview, a review queue and the lookup the booking form will use, and Motorcycles are a vehicle class with Motorcycle Detail at $100 ([../reference/vehicle-classification.md](../reference/vehicle-classification.md), decisions 0072 and 0073).
+**Phase 2, the vehicle catalog, is in progress.** Step 1, the vehicle data import, is built: the catalog loads from the EPA, NHTSA vPIC and the Canadian specifications, with each source's facts kept per model year ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071). Step 2, classification, is built: ordered rules and overrides give each model year a vehicle class and size variant, with a preview, a review queue and the lookup the booking form will use, and Motorcycles are a vehicle class with Motorcycle Detail at $100 ([../reference/vehicle-classification.md](../reference/vehicle-classification.md), decisions 0072 and 0073). Step 3, the control app's catalog screens, is built: looking vehicles up with a test price, model and vehicle overrides, the rules with a preview before each change applies, class settings, the review queue and each model's history (decision 0076), with the owner's second dry-run fixes: next year's models take their model's nearest classified year until the EPA publishes them, Canadian trims split by nameplate, and the Jeep Wagoneer override starts in 2022 (decision 0075).
 
 Phase 1 started with two carry-overs from Phase 0, both done: `DEPLOY_REMOTE` and `DEPLOY_BRANCH` are in the server's `.env` and `ops/deploy.sh` works (confirmed by the owner 2026-10-17; the deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY` on 2026-10-13), and the restore test passed on 2026-10-14. Two more were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
 

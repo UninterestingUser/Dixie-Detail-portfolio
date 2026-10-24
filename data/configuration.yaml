@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-22
+  updated: 2026-10-23
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -158,7 +158,7 @@ development:
 
 stored_on_server:
   - name: bws-token
-    purpose: Bitwarden machine-account access token for dixie-server
+    purpose: Access token (labeled dixie-server) for the Bitwarden machine account server
     location: /etc/credstore.encrypted/dixie-bws-token.cred
     protection: systemd-creds, --with-key=host+tpm2
 

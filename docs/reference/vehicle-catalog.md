@@ -4,9 +4,9 @@ summary: The years, makes and models the system knows, the facts it keeps per mo
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [vehicles, catalog, phase-2]
-related: [docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
+related: [docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
 ---
 
 # Vehicle catalog
@@ -62,7 +62,7 @@ The EPA has no door field. The EPA lists passenger and luggage volume separately
 
 ## How Canadian rows are matched
 
-A Canadian row names the model and trim together, such as "RAV4 AWD LE / XLE 4DR SUV". It is matched to the catalog model of the same make and model year whose whole name begins it and ends where one of its words ends: "RAV4" here, and "3 Series" for "3-SERIES 330i". The longest such name wins, so "F-250 SUPER DUTY" goes to the F-250, not the F-150.
+A Canadian row names the model and trim together, such as "RAV4 AWD LE / XLE 4DR SUV". It is matched to the catalog model of the same make and model year whose whole name begins it and ends where one of its words ends: "RAV4" here, and "3 Series" for "3-SERIES 330i". The longest such name wins, so "F-250 SUPER DUTY" goes to the F-250, not the F-150. A trim of a model the nameplate list splits goes to the nameplate its name names, as an EPA row does: "EQE CLASS 350 4DR SUV" begins with "EQE" but goes to the EQE SUV, and "SILVERADO 2500 HD" to the Silverado HD ([decision 0075](../decisions/0075-unpublished-years-and-canadian-nameplates.md)).
 
 A row is left for the owner, and listed in the import's report, when no name matches, when two names match equally, or when the name goes on with a series number such as 1500, 2500HD or HD ("SILVERADO 2500HD" against "Silverado"), because that row may be a heavier model. Guessing would put one model's weight on another and could move it to the wrong vehicle class.
 

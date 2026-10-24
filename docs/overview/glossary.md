@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -73,7 +73,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Photo card.** One card per vehicle class, with a picture and caption, that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are seven.
 
-**Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner adds a rule or a model override. Not the same as the returning-customer match flags.
+**Review queue (vehicles).** The model years no classification rule settles cleanly, waiting for the owner: no rule matches, the trims straddle a rule's threshold, or two sources disagree. They do not go live until the owner settles them: a **review queue decision** (accept the suggested class, pick another, or send it to the photo cards), a rule or a model override. Not the same as the returning-customer match flags.
 
 **Third-row list.** [data/third-row-seating.yaml](../../data/third-row-seating.yaml), the owner-approved list of which crossovers and midsize SUVs have a third row always, optionally or never, by model year. Optional is asked in the booking form.
 

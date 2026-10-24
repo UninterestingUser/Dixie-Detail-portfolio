@@ -226,23 +226,30 @@ class LaunchSetTests(ClassificationTestCase):
         named = [
             ("Chevrolet", "Tahoe"), ("GMC", "Yukon"), ("GMC", "Yukon XL"), ("Cadillac", "Escalade"),
             ("Cadillac", "Escalade ESV"), ("Lincoln", "Navigator"), ("Lincoln", "Navigator L"), ("Nissan", "Armada"),
-            ("Infiniti", "QX56"), ("Infiniti", "QX80"), ("Jeep", "Wagoneer"), ("Ford", "Expedition MAX"),
+            ("Infiniti", "QX56"), ("Infiniti", "QX80"), ("Ford", "Expedition MAX"),
             ("Ford", "Expedition EL"), ("Chevrolet", "Suburban HD"), ("Chevrolet", "Suburban"),
         ]
         for make, name in named:
             add_facts(add_model(make, name), epa_size_classes=STANDARD_SUVS)
+        # The Wagoneer and Grand Wagoneer from 2022 only: the 1989 to 1990
+        # Wagoneer is the old compact one, and the 1984 to 1991 Grand Wagoneer
+        # a different vehicle too.
         grand = add_model("Jeep", "Grand Wagoneer", year_from=1990, year_to=2023)
-        for year in (1990, 2023):
-            add_facts(grand, year=year, epa_size_classes=["Special Purpose Vehicles"] if year == 1990 else STANDARD_SUVS)
+        wagoneer = add_model("Jeep", "Wagoneer", year_from=1990, year_to=2023)
+        for vehicle_model in (grand, wagoneer):
+            for year in (1990, 2023):
+                add_facts(vehicle_model, year=year, epa_size_classes=["Special Purpose Vehicles"] if year == 1990 else STANDARD_SUVS)
         self.sync()
         results = classify_catalog()
         for make, name in named:
             with self.subTest(model=name):
                 result = results[(VehicleModel.objects.get(make=make, model=name).pk, 2019)][1]
                 self.assertEqual((result.vehicle_class.name, result.method), ("Fullsize SUVs & Minivans", "override"))
-        self.assertEqual(grand.overrides.get().year_from, 2022)
-        self.assertEqual(results[(grand.pk, 2023)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
-        self.assertNotEqual(results[(grand.pk, 1990)][1].method, "override")
+        for vehicle_model in (grand, wagoneer):
+            with self.subTest(model=vehicle_model.model):
+                self.assertEqual(vehicle_model.overrides.get().year_from, 2022)
+                self.assertEqual(results[(vehicle_model.pk, 2023)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
+                self.assertNotEqual(results[(vehicle_model.pk, 1990)][1].method, "override")
 
     def test_an_unedited_launch_rule_follows_the_file_and_an_edited_one_is_kept(self):
         self.sync()

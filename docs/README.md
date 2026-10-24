@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-23
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-22):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, and Step 2, classification, are built. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-10-23):** Phase 0 (Foundations) and Phase 1 (Core data and control app) are complete. Phase 2 (Vehicle catalog) is in progress: Step 1, the vehicle data import, Step 2, classification, and Step 3, the control app's catalog screens, are built. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 
@@ -84,6 +84,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
 | [Publishing the public portfolio copy](operations/publishing-the-portfolio.md) | How the owner publishes and updates the public copy of this private repository, with every commit rewritten to hide server addresses and private details, and what to do when the publish script stops. | current |
 | [Troubleshooting](operations/troubleshooting.md) | Known problems with the server, stack, backups and tools, each with the exact symptom, the cause and the fix, collected from Phase 0 onward. | current |
+| [Using the catalog screens](operations/using-the-catalog-screens.md) | A short guide to the control app's Catalog tab - looking a vehicle up, test prices, overrides, the rules and their preview, class settings, the review queue and each model's history. | current |
 | [Workstation setup](operations/workstation-setup.md) | How the owner's Fedora workstation is set up to work on the repository with Git, the GitHub CLI and Claude Code, without storing secrets in plaintext. | current |
 
 ## Guides: day-to-day use
