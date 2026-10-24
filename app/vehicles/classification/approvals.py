@@ -17,7 +17,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
-from vehicles.models import ClassificationChange, ModelApproval, ModelYearClassification, Vehicle, VehicleModel
+from vehicles.models import ClassificationChange, ModelApproval, ModelYearClassification, VehicleModel
 from vehicles.vehicle_data.names import load_names
 
 from . import owner
@@ -188,9 +188,12 @@ def mixed_class_models():
 
 def approval_list(data_dir=None):
     """([ListedModel] by make and model, [spot-check entries not in the catalog])."""
+    # linking imports this module, so it is imported here.
+    from vehicles.linking import job_history_models
+
     reasons = defaultdict(list)
-    vehicles = Vehicle.objects.filter(vehicle_model__isnull=False, appointments__isnull=False)
-    for model_id, count in vehicles.values("vehicle_model").annotate(count=Count("pk", distinct=True)).values_list("vehicle_model", "count"):
+    # By make and model, so a model is listed whether or not its vehicles have a year (decision 0080).
+    for model_id, count in sorted(job_history_models().items()):
         reasons[model_id].append(f"{JOB_HISTORY} ({count} vehicle{'s' if count != 1 else ''})")
     missing = []
     for entry, found in spot_checks(data_dir):

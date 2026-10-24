@@ -19,6 +19,7 @@ make_aliases:
   Benz: Mercedes-Benz
   VW: Volkswagen
   Harley: Harley-Davidson
+  Harley Davidson: Harley-Davidson
 
 # The EPA groups its rows by base model, which can hold several vehicles a
 # customer knows apart, such as the Santa Fe and the Santa Fe Sport. A row of
@@ -150,6 +151,22 @@ aliases:
   - {make: Chevrolet, name: Silverado, also: [Silverado 1500]}
   - {make: GMC, name: Sierra, also: [Sierra 1500]}
 
+# A customer's name for a vehicle that the catalog files under another name,
+# or another make, read by link_vehicles only (decision 0080). `names` are the
+# customer's spellings for the make; `catalog_make` (the same make when left
+# out) and `catalog_model` the catalog's name, which the aliases above and the
+# trim words then apply to. `from` and `to` limit an alias to those model
+# years: outside them the name means what it says, and with no year recorded
+# the vehicle is left for the owner, because the year decides.
+customer_aliases:
+  - {make: Dodge, names: [Ram, Ram 1500], from: 2011, catalog_make: Ram, catalog_model: Ram 1500}
+  - {make: Dodge, names: [Ram 2500], from: 2011, catalog_make: Ram, catalog_model: Ram 2500}
+  - {make: Chevrolet, names: ["2500", 2500HD], catalog_model: Silverado 2500 HD}
+  - {make: Lexus, names: [GX550, GX 550], catalog_model: GX}
+  - {make: Mercedes-Benz, names: [CLS 550], catalog_model: CLS}
+  - {make: BMW, names: [530i], catalog_model: 5 Series}
+  - {make: BMW, names: [650i], catalog_model: 6 Series}
+
 # Words a customer's vehicle record may carry after the model name, such as
 # "Camry LE", "F150 XLT" or "CR-V EX-L". link_vehicles matches the longest
 # start of the model field that is a catalog model of the make and year, and
@@ -201,6 +218,7 @@ trim_words:
   - XLT
   - Lariat
   - King Ranch
+  - "392"
   - Raptor
   - Tremor
   - STX
