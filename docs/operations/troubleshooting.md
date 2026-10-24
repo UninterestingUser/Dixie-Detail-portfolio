@@ -86,6 +86,11 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 **Cause:** the timer's matching `.service` file was not copied to `/etc/systemd/system/`.
 **Fix:** copy the `.service` file, `sudo systemctl daemon-reload`, `sudo systemctl restart NAME.timer`.
 
+### A timer is missing from `systemctl list-timers` after a deploy
+
+**Cause:** until 2026-10-24, `ops/deploy.sh` ran to the end as the version from before its own pull, because bash keeps reading the file it opened. A pull that added a timer and its line in `deploy.sh` (as the monthly vehicle data refresh did) installed the timer's unit file but did not enable it. `deploy.sh` now starts its pulled copy after the pull, enables every timer in `ops/`, and ends with an error naming any timer that is not enabled and active.
+**Fix:** run `sudo /srv/dixie-detail/ops/deploy.sh` again; the second run uses the new script. Or enable it by hand: `sudo systemctl enable --now NAME.timer`, then `systemctl list-timers | grep -i dixie`.
+
 ### A script stops with "set SETTING in .env" (for example `RESTIC_REPOSITORY` or `PUBLIC_HEALTH_URL`)
 
 **Cause:** a pull added a setting to `.env.example` that the server's `.env` lacks.

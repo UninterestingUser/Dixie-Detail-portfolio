@@ -85,7 +85,7 @@ The stack unit reads `/srv/dixie-detail/.env` as an environment file and loads t
 | Script | Purpose |
 | --- | --- |
 | `ops/stack-start.sh` | Fetch secrets from Bitwarden, write them to `/run/dixie-stack/secrets`, and recreate and start every container |
-| `ops/deploy.sh` | Pull `DEPLOY_BRANCH` from `DEPLOY_REMOTE` with the deploy key from Bitwarden, install any new or changed unit files, enable the stack and the three timers, create the vehicle data cache folder if it is missing, rebuild the app image and restart the stack; run with `sudo` |
+| `ops/deploy.sh` | Pull `DEPLOY_BRANCH` from `DEPLOY_REMOTE` with the deploy key from Bitwarden, start the pulled copy of itself for the rest, install any new or changed unit files, enable the stack and every timer in `ops/` and check that each is active, create the vehicle data cache folder if it is missing, rebuild the app image and restart the stack; run with `sudo` |
 | `ops/backup.sh` | Nightly dump, off-site copy, retention and Healthchecks pings |
 | `ops/restore-test.sh` | Restore the newest Drive snapshot into a throwaway PostgreSQL container and check it; run with `sudo` |
 | `ops/restic.sh` | Run any restic command against the Drive repository with the passwords loaded, such as `init`, `snapshots` or `check`; run with `sudo` |
