@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-10-22
+  updated: 2026-10-23
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -18,7 +18,7 @@ services:
   - name: Bitwarden Secrets Manager
     purpose: Every key, password and token
     phase: 0
-    status: In use; project Dixie Detail, machine account dixie-server
+    status: In use; project Dixie Detail, machine account server (access token labeled dixie-server)
   - name: GitHub
     purpose: Private repository; server pulls with a read-only deploy key
     phase: 0

@@ -4,7 +4,7 @@ summary: How every key, password and token is kept in Bitwarden Secrets Manager,
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-18
+updated: 2026-10-23
 tags: [security, secrets, bitwarden, systemd]
 related: [data/configuration.yaml, docs/decisions/0028-secrets-in-bitwarden.md, docs/decisions/0041-backup-password-paper-copy.md, docs/operations/secrets-management.md]
 ---
@@ -16,8 +16,8 @@ The owner's rule: every key, password and token lives in Bitwarden Secrets Manag
 ## Where secrets live
 
 - **Bitwarden Secrets Manager project "Dixie Detail"** holds every secret the system uses. The list of names, with what uses each one, is in [data/configuration.yaml](../../data/configuration.yaml). Values never appear in the repository.
-- **Machine account `dixie-server`** can read that project and nothing else. The server uses it to fetch secrets.
-- **The machine account's access token** is the only secret stored on the server. It is encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred`, locked to both the server's TPM chip and a root-only host key (`--with-key=host+tpm2`). A copy of the drive alone cannot decrypt it.
+- **Machine account `server`** can read that project and nothing else. The server uses it to fetch secrets. (It was named `dixie-server` until 2026-10-23.)
+- **The machine account's access token**, labeled `dixie-server` in Bitwarden, is the only secret stored on the server. It is encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred`, locked to both the server's TPM chip and a root-only host key (`--with-key=host+tpm2`). A copy of the drive alone cannot decrypt it.
 
 ## How a service gets its secrets
 
