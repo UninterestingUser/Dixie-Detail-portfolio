@@ -48,11 +48,14 @@ A rule's conditions map a fact to what it must be. For example, "EPA small SUV w
 | `cab_style` | A list: `regular`, `extended`, `crew` | Canadian specifications |
 | `seat_rows` | A list of numbers of rows, such as `[3]` | The third-row list, then NHTSA |
 | `source_vehicle_type` | A list of vPIC's types, such as `Truck` or `Multipurpose Passenger Vehicle (MPV)` | vPIC |
-| `gvwr`, `curb_weight` | `{"over": 4500}` and/or `{"up_to": 6000}`, in pounds | Canadian specifications (curb weight); no source yet (GVWR) |
+| `gvwr`, `curb_weight` | `{"over": 4500}` and/or `{"up_to": 6000}`, in pounds, or `{"at_least": 4500}` and/or `{"under": 6000}`, where the number itself belongs to the upper side | Canadian specifications (curb weight); no source yet (GVWR) |
 | `length`, `width`, `height`, `wheelbase` | The same, in inches | Canadian specifications |
 | `passenger_volume`, `luggage_volume` | The same, in cubic feet | EPA |
+| `box_volume` | The same, in cubic feet: length × width × height ÷ 1,728 from the median trim's dimensions, or the nearest measured model year's | Worked out from the Canadian specifications or the owner's figures ([decision 0082](../decisions/0082-size-based-vehicle-classes.md)) |
 
 In a list, `none` matches a model year that no source gives a value for, such as a vPIC truck the EPA does not list.
+
+Box volume is one figure per model year, so it never splits a model year's trims. A model year with no dimensions takes the box volume of the nearest measured model year of the same model, the newer on a tie, and the report says "inherited from" that year. A model with no measured year has none, and a box-volume condition fails for it. Each applied run saves every model year's box volume.
 
 ### How a condition is tested
 
@@ -168,6 +171,10 @@ EPA size classes are coarser for older SUVs, so those lean more on the rules and
 ## The vehicle size report
 
 The `vehicle_size_report` command gathers facts for deciding how the car, crossover and SUV classes are split. It reads the catalog's stored dimensions for every model now in Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, and the review queue's cars, wagons and SUVs, and prints each model's size ranges with length, width, height, wheelbase, curb weight and box volume (length × width × height ÷ 1,728), as a CSV or as ladders sorted by size with the largest steps between neighbors. Customers appear only as counts. The vehicle size report changes nothing: no class, rule, override or approval. What it shows and how to run it are in [../operations/classifying-vehicles.md](../operations/classifying-vehicles.md#vehicle-size-report).
+
+## Size-based classes, decided and not yet applied
+
+On 2026-10-26 the owner decided to class cars, wagons, crossovers, SUVs and minivans by box volume instead of body type ([decision 0082](../decisions/0082-size-based-vehicle-classes.md)): Small, Medium, Large, Full-size and Full-size Vans, with seat rows as the size variant and doors no longer used. Pickups and motorcycles keep their rules. The rules above, with the body-type classes, stay live until the size-based classes are applied in a later pull request. The new classes, lines and rules, and how the dry run previews them, are in [size-based-classes.md](size-based-classes.md).
 
 ## Possible future vehicle classes
 

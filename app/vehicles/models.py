@@ -27,6 +27,9 @@ class VehicleClass(models.Model):
         DOORS = "doors", "Doors"
         CAB_STYLE = "cab style", "Cab style"
         SEAT_ROWS = "seat rows", "Seat rows"
+        # The size-based classes (decision 0082): one row for an EPA two
+        # seater, three or asked from the third-row data, otherwise two.
+        SEATS = "seats", "Seat rows, two unless the data says otherwise"
         NONE = "none", "None (one price)"
 
     class Booking(models.TextChoices):
@@ -239,6 +242,31 @@ class VehicleModelYear(models.Model):
         return f"{self.year} {self.vehicle_model.make} {self.vehicle_model.model} ({self.get_source_display()})"
 
 
+class ModelYearSize(models.Model):
+    """The box volume of one model year: length x width x height / 1,728 in
+    cubic feet, from the medians of its trims' dimensions
+    (vehicles.classification.sizes, decision 0082). A model year with no
+    dimensions takes the nearest measured model year of the same model, the
+    newer on a tie, and names it in inherited_from. Saved each time
+    classify_vehicles applies the rules; derived, so never edited by hand."""
+
+    vehicle_model = models.ForeignKey(VehicleModel, on_delete=models.CASCADE, related_name="sizes")
+    year = models.PositiveSmallIntegerField()
+    box_volume = models.DecimalField(max_digits=6, decimal_places=1, help_text="Cubic feet.")
+    inherited_from = models.PositiveSmallIntegerField(
+        null=True, blank=True, help_text="The measured model year this one takes its box volume from."
+    )
+    computed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ["vehicle_model", "year"]
+        constraints = [models.UniqueConstraint(fields=["vehicle_model", "year"], name="one_size_per_model_year")]
+
+    def __str__(self):
+        inherited = f", inherited from {self.inherited_from}" if self.inherited_from else ""
+        return f"{self.year} {self.vehicle_model.make} {self.vehicle_model.model}: {self.box_volume} cu ft{inherited}"
+
+
 class VehicleDataImportRun(models.Model):
     """One run of import_vehicle_data for one source, so the monthly refresh
     can tell when each source last loaded and what it changed."""
@@ -442,6 +470,10 @@ class ModelYearClassification(models.Model):
         # A model year the EPA has not published yet takes the class of the
         # model's nearest classified year (decision 0075).
         CARRIED = "carried", "Nearest classified year"
+        # A size-based class for a model with no measurements in any year,
+        # from where most measured model years of its EPA size class land
+        # (decision 0082).
+        EPA_FALLBACK = "epa_fallback", "EPA size class fallback"
         PHOTO_CARDS = "photo_cards", "Photo cards"
         REVIEW = "review", "Review queue"
 

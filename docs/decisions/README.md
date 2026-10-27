@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 
 Each decision has its own file with the context, the decision, the alternatives considered and the consequences. Numbers are permanent identifiers in the order decisions were recorded. A changed decision gets a new record that supersedes the old one; old records are never rewritten. How to add one is in [../CONVENTIONS.md](../CONVENTIONS.md#decision-records).
 
-Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps. Record 0063 keeps the working repository private and publishes a rewritten public copy as a portfolio. Record 0064 lets the app read the repository's data/ folder, mounted read-only. Record 0065 makes the condition level lengthen the service time. Record 0066 sets how imported payments are kept out of the GnuCash export. Record 0071 sets how the vehicle catalog keeps each source's facts per model year (Phase 2 Step 1). Records 0072 and 0073 add the Motorcycles class and set how classification is applied per model year (Phase 2 Step 2), and record 0074 adds nameplates, one name per vehicle and majority voting after the owner's first dry run. Records 0075 and 0076 come from the owner's second dry run and the catalog screens (Phase 2 Step 3). Records 0077 to 0079 link customers' vehicles to the catalog without guessing, give the two imported motorcycle jobs their class and service, and set up the approval list (Phase 2 Step 4); record 0080 holds the fixes from the owner's first `link_vehicles` dry run.
+Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.md`); they were split into files on 2026-10-13 with their original numbers. Records 0029 to 0044 capture decisions made during planning and Phase 0 that had not yet been written down. Records 0045 to 0052 set the conventions Phase 1 builds on. Records 0053 and 0054 add owner-only payment methods, helper pay types, gift cards and vouchers found in the job history. Record 0055 sets how percentage promotions round. Records 0056 to 0062 come from the owner's plan review of 2026-10-17, before Phase 1 Step 3: scheduling settings, calendar sync, service times, the quoted price, vehicle classification rules, staff authorization and arrival taps. Record 0063 keeps the working repository private and publishes a rewritten public copy as a portfolio. Record 0064 lets the app read the repository's data/ folder, mounted read-only. Record 0065 makes the condition level lengthen the service time. Record 0066 sets how imported payments are kept out of the GnuCash export. Record 0071 sets how the vehicle catalog keeps each source's facts per model year (Phase 2 Step 1). Records 0072 and 0073 add the Motorcycles class and set how classification is applied per model year (Phase 2 Step 2), and record 0074 adds nameplates, one name per vehicle and majority voting after the owner's first dry run. Records 0075 and 0076 come from the owner's second dry run and the catalog screens (Phase 2 Step 3). Records 0077 to 0079 link customers' vehicles to the catalog without guessing, give the two imported motorcycle jobs their class and service, and set up the approval list (Phase 2 Step 4); record 0080 holds the fixes from the owner's first `link_vehicles` dry run. Record 0082 classes cars, wagons, crossovers, SUVs and minivans by measured size, after the vehicle size report, and supersedes the body-type classes and cars priced by doors once applied.
 
 ## Open points
 
@@ -38,9 +38,9 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0011](0011-price-matrix-supersedes-website.md) | 2026-10-07 | pricing | The price matrix supersedes every price on the old website | accepted |
 | [0012](0012-maintenance-priced-from-full-detail.md) | 2026-10-07 | pricing | Maintenance plans are priced as a share of Full Detail | accepted |
 | [0013](0013-condition-levels.md) | 2026-10-07 | pricing | Three condition levels add 0%, 10% or 20% | accepted |
-| [0014](0014-cars-priced-by-doors.md) | 2026-10-07 | pricing | Cars are priced by doors, not seats | accepted |
+| [0014](0014-cars-priced-by-doors.md) | 2026-10-07 | pricing | Cars are priced by doors, not seats | superseded |
 | [0015](0015-crossover-three-row-price.md) | 2026-10-07 | pricing | Crossovers & Wagons gain a three-row price | accepted |
-| [0016](0016-size-from-vehicle-data.md) | 2026-10-07 | booking | Derive the size variant from vehicle data; ask only when needed | accepted |
+| [0016](0016-size-from-vehicle-data.md) | 2026-10-07 | booking | Derive the size variant from vehicle data; ask only when needed | superseded |
 | [0017](0017-two-person-crew-time.md) | 2026-10-07 | crew | Two people take 60% of the one-person time | accepted |
 | [0018](0018-monthly-maintenance-two-person-default.md) | 2026-10-07 | crew | Monthly Maintenance defaults to a two-person crew | accepted |
 | [0019](0019-second-person-flag-at-8-hours.md) | 2026-10-07 | crew | Flag a second person at 8 one-person hours | accepted |
@@ -53,7 +53,7 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0026](0026-carrier-registration-timing.md) | 2026-10-08 | texting | Submit text registration when the new booking form is public | accepted |
 | [0027](0027-backups-to-google-drive.md) | 2026-10-13 | backups | Nightly backups to the RAID and to Google Drive with restic | superseded by [0070](0070-nightly-backup-at-2-45.md) |
 | [0028](0028-secrets-in-bitwarden.md) | 2026-10-13 | security | Every secret lives in Bitwarden Secrets Manager | accepted |
-| [0029](0029-vehicle-data-from-epa-and-nhtsa.md) | 2026-10-07 | vehicles | Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC | accepted |
+| [0029](0029-vehicle-data-from-epa-and-nhtsa.md) | 2026-10-07 | vehicles | Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC | superseded |
 | [0030](0030-two-text-consents.md) | 2026-10-07 | texting | Two separate text consents: appointment and follow-up | accepted |
 | [0031](0031-website-design-direction.md) | 2026-10-10 | website | Website design direction: red base, navy accent, familiar sections kept | accepted |
 | [0032](0032-address-validation-with-places.md) | 2026-10-10 | booking | Booking addresses validated with Google Places Autocomplete | accepted |
@@ -84,7 +84,7 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0057](0057-calendar-sync-and-conflict-rules.md) | 2026-10-17 | calendar | Calendar sync and conflict rules: the app writes Jobs, reads Time Off, and neither calendar changes an appointment | accepted |
 | [0058](0058-service-times-exclude-setup-and-breakdown.md) | 2026-10-17 | pricing | Service times in the price matrix exclude setup and breakdown | accepted |
 | [0059](0059-quoted-price-is-price-of-record.md) | 2026-10-17 | pricing | The quoted price is the price of record | accepted |
-| [0060](0060-vehicle-classification-rules-are-data.md) | 2026-10-17 | vehicles | Vehicle classification rules are data the owner edits | accepted |
+| [0060](0060-vehicle-classification-rules-are-data.md) | 2026-10-17 | vehicles | Vehicle classification rules are data the owner edits | superseded |
 | [0061](0061-staff-authorized-per-service.md) | 2026-10-17 | staff | Staff are authorized per service, and a manager assigns staff to each job | accepted |
 | [0062](0062-arrival-and-departure-by-one-tap.md) | 2026-10-17 | scheduling | Arrival and departure times are recorded by one tap | accepted |
 | [0063](0063-public-portfolio-copy.md) | 2026-10-17 | repository | The working repository stays private; a rewritten public copy serves as a portfolio | accepted |
@@ -106,3 +106,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0079](0079-approval-list.md) | 2026-10-24 | vehicles | The approval list: models in the job history, a spot-check list and mixed-class models, approved by year range and cleared by any change | accepted |
 | [0080](0080-link-vehicles-follow-up.md) | 2026-10-24 | vehicles | Vehicles with no year link by make and model, customer aliases can hold for some years, and motorcycle-only makes give the Motorcycles class | accepted |
 | [0081](0081-monthly-vehicle-data-refresh.md) | 2026-10-24 | vehicles | The vehicle data is refreshed on the first Sunday of each month, and a refresh never changes the class of a model the owner relies on | accepted |
+| [0082](0082-size-based-vehicle-classes.md) | 2026-10-26 | vehicles | Cars, wagons, crossovers, SUVs and minivans are classed by measured size | accepted |

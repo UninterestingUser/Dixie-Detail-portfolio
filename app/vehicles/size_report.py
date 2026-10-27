@@ -19,7 +19,6 @@ Customers appear only as counts.
 
 import csv
 import re
-import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
@@ -29,9 +28,9 @@ from django.db.models import Q
 from appointments.models import Appointment
 from vehicles.classification.engine import catalog_model_years, years_text
 from vehicles.classification.rules import FACTS
-from vehicles.models import ModelYearClassification, Vehicle, VehicleModelYear
+from vehicles.classification.sizes import median, tenth, trims_of
+from vehicles.models import ModelYearClassification, Vehicle
 
-Source = VehicleModelYear.Source
 COUPES = "Coupes & Sedans"
 CROSSOVERS = "Crossovers & Wagons"
 MIDSIZE = "Midsize SUVs"
@@ -44,7 +43,6 @@ DIMENSIONS = ("length", "width", "height")
 MEASURES = ("length", "width", "height", "wheelbase", "curb_weight")
 # How far a range's length, width and height may each spread, in inches.
 SPREAD = Decimal(1)
-TENTH = Decimal("0.1")
 CUBIC_INCHES = Decimal(1728)
 NEWEST_FROM = 2015
 DOORS = {"two-door": "2", "four-door": "4", "hatchback": "hatchback"}
@@ -76,30 +74,8 @@ def epa_kind(base):
     return ""
 
 
-def median(values):
-    return Decimal(str(statistics.median(values))) if values else None
-
-
-def tenth(value):
-    return value.quantize(TENTH, ROUND_HALF_UP) if value is not None else None
-
-
 def whole(value):
     return value.quantize(Decimal(1), ROUND_HALF_UP) if value is not None else None
-
-
-def trims_of(model_year, name):
-    """Each trim's value of a measured fact in one model year, from the
-    record classification reads (the owner's own first, then the Canadian
-    specifications), or the two ends of a range with no spread."""
-    rows = model_year.measured(FACTS[name])
-    if not rows:
-        return [], False
-    row = rows.get(Source.OWNER) or rows.get(Source.CANADA) or rows[sorted(rows)[0]]
-    spread = (row.distribution or {}).get(name)
-    if isinstance(spread, list) and spread:
-        return [Decimal(str(value)) for value in spread], True
-    return [getattr(row, f"{name}_min"), getattr(row, f"{name}_max")], False
 
 
 @dataclass
@@ -359,17 +335,17 @@ def write_csv(ranges, out):
 # The summary.
 
 
-def ladder(ranges):
-    """One line per model, its newest size range from 2015 on, plus any
-    older range a customer owns, sorted by box volume. Ranges with no
-    dimensions are left to the data gaps."""
+def ladder(ranges, newest_from=NEWEST_FROM):
+    """One line per model, its newest size range from 2015 (newest_from) on,
+    plus any older range a customer owns, sorted by box volume. Ranges with
+    no dimensions are left to the data gaps."""
     by_model = defaultdict(list)
     for found in ranges:
         if found.has_dimensions:
             by_model[found.vehicle_model.pk].append(found)
     chosen = []
     for found in by_model.values():
-        recent = [candidate for candidate in found if candidate.last >= NEWEST_FROM]
+        recent = [candidate for candidate in found if candidate.last >= newest_from]
         newest = max(recent, key=lambda candidate: candidate.last) if recent else None
         chosen.extend(candidate for candidate in found if candidate is newest or candidate.vehicles)
     return sorted(chosen, key=lambda found: (found.box_volume, found.measure("length"), found.name))
