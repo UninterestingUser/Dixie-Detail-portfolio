@@ -4,7 +4,7 @@ summary: How a year, make and model becomes a vehicle class and size variant, fr
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [vehicles, classification, phase-2]
 related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0080-link-vehicles-follow-up.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0078-imported-motorcycle-jobs-get-their-class.md, docs/decisions/0079-approval-list.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
 ---
@@ -164,6 +164,10 @@ Phase 2 is done when the owner approves the class for every model on the control
 The customer sees the class with a "not right?" link, the owner sees the vehicle on every booking, and each correction becomes a rule or an override. The booking form shows these from Phase 3. When the owner corrects a vehicle's size on a job, the model's record will be updated, from Phase 3. Before launch the owner approves the classes for every model in the job history on the approval list.
 
 EPA size classes are coarser for older SUVs, so those lean more on the rules and overrides. The monthly refresh re-pulls the sources and reclassifies, and never changes the class of a model the owner relies on without asking ([The monthly refresh](#the-monthly-refresh)).
+
+## The vehicle size report
+
+The `vehicle_size_report` command gathers facts for deciding how the car, crossover and SUV classes are split. It reads the catalog's stored dimensions for every model now in Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, and the review queue's cars, wagons and SUVs, and prints each model's size ranges with length, width, height, wheelbase, curb weight and box volume (length × width × height ÷ 1,728), as a CSV or as ladders sorted by size with the largest steps between neighbors. Customers appear only as counts. The vehicle size report changes nothing: no class, rule, override or approval. What it shows and how to run it are in [../operations/classifying-vehicles.md](../operations/classifying-vehicles.md#vehicle-size-report).
 
 ## Possible future vehicle classes
 
