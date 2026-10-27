@@ -1,0 +1,137 @@
+meta:
+  title: Size-based vehicle classes
+  summary: The size-based vehicle classes the owner chose on 2026-10-26, the box-volume lines between them, their rules in order, and how customers' vehicles map to them, previewed by classify_vehicles --scheme size --dry-run.
+  updated: 2026-10-26
+  status: draft
+  explained_in: docs/reference/vehicle-classification.md
+  note: >-
+    Decision 0082. Draft until the classes are applied: classify_vehicles --scheme size only previews
+    them, and the live classes and rules are still those in data/vehicle-classes.yaml. Nothing here is
+    priced yet; data/price-matrix.csv is unchanged. The dry run builds these classes in memory, so no
+    class or pricebook record is created until they are applied.
+
+# Box volume is length x width x height / 1,728 in cubic feet, from the
+# median trim of each model year (or the nearest measured year of the
+# model). A model year at a line belongs to the class above it: 490.0 is
+# Medium and 489.9 is Small. The rules below name these lines.
+lines:
+  - {name: medium, at: 490, below: Small, above: Medium}
+  - {name: large, at: 580, below: Medium, above: Large}
+  - {name: full-size, at: 700, below: Large, above: Full-size}
+  - {name: full-size vans, at: 865, below: Full-size, above: Full-size Vans}
+
+# The dry run's near-line list: models within this many cubic feet of a line.
+near_line: 5
+# Ladders and the near-line list show each model's newest size range from
+# this model year on, plus any older range a customer owns.
+newest_from: 2015
+
+# Seat rows, the size variant of every size-based class but Full-size Vans:
+# one for these EPA size classes, three when the third-row data says always,
+# asked when it says optional, and otherwise two. Doors are no longer used.
+seat_rows:
+  one_row_epa_classes: [Two Seaters]
+
+classes:
+  - name: Small
+    size_variant_measures: seats
+    size_variants: {1: one row, 2: two rows, 3: three rows}
+    booking: online
+    photo_card: Small cars, small crossovers and two-seaters
+  - name: Medium
+    size_variant_measures: seats
+    size_variants: {1: one row, 2: two rows, 3: three rows}
+    booking: online
+    photo_card: Midsize cars and crossovers, and small three-row vehicles
+  - name: Large
+    size_variant_measures: seats
+    size_variants: {1: one row, 2: two rows, 3: three rows}
+    booking: online
+    photo_card: Large cars and wagons, midsize SUVs and minivans
+  - name: Full-size
+    size_variant_measures: seats
+    size_variants: {1: one row, 2: two rows, 3: three rows}
+    booking: online
+    photo_card: Full-size SUVs
+  - name: Full-size Vans
+    size_variant_measures: none
+    size_variants: {}
+    booking: quote
+    photo_card: Full-size and passenger vans
+  - name: Light Pickups
+    renamed_from: Light Pickups & Offroad   # keeps its cab-style size variants
+  - name: Fullsize Trucks                   # unchanged
+  - name: Motorcycles                       # unchanged
+
+# Tried in this order; the first whose conditions all hold gives the class.
+# box_volume names a line above, by its name. The pickup rules identify
+# pickups as the launch rules in data/vehicle-classes.yaml do, plus pickups
+# the EPA lists as SUVs.
+rules:
+  - name: Motorcycles
+    class: Motorcycles
+    conditions: {vehicle_type: [motorcycle]}
+  - name: Heavy pickups the EPA leaves out
+    class: Fullsize Trucks
+    conditions:
+      epa_size_class: [none]
+      source_vehicle_type: [Truck]
+      model_word: [HD, Super Duty, "2500", "3500", "4500", "5500", 2500HD, 3500HD, C2500, K2500, C3500, K3500,
+                   F-250, F-350, F-450, F-550, F-600, F-650, F-750]
+  - name: Heavy pickups over 8,500 lb GVWR the EPA leaves out
+    class: Fullsize Trucks
+    conditions: {epa_size_class: [none], source_vehicle_type: [Truck], gvwr: {over: 8500}}
+  - name: EPA small pickups
+    class: Light Pickups
+    conditions:
+      epa_size_class: [Small Pickup Trucks, Small Pickup Trucks 2WD, Small Pickup Trucks 4WD]
+  - name: Pickups the EPA lists as small SUVs
+    class: Light Pickups
+    conditions: {make: [Hyundai], model: [Santa Cruz]}
+    note: The EPA lists every Santa Cruz as a Small Sport Utility Vehicle, 2WD or 4WD (checked 2026-10-26).
+  - name: EPA standard pickups
+    class: Fullsize Trucks
+    conditions:
+      epa_size_class: [Standard Pickup Trucks, Standard Pickup Trucks 2WD, Standard Pickup Trucks 4WD,
+                       Standard Pickup Trucks/2wd]
+  - name: Full-size Vans
+    class: Full-size Vans
+    conditions: {box_volume: {at_least: full-size vans}}
+  - name: Full-size
+    class: Full-size
+    conditions: {box_volume: {at_least: full-size, under: full-size vans}}
+  - name: Large
+    class: Large
+    conditions: {box_volume: {at_least: large, under: full-size}}
+  - name: Medium
+    class: Medium
+    conditions: {box_volume: {at_least: medium, under: large}}
+  - name: Three-row vehicles under the Medium line
+    class: Medium
+    conditions: {seat_rows: [3], box_volume: {under: medium}}
+    note: Every vehicle the third-row data marks "always" three rows is at least Medium. An optional third row does not count.
+  - name: Small
+    class: Small
+    conditions: {box_volume: {under: medium}}
+
+# The dry run checks that these are pickups, and says so if not.
+pickup_checks:
+  - {make: Hyundai, model: Santa Cruz}
+  - {make: Ford, model: Maverick}
+
+# A customer's vehicle not linked to the catalog gets a proposed class from
+# its recorded class, marked for the owner's review.
+unlinked_vehicles:
+  Coupes & Sedans: Small
+  Crossovers & Wagons: Medium
+  Midsize SUVs: Large
+  Fullsize SUVs & Minivans: Full-size
+  Light Pickups & Offroad: Light Pickups
+  Fullsize Trucks: Fullsize Trucks
+  Motorcycles: Motorcycles
+# ...except a minivan recorded in Fullsize SUVs & Minivans, which goes here.
+# A vehicle is a minivan when its model is or begins with one of these names.
+minivan_class: Large
+minivan_models: [Caravan, Grand Caravan, Town & Country, Town and Country, Voyager, Grand Voyager, Pacifica, Odyssey,
+                 Sienna, Previa, Quest, Villager, Windstar, Freestar, Aerostar, Astro, Venture, Montana, Silhouette,
+                 Trans Sport, Lumina APV, Uplander, Relay, Terraza, MPV, Sedona, Carnival, Entourage, Routan]

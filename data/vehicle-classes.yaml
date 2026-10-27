@@ -1,7 +1,7 @@
 meta:
   title: Vehicle classes
   summary: The seven vehicle classes that set prices, each class's settings (what the size variant measures, online booking, photo card), the launch classification rules and model overrides, and the possible future classes.
-  updated: 2026-10-23
+  updated: 2026-10-26
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
@@ -10,6 +10,8 @@ meta:
     creates the classes and their settings from this file. classify_vehicles creates the launch rules
     and model overrides from this file and keeps each in step with it, except those the owner has
     edited or deleted in the database; the owner's own rules and overrides are never touched.
+    The size-based classes the owner chose on 2026-10-26 (decision 0082) are in data/size-classes.yaml
+    and only previewed so far; these classes and rules stay live until they are applied.
 
 classes:
   - name: Coupes & Sedans
@@ -239,7 +241,7 @@ model_overrides:
 classification:            # decision 0060; built in Phase 2 Step 2 (decision 0073)
   method: ordered list of owner-editable rules on stored facts; the first match wins
   stored: per model year, by classify_vehicles
-  facts: [vehicle type, make, model, model name words, model year, EPA size class, drive, body style, cab style, seat rows, vPIC vehicle type, GVWR, curb weight, length, width, height, wheelbase, passenger volume, luggage volume]
+  facts: [vehicle type, make, model, model name words, model year, EPA size class, drive, body style, cab style, seat rows, vPIC vehicle type, GVWR, curb weight, length, width, height, wheelbase, passenger volume, luggage volume, box volume]
   example_rule: "EPA small SUV weighing over 4,500 lb -> Midsize SUVs"
   overrides: [per model (beats every rule), per vehicle (one customer's lifted or modified vehicle; beats both)]
   review_queue_decisions: per model year, from the review queue; beat the rules, and a model override beats them

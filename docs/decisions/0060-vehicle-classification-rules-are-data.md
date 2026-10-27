@@ -4,18 +4,18 @@ title: "Vehicle classification rules are data the owner edits"
 summary: "Classification is an ordered list of owner-editable rules on stored vehicle facts, first match wins, with per-model and per-vehicle overrides, a preview before saving and per-class settings."
 date: 2026-10-17
 area: vehicles
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-17
+updated: 2026-10-26
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/vehicle-classification.md, data/vehicle-classes.yaml, data/integrations.yaml, docs/decisions/0016-size-from-vehicle-data.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md]
 ---
 
 # 0060: Vehicle classification rules are data the owner edits
 
-**Status:** accepted · **Date:** 2026-10-17 · **Area:** vehicles
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the six body-type classes, once the size-based classes are applied; rules as data, overrides and the preview stand · **Date:** 2026-10-17 · **Area:** vehicles
 
 ## Context
 

@@ -69,6 +69,8 @@ QUESTIONS = {
         "third_row", "Does it have a third row of seats?", (Choice(True, "Yes", 3), Choice(False, "No", 2))
     ),
 }
+# The size-based classes ask the same question; their one-row size is never asked.
+QUESTIONS[Measures.SEATS] = QUESTIONS[Measures.SEAT_ROWS]
 
 
 @dataclass(frozen=True)

@@ -4,18 +4,18 @@ title: "Cars are priced by doors, not seats"
 summary: "For Coupes & Sedans, two doors takes the 1-row price and four doors the 2-row price."
 date: 2026-10-07
 area: pricing
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-13
+updated: 2026-10-26
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/pricing.md]
 ---
 
 # 0014: Cars are priced by doors, not seats
 
-**Status:** accepted · **Date:** 2026-10-07 · **Area:** pricing
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) entirely, once the size-based classes are applied · **Date:** 2026-10-07 · **Area:** pricing
 
 ## Context
 

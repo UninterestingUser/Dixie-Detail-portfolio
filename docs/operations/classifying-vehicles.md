@@ -1,6 +1,6 @@
 ---
 title: Classifying the vehicle catalog
-summary: How to run classify_vehicles to apply the classification rules and overrides, read its preview and review queue, change a rule or override, add the Motorcycle Detail price, and print the size report.
+summary: How to run classify_vehicles to apply the rules and overrides, read its preview and review queue, change a rule or override, preview the size-based classes, and print the size report.
 audience: [owner, developer]
 visibility: restricted
 status: current
@@ -82,6 +82,29 @@ sudo docker compose run --rm --no-deps app python manage.py load_pricebook
 ```
 
 It adds the Motorcycles class and the Motorcycle Detail service, fills in each class's photo card caption, and puts the new $100 price in a new draft. It changes no published price. Then publish the draft from the control app's pricebook page with an effective date, as in [../guides/editing-the-pricebook.md](../guides/editing-the-pricebook.md). If a draft is already open, the command refuses and changes nothing; publish or discard that draft, then run it again.
+
+## Previewing the size-based classes
+
+The size-based classes of [decision 0082](../decisions/0082-size-based-vehicle-classes.md) can only be previewed until they are applied ([../reference/size-based-classes.md](../reference/size-based-classes.md)). The preview changes nothing: it loads the third-row list as every run does, classifies the whole catalog in memory with the rules in [data/size-classes.yaml](../../data/size-classes.yaml), prints the report and rolls everything back. Without `--dry-run`, or with `--refresh`, the command refuses.
+
+```bash
+cd /srv/dixie-detail
+sudo docker compose run --rm --no-deps app python manage.py classify_vehicles --scheme size --dry-run > size-classes-preview.txt
+```
+
+**What the size-based classes preview prints:**
+
+- **Model years by new class and source of the class:** for each new class, how many model years have their own measurements, inherited a box volume from the nearest measured year, need none (pickups and motorcycles), or took the EPA size class fallback; then how many are unclassified, waiting in the review queue.
+- **EPA size class fallback:** for each EPA size class, the class most of its measured model years land in, with the counts behind it, and how many model years with no measurements took it.
+- **Near a line:** every model within 5 cubic feet of a line (its newest size range from 2015 on, plus any range a customer owns), with its box volume, how far it is from the line, the classes on each side, and its customer vehicles.
+- **Models whose class changes between model years,** as year ranges.
+- **Model overrides and approvals, not carried forward,** each with what the new rules give for its years instead.
+- **Customer vehicles:** a count for each recorded class and new class, then each vehicle by id, year, make and model, never by customer, with its recorded class, its new class and the reason. A vehicle with no year gets a class only when every model year of its model has the same one; otherwise it shows "year needed" with the classes its model's years span. A vehicle not linked to the catalog gets a proposed class from its recorded class, marked for review.
+- **Models now in Light Pickups & Offroad that the new rules do not treat as pickups,** such as the Jeep Wrangler, with their new classes.
+- **Pickup ladder:** every pickup model's newest size range from 2015 on, plus ranges customers own, sorted by box volume, with length, cab styles, EPA size class, GVWR range, current class and customer vehicles, and the five largest steps in box volume and in length, for placing a pickup size line later.
+- **Pickup check:** whether the Hyundai Santa Cruz and Ford Maverick are pickups in every model year.
+
+The file holds vehicle ids, years, makes and models, but no customer names. Copy it off the server and delete it there once you have it.
 
 ## Vehicle size report
 
