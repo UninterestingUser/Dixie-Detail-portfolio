@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -63,6 +63,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and why the quoted price is the price of record. | current |
 | [Returning customers and quiet matching](reference/returning-customers.md) | How a new booking is linked to an existing customer by mobile number without showing the customer anything, and how the owner resolves differences in the control app. | current |
 | [Sales tax](reference/sales-tax.md) | How sales tax is added at the rate for the customer's service address, how the rate is found and kept current, how approved out-of-area addresses are treated, and how collected tax is tracked until remitted. | current |
+| [Size-based vehicle classes](reference/size-based-classes.md) | The five vehicle classes by box volume the owner chose on 2026-10-26, their lines, rules and seat rows, the EPA size class fallback, and the dry run that previews them. | draft |
 | [Scheduling, calendars and time-to-leave alerts](reference/scheduling-and-calendars.md) | The scheduling settings and the one availability check that decide which days and start times are open, time on site, the calendar sync and conflict rules, time-to-leave alerts and arrival taps. | current |
 | [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the two kinds of consent each one needs, the exact consent wording, automatic STOP and HELP replies, and the carrier registration plan. | current |
 | [Vehicle catalog](reference/vehicle-catalog.md) | The years, makes and models the system knows, the facts it keeps per model year from the EPA, NHTSA vPIC, the Canadian specifications and the third-row list, and how imports never overwrite the owner. | current |
@@ -76,7 +77,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Running and checking backups, and restoring](operations/backups-and-restore.md) | How to confirm the nightly backup ran, run one by hand, test a restore, and recover the database from the RAID or from Google Drive. | current |
 | [Deploying changes to the server](operations/deploying-changes.md) | The routine for getting a merged pull request onto the server, and what to restart, copy or add afterwards depending on what changed. | current |
 | [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
-| [Classifying the vehicle catalog](operations/classifying-vehicles.md) | How to run classify_vehicles to apply the classification rules and overrides, read its preview and review queue, change a rule or override, add the Motorcycle Detail price, and print the size report. | current |
+| [Classifying the vehicle catalog](operations/classifying-vehicles.md) | How to run classify_vehicles to apply the rules and overrides, read its preview and review queue, change a rule or override, preview the size-based classes, and print the size report. | current |
 | [Linking customers' vehicles to the catalog](operations/linking-vehicles.md) | How to run link_vehicles on the server to link each customer's vehicle to its catalog model, read its report, add spellings, and settle what it finds on the differences screen and the approval list. | current |
 | [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, add a make, and how the monthly refresh runs it. | current |
 | [Monitoring and alerts](operations/monitoring.md) | What the three Healthchecks.io checks watch, the monthly vehicle data refresh and its timer, what to do when an alert email arrives, and how to test the alerts. | current |
