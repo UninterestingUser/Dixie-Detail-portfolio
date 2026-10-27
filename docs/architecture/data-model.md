@@ -4,7 +4,7 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [data-model, database, phase-1]
 related: [docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
@@ -24,6 +24,7 @@ erDiagram
     Customer ||--o{ Appointment : "books"
     VehicleClass ||--o{ SizeVariant : "is split into"
     VehicleModel ||--o{ VehicleModelYear : "has facts in"
+    VehicleModel ||--o{ ModelYearSize : "has a box volume in"
     VehicleModel ||--o{ ModelYearClassification : "is classed by"
     VehicleModel ||--o{ ModelOverride : "is overridden by"
     VehicleModel ||--o{ ReviewDecision : "is settled by"
@@ -69,6 +70,7 @@ The `customers` and `vehicles` apps.
 - **Size variant** is one size within a vehicle class, such as "two doors" or "three rows", with the number used in the price matrix's size column. A class with no size variants, such as motorcycles, has a single price per service.
 - **Vehicle model** is a make and model a customer picks, such as Toyota RAV4, over a range of model years, with its vehicle type (car, truck or van, or motorcycle), a flag set when the booking form asks the size for any of its model years, and where it came from (EPA, NHTSA or the owner). The vehicle data import fills these and never changes one whose source is the owner ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071).
 - **Model-year facts** are one source's facts about one model year of a vehicle model: the EPA size classes, drives, body styles, cab styles, seat rows and the source's vehicle types as lists, and passenger and luggage volume, GVWR, curb weight, length, width, height and wheelbase as a lowest and highest value across the source's rows, with the source's own ids, how the source's rows spread across each fact (for the majority rule, decision 0074), and when the record was first and last seen. Each source (EPA, vPIC, the Canadian specifications, the third-row list or the owner) has its own record, so no source overwrites another, and no import touches the owner's.
+- **Model-year size** is one model year's box volume in cubic feet, from the median trim's length, width and height, or, with no dimensions, the nearest measured model year's, which it names. `classify_vehicles` saves it each time it applies the rules (decision 0082).
 - **Vehicle data import run** records one run of the vehicle data import for one source: start, end, whether it was a dry run, its counts and its result.
 - **Classification rule** is one rule of the ordered list that classifies model years: a position, a name, its conditions on stored facts, the vehicle class it gives, whether it is active, and, for a launch rule, the entry in data/vehicle-classes.yaml it was made from, so an unedited one follows the file (decisions 0060 and 0074, [../reference/vehicle-classification.md](../reference/vehicle-classification.md)).
 - **Model override** is the owner's vehicle class for a vehicle model, for all its years or a range of them, which beats every rule. It fixes the size variant, always asks it, or leaves it to the facts, and records who set it, when, and a note.

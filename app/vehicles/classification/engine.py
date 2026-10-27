@@ -84,6 +84,8 @@ def because(found):
     """How a Result or a stored ModelYearClassification was reached, in words."""
     if found.method == Method.PHOTO_CARDS:
         return "sent to the photo cards from the review queue"
+    if found.method == Method.EPA_FALLBACK:
+        return "EPA size class fallback: " + "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
     if found.method == Method.DECISION:
         return "review queue decision" + (f" ({found.decision.note})" if found.decision is not None and found.decision.note else "")
     if found.method == Method.REVIEW:
@@ -119,6 +121,10 @@ def fact_sizes(vehicle_class, model_year):
     if vehicle_class.size_variant_measures == Measures.SEAT_ROWS:
         rows = model_year.values("seat_rows")
         return {int(count) for count in rows} if rows else {None}
+    if vehicle_class.size_variant_measures == Measures.SEATS:
+        from .sizes import seat_rows
+
+        return seat_rows(model_year)
     return {None}
 
 
@@ -245,12 +251,17 @@ def catalog_model_years(model_ids=None):
     return [ModelYear(models[model_id], year, found) for (model_id, year), found in sorted(rows.items())]
 
 
-def classify_catalog(rules=None, overrides=None, model_years=None, share=None, decisions=None, classes=None, window=None):
+def classify_catalog(
+    rules=None, overrides=None, model_years=None, share=None, decisions=None, classes=None, window=None, variants=None
+):
     """{(model id, year): (ModelYear, Result)} for the whole catalog. rules,
     overrides and decisions default to those saved; pass a proposed set to
     preview it. classes, {pk: VehicleClass}, puts proposed class settings in
-    place of the saved ones. share and window default to the settings in
-    data/vehicle-classes.yaml."""
+    place of the saved ones, and variants, {class pk: {value: SizeVariant}},
+    proposed size variants in place of the active ones. share and window
+    default to the settings in data/vehicle-classes.yaml."""
+    from .sizes import attach_box_volumes
+
     share = majority_share() if share is None else share
     window = unpublished_window() if window is None else window
     if rules is None:
@@ -269,8 +280,10 @@ def classify_catalog(rules=None, overrides=None, model_years=None, share=None, d
         # An override for some years beats one for the whole model.
         found.sort(key=lambda override: (override.year_from is None and override.year_to is None, -(override.pk or 0)))
     decided = {(decision.vehicle_model_id, decision.year): decision for decision in decisions}
-    variants = active_variants()
+    variants = active_variants() if variants is None else variants
     model_years = catalog_model_years() if model_years is None else model_years
+    if not all(model_year.sized for model_year in model_years):
+        attach_box_volumes(model_years)
     pending = not_yet_published(model_years, window)
 
     results = {}
@@ -612,5 +625,8 @@ def apply(results, partial=False):
             flips, VehicleModel, ["ask_size"], batch_size=BATCH, default_change_reason="classify_vehicles"
         )
     counts["models whose ask_size changed"] = len(flips)
+    from .sizes import save_box_volumes
+
+    counts.update(save_box_volumes([model_year for model_year, _ in results.values()], partial=partial))
     counts["model years in the review queue"] = ModelYearClassification.objects.filter(in_review=True).count()
     return dict(counts)

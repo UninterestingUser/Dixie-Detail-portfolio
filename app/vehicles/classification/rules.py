@@ -13,7 +13,12 @@ A rule's conditions map a fact to what it must be:
   compared on capitals and digits only, as the import matches them.
 - year takes {"from": 2013, "to": 2019}, either end optional.
 - a measured fact (GVWR, curb weight, the four dimensions, the volumes)
-  takes {"over": 4500} and/or {"up_to": 6000}, in pounds, inches or cubic feet.
+  takes {"over": 4500} and/or {"up_to": 6000}, in pounds, inches or cubic feet,
+  or {"at_least": 490} and/or {"under": 580} where the line itself belongs
+  to the upper side.
+- box volume takes the same forms, in cubic feet. It is one figure per model
+  year, the median trim's length x width x height / 1,728, or the nearest
+  measured year's (classification.sizes), so it never straddles.
 
 Trims differ, so a condition is decided by what most of a model year's rows
 say: it holds when at least the majority share of them (two-thirds at
@@ -51,7 +56,7 @@ class Outcome:
 class Fact:
     key: str
     label: str
-    kind: str  # "model", "names", "model names", "model words", "year", "listed" or "measured"
+    kind: str  # "model", "names", "model names", "model words", "year", "listed", "measured" or "box volume"
     field: str = ""
     # For seat rows only: the first of these sources with a value is used.
     first_of: tuple = ()
@@ -82,9 +87,12 @@ FACTS = {
         Fact("wheelbase", "wheelbase", "measured", "wheelbase"),
         Fact("passenger_volume", "passenger volume", "measured", "passenger_volume"),
         Fact("luggage_volume", "luggage volume", "measured", "luggage_volume"),
+        Fact("box_volume", "box volume", "box volume", "box_volume"),
     )
 }
 VEHICLE_TYPES = set(VehicleModel.VehicleType.values)
+# The ends a measured condition can give.
+BOUNDS = ("over", "up_to", "at_least", "under")
 
 
 def parse_share(text):
@@ -104,8 +112,8 @@ def condition_errors(conditions):
         fact = FACTS.get(key)
         if fact is None:
             errors.append(f"{key!r} is not a fact a rule can use; the facts are {', '.join(FACTS)}.")
-        elif fact.kind in ("year", "measured"):
-            ends = ("from", "to") if fact.kind == "year" else ("over", "up_to")
+        elif fact.kind in ("year", "measured", "box volume"):
+            ends = ("from", "to") if fact.kind == "year" else BOUNDS
             if (
                 not isinstance(value, dict)
                 or not value
@@ -130,6 +138,9 @@ class ModelYear:
         self.year = year
         self.rows = {row.source: row for row in rows}
         self._words = None
+        # A classification.sizes.BoxVolume, or None, once attach_box_volumes() has run.
+        self.box_volume = None
+        self.sized = False
 
     @property
     def model_words(self):
@@ -196,7 +207,12 @@ def _decide(meeting, total, share, by_majority=True):
 
 
 def _meets(value, bounds):
-    return ("over" not in bounds or value > bounds["over"]) and ("up_to" not in bounds or value <= bounds["up_to"])
+    return (
+        ("over" not in bounds or value > bounds["over"])
+        and ("up_to" not in bounds or value <= bounds["up_to"])
+        and ("at_least" not in bounds or value >= bounds["at_least"])
+        and ("under" not in bounds or value < bounds["under"])
+    )
 
 
 def _test_listed(row, fact, wanted, share):
@@ -217,10 +233,16 @@ def _test_measured(row, fact, bounds, share):
     low, high = getattr(row, f"{fact.field}_min"), getattr(row, f"{fact.field}_max")
     if _meets(low, bounds) and _meets(high, bounds):
         return Tested(Outcome.HOLDS)
-    over, up_to = bounds.get("over"), bounds.get("up_to")
-    if (over is not None and high <= over) or (up_to is not None and low > up_to):
+    if not _meets(low, bounds) and not _meets(high, bounds) and _same_side(low, high, bounds):
         return Tested(Outcome.FAILS)
     return Tested(Outcome.STRADDLES, f"its range, {low} to {high}, spans it")
+
+
+def _same_side(low, high, bounds):
+    """Whether the whole range is beyond the same end of the bounds."""
+    below = lambda value: ("over" in bounds and value <= bounds["over"]) or ("at_least" in bounds and value < bounds["at_least"])  # noqa: E731
+    above = lambda value: ("up_to" in bounds and value > bounds["up_to"]) or ("under" in bounds and value >= bounds["under"])  # noqa: E731
+    return (below(low) and below(high)) or (above(low) and above(high))
 
 
 def _by_source(per_source):
@@ -260,6 +282,10 @@ def test_condition(model_year, key, wanted, share=Fraction(1)):
         if found is None:
             return Tested(Outcome.HOLDS if NONE in wanted else Outcome.FAILS)
         return found
+    if fact.kind == "box volume":
+        # One figure per model year; none, with no measured year, does not hold.
+        found = model_year.box_volume
+        return Tested(Outcome.HOLDS if found is not None and _meets(found.value, wanted) else Outcome.FAILS)
     # A measured fact no source gives does not hold.
     per_source = {source: _test_measured(row, fact, wanted, share) for source, row in model_year.measured(fact).items()}
     return _by_source(per_source) or Tested(Outcome.FAILS)
@@ -299,8 +325,9 @@ def test_rule(model_year, conditions, share=Fraction(1)):
 
 UNITS = {
     "gvwr": "lb", "curb_weight": "lb", "length": "in", "width": "in", "height": "in", "wheelbase": "in",
-    "passenger_volume": "cu ft", "luggage_volume": "cu ft",
+    "passenger_volume": "cu ft", "luggage_volume": "cu ft", "box_volume": "cu ft",
 }
+WORDS = (("over", "over"), ("up_to", "up to"), ("at_least", "at least"), ("under", "under"))
 
 
 def either(values):
@@ -323,9 +350,9 @@ def describe_condition(key, value):
         if low is not None and high is not None:
             return f"model year {low} to {high}"
         return f"model year {low} or later" if low is not None else f"model year up to {high}"
-    if fact.kind == "measured":
+    if fact.kind in ("measured", "box volume"):
         unit = UNITS.get(key, "")
-        parts = [f"{word} {_number(value[end])} {unit}".strip() for end, word in (("over", "over"), ("up_to", "up to")) if end in value]
+        parts = [f"{word} {_number(value[end])} {unit}".strip() for end, word in WORDS if end in value]
         return f"{fact.label} {' and '.join(parts)}"
     values = [str(found) for found in value]
     named = [found for found in values if found != NONE]

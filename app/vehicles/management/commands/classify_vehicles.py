@@ -2,6 +2,7 @@
 vehicle catalog (docs/reference/vehicle-classification.md).
 
   python manage.py classify_vehicles [--dry-run] [--refresh]
+  python manage.py classify_vehicles --scheme size --dry-run
 
 First it brings the launch rules and model overrides in step with
 data/vehicle-classes.yaml (leaving alone any the owner edited or deleted)
@@ -13,6 +14,10 @@ model override, a customer's vehicle, or anything with source "owner".
 With --refresh, as the monthly refresh runs it, a model year whose class or
 size would change is held in the review queue instead when its model has a
 model override, an approval or customers' jobs (classification.guard).
+
+With --scheme size --dry-run it previews the size-based classes of
+data/size-classes.yaml (decision 0082, classification.sizes) instead, and
+changes nothing. The size-based classes cannot be applied yet.
 """
 
 from collections import Counter, defaultdict
@@ -23,6 +28,8 @@ from django.db import transaction
 from vehicles.classification.engine import apply, change_detail, changes, classify_catalog, record, year_spans, years_text
 from vehicles.classification.guard import hold
 from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
+from vehicles.classification.size_preview import write_report
+from vehicles.classification.sizes import classify_scheme
 from vehicles.models import ClassificationChange, VehicleModel
 
 
@@ -42,10 +49,18 @@ class Command(BaseCommand):
             action="store_true",
             help="As the monthly refresh: hold class changes to models with an override, an approval or jobs in the review queue.",
         )
+        parser.add_argument(
+            "--scheme",
+            choices=("body", "size"),
+            default="body",
+            help="body (the live classes, the default) or size: preview the size-based classes of data/size-classes.yaml.",
+        )
 
-    def handle(self, *args, dry_run, refresh, **options):
+    def handle(self, *args, dry_run, refresh, scheme="body", **options):
         if not VehicleModel.objects.exists():
             raise CommandError("The vehicle catalog is empty: run import_vehicle_data first.")
+        if scheme == "size":
+            return self.preview_sizes(dry_run, refresh)
         seeded = SeedReport()
         with transaction.atomic():
             try:
@@ -67,6 +82,20 @@ class Command(BaseCommand):
         # Kept on the command for refresh_vehicle_data, which runs this one.
         self.found, self.held = found, held
         self.print_report(dry_run, seeded, results, found, counts, held if refresh else None)
+
+    def preview_sizes(self, dry_run, refresh):
+        """The size-based classes' dry run: loads the third-row list as any
+        run does, classifies in memory, prints, and rolls everything back."""
+        if not dry_run or refresh:
+            raise CommandError("The size-based classes can only be previewed for now: use --scheme size --dry-run, without --refresh.")
+        with transaction.atomic():
+            try:
+                sync_seat_list(SeedReport())
+                found = classify_scheme()
+            except SeedError as error:
+                raise CommandError(str(error)) from error
+            write_report(found, self.stdout)
+            transaction.set_rollback(True)
 
     def print_report(self, dry_run, seeded, results, found, counts, held=None):
         write = self.stdout.write

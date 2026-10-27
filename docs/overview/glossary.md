@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -56,6 +56,8 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 **Quote.** The server's record of a priced job before booking: its inputs, lines, totals, pricebook version, tax rate, service time and time on site. It never changes once issued. A booking refers to the quote, and its lines become the appointment's line snapshot. See [../reference/pricing.md](../reference/pricing.md).
 
 **Service time.** The time spent working on the vehicle, without setup and breakdown. The price matrix holds one-person service time; two people take 60% of it, rounded to the nearest 15 minutes. The pricing engine returns service time.
+
+**Box volume.** A model year's length × width × height ÷ 1,728, in cubic feet, from the median trim's dimensions: a rough measure of a vehicle's bulk, not its cargo space. A model year with no dimensions takes the nearest measured model year's. The size-based vehicle classes are set by it (decision 0082).
 
 **Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as Motorcycles, and then has a single price per service.
 

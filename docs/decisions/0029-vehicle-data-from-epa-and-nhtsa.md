@@ -4,18 +4,18 @@ title: "Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC"
 summary: "Free government data sets the vehicle class from year, make and model, with override rules and an owner review queue; RockAuto is not used."
 date: 2026-10-07
 area: vehicles
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-13
+updated: 2026-10-26
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/vehicle-classification.md]
 ---
 
 # 0029: Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC
 
-**Status:** accepted · **Date:** 2026-10-07 · **Area:** vehicles
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the EPA size class as the first guess at a class, once the size-based classes are applied; the data sources stand · **Date:** 2026-10-07 · **Area:** vehicles
 
 ## Context
 
