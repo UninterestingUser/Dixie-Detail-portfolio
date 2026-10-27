@@ -1,10 +1,10 @@
 ---
 title: Classifying the vehicle catalog
-summary: How to run classify_vehicles on the server to apply the classification rules and overrides to the vehicle catalog, read its preview and review queue, change a rule or override, and add the Motorcycle Detail price.
+summary: How to run classify_vehicles to apply the classification rules and overrides, read its preview and review queue, change a rule or override, add the Motorcycle Detail price, and print the size report.
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-24
+updated: 2026-10-26
 tags: [operations, vehicles, classification, phase-2]
 related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
 ---
@@ -82,3 +82,29 @@ sudo docker compose run --rm --no-deps app python manage.py load_pricebook
 ```
 
 It adds the Motorcycles class and the Motorcycle Detail service, fills in each class's photo card caption, and puts the new $100 price in a new draft. It changes no published price. Then publish the draft from the control app's pricebook page with an effective date, as in [../guides/editing-the-pricebook.md](../guides/editing-the-pricebook.md). If a draft is already open, the command refuses and changes nothing; publish or discard that draft, then run it again.
+
+## Vehicle size report
+
+The `vehicle_size_report` command prints the measured size of every model in the car, crossover and SUV classes, as facts for deciding whether to split those classes differently. It only reads facts already in the database: it makes no network calls, runs in a read-only transaction and changes no class, rule, override, approval, price or vehicle.
+
+```bash
+cd /srv/dixie-detail
+sudo docker compose run --rm --no-deps app python manage.py vehicle_size_report --format summary
+sudo docker compose run --rm --no-deps app python manage.py vehicle_size_report --format csv > vehicle-sizes.csv
+```
+
+**What the vehicle size report covers:** the model years now in Coupes & Sedans, Crossovers & Wagons and Midsize SUVs, Fullsize SUVs & Minivans for comparison, and the model years waiting in the review queue with no class whose EPA size class is a car, station-wagon or SUV class, shown as "in queue".
+
+**How the vehicle size report groups model years:** one row per model and size range. A model's consecutive model years share a row while they keep the same class and seat rows and their length, width and height each stay within 1 inch. Where trims differ, each model year's figure is the median of its trims, read the way classification reads it (the owner's own figures first, then the Canadian specifications), and the row's figure is the median of its years'. Box volume is length × width × height ÷ 1,728, in cubic feet: a rough measure of bulk, not cargo space.
+
+**The CSV (`--format csv`)** has every row, with units in the headers: make, catalog model name, years, current class or "in queue", seat rows (2, 3 or optional, from the third-row data), doors for cars, EPA size classes, length, width, height and wheelbase in inches, curb weight in pounds, box volume, the number of trims with specs and their shortest and longest length, and the counts of customer vehicles and completed jobs in those years, plus the model's customer vehicles with no year. Rows with no length, width or height are marked "missing".
+
+**The summary (`--format summary`, the default)** has five parts:
+
+- **Crossovers and SUVs:** a 2-row ladder sorted by box volume, one line per model for its newest size range from 2015 on, plus any older range a customer owns; a 3-row ladder (an optional third row included); and Fullsize SUVs & Minivans last for comparison. Each line shows box volume, length and current class, and `*` marks lines with customer vehicles.
+- **Candidate lines:** the five largest steps in box volume and the five largest in length along the 2-row ladder, with the models on each side.
+- **Cars and wagons:** the same ladder for Coupes & Sedans and for the wagons in Crossovers & Wagons (EPA station-wagon classes), with each model's main EPA size class, and the number of models and customer vehicles in each EPA car class.
+- **Customer vehicles by their recorded class:** linked with a year, linked with no year, and unlinked.
+- **Data gaps:** models in scope with no dimensions, and how many customer vehicles they hold.
+
+Customers appear only as counts: the vehicle size report never prints a name, phone number or address. Copy a CSV off the server and delete it there once you have it.
