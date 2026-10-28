@@ -59,12 +59,12 @@ class PricebookTestCase(TestCase):
     def rav4(self, **inputs):
         """The worked example in data/pricing-rules.yaml, with any input changed."""
         inputs = {
-            "size_variant": self.size("Crossovers & Wagons", 2),
+            "size_variant": self.size("Medium", 2),
             "condition_level": 2,
             "add_ons": [self.service("Seat Extraction")],
             **inputs,
         }
-        return price_job(self.service("Full Detail"), self.vehicle_class("Crossovers & Wagons"), **inputs)
+        return price_job(self.service("Full Detail"), self.vehicle_class("Medium"), **inputs)
 
 
 class LoadPricebookTests(PricebookTestCase):
@@ -106,13 +106,13 @@ class PricingEngineTests(PricebookTestCase):
         self.assertEqual([line.amount for line in job.lines], [Decimal(line["price"]) for line in rules["lines"]])
         self.assertEqual(job.total_before_tax, Decimal("355.00"))
         self.assertEqual(job.total_before_tax, Decimal(rules["total_before_tax"]))
-        # 5 hours, plus 10% for condition level 2, plus 1.5 hours of Seat Extraction (decision 0065).
-        self.assertEqual(job.one_person_service_hours, Decimal("7"))
+        # 4 hours, plus 10% for condition level 2, plus 1.5 hours of Seat Extraction (decision 0065).
+        self.assertEqual(job.one_person_service_hours, Decimal("5.9"))
         self.assertEqual(job.one_person_service_hours, Decimal(str(rules["one_person_service_hours"])))
-        self.assertEqual(job.service_minutes, 420)
-        self.assertEqual(job.time_on_site.total_minutes, 480)
-        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal(str(rules["one_person_time_on_site_hours"])))
-        self.assertTrue(job.full_day)
+        self.assertEqual(job.service_minutes, 360)
+        self.assertEqual(job.time_on_site.total_minutes, 420)
+        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal(str(rules["time_on_site_hours"])))
+        self.assertFalse(job.full_day)
         self.assertIs(job.full_day, rules["full_day"])
 
     def test_monthly_maintenance_with_two_people_takes_2_25_to_4_5_hours_on_site(self):
@@ -133,19 +133,20 @@ class PricingEngineTests(PricebookTestCase):
     def test_two_people_take_60_percent_rounded_to_15_minutes(self):
         job = price_job(
             self.service("Full Detail"),
-            self.vehicle_class("Midsize SUVs"),
-            size_variant=self.size("Midsize SUVs", 2),
+            self.vehicle_class("Large"),
+            size_variant=self.size("Large", 2),
             condition_level=1,
             crew_size=2,
         )
-        self.assertEqual(job.one_person_service_hours, Decimal("5.5"))
-        self.assertEqual(hours(job.service_minutes), Decimal("3.25"))
-        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("3.75"))
+        self.assertEqual(job.one_person_service_hours, Decimal("5"))
+        self.assertEqual(hours(job.service_minutes), Decimal("3"))
+        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("3.5"))
 
     def test_headlight_restoration_takes_2_5_hours_on_site_for_one_person(self):
         headlights = self.service("Headlight Restoration")
-        # Every class but Motorcycles, whose only service is Motorcycle Detail.
-        for vehicle_class in VehicleClass.objects.exclude(name="Motorcycles"):
+        # Every class offered but Motorcycles, whose only service is Motorcycle
+        # Detail, and Full-size Vans, which are quoted by hand.
+        for vehicle_class in VehicleClass.objects.offered().exclude(name="Motorcycles").exclude(booking=VehicleClass.Booking.QUOTE):
             job = price_job(headlights, vehicle_class)
             with self.subTest(vehicle_class=vehicle_class):
                 self.assertEqual(job.total_before_tax, Decimal("95.00"))
@@ -183,23 +184,23 @@ class PricingEngineTests(PricebookTestCase):
     def test_condition_adjustment_rounds_to_the_whole_dollar(self):
         job = price_job(
             self.service("Exterior Only"),
-            self.vehicle_class("Crossovers & Wagons"),
+            self.vehicle_class("Medium"),
             condition_level=3,
         )
         # 20% of $120.
         self.assertEqual(job.lines[1].amount, Decimal("24.00"))
-        job = price_job(self.service("Interior Only"), self.vehicle_class("Fullsize Trucks"), size_variant=self.size("Fullsize Trucks", 1), condition_level=2)
+        job = price_job(self.service("Interior Only"), self.vehicle_class("Full-size Trucks"), size_variant=self.size("Full-size Trucks", 1), condition_level=2)
         # 10% of $125 is $12.50, rounded to $13.
         self.assertEqual(job.lines[1].amount, Decimal("13.00"))
 
     def test_condition_does_not_apply_to_maintenance_or_headlights(self):
-        job = price_job(self.service("Headlight Restoration"), self.vehicle_class("Midsize SUVs"), condition_level=3)
+        job = price_job(self.service("Headlight Restoration"), self.vehicle_class("Large"), condition_level=3)
         self.assertEqual(job.total_before_tax, Decimal("95.00"))
         self.assertIsNone(job.lines[0].condition_level)
 
     def test_a_service_with_condition_needs_a_level(self):
         with self.assertRaises(PricingError):
-            price_job(self.service("Full Detail"), self.vehicle_class("Crossovers & Wagons"), size_variant=self.size("Crossovers & Wagons", 2))
+            price_job(self.service("Full Detail"), self.vehicle_class("Medium"), size_variant=self.size("Medium", 2))
 
     def test_a_missing_combination_cannot_be_priced(self):
         with self.assertRaises(NotPriced):
@@ -208,22 +209,22 @@ class PricingEngineTests(PricebookTestCase):
         with self.assertRaises(NotPriced):
             price_job(
                 self.service("Exterior Only"),
-                self.vehicle_class("Midsize SUVs"),
+                self.vehicle_class("Large"),
                 condition_level=1,
                 add_ons=[self.service("Carpet Extraction")],
             )
         # A service off the price list, or an add-on alone, is not a job.
         with self.assertRaises(PricingError):
-            price_job(self.service("PPF Removal"), self.vehicle_class("Midsize SUVs"))
+            price_job(self.service("PPF Removal"), self.vehicle_class("Large"))
         with self.assertRaises(PricingError):
-            price_job(self.service("Seat Extraction"), self.vehicle_class("Midsize SUVs"), size_variant=self.size("Midsize SUVs", 2))
+            price_job(self.service("Seat Extraction"), self.vehicle_class("Large"), size_variant=self.size("Large", 2))
 
     def test_a_size_variant_must_belong_to_the_class(self):
         with self.assertRaises(PricingError):
             price_job(
                 self.service("Full Detail"),
-                self.vehicle_class("Midsize SUVs"),
-                size_variant=self.size("Coupes & Sedans", 2),
+                self.vehicle_class("Large"),
+                size_variant=self.size("Small", 2),
                 condition_level=1,
             )
 
@@ -241,7 +242,7 @@ class PricingEngineTests(PricebookTestCase):
         # Never more than the $80 it applies to.
         self.assertEqual(job.lines[-1].amount, Decimal("-80.00"))
         with self.assertRaises(PricingError):
-            price_job(self.service("Headlight Restoration"), self.vehicle_class("Midsize SUVs"), promotions=[promotion])
+            price_job(self.service("Headlight Restoration"), self.vehicle_class("Large"), promotions=[promotion])
 
     def test_promotion_outside_its_dates_is_refused(self):
         today = timezone.localdate()
@@ -270,26 +271,26 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
             **inputs,
         )
 
-    def test_two_door_coupe_full_detail_at_level_3(self):
-        job = self.full_detail("Coupes & Sedans", 1, 3)
+    def test_one_row_small_full_detail_at_level_3(self):
+        job = self.full_detail("Small", 1, 3)
         # 3 hours plus 20% is 3.6, rounded once to 3.5.
         self.assertEqual(job.one_person_service_hours, Decimal("3.6"))
         self.assertEqual(hours(job.service_minutes), Decimal("3.5"))
         self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4.5"))
 
-    def test_two_person_midsize_suv_full_detail_at_level_3(self):
-        job = self.full_detail("Midsize SUVs", 2, 3, crew_size=2)
-        # 5.5 hours plus 20% is 6.6; 60% of that is 3.96, rounded once to 4.
-        self.assertEqual(job.one_person_service_hours, Decimal("6.6"))
-        self.assertEqual(hours(job.service_minutes), Decimal("4"))
-        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4.5"))
+    def test_two_person_large_full_detail_at_level_3(self):
+        job = self.full_detail("Large", 2, 3, crew_size=2)
+        # 5 hours plus 20% is 6; 60% of that is 3.6, rounded once to 3.5.
+        self.assertEqual(job.one_person_service_hours, Decimal("6"))
+        self.assertEqual(hours(job.service_minutes), Decimal("3.5"))
+        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4"))
         self.assertEqual((job.time_on_site.setup_minutes, job.time_on_site.breakdown_minutes), (15, 15))
 
     def test_level_1_changes_nothing(self):
         for service_name, class_name, size in (
-            ("Full Detail", "Midsize SUVs", 2),
-            ("Interior Only", "Coupes & Sedans", 2),
-            ("Exterior Only", "Fullsize Trucks", None),
+            ("Full Detail", "Large", 2),
+            ("Interior Only", "Small", 2),
+            ("Exterior Only", "Full-size Trucks", None),
         ):
             vehicle_class = self.vehicle_class(class_name)
             size_variant = self.size(class_name, size) if size else None
@@ -301,24 +302,24 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
                 self.assertEqual(job.one_person_service_hours, base.one_person_service_hours)
 
     def test_the_condition_line_carries_its_extra_time_unrounded(self):
-        job = self.full_detail("Fullsize Trucks", 2, 2)
+        job = self.full_detail("Full-size Trucks", 2, 2)
         [condition] = [line for line in job.lines if line.kind == PricedLine.Kind.CONDITION]
-        # 10% of 5.5 hours.
-        self.assertEqual(condition.one_person_service_hours, Decimal("0.55"))
+        # 10% of 6 hours.
+        self.assertEqual(condition.one_person_service_hours, Decimal("0.6"))
         quote = issue_quote(
             self.service("Full Detail"),
-            self.vehicle_class("Fullsize Trucks"),
-            size_variant=self.size("Fullsize Trucks", 2),
+            self.vehicle_class("Full-size Trucks"),
+            size_variant=self.size("Full-size Trucks", 2),
             condition_level=2,
         )
-        self.assertEqual(quote.lines.get(kind=PricedLine.Kind.CONDITION).one_person_service_hours, Decimal("0.55"))
-        self.assertEqual(quote.one_person_service_hours, Decimal("6.05"))
+        self.assertEqual(quote.lines.get(kind=PricedLine.Kind.CONDITION).one_person_service_hours, Decimal("0.6"))
+        self.assertEqual(quote.one_person_service_hours, Decimal("6.6"))
 
     def test_interior_and_exterior_only_are_lengthened_too(self):
         interior = price_job(
-            self.service("Interior Only"), self.vehicle_class("Coupes & Sedans"), size_variant=self.size("Coupes & Sedans", 2), condition_level=3
+            self.service("Interior Only"), self.vehicle_class("Small"), size_variant=self.size("Small", 2), condition_level=3
         )
-        exterior = price_job(self.service("Exterior Only"), self.vehicle_class("Midsize SUVs"), condition_level=2)
+        exterior = price_job(self.service("Exterior Only"), self.vehicle_class("Large"), condition_level=2)
         # 2 hours + 20%, and 2 hours + 10%.
         self.assertEqual(interior.one_person_service_hours, Decimal("2.4"))
         self.assertEqual(exterior.one_person_service_hours, Decimal("2.2"))
@@ -326,7 +327,7 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
     def test_add_ons_never_change_with_condition(self):
         for level in (1, 2, 3):
             job = self.full_detail(
-                "Crossovers & Wagons", 3, level, add_ons=[self.service("Carpet Extraction"), self.service("Seat Extraction")]
+                "Medium", 3, level, add_ons=[self.service("Carpet Extraction"), self.service("Seat Extraction")]
             )
             add_ons = [(line.amount, line.one_person_service_hours) for line in job.lines if line.kind == PricedLine.Kind.ADD_ON]
             with self.subTest(level=level):
@@ -334,10 +335,10 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
 
     def test_maintenance_plans_never_change_with_condition(self):
         for name in ("Monthly Maintenance", "Quarterly Maintenance"):
-            plain = price_job(self.service(name), self.vehicle_class("Midsize SUVs"), size_variant=self.size("Midsize SUVs", 3))
+            plain = price_job(self.service(name), self.vehicle_class("Large"), size_variant=self.size("Large", 3))
             for level in (1, 2, 3):
                 job = price_job(
-                    self.service(name), self.vehicle_class("Midsize SUVs"), size_variant=self.size("Midsize SUVs", 3), condition_level=level
+                    self.service(name), self.vehicle_class("Large"), size_variant=self.size("Large", 3), condition_level=level
                 )
                 with self.subTest(service=name, level=level):
                     self.assertEqual(len(job.lines), 1)
@@ -348,8 +349,8 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
 
 class MaintenanceFollowsFullDetailTests(PricebookTestCase):
     def test_maintenance_follows_a_changed_full_detail_price(self):
-        crossover = self.vehicle_class("Crossovers & Wagons")
-        two_rows = self.size("Crossovers & Wagons", 2)
+        crossover = self.vehicle_class("Medium")
+        two_rows = self.size("Medium", 2)
         full_detail = self.service("Full Detail")
         draft = PricebookVersion.new_draft()
         price = Price.objects.get(version=draft, service=full_detail, vehicle_class=crossover, size_variant=two_rows)
@@ -362,7 +363,7 @@ class MaintenanceFollowsFullDetailTests(PricebookTestCase):
         quarterly = price_job(self.service("Quarterly Maintenance"), crossover, size_variant=two_rows)
         self.assertEqual(monthly.total_before_tax, Decimal("150.00"))
         self.assertEqual(quarterly.total_before_tax, Decimal("240.00"))
-        self.assertEqual(monthly.one_person_service_hours, Decimal("5"))
+        self.assertEqual(monthly.one_person_service_hours, Decimal("4"))
         # Version 1 is unchanged.
         old = price_job(self.service("Monthly Maintenance"), crossover, size_variant=two_rows, version=self.version)
         self.assertEqual(old.total_before_tax, Decimal("125.00"))
@@ -374,8 +375,8 @@ class QuoteAndBookingTests(PricebookTestCase):
         self.promotion = Promotion.objects.create(name="Test Offer", kind=Promotion.Kind.PERCENT_OFF, value=Decimal("12.5"))
         self.quote = issue_quote(
             self.service("Full Detail"),
-            self.vehicle_class("Crossovers & Wagons"),
-            size_variant=self.size("Crossovers & Wagons", 2),
+            self.vehicle_class("Medium"),
+            size_variant=self.size("Medium", 2),
             condition_level=2,
             add_ons=[self.service("Seat Extraction")],
             promotions=[self.promotion],
@@ -392,12 +393,12 @@ class QuoteAndBookingTests(PricebookTestCase):
         self.assertEqual(list(quote.promotions.all()), [self.promotion])
         self.assertEqual(quote.total_before_tax, Decimal("310.62"))
         self.assertEqual((quote.tax_rate, quote.sales_tax, quote.total), (Decimal("0"), Decimal("0"), Decimal("310.62")))
-        self.assertEqual(quote.one_person_service_hours, Decimal("7"))
-        self.assertEqual((quote.setup_minutes, quote.service_minutes, quote.breakdown_minutes), (30, 420, 30))
-        self.assertEqual(quote.time_on_site_minutes, 480)
-        self.assertTrue(quote.full_day)
+        self.assertEqual(quote.one_person_service_hours, Decimal("5.9"))
+        self.assertEqual((quote.setup_minutes, quote.service_minutes, quote.breakdown_minutes), (30, 360, 30))
+        self.assertEqual(quote.time_on_site_minutes, 420)
+        self.assertFalse(quote.full_day)
         condition = quote.lines.get(kind=PricedLine.Kind.CONDITION)
-        self.assertEqual(condition.one_person_service_hours, Decimal("0.5"))
+        self.assertEqual(condition.one_person_service_hours, Decimal("0.4"))
         self.assertEqual(quote.lines.count(), 4)
 
     def test_a_quote_never_changes(self):
@@ -439,14 +440,14 @@ class QuoteAndBookingTests(PricebookTestCase):
     def test_quotes_come_from_a_published_version(self):
         draft = PricebookVersion.new_draft()
         with self.assertRaises(PricingError):
-            issue_quote(self.service("Headlight Restoration"), self.vehicle_class("Midsize SUVs"), version=draft)
+            issue_quote(self.service("Headlight Restoration"), self.vehicle_class("Large"), version=draft)
 
 
 class PublishingTests(PricebookTestCase):
     def setUp(self):
         self.customer = Customer.objects.create(first_name="Pat", mobile="4235550142")
-        self.crossover = self.vehicle_class("Crossovers & Wagons")
-        self.two_rows = self.size("Crossovers & Wagons", 2)
+        self.crossover = self.vehicle_class("Medium")
+        self.two_rows = self.size("Medium", 2)
 
     def book(self, service_name, days, **inputs):
         quote = issue_quote(self.service(service_name), self.crossover, size_variant=self.two_rows, **inputs)
@@ -515,7 +516,7 @@ class QuoteCommandTests(PricebookTestCase):
         call_command(
             "quote",
             "--service", "Full Detail",
-            "--class", "Crossovers & Wagons",
+            "--class", "Medium",
             "--size", "2",
             "--condition", "2",
             "--add-on", "Seat Extraction",
@@ -523,5 +524,5 @@ class QuoteCommandTests(PricebookTestCase):
         )
         text = output.getvalue()
         for expected in ("Full Detail", "$250.00", "Condition level 2 (+10%)", "$25.00", "Seat Extraction", "$80.00", "$355.00",
-                         "Service time: 7 hours", "Time on site: 8 hours", "Full day"):
+                         "Service time: 5.9 hours", "Time on site: 7 hours"):
             self.assertIn(expected, text)

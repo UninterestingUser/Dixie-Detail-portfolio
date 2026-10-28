@@ -7,15 +7,15 @@ area: vehicles
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-26
+updated: 2026-10-28
 supersedes: [docs/decisions/0014-cars-priced-by-doors.md, docs/decisions/0016-size-from-vehicle-data.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0060-vehicle-classification-rules-are-data.md]
 superseded_by: []
-related: [data/size-classes.yaml, data/vehicle-classes.yaml, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0015-crossover-three-row-price.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0079-approval-list.md]
+related: [docs/decisions/0083-applying-the-size-based-classes.md, data/size-classes.yaml, data/vehicle-classes.yaml, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0015-crossover-three-row-price.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0079-approval-list.md]
 ---
 
 # 0082: Cars, wagons, crossovers, SUVs and minivans are classed by measured size
 
-**Status:** accepted; takes effect when the size-based classes are applied · **Date:** 2026-10-26 · **Area:** vehicles
+**Status:** accepted and applied: `apply_size_classes` switches to the size-based classes with the new price book, and [decision 0083](0083-applying-the-size-based-classes.md) adds vans before pickups, the pickup line, smoothing and three model overrides · **Date:** 2026-10-26 · **Area:** vehicles
 
 ## Context
 

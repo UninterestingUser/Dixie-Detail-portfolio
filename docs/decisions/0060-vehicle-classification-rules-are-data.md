@@ -7,7 +7,7 @@ area: vehicles
 status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-26
+updated: 2026-10-28
 supersedes: []
 superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/vehicle-classification.md, data/vehicle-classes.yaml, data/integrations.yaml, docs/decisions/0016-size-from-vehicle-data.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md]
@@ -15,7 +15,7 @@ related: [docs/reference/vehicle-classification.md, data/vehicle-classes.yaml, d
 
 # 0060: Vehicle classification rules are data the owner edits
 
-**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the six body-type classes, once the size-based classes are applied; rules as data, overrides and the preview stand · **Date:** 2026-10-17 · **Area:** vehicles
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the six body-type classes, applied by `apply_size_classes` ([0083](0083-applying-the-size-based-classes.md)); rules as data, overrides and the preview stand · **Date:** 2026-10-17 · **Area:** vehicles
 
 ## Context
 

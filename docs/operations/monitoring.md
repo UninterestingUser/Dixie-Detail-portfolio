@@ -4,9 +4,9 @@ summary: What the three Healthchecks.io checks watch, the monthly vehicle data r
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-24
+updated: 2026-10-28
 tags: [operations, monitoring, healthchecks, alerts, vehicles]
-related: [docs/architecture/backups-and-monitoring.md, docs/operations/troubleshooting.md, docs/operations/importing-vehicle-data.md, docs/decisions/0081-monthly-vehicle-data-refresh.md, ops/vehicle-refresh.sh, data/configuration.yaml]
+related: [docs/decisions/0083-applying-the-size-based-classes.md, docs/architecture/backups-and-monitoring.md, docs/operations/troubleshooting.md, docs/operations/importing-vehicle-data.md, docs/decisions/0081-monthly-vehicle-data-refresh.md, ops/vehicle-refresh.sh, data/configuration.yaml]
 ---
 
 # Monitoring and alerts
@@ -33,7 +33,9 @@ The 2:45 AM backup failed or did not run. Read `journalctl -u dixie-backup.servi
 
 `dixie-vehicle-refresh.timer` starts `dixie-vehicle-refresh.service` on the first Sunday of each month at 4:15 AM Eastern, plus a random delay of up to 15 minutes, so the refresh never runs on a business day or near the 2:45 AM backup ([decision 0081](../decisions/0081-monthly-vehicle-data-refresh.md)). A refresh missed while the server was off is not made up at boot; run it by hand instead. `ops/deploy.sh` installs and enables the timer like the others.
 
-The service runs `ops/vehicle-refresh.sh`, which runs `python manage.py refresh_vehicle_data` in a one-off app container with the download cache `/srv/dixie-vehicle-data` attached, as [importing-vehicle-data.md](importing-vehicle-data.md) runs the import by hand. That command runs `import_vehicle_data --source all --refresh`, which downloads every file again, then `classify_vehicles --refresh`. A full run makes about 3,500 vPIC calls a second apart, so it takes an hour or more.
+The service runs `ops/vehicle-refresh.sh`, which runs `python manage.py refresh_vehicle_data` in a one-off app container with the download cache `/srv/dixie-vehicle-data` attached, as [importing-vehicle-data.md](importing-vehicle-data.md) runs the import by hand. That command runs `import_vehicle_data --source all --refresh`, which downloads every file again, then `classify_vehicles --refresh`, which classifies new model years with the size-based rules once `apply_size_classes` has switched to them (decision 0083). A full run makes about 3,500 vPIC calls a second apart, so it takes an hour or more.
+
+The refresh's log holds only the model years newly sent to the review queue, joined into year ranges with the reason, and, as its last line, the one-line summary. The two commands' full reports appear in the log only when the refresh fails, before the summary, so the failure ping's log tail shows what went wrong.
 
 A refresh adds new models and model years and updates facts. It never changes the vehicle class or size of a model with a model override, an approval on the approval list, or customers' jobs: those model years wait in the review queue under "Held by the monthly refresh", with the old and the new value ([../reference/vehicle-classification.md](../reference/vehicle-classification.md#the-monthly-refresh)).
 

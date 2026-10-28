@@ -3,7 +3,7 @@
 {% block content %}
 <h1>Approvals</h1>
 {% include "control/_catalog_nav.html" %}
-<p class="help">Every model in the job history, the spot-check list, every model whose years are in different classes and every model approved before, each with its year ranges. Approve each range, or change it to another class, which sets a model override for exactly those years. A later change to the rules or overrides that alters an approved range clears its approval, and the model shows here again.</p>
+<p class="help">Every model in the job history, the spot-check list (only the years an entry names, where it names some), every model with model years from 2015 on near a size line, and every model approved since the list started over with the size-based classes, each with its year ranges. Approve each range, or change it to another class, which sets a model override for exactly those years. A later change to the rules or overrides that alters an approved range clears its approval, and the model shows here again.</p>
 
 <p><strong>{{ approved }} of {{ total }} model{{ total|pluralize }} approved.</strong></p>
 

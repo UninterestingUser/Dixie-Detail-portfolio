@@ -294,6 +294,49 @@ def differences(vehicles=None):
     return sorted(found, key=lambda difference: (difference.vehicle.make, difference.vehicle.model, difference.vehicle.year or 0, difference.vehicle.pk))
 
 
+# Vehicles left in a retired class (decision 0083).
+
+
+@dataclass
+class Proposal:
+    vehicle: Vehicle
+    # The class proposed from its recorded class, or None.
+    proposed: VehicleClass
+    reason: str
+
+
+def retired_class_vehicles():
+    """[Proposal] for every customer's vehicle whose class is retired, such
+    as one not linked to the catalog when the size-based classes were
+    applied, with the class proposed from its recorded class."""
+    from vehicles.classification.sizes import read_scheme
+    from vehicles.classification.switch import proposed_class
+
+    data = read_scheme()
+    offered = {found.name: found for found in VehicleClass.objects.offered()}
+    found = []
+    for vehicle in Vehicle.objects.filter(vehicle_class__active=False).select_related("customer", "vehicle_class", "size_variant").order_by("make", "model", "pk"):
+        name, reason = proposed_class(vehicle, data)
+        found.append(Proposal(vehicle, offered.get(name), reason))
+    return found
+
+
+@transaction.atomic
+def take_class(vehicle, vehicle_class, user, note=""):
+    """Give a vehicle left in a retired class an offered class, with its
+    only size when the class has one."""
+    before = own_label(vehicle)
+    sizes = list(vehicle_class.size_variants.filter(active=True))
+    vehicle.vehicle_class = vehicle_class
+    vehicle.size_variant = sizes[0] if len(sizes) == 1 else None
+    vehicle._change_reason = "Took a size-based class on the differences screen"
+    vehicle.save()
+    summary = f"Vehicle {vehicle.pk} ({vehicle}) leaves its retired class: {before} -> {own_label(vehicle)}"
+    if note:
+        summary += f". Note: {note}"
+    return record(Kind.VEHICLE_CLASS, summary, user=user, vehicle_model=vehicle.vehicle_model)
+
+
 # The owner's three choices on the differences screen.
 
 

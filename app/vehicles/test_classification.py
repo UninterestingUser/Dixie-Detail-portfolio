@@ -22,7 +22,8 @@ from pricebook.pricing import NotPriced, price_job
 from vehicles.classification.engine import apply, classify_catalog, preview
 from vehicles.classification.lookup import How, classify
 from vehicles.classification.rules import condition_errors
-from vehicles.classification.seed import SeedReport, read_data, sync_seat_list
+from vehicles.classification.seed import SeedReport, sync_seat_list
+from vehicles.classification.sizes import read_scheme
 from vehicles.models import (
     ClassificationRule,
     ModelOverride,
@@ -90,7 +91,7 @@ class RuleOrderTests(ClassificationTestCase):
     def test_the_first_rule_that_holds_wins(self):
         heavy = self.rule(10, {"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 4500}}, "Midsize SUVs")
         small = self.rule(20, {"epa_size_class": SMALL_SUVS}, "Crossovers & Wagons")
-        self.rule(30, {"make": ["Toyota"]}, "Fullsize Trucks")
+        self.rule(30, {"make": ["Toyota"]}, "Full-size Trucks")
         # No curb weight is known, so the first rule fails and the second wins.
         self.assertEqual(self.result(self.rav4).rule, small)
         add_facts(self.rav4, Source.CANADA, curb_weight_min=4600, curb_weight_max=4700)
@@ -136,8 +137,8 @@ class RuleOrderTests(ClassificationTestCase):
             rule.full_clean()
 
     def test_every_launch_rule_in_the_data_file_is_valid(self):
-        data = read_data("vehicle-classes.yaml")
-        for entry in data["launch_rules"]:
+        data = read_scheme()
+        for entry in data["rules"]:
             with self.subTest(rule=entry["name"]):
                 self.assertEqual(condition_errors(entry["conditions"]), [])
                 self.vehicle_class(entry["class"])
@@ -154,20 +155,20 @@ class OverrideTests(ClassificationTestCase):
 
     def test_a_model_override_beats_every_rule(self):
         override = ModelOverride.objects.create(
-            vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups & Offroad"), note="Offroad"
+            vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups"), note="Offroad"
         )
         result = self.result(self.wrangler)
-        self.assertEqual((result.vehicle_class.name, result.method, result.override), ("Light Pickups & Offroad", "override", override))
+        self.assertEqual((result.vehicle_class.name, result.method, result.override), ("Light Pickups", "override", override))
         # No cab style is known, so the customer is asked.
         self.assertTrue(result.ask_size)
 
     def test_an_override_for_some_years_beats_one_for_the_whole_model(self):
-        ModelOverride.objects.create(vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups & Offroad"))
+        ModelOverride.objects.create(vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups"))
         ModelOverride.objects.create(
             vehicle_model=self.wrangler, year_from=2019, vehicle_class=self.vehicle_class("Midsize SUVs"),
             size_variant=self.size("Midsize SUVs", 2),
         )
-        self.assertEqual(self.result(self.wrangler, 2018).vehicle_class.name, "Light Pickups & Offroad")
+        self.assertEqual(self.result(self.wrangler, 2018).vehicle_class.name, "Light Pickups")
         result = self.result(self.wrangler, 2019)
         self.assertEqual((result.vehicle_class.name, result.size_variant.value, result.ask_size), ("Midsize SUVs", 2, False))
 
@@ -179,21 +180,21 @@ class OverrideTests(ClassificationTestCase):
     def test_every_override_records_who_set_it_when_and_a_note(self):
         user = get_user_model().objects.create_user("owner-test", password="made-up-password")
         override = ModelOverride.objects.create(
-            vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups & Offroad"), set_by=user, note="Lifted"
+            vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups"), set_by=user, note="Lifted"
         )
         self.assertEqual((override.set_by, override.note), (user, "Lifted"))
         self.assertIsNotNone(override.set_at)
 
     def test_a_vehicle_override_beats_the_model_override_and_the_rules(self):
-        ModelOverride.objects.create(vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups & Offroad"))
+        ModelOverride.objects.create(vehicle_model=self.wrangler, vehicle_class=self.vehicle_class("Light Pickups"))
         apply(classify_catalog())
         customer = Customer.objects.create(first_name="Pat")
         vehicle = Vehicle.objects.create(customer=customer, vehicle_model=self.wrangler, year=2019, make="Jeep", model="Wrangler")
         self.assertEqual(classify(2019, "Jeep", "Wrangler", vehicle=vehicle).how, How.MODEL_OVERRIDE)
         user = get_user_model().objects.create_user("owner-test", password="made-up-password")
-        vehicle.override_class(self.vehicle_class("Fullsize Trucks"), self.size("Fullsize Trucks", 2), user=user, note="Lifted on 37s")
+        vehicle.override_class(self.vehicle_class("Full-size Trucks"), self.size("Full-size Trucks", 2), user=user, note="Lifted on 37s")
         result = classify(2019, "Jeep", "Wrangler", vehicle=vehicle)
-        self.assertEqual((result.how, result.vehicle_class.name, result.size_variant.value), (How.VEHICLE_OVERRIDE, "Fullsize Trucks", 2))
+        self.assertEqual((result.how, result.vehicle_class.name, result.size_variant.value), (How.VEHICLE_OVERRIDE, "Full-size Trucks", 2))
         self.assertEqual((vehicle.class_override_by, vehicle.class_override_note), (user, "Lifted on 37s"))
         self.assertIsNotNone(vehicle.class_override_at)
 
@@ -219,10 +220,10 @@ class SizeVariantTests(ClassificationTestCase):
         self.assertEqual(self.sized("Coupes & Sedans", body_styles=["unknown"]), "ask")
 
     def test_pickups_by_cab_asked_only_when_there_is_more_than_one(self):
-        self.assertEqual(self.sized("Fullsize Trucks", cab_styles=["regular"]), 1)
-        self.assertEqual(self.sized("Fullsize Trucks", cab_styles=["extended", "crew"]), 2)
-        self.assertEqual(self.sized("Light Pickups & Offroad", cab_styles=["regular", "crew"]), "ask")
-        self.assertEqual(self.sized("Light Pickups & Offroad"), "ask")
+        self.assertEqual(self.sized("Full-size Trucks", cab_styles=["regular"]), 1)
+        self.assertEqual(self.sized("Full-size Trucks", cab_styles=["extended", "crew"]), 2)
+        self.assertEqual(self.sized("Light Pickups", cab_styles=["regular", "crew"]), "ask")
+        self.assertEqual(self.sized("Light Pickups"), "ask")
 
     def test_crossovers_and_midsize_suvs_by_the_third_row_flag(self):
         self.assertEqual(self.sized("Crossovers & Wagons", seat_rows=[2]), 2)
@@ -263,15 +264,16 @@ class SizeVariantTests(ClassificationTestCase):
 
 class ReviewQueueTests(ClassificationTestCase):
     def setUp(self):
-        self.heavy = self.rule(10, {"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 4500}}, "Midsize SUVs")
-        self.small = self.rule(20, {"epa_size_class": SMALL_SUVS}, "Crossovers & Wagons")
+        self.heavy = self.rule(10, {"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 4500}}, "Large")
+        self.small = self.rule(20, {"epa_size_class": SMALL_SUVS}, "Medium")
 
     def test_no_rule_matches(self):
         odd = add_model("Test", "Odd")
         add_facts(odd, epa_size_classes=["Special Purpose Vehicle 2WD"])
         result = self.result(odd)
         self.assertTrue(result.in_review)
-        self.assertEqual(result.reasons, ["no rule matches"])
+        # With no measurements the EPA size class fallback is tried, and nothing measured is in its class.
+        self.assertEqual(result.reasons, ["no rule matches: no dimensions in any year, and no measured model year is in Special Purpose Vehicle 2WD"])
 
     def test_trims_straddle_a_threshold(self):
         straddler = add_model("Test", "Straddler")
@@ -304,13 +306,13 @@ class ReviewQueueTests(ClassificationTestCase):
         add_facts(rav4, epa_size_classes=SMALL_SUVS)
         add_facts(rav4, Source.SEAT_LIST, seat_rows=[2])
         apply(classify_catalog())
-        self.assertEqual(classified(rav4).vehicle_class.name, "Crossovers & Wagons")
+        self.assertEqual(classified(rav4).vehicle_class.name, "Medium")
         add_facts(rav4, Source.CANADA, curb_weight_min=4300, curb_weight_max=4700)
         apply(classify_catalog())
         row = classified(rav4)
         self.assertTrue(row.in_review)
-        self.assertEqual(row.vehicle_class.name, "Crossovers & Wagons")
-        self.assertEqual(classify(2019, "Toyota", "RAV4").vehicle_class.name, "Crossovers & Wagons")
+        self.assertEqual(row.vehicle_class.name, "Medium")
+        self.assertEqual(classify(2019, "Toyota", "RAV4").vehicle_class.name, "Medium")
 
     def test_a_new_model_year_in_the_queue_does_not_go_live(self):
         odd = add_model("Test", "Odd")
@@ -319,7 +321,7 @@ class ReviewQueueTests(ClassificationTestCase):
         self.assertIsNone(classified(odd).vehicle_class)
         result = classify(2019, "Test", "Odd")
         self.assertEqual(result.how, How.REVIEW_QUEUE)
-        self.assertEqual(len(result.photo_cards), 7)
+        self.assertEqual(len(result.photo_cards), 8)
 
 
 class PreviewTests(ClassificationTestCase):
@@ -380,9 +382,13 @@ class LookupTests(ClassificationTestCase):
                 result = classify(year, make, name)
                 self.assertEqual(result.how, How.PHOTO_CARDS)
                 self.assertIsNone(result.vehicle_class)
-                cards = [card.vehicle_class.name for card in result.photo_cards]
-                self.assertEqual(len(cards), 7)
+                cards = {card.vehicle_class.name: card for card in result.photo_cards}
+                self.assertEqual(len(cards), 8)
                 self.assertIn("Motorcycles", cards)
+                self.assertEqual(cards["Small"].examples, ["Civic", "Corolla", "Camry", "Accord", "Crosstrek"])
+                self.assertIsNone(cards["Small"].photo)  # a placeholder until the owner adds one
+                self.assertTrue(cards["Full-size Vans"].quote)
+                self.assertEqual(cards["Full-size Vans"].caption, "Send us a photo for a quote")
 
     def test_a_motorcycle_and_a_car_of_the_same_name(self):
         gold_wing = add_model("Honda", "Gold Wing", MOTORCYCLE, VehicleModel.Source.NHTSA)
@@ -410,9 +416,9 @@ class MotorcycleTests(ClassificationTestCase):
                 self.assertEqual(job.total_before_tax, Decimal("100.00"))
                 self.assertEqual(len(job.lines), 1)
                 self.assertIsNone(job.lines[0].condition_level)
-                # 1 hour of service, 2 hours on site with setup and breakdown.
-                self.assertEqual(job.service_minutes, 60)
-                self.assertEqual(job.time_on_site.total_minutes, 120)
+                # 2 hours of service, 3 hours on site with setup and breakdown.
+                self.assertEqual(job.service_minutes, 120)
+                self.assertEqual(job.time_on_site.total_minutes, 180)
                 self.assertEqual(job.crew_size, 1)
 
     def test_motorcycle_detail_is_offered_only_for_motorcycles_and_takes_no_add_ons(self):
@@ -425,7 +431,7 @@ class MotorcycleTests(ClassificationTestCase):
         with self.assertRaises(NotPriced):
             price_job(detail, motorcycles, add_ons=[Service.objects.get(name="Seat Extraction")])
         with self.assertRaises(NotPriced):
-            price_job(detail, self.vehicle_class("Coupes & Sedans"))
+            price_job(detail, self.vehicle_class("Small"))
 
     def test_the_motorcycles_class_settings(self):
         motorcycles = self.vehicle_class("Motorcycles")
@@ -452,44 +458,47 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
         return out.getvalue()
 
     def test_the_rav4_worked_example(self):
-        """Decision 0065: a 2019 Toyota RAV4 is Crossovers & Wagons with two
+        """Decisions 0065 and 0083: a 2019 Toyota RAV4 is Medium with two
         rows, and a level 2 Full Detail with Seat Extraction is $355."""
         self.command()
         result = classify(2019, "Toyota", "RAV4")
-        self.assertEqual((result.how, result.vehicle_class.name, result.size_variant.value), (How.RULE, "Crossovers & Wagons", 2))
-        self.assertEqual(result.rule.name, "EPA small SUVs and station wagons")
+        self.assertEqual((result.how, result.vehicle_class.name, result.size_variant.value), (How.RULE, "Medium", 2))
+        self.assertEqual(result.rule.name, "Medium")
         job = price_job(
             Service.objects.get(name="Full Detail"), result.vehicle_class, result.size_variant,
             condition_level=2, add_ons=[Service.objects.get(name="Seat Extraction")],
         )
         self.assertEqual(job.total_before_tax, Decimal("355.00"))
-        self.assertEqual(job.time_on_site.total_minutes, 480)
+        self.assertEqual(job.time_on_site.total_minutes, 420)
 
     def test_the_launch_set_on_the_fixture_catalog(self):
         self.command()
         expected = {
-            ("Toyota", "Camry"): ("Coupes & Sedans", 2),
-            ("Honda", "Civic"): ("Coupes & Sedans", "ask"),
-            ("Ford", "F150"): ("Fullsize Trucks", 2),          # SUPERCREW in the Canadian trim name
-            ("Ford", "F-250"): ("Fullsize Trucks", 2),         # vPIC only; CREW CAB
-            ("Ford", "F-350"): ("Fullsize Trucks", "ask"),     # vPIC only; no cab style known
-            ("Ford", "Transit"): ("Fullsize SUVs & Minivans", 3),
-            ("Ford", "Expedition"): ("Fullsize SUVs & Minivans", 3),  # the launch model override
+            ("Toyota", "Camry"): ("Small", 2),
+            ("Toyota", "RAV4"): ("Medium", 2),
+            ("Ford", "F150"): ("Full-size Trucks", 2),          # SUPERCREW in the Canadian trim name; over the pickup line
+            ("Ford", "F-250"): ("Full-size Trucks", 2),         # vPIC only; CREW CAB
+            ("Ford", "F-350"): ("Full-size Trucks", "ask"),     # vPIC only; no box volume, so its rule's class
             ("Harley-Davidson", "Fat Boy"): ("Motorcycles", None),
+            # No dimensions in any year: the Civic's EPA class has no measured
+            # model year in the fixtures, and the Transit and Expedition have none.
+            ("Honda", "Civic"): (None, None),
+            ("Ford", "Transit"): (None, None),
+            ("Ford", "Expedition"): (None, None),
         }
         for (make, name), (class_name, size) in expected.items():
             with self.subTest(vehicle=(make, name)):
                 result = classify(2019, make, name)
-                self.assertEqual(result.vehicle_class.name, class_name)
+                self.assertEqual(getattr(result.vehicle_class, "name", None), class_name)
                 self.assertEqual("ask" if result.question else getattr(result.size_variant, "value", None), size)
-        self.assertEqual(classify(2019, "Ford", "Expedition").how, How.MODEL_OVERRIDE)
-        self.assertTrue(VehicleModel.objects.get(make="Honda", model="Civic").ask_size)
+        self.assertEqual(classify(2019, "Ford", "Transit").how, How.REVIEW_QUEUE)
+        self.assertEqual(classify(2019, "Ford", "F-250").how, How.PICKUP_LINE)
         self.assertFalse(VehicleModel.objects.get(make="Toyota", model="RAV4").ask_size)
 
     def test_a_dry_run_prints_the_preview_and_changes_nothing(self):
         output = self.command("--dry-run")
         self.assertIn("DRY RUN", output)
-        self.assertIn("Toyota RAV4 2019: no class -> Crossovers & Wagons (two rows) (rule 140: EPA small SUVs and station wagons)", output)
+        self.assertIn("Toyota RAV4 2019: no class -> Medium (two rows) (rule 100: Medium)", output)
         self.assertFalse(ModelYearClassification.objects.exists())
         self.assertFalse(ClassificationRule.objects.exists())
         self.assertFalse(VehicleModelYear.objects.filter(source=Source.SEAT_LIST).exists())
@@ -497,8 +506,8 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
     def test_a_rerun_changes_nothing_and_a_deleted_launch_rule_is_not_added_again(self):
         self.command()
         rules = ClassificationRule.objects.count()
-        self.assertEqual(rules, len(read_data("vehicle-classes.yaml")["launch_rules"]))
-        self.assertIn("Launch rules and overrides (data/vehicle-classes.yaml): 0 changes", self.command("--dry-run"))
+        self.assertEqual(rules, len(read_scheme()["rules"]))
+        self.assertIn("Launch rules and overrides (data/size-classes.yaml): 0 changes", self.command("--dry-run"))
         ClassificationRule.objects.filter(name="Motorcycles").delete()
         output = self.command()
         self.assertEqual(ClassificationRule.objects.count(), rules - 1)
@@ -508,11 +517,11 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
     def test_it_never_changes_an_override_a_customer_vehicle_or_an_owner_record(self):
         self.command()
         expedition = VehicleModel.objects.get(make="Ford", model="Expedition")
-        override = expedition.overrides.get()
+        override = ModelOverride.objects.create(vehicle_model=expedition, vehicle_class=self.vehicle_class("Full-size"), note="The owner's own")
         owner_row = add_facts(VehicleModel.objects.get(make="Toyota", model="RAV4"), Source.OWNER, seat_rows=[2])
         customer = Customer.objects.create(first_name="Pat")
         vehicle = Vehicle.objects.create(
-            customer=customer, year=2019, make="Toyota", model="RAV4", vehicle_class=self.vehicle_class("Midsize SUVs")
+            customer=customer, year=2019, make="Toyota", model="RAV4", vehicle_class=self.vehicle_class("Large")
         )
         before = (override.history.count(), owner_row.seat_rows, vehicle.vehicle_class_id)
         self.command()

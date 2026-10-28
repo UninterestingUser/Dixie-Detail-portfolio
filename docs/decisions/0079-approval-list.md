@@ -4,18 +4,18 @@ title: "The approval list: models in the job history, a spot-check list and mixe
 summary: "The owner approves each year range of each listed model as it stands, with who and when recorded; a later change that alters an approved range clears its approval so the model shows again."
 date: 2026-10-24
 area: vehicles
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-24
+updated: 2026-10-28
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0083-applying-the-size-based-classes.md]
 related: [data/approval-spot-checks.yaml, docs/operations/using-the-catalog-screens.md, docs/reference/vehicle-classification.md, docs/overview/roadmap.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md]
 ---
 
 # 0079: The approval list: models in the job history, a spot-check list and mixed-class models, approved by year range and cleared by any change
 
-**Status:** accepted · **Date:** 2026-10-24 · **Area:** vehicles
+**Status:** superseded by [0083](0083-applying-the-size-based-classes.md) for the mixed-class models, which the list no longer holds, and the spot-check list, replaced when the list started over; approving by year range and clearing on any change stand · **Date:** 2026-10-24 · **Area:** vehicles
 
 ## Context
 

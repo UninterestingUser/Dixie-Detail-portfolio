@@ -1,62 +1,29 @@
 meta:
   title: Approval spot-check list
-  summary: The vehicle models near a class boundary that the owner approves on the control app's approval list, alongside every model in the job history, before Phase 2 is done.
-  updated: 2026-10-24
+  summary: The vehicle models the owner spot-checks on the control app's approval list, alongside every model in the job history and every model near a size line, before Phase 2 is done.
+  updated: 2026-10-28
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
-    Each entry is a make and a model as customers name them; they are matched to the catalog by the
-    names in data/vehicle-names.yaml, every catalog model of that name, all years. An entry that
-    matches no catalog model is shown on the approval list as not found, so a spelling can be added
-    there. The approval list also shows, without listing them here, every model in the job history,
-    every model whose years are in different vehicle classes (the classify_vehicles report's
-    "Models whose years are in different classes"), because those change with the data, and every
-    model approved before (decision 0079).
+    Each entry is a make and a model as customers name them, matched to the catalog by the names in
+    data/vehicle-names.yaml, every catalog model of that name. year_from and year_to, when given,
+    limit the entry to those model years, and the approval list shows only the model's year ranges
+    that overlap them. An entry that matches no catalog model is shown on the approval list as not
+    found, so a spelling can be added there. The approval list started over when the size-based
+    classes were applied (decision 0083). Besides this list it shows, without listing them here,
+    every model in the job history, every model with model years from 2015 on within 5 cubic feet of
+    a size line or the pickup line (near_line and newest_from in data/size-classes.yaml), because
+    those change with the data, and every model approved since.
 
-# Proposed on 2026-10-24 for Phase 2 Step 4: models that sit near the line
-# between two vehicle classes, by size, weight, seat rows or body.
+# The owner's spot-check list for the size-based classes (2026-10-28).
 models:
-  # Offroad SUVs, small pickups and their neighbors
-  - {make: Jeep, model: Wrangler, why: Light Pickups & Offroad by a launch override}
-  - {make: Ford, model: Bronco, why: an offroad SUV like the Wrangler, but no override}
-  - {make: Ford, model: Bronco Sport, why: a small SUV sold under the Bronco name}
-  - {make: Toyota, model: 4Runner, why: a body-on-frame SUV the EPA calls standard or small by year}
-  - {make: Jeep, model: Grand Cherokee, why: near the 4,500 lb line between Crossovers & Wagons and Midsize SUVs}
-  - {make: Toyota, model: Tacoma, why: the EPA moved it between small and standard pickups}
-  - {make: Chevrolet, model: Colorado, why: small or standard pickup by year}
-  - {make: Ford, model: Ranger, why: small or standard pickup by year}
-  - {make: Ford, model: Maverick, why: a compact pickup on a crossover body}
-  - {make: Honda, model: Ridgeline, why: a pickup on a crossover body}
-  # Full-size SUVs and trucks
-  - {make: Chevrolet, model: Tahoe, why: Fullsize SUVs & Minivans by a launch override}
-  - {make: Chevrolet, model: Suburban, why: Fullsize SUVs & Minivans by a launch override}
-  - {make: Toyota, model: Sequoia, why: Fullsize SUVs & Minivans by a launch override}
-  - {make: Ford, model: Expedition, why: Fullsize SUVs & Minivans by a launch override}
-  - {make: Ford, model: F-150, why: light-duty pickup, cab style asked}
-  - {make: Ford, model: F-250, why: a heavy-duty pickup the EPA leaves out}
-  - {make: Ram, model: "1500", why: light-duty pickup, cab style asked}
-  - {make: Ram, model: "2500", why: a heavy-duty pickup the EPA leaves out}
-  - {make: Chevrolet, model: Silverado, why: light-duty pickup, cab style asked}
-  - {make: Toyota, model: Tundra, why: light-duty pickup, cab style asked}
-  # Crossovers near the Midsize SUVs line, and two- or three-row models
-  - {make: Toyota, model: RAV4, why: a small SUV near the weight line}
-  - {make: Honda, model: CR-V, why: a small SUV near the weight line}
-  - {make: Subaru, model: Outback, why: a station wagon or small SUV by year}
-  - {make: Subaru, model: Crosstrek, why: a station wagon or small SUV by year}
-  - {make: Tesla, model: Model Y, why: a small SUV with an optional third row}
-  - {make: Toyota, model: Highlander, why: optional, then always, a third row}
-  - {make: Kia, model: Telluride, why: three rows; the EPA calls some years small}
-  - {make: Kia, model: Sorento, why: two or three rows by year}
-  - {make: Hyundai, model: Santa Fe, why: two or three rows by year, and the Sport and XL nameplates}
-  - {make: Mitsubishi, model: Outlander, why: a small SUV with an optional third row}
-  - {make: Lexus, model: RX, why: a small or standard SUV by year, and the RX 350L}
-  - {make: Honda, model: Pilot, why: three rows; small or standard SUV by year}
-  - {make: Ford, model: Explorer, why: three rows; near the Fullsize SUVs line}
-  - {make: Chevrolet, model: Traverse, why: three rows; near the Fullsize SUVs line}
-  # Minivans and vans
-  - {make: Toyota, model: Sienna, why: a minivan the EPA listed as a station wagon in older years}
-  - {make: Honda, model: Odyssey, why: a minivan the EPA listed as a station wagon in older years}
-  - {make: Chrysler, model: Pacifica, why: a minivan, and a crossover of the same name from 2004 to 2008}
-  - {make: Ford, model: Transit, why: a full-size van the EPA leaves out}
-  - {make: Ford, model: Transit Connect, why: a small van near the Crossovers & Wagons line}
-  - {make: Mercedes-Benz, model: Sprinter, why: a full-size van the EPA leaves out}
+  - {make: Toyota, model: Tacoma, year_from: 2024}
+  - {make: GMC, model: Canyon, year_from: 2025}
+  - {make: Rivian, model: R1T}
+  - {make: Cadillac, model: Escalade, why: once priced with the Suburban by a model override}
+  - {make: Toyota, model: Highlander, year_from: 2020}
+  - {make: Nissan, model: Murano, year_from: 2025}
+  - {make: Jeep, model: Wrangler, why: once priced with the light pickups by a model override}
+  - {make: Ford, model: Bronco}
+  - {make: Chevrolet, model: Tahoe, year_to: 2006}
+  - {make: Chevrolet, model: Suburban, year_to: 1997}

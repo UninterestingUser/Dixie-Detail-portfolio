@@ -1,7 +1,6 @@
-"""Size-based vehicle classes (decision 0082): box volume as a fact, seat
-rows for the size-based classes, and the size scheme of
-data/size-classes.yaml, classified in memory for
-classify_vehicles --scheme size --dry-run.
+"""Size-based vehicle classes (decisions 0082 and 0083): box volume as a
+fact, seat rows for the size-based classes, the rules of
+data/size-classes.yaml, and the steps that follow them.
 
 Box volume is length x width x height / 1,728 in cubic feet. Each
 dimension is the median of the model year's trims, read as classification
@@ -11,17 +10,23 @@ no dimensions takes the box volume of the nearest measured model year of
 the same model, the newer on a tie, "inherited from" that year. apply()
 saves each model year's box volume as a ModelYearSize.
 
-The size scheme's rules are tried in order like any rules. A model with no
-measurements in any year matches no box-volume rule; it takes the class
-where most measured model years of its EPA size class land (the fallback
-table), or, with no EPA size class either, waits in the review queue as any
-model year no rule matches does. Model overrides, review queue decisions
-and approvals name the old classes and are not carried into the scheme.
+The rules are the launch rules classification.seed creates from
+data/size-classes.yaml and are tried in order like any rules. finish()
+then takes three steps, in this order:
 
-The dry run creates no class or pricebook record: a class the database does
-not have yet, such as Small, is built in memory with its size variants, and
-a renamed class (Light Pickups) is a copy of the old record under its new
-name, keeping its size variants.
+1. The pickup line: a pickup a rule caught that has a box volume goes on
+   its side of the pickup line; one with no box volume in any year keeps
+   the class of its rule, from its EPA label.
+2. The EPA size class fallback: a model with no measurements in any year
+   matches no box-volume rule; it takes the class where most measured model
+   years of its EPA size class land (the fallback table), or, with no EPA
+   size class either, waits in the review queue as any model year no rule
+   matches does.
+3. Smoothing: a short run of model years between two runs of one class
+   takes that class.
+
+Model overrides and review queue decisions beat all three, and are never
+smoothed.
 """
 
 import copy
@@ -34,12 +39,13 @@ from functools import lru_cache
 from django.conf import settings
 from django.utils import timezone
 
-from vehicles.models import ClassificationRule, ModelYearSize, SizeVariant, VehicleClass, VehicleModelYear
+from vehicles.models import ModelYearClassification, ModelYearSize, VehicleClass, VehicleModelYear
 
 from .rules import FACTS, condition_errors
 from .seed import SeedError, read_data
 
 Source = VehicleModelYear.Source
+Method = ModelYearClassification.Method
 DATA_FILE = "size-classes.yaml"
 DIMENSIONS = ("length", "width", "height")
 TENTH = Decimal("0.1")
@@ -181,15 +187,14 @@ def main_epa_class(model_year):
     return max(sorted(counts), key=lambda name: counts[name]) if counts else ""
 
 
-# The scheme.
+# The rules and the steps after them.
 
 
-def read_scheme(data_dir=None):
-    """data/size-classes.yaml with each rule's line names replaced by their
-    box volumes, checked."""
+@lru_cache(maxsize=4)
+def _scheme(data_dir):
     data = read_data(DATA_FILE, data_dir)
     lines = {line["name"]: line["at"] for line in data["lines"]}
-    names = {entry["name"] for entry in data["classes"]}
+    names = {entry["name"] for entry in read_data("vehicle-classes.yaml", data_dir)["classes"]}
     for rule in data["rules"]:
         bounds = rule["conditions"].get("box_volume")
         if bounds is not None:
@@ -201,62 +206,25 @@ def read_scheme(data_dir=None):
         if errors:
             raise SeedError(f"Size rule {rule['name']!r}: {' '.join(errors)}")
         if rule["class"] not in names:
-            raise SeedError(f"Size rule {rule['name']!r}: {rule['class']!r} is not a class in {DATA_FILE}.")
+            raise SeedError(f"Size rule {rule['name']!r}: {rule['class']!r} is not a class in vehicle-classes.yaml.")
+    for line in [*data["lines"], data["pickup_line"]]:
+        for side in ("below", "above"):
+            if line[side] not in names:
+                raise SeedError(f"Line {line['name']!r}: {line[side]!r} is not a class in vehicle-classes.yaml.")
     return data
 
 
-def scheme_classes(data, variants):
-    """{name: VehicleClass} for the scheme's classes. One the database has
-    is used as it is; a renamed one is a copy under its new name; a new one
-    is built in memory, with a made-up negative id, and its size variants
-    are added to variants, {class pk: {value: SizeVariant}}."""
-    existing = {found.name: found for found in VehicleClass.objects.all()}
-    classes = {}
-    temporary = 0
-    for order, entry in enumerate(data["classes"], start=1):
-        name = entry["name"]
-        if name in existing:
-            classes[name] = existing[name]
-        elif "renamed_from" in entry:
-            if entry["renamed_from"] not in existing:
-                raise SeedError(f"No vehicle class {entry['renamed_from']!r} to rename to {name!r}: run load_pricebook first.")
-            classes[name] = copy.copy(existing[entry["renamed_from"]])
-            classes[name].name = name
-        elif "size_variant_measures" in entry:
-            temporary -= 1
-            found = VehicleClass(
-                pk=temporary, name=name, size_variant_measures=entry["size_variant_measures"], sort_order=order,
-                booking=VehicleClass.Booking.QUOTE if entry.get("booking") == "quote" else VehicleClass.Booking.ONLINE,
-                photo_card=entry.get("photo_card", ""),
-            )
-            variants[found.pk] = {}
-            for value, label in (entry.get("size_variants") or {}).items():
-                temporary -= 1
-                variants[found.pk][int(value)] = SizeVariant(pk=temporary, vehicle_class=found, value=int(value), label=label)
-            classes[name] = found
-        else:
-            raise SeedError(f"No vehicle class {name!r}: run load_pricebook first.")
-    return classes
-
-
-def scheme_rules(data, classes):
-    """The scheme's rules as unsaved ClassificationRule records, in order."""
-    return [
-        ClassificationRule(
-            position=index * 10, name=entry["name"], conditions=entry["conditions"], vehicle_class=classes[entry["class"]],
-            active=True, note=entry.get("note", ""),
-        )
-        for index, entry in enumerate(data["rules"], start=1)
-    ]
+def read_scheme(data_dir=None):
+    """data/size-classes.yaml with each rule's line names replaced by their
+    box volumes, checked against the classes of data/vehicle-classes.yaml."""
+    return copy.deepcopy(_scheme(data_dir or settings.DATA_DIR))
 
 
 @dataclass
 class Scheme:
-    """The size scheme classified in memory."""
+    """The catalog as the size-based rules classify it, for the reports."""
 
     data: dict
-    classes: dict
-    rules: list
     # {(model id, year): (ModelYear, Result)}, as classify_catalog returns.
     results: dict
     # {EPA size class: Counter of class names}, from measured model years.
@@ -272,14 +240,18 @@ class Scheme:
         return self.data["lines"]
 
     @property
+    def pickup_line(self):
+        return self.data["pickup_line"]
+
+    @property
     def pickup_classes(self):
-        """The classes the scheme's pickup rules give."""
-        return {rule.vehicle_class.name for rule in self.rules if "box_volume" not in rule.conditions and rule.vehicle_class.size_variant_measures == VehicleClass.Measures.CAB_STYLE}
+        """The classes on either side of the pickup line."""
+        return {self.pickup_line["below"], self.pickup_line["above"]}
 
     @property
     def size_classes(self):
-        """The classes a box-volume rule gives."""
-        return {rule.vehicle_class.name for rule in self.rules if "box_volume" in rule.conditions}
+        """The classes on either side of the box-volume lines."""
+        return {line[side] for line in self.lines for side in ("below", "above")}
 
 
 def winner(counts):
@@ -290,9 +262,9 @@ def winner(counts):
 def by_box_volume(model_year, result):
     """Whether a box-volume rule gave the model year its class, from its own measurements."""
     return (
-        result.rule is not None
+        result.method == Method.RULE
+        and result.rule is not None
         and "box_volume" in result.rule.conditions
-        and not result.in_review
         and model_year.box_volume is not None
         and model_year.box_volume.inherited_from is None
     )
@@ -310,10 +282,33 @@ def fallback_counts(results):
     return dict(counts)
 
 
+def classes_by_name():
+    return {found.name: found for found in VehicleClass.objects.all()}
+
+
+def apply_pickup_line(results, line, classes, variants):
+    """Put each pickup a rule caught that has a box volume on its side of
+    the pickup line, in place. One with no box volume keeps its rule's class."""
+    from .engine import Result, size_for
+
+    sides = {line["below"], line["above"]}
+    for key, (model_year, result) in results.items():
+        if result.method != Method.RULE or result.vehicle_class is None or result.vehicle_class.name not in sides:
+            continue
+        if model_year.box_volume is None:
+            continue
+        above = model_year.box_volume.value >= line["at"]
+        vehicle_class = classes[line["above"] if above else line["below"]]
+        size, ask = size_for(vehicle_class, model_year, variants)
+        side = "at or over" if above else "under"
+        reason = f"a pickup by rule {result.rule.position} ({result.rule.name}), {side} the {line['at']} cu ft pickup line"
+        results[key] = (model_year, Result(vehicle_class, size, ask, Method.PICKUP_LINE, rule=result.rule, reasons=[reason]))
+
+
 def apply_fallback(results, counts, classes, variants):
     """Give each model year with no box volume that no rule matched the
     class of its EPA size class in the fallback table, in place."""
-    from .engine import Kind, Method, Result, size_for
+    from .engine import Kind, Result, size_for
 
     for key, (model_year, result) in results.items():
         if model_year.box_volume is not None or not result.in_review or Kind.NO_RULE not in result.kinds:
@@ -331,19 +326,152 @@ def apply_fallback(results, counts, classes, variants):
         results[key] = (model_year, Result(vehicle_class, size, ask, Method.EPA_FALLBACK, reasons=[reason]))
 
 
-def classify_scheme(data_dir=None, model_years=None):
-    """The Scheme: data/size-classes.yaml's rules applied to the whole
-    catalog in memory, with no overrides or queue decisions, and the
-    EPA-class fallback. Saves nothing."""
-    from .engine import active_variants, catalog_model_years, classify_catalog
+# What smoothing may change: classes the rules and the steps gave, never an
+# override, a queue decision, a year carried from the nearest one, or a year
+# already smoothed.
+SMOOTHABLE = {Method.RULE, Method.PICKUP_LINE, Method.EPA_FALLBACK}
 
+
+def runs_of(entries):
+    """[(class name, [(year, ModelYear, Result)])] for one model's classified
+    years in order, each run one class."""
+    runs = []
+    for entry in entries:
+        result = entry[2]
+        if result.vehicle_class is None or result.in_review:
+            continue
+        if runs and runs[-1][0] == result.vehicle_class.name:
+            runs[-1][1].append(entry)
+        else:
+            runs.append((result.vehicle_class.name, [entry]))
+    return runs
+
+
+def smooth(results, variants, max_years):
+    """Give each run of up to max_years model years between two runs of one
+    class that class, in place, until no such run is left. Returns
+    [(vehicle model, first, last, old class name, new class name)]."""
+    from .engine import Result, size_for, years_text
+
+    by_model = defaultdict(list)
+    for (model_id, year), (model_year, result) in results.items():
+        by_model[model_id].append((year, model_year, result))
+    smoothed = []
+    for model_id, entries in by_model.items():
+        while True:
+            entries = sorted((year, *results[(model_id, year)]) for year, _, _ in entries)
+            runs = runs_of(entries)
+            found = next(
+                (
+                    index
+                    for index in range(1, len(runs) - 1)
+                    if runs[index - 1][0] == runs[index + 1][0]
+                    and len(runs[index][1]) <= max_years
+                    and all(result.method in SMOOTHABLE for _, _, result in runs[index][1])
+                ),
+                None,
+            )
+            if found is None:
+                break
+            run = runs[found][1]
+            target = runs[found - 1][1][-1][2].vehicle_class
+            first, last = run[0][0], run[-1][0]
+            for year, model_year, result in run:
+                size, ask = size_for(target, model_year, variants)
+                reason = f"smoothed: {years_text(first, last)} lies between two runs of {target}; {result.because} gives {result.vehicle_class}"
+                results[(model_id, year)] = (model_year, Result(target, size, ask, Method.SMOOTHED, rule=result.rule, reasons=[reason]))
+            smoothed.append((run[0][1].vehicle_model, first, last, runs[found][0], target.name))
+    return smoothed
+
+
+def finish(results, variants, classes=None, data_dir=None):
+    """The steps after the rules, in place: the pickup line, the EPA size
+    class fallback and smoothing. Returns the smoothed runs."""
     data = read_scheme(data_dir)
-    variants = active_variants()
-    classes = scheme_classes(data, variants)
-    rules = scheme_rules(data, classes)
-    model_years = catalog_model_years() if model_years is None else model_years
-    attach_box_volumes(model_years)
-    results = classify_catalog(rules=rules, overrides=[], decisions=[], model_years=model_years, variants=variants)
-    counts = fallback_counts(results)
-    apply_fallback(results, counts, classes, variants)
-    return Scheme(data, classes, rules, results, counts)
+    classes = classes or classes_by_name()
+    apply_pickup_line(results, data["pickup_line"], classes, variants)
+    apply_fallback(results, fallback_counts(results), classes, variants)
+    return smooth(results, variants, data["smoothing"]["max_years"])
+
+
+def classify_scheme(model_years=None):
+    """The Scheme: the whole catalog classified with the saved rules,
+    overrides and decisions, as classify_vehicles would apply them. Saves
+    nothing."""
+    from .engine import classify_catalog
+
+    results = classify_catalog(model_years=model_years)
+    return Scheme(read_scheme(), results, fallback_counts(results))
+
+
+# A customer's vehicle with no year.
+
+
+def dimensions_of(model_year):
+    found = {}
+    for name in DIMENSIONS:
+        values, _ = trims_of(model_year, name)
+        found[name] = tenth(median(values))
+    return found if all(value is not None for value in found.values()) else None
+
+
+def newest_generation(entries, spread=1):
+    """(Result, first year, last year) for the newest generation of one
+    model, entries [(year, ModelYear, Result)]: its newest measured model
+    year and the years before it whose length, width and height each stay
+    within spread inches, with any later years that have no measurements.
+    The Result is the class most of its classified years have, the newest on
+    a tie. None when none of them has a class."""
+    entries = sorted(entries, key=lambda entry: entry[0])
+    measured = [(year, dimensions_of(model_year)) for year, model_year, _ in entries]
+    measured = [(year, found) for year, found in measured if found]
+    if measured:
+        newest = measured[-1][0]
+        first = newest
+        kept = [measured[-1][1]]
+        for year, found in reversed(measured[:-1]):
+            trial = kept + [found]
+            if any(max(row[name] for row in trial) - min(row[name] for row in trial) > spread for name in DIMENSIONS):
+                break
+            kept, first = trial, year
+        generation = [entry for entry in entries if entry[0] >= first]
+    else:
+        generation = entries
+    classified = [(year, result) for year, _, result in generation if result.vehicle_class is not None and not result.in_review]
+    if not classified:
+        return None
+    counts = Counter(result.vehicle_class.name for _, result in classified)
+    top = max(counts.values())
+    result = next(result for _, result in reversed(classified) if counts[result.vehicle_class.name] == top)
+    return result, generation[0][0], generation[-1][0]
+
+
+# What the price book must price.
+
+
+def produced(results, variants):
+    """{(class name, size variant value or None): [model year names]} for
+    every class and size the rules give a model year, online-booked classes
+    only: a seat-row class by the rows its facts give (both when asked), a
+    cab-style class by cab (every size it has when the facts do not say),
+    and a class with one price by itself."""
+    from .engine import fact_sizes
+
+    found = defaultdict(list)
+    for (model_id, year), (model_year, result) in results.items():
+        vehicle_class = result.vehicle_class
+        if vehicle_class is None or result.in_review or vehicle_class.booking != VehicleClass.Booking.ONLINE:
+            continue
+        offered = variants.get(vehicle_class.pk, {})
+        if not offered and vehicle_class.size_variant_measures == VehicleClass.Measures.NONE:
+            values = {None}
+        else:
+            values = fact_sizes(vehicle_class, model_year)
+            if None in values:
+                values = (values - {None}) | set(offered)
+            if result.size_variant is not None:
+                values.add(result.size_variant.value)
+        name = f"{year} {model_year.vehicle_model.make} {model_year.vehicle_model.model}"
+        for value in values:
+            found[(vehicle_class.name, value)].append(name)
+    return dict(found)

@@ -44,7 +44,7 @@ class JobsTestCase(TestCase):
         cls.second_helper = StaffMember.objects.create(name="Helper Two", role=StaffMember.Role.HELPER, pay_type=PayType.FAMILY_HELPER)
         cls.customer = Customer.objects.create(first_name="Pat", last_name="Example", mobile="4235550101")
         cls.address = Address.objects.create(customer=cls.customer, line1="100 Sample Rd", city="Calhoun", state="TN", zip_code="37309")
-        cls.crossover = VehicleClass.objects.get(name="Crossovers & Wagons")
+        cls.crossover = VehicleClass.objects.get(name="Medium")
         cls.two_rows = SizeVariant.objects.get(vehicle_class=cls.crossover, value=2)
         cls.vehicle = Vehicle.objects.create(customer=cls.customer, year=2019, make="Toyota", model="RAV4", color="blue",
                                              vehicle_class=cls.crossover, size_variant=cls.two_rows)

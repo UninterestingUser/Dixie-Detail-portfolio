@@ -1,92 +1,92 @@
 service,vehicle_class,size_variant,one_person_service_hours,price_usd
-Full Detail,Coupes & Sedans,1,3,200
-Full Detail,Light Pickups & Offroad,1,3.5,220
-Full Detail,Fullsize Trucks,1,4.5,260
-Full Detail,Coupes & Sedans,2,4,220
-Full Detail,Crossovers & Wagons,2,5,250
-Full Detail,Light Pickups & Offroad,2,4.5,240
-Full Detail,Midsize SUVs,2,5.5,280
-Full Detail,Fullsize Trucks,2,5.5,280
-Full Detail,Crossovers & Wagons,3,5.5,280
-Full Detail,Midsize SUVs,3,6,310
-Full Detail,Fullsize SUVs & Minivans,3,6.5,330
-Interior Only,Coupes & Sedans,1,1,110
-Interior Only,Light Pickups & Offroad,1,1,110
-Interior Only,Fullsize Trucks,1,1.5,125
-Interior Only,Coupes & Sedans,2,2,130
-Interior Only,Crossovers & Wagons,2,2.5,150
-Interior Only,Light Pickups & Offroad,2,2,130
-Interior Only,Midsize SUVs,2,2.5,160
-Interior Only,Fullsize Trucks,2,2.5,150
-Interior Only,Crossovers & Wagons,3,3,180
-Interior Only,Midsize SUVs,3,3,190
-Interior Only,Fullsize SUVs & Minivans,3,3,200
-Exterior Only,Coupes & Sedans,,1,110
-Exterior Only,Crossovers & Wagons,,1.5,120
-Exterior Only,Light Pickups & Offroad,,1.5,130
-Exterior Only,Midsize SUVs,,2,150
-Exterior Only,Fullsize SUVs & Minivans,,2.5,170
-Exterior Only,Fullsize Trucks,,2,160
-Monthly Maintenance,Coupes & Sedans,1,3,100
-Monthly Maintenance,Light Pickups & Offroad,1,3.5,110
-Monthly Maintenance,Fullsize Trucks,1,4.5,130
-Monthly Maintenance,Coupes & Sedans,2,4,110
-Monthly Maintenance,Crossovers & Wagons,2,5,125
-Monthly Maintenance,Light Pickups & Offroad,2,4.5,120
-Monthly Maintenance,Midsize SUVs,2,5.5,140
-Monthly Maintenance,Fullsize Trucks,2,5.5,140
-Monthly Maintenance,Crossovers & Wagons,3,5.5,140
-Monthly Maintenance,Midsize SUVs,3,6,155
-Monthly Maintenance,Fullsize SUVs & Minivans,3,6.5,165
-Quarterly Maintenance,Coupes & Sedans,1,3,160
-Quarterly Maintenance,Light Pickups & Offroad,1,3.5,176
-Quarterly Maintenance,Fullsize Trucks,1,4.5,208
-Quarterly Maintenance,Coupes & Sedans,2,4,176
-Quarterly Maintenance,Crossovers & Wagons,2,5,200
-Quarterly Maintenance,Light Pickups & Offroad,2,4.5,192
-Quarterly Maintenance,Midsize SUVs,2,5.5,224
-Quarterly Maintenance,Fullsize Trucks,2,5.5,224
-Quarterly Maintenance,Crossovers & Wagons,3,5.5,224
-Quarterly Maintenance,Midsize SUVs,3,6,248
-Quarterly Maintenance,Fullsize SUVs & Minivans,3,6.5,264
-1-Step Paint Correction,Coupes & Sedans,,5,300
-1-Step Paint Correction,Crossovers & Wagons,,5.5,350
-1-Step Paint Correction,Light Pickups & Offroad,,5.5,350
-1-Step Paint Correction,Midsize SUVs,,6,400
-1-Step Paint Correction,Fullsize SUVs & Minivans,,6.5,450
-1-Step Paint Correction,Fullsize Trucks,,6.5,450
-2-Step Paint Correction,Coupes & Sedans,,7,450
-2-Step Paint Correction,Crossovers & Wagons,,7.5,550
-2-Step Paint Correction,Light Pickups & Offroad,,7.5,550
-2-Step Paint Correction,Midsize SUVs,,8,625
-2-Step Paint Correction,Fullsize SUVs & Minivans,,9,750
-2-Step Paint Correction,Fullsize Trucks,,9,750
-Headlight Restoration,Coupes & Sedans,,1.5,95
-Headlight Restoration,Crossovers & Wagons,,1.5,95
-Headlight Restoration,Light Pickups & Offroad,,1.5,95
-Headlight Restoration,Midsize SUVs,,1.5,95
-Headlight Restoration,Fullsize SUVs & Minivans,,1.5,95
-Headlight Restoration,Fullsize Trucks,,1.5,95
-Motorcycle Detail,Motorcycles,,1,100
-Carpet Extraction,Coupes & Sedans,1,1,50
-Carpet Extraction,Light Pickups & Offroad,1,1,50
-Carpet Extraction,Fullsize Trucks,1,1,50
-Carpet Extraction,Coupes & Sedans,2,1.5,70
-Carpet Extraction,Crossovers & Wagons,2,1.5,70
-Carpet Extraction,Light Pickups & Offroad,2,1.5,70
-Carpet Extraction,Midsize SUVs,2,1.5,70
-Carpet Extraction,Fullsize Trucks,2,1.5,70
-Carpet Extraction,Crossovers & Wagons,3,2,90
-Carpet Extraction,Midsize SUVs,3,2,90
-Carpet Extraction,Fullsize SUVs & Minivans,3,2,90
-Seat Extraction,Coupes & Sedans,1,1,60
-Seat Extraction,Light Pickups & Offroad,1,1,60
-Seat Extraction,Fullsize Trucks,1,1,60
-Seat Extraction,Coupes & Sedans,2,1.5,80
-Seat Extraction,Crossovers & Wagons,2,1.5,80
-Seat Extraction,Light Pickups & Offroad,2,1.5,80
-Seat Extraction,Midsize SUVs,2,1.5,80
-Seat Extraction,Fullsize Trucks,2,1.5,80
-Seat Extraction,Crossovers & Wagons,3,2,100
-Seat Extraction,Midsize SUVs,3,2,100
-Seat Extraction,Fullsize SUVs & Minivans,3,2,100
+Full Detail,Small,1,3,200
+Full Detail,Light Pickups,1,4,230
+Full Detail,Full-size Trucks,1,5,260
+Full Detail,Small,2,4,230
+Full Detail,Medium,2,4,250
+Full Detail,Large,2,5,280
+Full Detail,Light Pickups,2,5,250
+Full Detail,Full-size Trucks,2,6,290
+Full Detail,Medium,3,5,270
+Full Detail,Large,3,6,310
+Full Detail,Full-size,3,6.5,330
+Interior Only,Small,1,1,110
+Interior Only,Light Pickups,1,1,110
+Interior Only,Full-size Trucks,1,1.5,125
+Interior Only,Small,2,2,140
+Interior Only,Medium,2,2.5,160
+Interior Only,Large,2,2.5,160
+Interior Only,Light Pickups,2,2,140
+Interior Only,Full-size Trucks,2,2.5,150
+Interior Only,Medium,3,3,180
+Interior Only,Large,3,3,190
+Interior Only,Full-size,3,3,200
+Exterior Only,Small,,1,110
+Exterior Only,Medium,,1.5,120
+Exterior Only,Large,,2,150
+Exterior Only,Full-size,,2.5,170
+Exterior Only,Light Pickups,,1.5,140
+Exterior Only,Full-size Trucks,,2,170
+Monthly Maintenance,Small,1,3,100
+Monthly Maintenance,Light Pickups,1,4,115
+Monthly Maintenance,Full-size Trucks,1,5,130
+Monthly Maintenance,Small,2,4,115
+Monthly Maintenance,Medium,2,4,125
+Monthly Maintenance,Large,2,5,140
+Monthly Maintenance,Light Pickups,2,5,125
+Monthly Maintenance,Full-size Trucks,2,6,145
+Monthly Maintenance,Medium,3,5,135
+Monthly Maintenance,Large,3,6,155
+Monthly Maintenance,Full-size,3,6.5,165
+Quarterly Maintenance,Small,1,3,160
+Quarterly Maintenance,Light Pickups,1,4,184
+Quarterly Maintenance,Full-size Trucks,1,5,208
+Quarterly Maintenance,Small,2,4,184
+Quarterly Maintenance,Medium,2,4,200
+Quarterly Maintenance,Large,2,5,224
+Quarterly Maintenance,Light Pickups,2,5,200
+Quarterly Maintenance,Full-size Trucks,2,6,232
+Quarterly Maintenance,Medium,3,5,216
+Quarterly Maintenance,Large,3,6,248
+Quarterly Maintenance,Full-size,3,6.5,264
+1-Step Paint Correction,Small,,5,300
+1-Step Paint Correction,Medium,,5.5,350
+1-Step Paint Correction,Large,,6,400
+1-Step Paint Correction,Full-size,,6.5,450
+1-Step Paint Correction,Light Pickups,,5.5,350
+1-Step Paint Correction,Full-size Trucks,,6.5,450
+2-Step Paint Correction,Small,,7,450
+2-Step Paint Correction,Medium,,7.5,550
+2-Step Paint Correction,Large,,8,625
+2-Step Paint Correction,Full-size,,9,750
+2-Step Paint Correction,Light Pickups,,7.5,550
+2-Step Paint Correction,Full-size Trucks,,9,750
+Headlight Restoration,Small,,1.5,95
+Headlight Restoration,Medium,,1.5,95
+Headlight Restoration,Large,,1.5,95
+Headlight Restoration,Full-size,,1.5,95
+Headlight Restoration,Light Pickups,,1.5,95
+Headlight Restoration,Full-size Trucks,,1.5,95
+Carpet Extraction,Small,1,1,50
+Carpet Extraction,Light Pickups,1,1,50
+Carpet Extraction,Full-size Trucks,1,1,50
+Carpet Extraction,Small,2,1.5,70
+Carpet Extraction,Medium,2,1.5,70
+Carpet Extraction,Large,2,1.5,70
+Carpet Extraction,Light Pickups,2,1.5,70
+Carpet Extraction,Full-size Trucks,2,1.5,70
+Carpet Extraction,Medium,3,2,90
+Carpet Extraction,Large,3,2,90
+Carpet Extraction,Full-size,3,2,90
+Seat Extraction,Small,1,1,60
+Seat Extraction,Light Pickups,1,1,60
+Seat Extraction,Full-size Trucks,1,1,60
+Seat Extraction,Small,2,1.5,80
+Seat Extraction,Medium,2,1.5,80
+Seat Extraction,Large,2,1.5,80
+Seat Extraction,Light Pickups,2,1.5,80
+Seat Extraction,Full-size Trucks,2,1.5,80
+Seat Extraction,Medium,3,2,100
+Seat Extraction,Large,3,2,100
+Seat Extraction,Full-size,3,2,100
+Motorcycle Detail,Motorcycles,,2,100

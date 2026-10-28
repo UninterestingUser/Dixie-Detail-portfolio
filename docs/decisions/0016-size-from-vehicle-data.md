@@ -7,7 +7,7 @@ area: booking
 status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-26
+updated: 2026-10-28
 supersedes: []
 superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/vehicle-classification.md]
@@ -15,7 +15,7 @@ related: [docs/reference/vehicle-classification.md]
 
 # 0016: Derive the size variant from vehicle data; ask only when needed
 
-**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the doors question, once the size-based classes are applied; deriving the size from the data stands · **Date:** 2026-10-07 · **Area:** booking
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the doors question, applied by `apply_size_classes` ([0083](0083-applying-the-size-based-classes.md)); deriving the size from the data stands · **Date:** 2026-10-07 · **Area:** booking
 
 ## Context
 

@@ -1,6 +1,7 @@
 """Print the vehicle size report (vehicles.size_report): the measured size
-of every model in the car, crossover and SUV classes, for the owner's
-decision on how to split them.
+of every model in the body-type car, crossover and SUV classes, gathered
+for the owner's decision on how to split them (decision 0082). Those
+classes are retired once apply_size_classes has run (decision 0083).
 
   python manage.py vehicle_size_report [--format csv|summary]
 

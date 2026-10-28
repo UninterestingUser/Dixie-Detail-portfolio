@@ -39,9 +39,9 @@ class ControlTestCase(TestCase):
         cls.sam = Customer.objects.create(first_name="Sam", last_name="Nophone")
         SecondContact.objects.create(customer=cls.pat, name="Jordan Partner", phone="4235550199", relationship="spouse")
         cls.address = Address.objects.create(customer=cls.pat, line1="100 Sample Rd", city="Calhoun", state="TN", zip_code="37309")
-        cls.vehicle_class = VehicleClass.objects.create(name="Coupes & Sedans", size_variant_measures="doors")
+        cls.vehicle_class = VehicleClass.objects.create(name="Small", size_variant_measures="doors")
         cls.four_doors = SizeVariant.objects.create(vehicle_class=cls.vehicle_class, value=4, label="four doors")
-        cls.other_class = VehicleClass.objects.create(name="Midsize SUVs", size_variant_measures="seat rows")
+        cls.other_class = VehicleClass.objects.create(name="Large", size_variant_measures="seat rows")
         cls.silver = Vehicle.objects.create(customer=cls.pat, year=2019, make="Honda", model="Accord", color="silver",
                                             vehicle_class=cls.vehicle_class, size_variant=cls.four_doors)
         cls.blue = Vehicle.objects.create(customer=cls.pat, year=2019, make="Honda", model="Accord", color="dark blue")

@@ -112,7 +112,7 @@ class SizeRangeTests(SizeReportTestCase):
         sedan = add_model("Acme", "Sedan", year_from=2020, year_to=2020)
         self.add_year(sedan, 2020, "Coupes & Sedans", epa=["Midsize Cars"], rows=(), body_styles=["four-door"])
         pickup = add_model("Acme", "Hauler", year_from=2020, year_to=2020)
-        self.add_year(pickup, 2020, "Fullsize Trucks", epa=["Standard Pickup Trucks 4WD"], rows=())
+        self.add_year(pickup, 2020, "Full-size Trucks", epa=["Standard Pickup Trucks 4WD"], rows=())
         queued = add_model("Acme", "Unsure", year_from=2020, year_to=2020)
         self.add_year(queued, 2020, None, epa=["Small Station Wagons"], rows=())
         queued_pickup = add_model("Acme", "Unsure Hauler", year_from=2020, year_to=2020)

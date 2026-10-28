@@ -1,7 +1,7 @@
 """Price a job from the terminal with the pricing engine, without storing it.
 
 Example:
-  python manage.py quote --service "Full Detail" --class "Crossovers & Wagons" \
+  python manage.py quote --service "Full Detail" --class "Medium" \
       --size 2 --condition 2 --add-on "Seat Extraction"
 """
 
