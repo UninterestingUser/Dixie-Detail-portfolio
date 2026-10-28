@@ -121,7 +121,8 @@ Give the day you will apply it. The report holds vehicle ids, years, makes and m
 - **Models whose class changes between model years,** as year ranges.
 - **Model overrides now,** the three from data/size-classes.yaml, then the **archived model overrides, review queue decisions and approvals,** each with what the new rules give instead.
 - **Customer vehicles:** counts by recorded and new class, how many had no year and took their model's newest generation (flagged to confirm the year at the next visit), how many stay in a retired class for the differences screen, then each vehicle one by one.
-- **Booked jobs:** each booked job from the effective date on that the new price book prices differently, with its quoted price, its price in the vehicle's new class, and why. Each keeps its quoted price.
+- **Booked jobs to check by hand:** each booked job in a retired class that has no vehicle, or whose vehicle has no class or size variant (no year, or unclassified), by appointment id, date and vehicle. These are not re-priced and keep their quoted price; give the vehicle its class and size, then decide the job on the booked-job review ([decision 0084](../decisions/0084-booked-jobs-with-no-vehicle-or-class.md)).
+- **Booked jobs:** each other booked job from the effective date on that the new price book prices differently, with its quoted price, its price in the vehicle's new class, and why. Each keeps its quoted price.
 - **Models now in Light Pickups & Offroad that the new rules do not treat as pickups,** such as the Jeep Wrangler.
 - **Pickup ladder:** every pickup model's newest size range, sorted by box volume, with the 760 cubic foot line marked, its length, cab styles, EPA size class, GVWR range and class before and after, then the largest steps.
 - **Pickup check and van check:** whether the Santa Cruz and Maverick are pickups in every model year, and every van model with its classes, flagged if it is a pickup in any year.
@@ -135,7 +136,7 @@ cd /srv/dixie-detail
 sudo docker compose run --rm --no-deps app python manage.py apply_size_classes --effective YYYY-MM-DD
 ```
 
-It refuses any date but today, because the classes switch when it runs and the prices must take effect the same day. The report starts with "APPLIED". It publishes the draft, renames Light Pickups & Offroad and Fullsize Trucks, offers the new classes, retires Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, archives the old rules, overrides, decisions and approvals, classifies every model year, and sets each customer's vehicle's class. Past jobs keep their classes and prices. Run it once; a second run says the classes are already applied.
+If it stops partway, for a reason the checks do not foresee, its error names the step it was on and the appointment or vehicle it was working on, and nothing is changed. It refuses any date but today, because the classes switch when it runs and the prices must take effect the same day. The report starts with "APPLIED". It publishes the draft, renames Light Pickups & Offroad and Fullsize Trucks, offers the new classes, retires Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, archives the old rules, overrides, decisions and approvals, classifies every model year, and sets each customer's vehicle's class. Past jobs keep their classes and prices. Run it once; a second run says the classes are already applied.
 
 ### Step 4: Settle what waits for you
 
