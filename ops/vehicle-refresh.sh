@@ -6,7 +6,9 @@
 # cache attached, as docs/operations/importing-vehicle-data.md runs the import
 # by hand: import_vehicle_data --source all --refresh, then classify_vehicles
 # --refresh, which holds in the review queue any class change to a model with
-# an override, an approval or customers' jobs (decision 0081).
+# an override, an approval or customers' jobs (decision 0081). Its output is
+# the model years newly sent to the review queue and a one-line summary; the
+# full reports appear only when it fails (decision 0083).
 #
 # HEALTHCHECKS_VEHICLE_REFRESH_URL comes from Bitwarden at the start of the
 # run, in one call, and lives only in this script's memory. The container

@@ -1,7 +1,8 @@
-"""The differences screen and the approval list (decision 0077): the three
-choices for a vehicle whose class differs from the catalog's, who may
-change anything, what the approval list holds, recording who approved what
-and when, and approvals cleared by a later change."""
+"""The differences screen and the approval list (decisions 0077 and 0083):
+the three choices for a vehicle whose class differs from the catalog's, a
+vehicle left in a retired class, who may change anything, what the approval
+list holds, recording who approved what and when, and approvals cleared by
+a later change."""
 
 import datetime
 from decimal import Decimal
@@ -18,8 +19,8 @@ from .test_catalog import SMALL_SUVS, CatalogTestCase, add_facts, add_model, cla
 
 
 class DifferencesTestCase(CatalogTestCase):
-    """The customer's 2019 RAV4 was imported as a Midsize SUV with three
-    rows; the catalog says Crossovers & Wagons, two rows. A second RAV4,
+    """The customer's 2019 RAV4 was imported as a Large with three
+    rows; the catalog says Medium, two rows. A second RAV4,
     imported as the catalog has it, shows what a per-model override does."""
 
     @classmethod
@@ -38,7 +39,7 @@ class DifferencesTestCase(CatalogTestCase):
         )
         AppointmentLine.objects.create(
             appointment=cls.past, kind=AppointmentLine.Kind.SERVICE, description="Full Detail", amount=Decimal("300.00"),
-            vehicle_class=cls.midsize, vehicle_class_name="Midsize SUVs", size_variant=cls.three_rows, size_variant_value=3,
+            vehicle_class=cls.midsize, vehicle_class_name="Large", size_variant=cls.three_rows, size_variant_value=3,
         )
 
     def act(self, choice, vehicle=None, **data):
@@ -50,8 +51,8 @@ class DifferencesScreenTests(DifferencesTestCase):
         response = self.client.get(reverse("differences"))
         self.assertContains(response, "2019 Toyota RAV4, blue")
         self.assertNotContains(response, "2019 Toyota RAV4, red")
-        self.assertContains(response, "Midsize SUVs (three rows)")
-        self.assertContains(response, "Crossovers &amp; Wagons (two rows)")
+        self.assertContains(response, "Large (three rows)")
+        self.assertContains(response, "Medium (two rows)")
         for choice in ("keep", "accept", "model"):
             self.assertContains(response, f'value="{choice}"')
 
@@ -70,7 +71,7 @@ class DifferencesScreenTests(DifferencesTestCase):
         self.assertEqual((self.vehicle.vehicle_class, self.vehicle.size_variant), (self.crossover, self.two_rows))
         self.assertFalse(self.vehicle.class_overridden)
         line = self.past.lines.get()
-        self.assertEqual((line.vehicle_class, line.vehicle_class_name, line.amount), (self.midsize, "Midsize SUVs", Decimal("300.00")))
+        self.assertEqual((line.vehicle_class, line.vehicle_class_name, line.amount), (self.midsize, "Large", Decimal("300.00")))
         change = ClassificationChange.objects.get()
         self.assertEqual((change.kind, change.made_by, change.vehicle_model), (ClassificationChange.Kind.VEHICLE_CLASS, self.owner_user, self.rav4))
         self.assertNotIn("Example", change.summary)
@@ -110,11 +111,20 @@ class ApprovalListTests(DifferencesTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        # A model whose years are in two classes: 2018 by the weight rule, 2019 by the small SUV rule.
+        # A model near the 580 cu ft line, whose years are in two classes:
+        # 2018 by the weight rule, 2019 by the small SUV rule.
         cls.mixed = add_model("Test", "Mixed", 2018, 2019)
+        measured = {"length_min": 231.2, "length_max": 231.2, "width_min": 72, "width_max": 72, "height_min": 60, "height_max": 60}
         add_facts(cls.mixed, year=2018, epa_size_classes=SMALL_SUVS)
-        add_facts(cls.mixed, year=2018, source="canada", curb_weight_min=4800, curb_weight_max=4900)
+        add_facts(cls.mixed, year=2018, source="canada", curb_weight_min=4800, curb_weight_max=4900, **measured)
         add_facts(cls.mixed, year=2019, epa_size_classes=SMALL_SUVS)
+        add_facts(cls.mixed, year=2019, source="canada", **measured)
+        # The older Tahoe is on the spot-check list; only its years to 2006 show.
+        cls.tahoe = add_model("Chevrolet", "Tahoe", 2005, 2008)
+        for year in (2005, 2006):
+            add_facts(cls.tahoe, year=year, epa_size_classes=SMALL_SUVS)
+        for year in (2007, 2008):
+            add_facts(cls.tahoe, year=year, epa_size_classes=["Standard Sport Utility Vehicle 4WD"])
         apply(classify_catalog())
 
     def listed(self):
@@ -124,16 +134,19 @@ class ApprovalListTests(DifferencesTestCase):
     def approve(self, vehicle_model, first, last, **data):
         return self.client.post(reverse("approval-act"), {"do": f"approve:{vehicle_model.pk}:{first}-{last}", **data})
 
-    def test_the_list_holds_the_job_history_the_spot_checks_and_the_mixed_models(self):
+    def test_the_list_holds_the_job_history_the_spot_checks_and_the_near_line_models(self):
         listed = self.listed()
         self.assertTrue(any(reason.startswith(approvals.JOB_HISTORY) for reason in listed[self.rav4].reasons))
-        self.assertTrue(any(reason.startswith(approvals.SPOT_CHECK) for reason in listed[self.rav4].reasons))
-        self.assertEqual(listed[self.mixed].reasons, [approvals.MIXED])
+        self.assertEqual(listed[self.mixed].reasons, ["near a line: 2018-2019 at 578.0 cu ft, near the 580 cu ft line (Medium | Large)"])
         self.assertNotIn(self.odd, listed)
+        tahoe = listed[self.tahoe]
+        self.assertEqual(tahoe.reasons, ["spot-check list (to 2006)"])
+        self.assertEqual([(found.first, found.last) for found in tahoe.ranges], [(2005, 2006)])
         ranges = listed[self.mixed].ranges
         self.assertEqual([(found.first, found.last, found.vehicle_class) for found in ranges], [(2018, 2018, self.midsize), (2019, 2019, self.crossover)])
         self.assertEqual(ranges[1].how, "rule 20: EPA small SUVs")
-        self.assertEqual(ranges[1].size, "asked")
+        # A size-based class is two rows unless the third-row data says otherwise.
+        self.assertEqual(ranges[1].size, "two rows")
 
     def test_each_model_shows_once_with_its_ranges(self):
         response = self.client.get(reverse("approvals"))
@@ -161,9 +174,9 @@ class ApprovalListTests(DifferencesTestCase):
         # Moving the weight line to 5,000 lb sends the 2018 Mixed to the small SUV rule.
         self.heavy.conditions = {"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 5000}}
         owner.save_rules([self.heavy], "Move the weight line", self.owner_user)
-        # No longer in two classes, it stays on the list because it was approved.
+        # Both years are now Medium; it stays on the list, near the line.
         mixed = self.listed()[self.mixed]
-        self.assertEqual(mixed.reasons, [approvals.APPROVED_BEFORE])
+        self.assertTrue(mixed.reasons[0].startswith(approvals.NEAR_LINE))
         self.assertFalse(mixed.approved)
         self.assertEqual([(found.first, found.last) for found in mixed.ranges], [(2018, 2019)])
         cleared = ModelApproval.objects.exclude(cleared_at=None)
@@ -210,3 +223,30 @@ class ApprovalListTests(DifferencesTestCase):
         self.assertEqual(self.client.get(reverse("approvals")).status_code, 200)
         self.assertEqual(self.approve(self.mixed, 2018, 2018).status_code, 403)
         self.assertFalse(ModelApproval.objects.exists())
+
+
+class RetiredClassTests(DifferencesTestCase):
+    """A vehicle left in a retired class when the size-based classes were applied."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        from vehicles.models import VehicleClass
+
+        cls.old = VehicleClass.objects.get(name="Fullsize SUVs & Minivans")
+        cls.minivan = Vehicle.objects.create(customer=cls.customer, make="Honda", model="Odyssey EX", vehicle_class=cls.old)
+
+    def test_the_screen_proposes_a_class_and_the_owner_picks_one(self):
+        page = self.client.get(reverse("differences"))
+        self.assertContains(page, "Left in a retired class")
+        self.assertContains(page, "a minivan, proposed from its recorded class")
+        response = self.client.post(reverse("retired-act", args=[self.minivan.pk]), {"vehicle_class": self.midsize.pk, "note": "Checked"})
+        self.assertRedirects(response, reverse("differences"))
+        self.minivan.refresh_from_db()
+        self.assertEqual(self.minivan.vehicle_class, self.midsize)
+        self.assertEqual(ClassificationChange.objects.get().kind, ClassificationChange.Kind.VEHICLE_CLASS)
+        self.assertNotContains(self.client.get(reverse("differences")), "Left in a retired class")
+
+    def test_only_a_manager_picks(self):
+        self.as_helper()
+        self.assertEqual(self.client.post(reverse("retired-act", args=[self.minivan.pk]), {"vehicle_class": self.midsize.pk}).status_code, 403)

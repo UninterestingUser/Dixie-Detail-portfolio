@@ -51,13 +51,13 @@ class LinkTestCase(ClassificationTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
         cls.customer = Customer.objects.create(first_name="Pat", last_name="Example", mobile="4235550101")
-        cls.crossover = VehicleClass.objects.get(name="Crossovers & Wagons")
-        cls.midsize = VehicleClass.objects.get(name="Midsize SUVs")
+        cls.crossover = VehicleClass.objects.get(name="Medium")
+        cls.midsize = VehicleClass.objects.get(name="Large")
         cls.motorcycles = VehicleClass.objects.get(name="Motorcycles")
         for position, conditions, class_name in (
             (10, {"vehicle_type": ["motorcycle"]}, "Motorcycles"),
-            (20, {"epa_size_class": SMALL_SUVS}, "Crossovers & Wagons"),
-            (30, {"epa_size_class": PICKUPS}, "Fullsize Trucks"),
+            (20, {"epa_size_class": SMALL_SUVS}, "Medium"),
+            (30, {"epa_size_class": PICKUPS}, "Full-size Trucks"),
             (40, {"epa_size_class": ["Midsize Cars"]}, "Coupes & Sedans"),
         ):
             ClassificationRule.objects.create(
@@ -163,7 +163,7 @@ class LinkRunTests(LinkTestCase):
         link_vehicles(apply=True)
         vehicle.refresh_from_db()
         self.assertEqual(vehicle.vehicle_model, self.rav4)
-        self.assertEqual(vehicle.size_variant, self.size("Crossovers & Wagons", 2))
+        self.assertEqual(vehicle.size_variant, self.size("Medium", 2))
         self.assertEqual(vehicle.missing_details, [])
         self.assertEqual(vehicle.history.first().history_change_reason, "link_vehicles")
 
@@ -174,7 +174,7 @@ class LinkRunTests(LinkTestCase):
         self.assertEqual((vehicle.vehicle_class, vehicle.size_variant.value), (self.crossover, 2))
 
     def test_a_class_the_vehicle_has_never_changes(self):
-        three_rows = self.size("Midsize SUVs", 3)
+        three_rows = self.size("Large", 3)
         vehicle = self.vehicle(2019, "Toyota", "RAV4", self.midsize, three_rows)
         report = link_vehicles(apply=True)
         vehicle.refresh_from_db()
@@ -182,7 +182,7 @@ class LinkRunTests(LinkTestCase):
         self.assertEqual([(found.vehicle, found.kind) for found in report.differences], [(vehicle, "class")])
 
     def test_a_size_that_differs_is_listed(self):
-        vehicle = self.vehicle(2019, "Toyota", "RAV4", self.crossover, self.size("Crossovers & Wagons", 3))
+        vehicle = self.vehicle(2019, "Toyota", "RAV4", self.crossover, self.size("Medium", 3))
         report = link_vehicles(apply=True)
         self.assertEqual([(found.vehicle, found.kind) for found in report.differences], [(vehicle, "size")])
 
@@ -386,7 +386,7 @@ class FollowUpAliasTests(FollowUpTestCase):
 
 class NoYearTests(FollowUpTestCase):
     def test_a_vehicle_with_no_year_links_by_make_and_model_and_keeps_its_class(self):
-        three_rows = self.size("Midsize SUVs", 3)
+        three_rows = self.size("Large", 3)
         vehicle = self.vehicle(None, "Toyota", "Rav4 XLE", self.midsize, three_rows)
         out = io.StringIO()
         call_command("link_vehicles", stdout=out)
@@ -397,7 +397,7 @@ class NoYearTests(FollowUpTestCase):
         text = out.getvalue()
         self.assertIn("Linked, year unknown (1 vehicles", text)
         self.assertIn(f"vehicle {vehicle.pk}: Toyota Rav4 XLE -> Toyota RAV4", text)
-        self.assertIn("keeps Midsize SUVs (three rows)", text)
+        self.assertIn("keeps Large (three rows)", text)
 
     def test_with_no_year_nothing_is_filled(self):
         vehicle = self.vehicle(None, "Toyota", "RAV4")

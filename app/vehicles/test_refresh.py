@@ -45,7 +45,7 @@ def refresh_classes():
 
 
 class HoldTestCase(ClassificationTestCase):
-    """Small SUVs are Crossovers & Wagons and standard ones Midsize SUVs, both
+    """Small SUVs are Medium and standard ones Large, both
     sized by seat rows. Four made-up models start as two-row Crossovers &
     Wagons: one with nothing to protect it, one with a model override for
     other years, one approved on the approval list, and one in the job
@@ -56,12 +56,12 @@ class HoldTestCase(ClassificationTestCase):
     client_class = TailnetClient
 
     def setUp(self):
-        self.rule(1, {"epa_size_class": SMALL_SUVS}, "Crossovers & Wagons", name="small SUVs")
-        self.rule(2, {"epa_size_class": STANDARD_SUVS}, "Midsize SUVs", name="standard SUVs")
+        self.rule(1, {"epa_size_class": SMALL_SUVS}, "Medium", name="small SUVs")
+        self.rule(2, {"epa_size_class": STANDARD_SUVS}, "Large", name="standard SUVs")
         self.free = self.suv("Free")
         self.overridden = self.suv("Overridden")
         ModelOverride.objects.create(
-            vehicle_model=self.overridden, year_from=2010, year_to=2015, vehicle_class=self.vehicle_class("Midsize SUVs")
+            vehicle_model=self.overridden, year_from=2010, year_to=2015, vehicle_class=self.vehicle_class("Large")
         )
         self.approved = self.suv("Approved")
         self.driven = self.suv("Driven")
@@ -73,8 +73,8 @@ class HoldTestCase(ClassificationTestCase):
         )
         apply(classify_catalog())
         approvals.approve(self.approved, 2019, 2019, None)
-        self.crossover = self.vehicle_class("Crossovers & Wagons")
-        self.midsize = self.vehicle_class("Midsize SUVs")
+        self.crossover = self.vehicle_class("Medium")
+        self.midsize = self.vehicle_class("Large")
 
     def suv(self, name, year=2019, size_classes=SMALL_SUVS, rows=(2,)):
         vehicle_model = VehicleModel.objects.filter(make="Acme", model=name).first() or add_model("Acme", name, year_from=year, year_to=year)
@@ -134,18 +134,18 @@ class WhatARefreshHoldsTests(HoldTestCase):
                 found = self.assert_live(vehicle_model, self.crossover, 2, in_review=True)
                 self.assertEqual(found.review_kinds, [Kind.HELD])
                 (reason,) = found.review_reasons
-                self.assertIn("from Crossovers & Wagons (two rows) to Midsize SUVs (two rows)", reason)
+                self.assertIn("from Medium (two rows) to Large (two rows)", reason)
                 self.assertIn("rule 2: standard SUVs", reason)
                 self.assertIn(why, reason)
-                self.assertEqual((found.suggested_class, found.suggested_size_variant), (self.midsize, self.size("Midsize SUVs", 2)))
+                self.assertEqual((found.suggested_class, found.suggested_size_variant), (self.midsize, self.size("Large", 2)))
         self.assertIn("Held in the review queue: the refresh may not change these on its own (3 model years)", out)
-        self.assertIn("Acme Approved 2019: Crossovers & Wagons (two rows) -> Midsize SUVs (two rows)", out)
+        self.assertIn("Acme Approved 2019: Medium (two rows) -> Large (two rows)", out)
 
     def test_a_size_variant_change_is_held_too(self):
         VehicleModelYear.objects.filter(vehicle_model=self.driven, source=Source.VPIC).update(seat_rows=[3])
         refresh_classes()
         found = self.assert_live(self.driven, self.crossover, 2, in_review=True)
-        self.assertIn("to Crossovers & Wagons (three rows)", found.review_reasons[0])
+        self.assertIn("to Medium (three rows)", found.review_reasons[0])
 
     def test_classify_vehicles_by_hand_applies_the_change(self):
         self.new_facts(self.driven, epa_size_classes=STANDARD_SUVS)
@@ -182,8 +182,8 @@ class WhatARefreshHoldsTests(HoldTestCase):
         self.client.force_login(get_user_model().objects.create_user("staff"))
         response = self.client.get(reverse("review-queue"), {"reason": Kind.HELD})
         self.assertContains(response, "2019 Acme Driven")
-        self.assertContains(response, "Live meanwhile: Crossovers &amp; Wagons (two rows)")
-        self.assertContains(response, "Suggested: <strong>Midsize SUVs (two rows)</strong>")
+        self.assertContains(response, "Live meanwhile: Medium (two rows)")
+        self.assertContains(response, "Suggested: <strong>Large (two rows)</strong>")
 
 
 class ModelsASourceStopsListingTests(CachedFixtures, TestCase):
@@ -230,8 +230,10 @@ class RefreshCommandTests(CachedFixtures, ClassificationTestCase):
         self.assertEqual(refresh.models_added, VehicleModel.objects.count())
         self.assertEqual(refresh.sent_to_queue, ModelYearClassification.objects.filter(in_review=True).count())
         self.assertEqual(refresh.held, 0)
-        self.assertIn("APPLIED: the import was written.", self.output)
-        self.assertIn("APPLIED: the classifications were saved.", self.output)
+        # The log holds the newly queued model years and the summary, not the two full reports.
+        self.assertNotIn("APPLIED", self.output)
+        self.assertIn(f"Newly in the review queue ({refresh.sent_to_queue:,} model years):", self.output)
+        self.assertIn("  Ford Transit 2019: review queue: no rule matches", self.output)
         self.assertEqual(self.output.strip().splitlines()[-1], refresh.summary)
         self.assertTrue(refresh.summary.startswith(f"Vehicle data refresh succeeded: {refresh.models_added} models added, 0 changed,"))
 

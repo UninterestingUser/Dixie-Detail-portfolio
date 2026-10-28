@@ -174,7 +174,7 @@ class SplitImportTests(TestCase):
         ]
         import_epa(rows, names=Names(), years=(2017, 2018))
         santa_fe = VehicleModel.objects.get(make="Hyundai", model="Santa Fe")
-        override = ModelOverride.objects.create(vehicle_model=santa_fe, vehicle_class=VehicleClass.objects.get(name="Midsize SUVs"))
+        override = ModelOverride.objects.create(vehicle_model=santa_fe, vehicle_class=VehicleClass.objects.get(name="Large"))
         self.assertEqual(santa_fe.model_years.count(), 2)
 
         report = import_epa(rows, years=(2017, 2018))
@@ -207,7 +207,7 @@ class MergeTests(TestCase):
         add_facts(epa, year=2022, epa_size_classes=SMALL_SUVS)
         vpic = add_model("Mercedes-Benz", "EQB-Class", source=NHTSA, year_from=2024, year_to=2024)
         add_facts(vpic, Source.VPIC, year=2024, source_vehicle_types=["Multipurpose Passenger Vehicle (MPV)"])
-        override = ModelOverride.objects.create(vehicle_model=vpic, vehicle_class=VehicleClass.objects.get(name="Midsize SUVs"))
+        override = ModelOverride.objects.create(vehicle_model=vpic, vehicle_class=VehicleClass.objects.get(name="Large"))
         vehicle = Vehicle.objects.create(customer=Customer.objects.create(first_name="Pat"), vehicle_model=vpic, year=2024)
 
         f150 = add_model("Ford", "F150", year_from=2022, year_to=2022)
@@ -261,75 +261,48 @@ class LaunchSetTests(ClassificationTestCase):
         sync_launch_set(report, data_dir)
         return report
 
-    def test_full_size_suvs_are_priced_with_the_suburban(self):
-        named = [
-            ("Chevrolet", "Tahoe"), ("GMC", "Yukon"), ("GMC", "Yukon XL"), ("Cadillac", "Escalade"),
-            ("Cadillac", "Escalade ESV"), ("Lincoln", "Navigator"), ("Lincoln", "Navigator L"), ("Nissan", "Armada"),
-            ("Infiniti", "QX56"), ("Infiniti", "QX80"), ("Ford", "Expedition MAX"),
-            ("Ford", "Expedition EL"), ("Chevrolet", "Suburban HD"), ("Chevrolet", "Suburban"),
-        ]
-        for make, name in named:
-            add_facts(add_model(make, name), epa_size_classes=STANDARD_SUVS)
-        # The Wagoneer and Grand Wagoneer from 2022 only: the 1989 to 1990
-        # Wagoneer is the old compact one, and the 1984 to 1991 Grand Wagoneer
-        # a different vehicle too.
-        grand = add_model("Jeep", "Grand Wagoneer", year_from=1990, year_to=2023)
-        wagoneer = add_model("Jeep", "Wagoneer", year_from=1990, year_to=2023)
-        for vehicle_model in (grand, wagoneer):
-            for year in (1990, 2023):
-                add_facts(vehicle_model, year=year, epa_size_classes=["Special Purpose Vehicles"] if year == 1990 else STANDARD_SUVS)
-        self.sync()
-        results = classify_catalog()
-        for make, name in named:
-            with self.subTest(model=name):
-                result = results[(VehicleModel.objects.get(make=make, model=name).pk, 2019)][1]
-                self.assertEqual((result.vehicle_class.name, result.method), ("Fullsize SUVs & Minivans", "override"))
-        for vehicle_model in (grand, wagoneer):
-            with self.subTest(model=vehicle_model.model):
-                self.assertEqual(vehicle_model.overrides.get().year_from, 2022)
-                self.assertEqual(results[(vehicle_model.pk, 2023)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
-                self.assertNotEqual(results[(vehicle_model.pk, 1990)][1].method, "override")
-
     def test_an_unedited_launch_rule_follows_the_file_and_an_edited_one_is_kept(self):
         self.sync()
         data = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, data)
-        classes = yaml.safe_load((settings.DATA_DIR / "vehicle-classes.yaml").read_text())
-        for entry in classes["launch_rules"]:
-            if entry["name"] in ("Small SUVs over 4,500 lb", "EPA car classes"):
+        for path in settings.DATA_DIR.iterdir():
+            if path.is_file():
+                shutil.copy(path, data)
+        rules = yaml.safe_load((settings.DATA_DIR / "size-classes.yaml").read_text())
+        for entry in rules["rules"]:
+            if entry["name"] in ("Large", "Small"):
                 entry["note"] = "Changed in the file."
-        classes["launch_rules"].append({"name": "A new launch rule", "class": "Midsize SUVs", "conditions": {"make": ["Test"]}})
-        (data / "vehicle-classes.yaml").write_text(yaml.safe_dump(classes))
-        edited = ClassificationRule.objects.get(name="EPA car classes")
+        rules["rules"].append({"name": "A new launch rule", "class": "Large", "conditions": {"make": ["Test"]}})
+        (data / "size-classes.yaml").write_text(yaml.safe_dump(rules))
+        edited = ClassificationRule.objects.get(name="Small")
         edited.note = "The owner's note."
         edited.save()
         report = self.sync(data)
-        self.assertEqual(ClassificationRule.objects.get(name="Small SUVs over 4,500 lb").note, "Changed in the file.")
-        self.assertEqual(ClassificationRule.objects.get(name="EPA car classes").note, "The owner's note.")
+        self.assertEqual(ClassificationRule.objects.get(name="Large").note, "Changed in the file.")
+        self.assertEqual(ClassificationRule.objects.get(name="Small").note, "The owner's note.")
         self.assertTrue(ClassificationRule.objects.filter(name="A new launch rule").exists())
-        self.assertIn("kept your edited rule 130 (EPA car classes); the launch set has a different version", report.launch_set)
-        self.assertIn("updated launch rule 80 (Small SUVs over 4,500 lb)", report.launch_set)
+        self.assertIn("kept your edited rule 120 (Small); the launch set has a different version", report.launch_set)
+        self.assertIn("updated launch rule 90 (Large)", report.launch_set)
 
     def test_the_first_launch_set_is_brought_in_step(self):
-        """Rules seeded by the first version, never edited, follow the new file."""
+        """Rules seeded by the first version, never edited, follow the file:
+        one the file no longer has is removed, and the owner's own stays."""
         old = ClassificationRule.objects.create(
-            position=70, name="Older SUVs over 4,500 lb", vehicle_class=self.vehicle_class("Midsize SUVs"),
+            position=70, name="Older SUVs over 4,500 lb", vehicle_class=self.vehicle_class("Large"),
             conditions={"epa_size_class": ["Special Purpose Vehicles"], "curb_weight": {"over": 4500}},
         )
-        mine = ClassificationRule.objects.create(position=5, name="My own rule", vehicle_class=self.vehicle_class("Midsize SUVs"), conditions={"make": ["Test"]})
+        mine = ClassificationRule.objects.create(position=5, name="My own rule", vehicle_class=self.vehicle_class("Large"), conditions={"make": ["Test"]})
         migration = importlib.import_module("vehicles.migrations.0005_names_and_launch_set")
         migration.mark_first_launch_set(apps, None)
-        self.sync()
-        old.refresh_from_db()
-        self.assertEqual(old.conditions["year"], {"to": 2012})
-        self.assertEqual(old.position, 90)
+        report = self.sync()
+        self.assertFalse(ClassificationRule.objects.filter(pk=old.pk).exists())
+        self.assertIn("removed launch rule 70 (Older SUVs over 4,500 lb), no longer in the launch set", report.launch_set)
         mine.refresh_from_db()
         self.assertIsNone(mine.seeded_from)
-        self.assertEqual(ClassificationRule.objects.filter(name="Older SUVs over 4,500 lb").count(), 1)
 
 
 class ThreeRowAndMajorityTests(ClassificationTestCase):
-    """Items 4, 5 and 6 with the launch rules and the third-row list from data/."""
+    """The majority share and the heavy pickup rules, with the launch rules and the third-row list from data/."""
 
     def classify(self):
         report = SeedReport()
@@ -340,35 +313,6 @@ class ThreeRowAndMajorityTests(ClassificationTestCase):
     def epa(self, vehicle_model, year, counts):
         add_facts(vehicle_model, year=year, epa_size_classes=sorted(counts), distribution={"epa_size_classes": counts})
 
-    def test_three_row_suvs_keep_one_price_across_the_years(self):
-        cases = {
-            ("Hyundai", "Palisade"): (2020, 2024), ("Kia", "Telluride"): (2020, 2024), ("Mazda", "CX-9"): (2016, 2022),
-            ("Mazda", "CX-90"): (2024, 2025), ("Toyota", "Highlander"): (2015, 2021), ("Honda", "Pilot"): (2012, 2020),
-            ("Volkswagen", "Atlas"): (2018, 2022), ("Acura", "MDX"): (2011, 2020),
-        }
-        for (make, name), (first, second) in cases.items():
-            vehicle_model = add_model(make, name, year_from=first, year_to=second)
-            # The EPA calls one year small and the other standard, or mixes them in a year.
-            self.epa(vehicle_model, first, {"Small Sport Utility Vehicle 2WD": 2, "Standard Sport Utility Vehicle 4WD": 3})
-            self.epa(vehicle_model, second, {"Standard Sport Utility Vehicle 4WD": 4})
-        sienna = add_model("Toyota", "Sienna")
-        self.epa(sienna, 2019, {"Minivan - 2WD": 3})
-        results = self.classify()
-        for (make, name), years in cases.items():
-            vehicle_model = VehicleModel.objects.get(make=make, model=name)
-            for year in years:
-                with self.subTest(model=name, year=year):
-                    result = results[(vehicle_model.pk, year)][1]
-                    self.assertEqual((result.vehicle_class.name, result.size_variant.value), ("Midsize SUVs", 3))
-                    self.assertEqual(result.rule.name, "Three-row SUVs")
-        self.assertEqual(results[(sienna.pk, 2019)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
-
-    def test_an_override_beats_the_three_row_rule(self):
-        tahoe = add_model("Chevrolet", "Tahoe")
-        self.epa(tahoe, 2019, {"Standard Sport Utility Vehicle 4WD": 4})
-        add_facts(tahoe, Source.OWNER, seat_rows=[3])
-        self.assertEqual(self.classify()[(tahoe.pk, 2019)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
-
     def test_the_majority_of_rows_decides_and_the_split_is_shown_otherwise(self):
         self.assertEqual(majority_share(), Fraction(2, 3))
         silverado = add_model("Chevrolet", "Silverado", year_from=2024, year_to=2025)
@@ -376,15 +320,11 @@ class ThreeRowAndMajorityTests(ClassificationTestCase):
         add_facts(silverado, Source.CANADA, year=2024, curb_weight_min=4600, curb_weight_max=5800)
         sierra = add_model("GMC", "Sierra")
         self.epa(sierra, 2019, {"Standard Pickup Trucks 2WD": 5, "Standard Pickup Trucks 4WD": 5, "Special Purpose Vehicle 2WD": 1})
-        heavy = add_model("Test", "Heavy Crossover")
-        self.epa(heavy, 2019, {"Small Sport Utility Vehicle 4WD": 4})
-        add_facts(heavy, Source.CANADA, curb_weight_min=4300, curb_weight_max=4800, distribution={"curb_weight": [4300, 4600, 4700, 4800]})
         even = add_model("Test", "Even")
-        self.epa(even, 2019, {"Compact Cars": 3, "Small Station Wagons": 3})
+        self.epa(even, 2019, {"Small Pickup Trucks 2WD": 3, "Small Sport Utility Vehicle 2WD": 3})
         results = self.classify()
-        self.assertEqual(results[(silverado.pk, 2024)][1].vehicle_class.name, "Fullsize Trucks")
-        self.assertEqual(results[(sierra.pk, 2019)][1].vehicle_class.name, "Fullsize Trucks")
-        self.assertEqual(results[(heavy.pk, 2019)][1].rule.name, "Small SUVs over 4,500 lb")
+        self.assertEqual(results[(silverado.pk, 2024)][1].vehicle_class.name, "Full-size Trucks")
+        self.assertEqual(results[(sierra.pk, 2019)][1].vehicle_class.name, "Full-size Trucks")
         result = results[(even.pk, 2019)][1]
         self.assertTrue(result.in_review)
         self.assertIn("its trims split on the EPA size class condition: 3 of 6 rows (50%) meet it", result.reasons[0])
@@ -402,49 +342,35 @@ class ThreeRowAndMajorityTests(ClassificationTestCase):
         heavy = [vpic_truck("Ford", "F-250"), vpic_truck("Ford", "F-350 Super Duty"), vpic_truck("Chevrolet", "Silverado HD"),
                  vpic_truck("Ram", "2500"), vpic_truck("GMC", "Sierra 3500HD"),
                  vpic_truck("Test", "Big Hauler", **{Source.OWNER: {"gvwr_min": 9900, "gvwr_max": 9900}})]
+        # Vans of the same series are never pickups; with no measurements they wait for the owner.
+        vans = [vpic_truck("Chevrolet", "Express 2500"), vpic_truck("Ram", "ProMaster 3500"), vpic_truck("Ford", "Transit-350 HD")]
         minivans = [vpic_truck("Chevrolet", "Astro"), vpic_truck("Dodge", "Caravan"), vpic_truck("Chevrolet", "Lumina APV")]
         light = [vpic_truck("Dodge", "Dakota"), vpic_truck("Ford", "Explorer Sport Trac")]
         results = self.classify()
         for vehicle_model in heavy:
             with self.subTest(model=vehicle_model.model):
-                self.assertEqual(results[(vehicle_model.pk, 2019)][1].vehicle_class.name, "Fullsize Trucks")
-        for vehicle_model in minivans:
-            with self.subTest(model=vehicle_model.model):
-                self.assertEqual(results[(vehicle_model.pk, 2019)][1].vehicle_class.name, "Fullsize SUVs & Minivans")
-        for vehicle_model in light:
+                self.assertEqual(results[(vehicle_model.pk, 2019)][1].vehicle_class.name, "Full-size Trucks")
+        for vehicle_model in vans + minivans + light:
             with self.subTest(model=vehicle_model.model):
                 self.assertTrue(results[(vehicle_model.pk, 2019)][1].in_review)
-
-    def test_the_older_suv_rules_keep_to_suv_classes_and_their_years(self):
-        silverado = add_model("Chevrolet", "Silverado", year_from=2024, year_to=2026)
-        for year in (2024, 2026):
-            self.epa(silverado, year, {"Special Purpose Vehicle 4WD": 3, "Standard Pickup Trucks 4WD": 3})
-            add_facts(silverado, Source.CANADA, year=year, curb_weight_min=4700, curb_weight_max=5200)
-        explorer = add_model("Ford", "Explorer", year_from=1995, year_to=2005)
-        self.epa(explorer, 1995, {"Special Purpose Vehicles": 4})
-        self.epa(explorer, 2005, {"Sport Utility Vehicle - 4WD": 4})
-        for year in (1995, 2005):
-            add_facts(explorer, Source.CANADA, year=year, curb_weight_min=4600, curb_weight_max=4700)
-        results = self.classify()
-        for year in (2024, 2026):
-            result = results[(silverado.pk, year)][1]
-            self.assertNotIn("SUVs", result.because)
-        self.assertEqual(results[(explorer.pk, 1995)][1].rule.name, "Special purpose SUVs over 4,500 lb")
-        self.assertEqual(results[(explorer.pk, 2005)][1].rule.name, "Older SUVs over 4,500 lb")
 
 
 class ReportTests(ClassificationTestCase):
     def test_counts_per_class_and_size_and_models_in_different_classes(self):
+        from vehicles.test_size_classes import dimensions
+
         rav4 = add_model("Toyota", "RAV4", year_from=2018, year_to=2019)
         add_facts(rav4, year=2018, epa_size_classes=SMALL_SUVS)
+        add_facts(rav4, Source.CANADA, year=2018, **dimensions([200]))
         add_facts(rav4, year=2019, epa_size_classes=STANDARD_SUVS)
+        add_facts(rav4, Source.CANADA, year=2019, **dimensions([240]))
         out = io.StringIO()
         call_command("classify_vehicles", "--dry-run", stdout=out)
         output = out.getvalue()
         self.assertIn("Model years by class and size", output)
-        self.assertIn("  Crossovers & Wagons: 1\n    two rows: 1\n", output)
+        self.assertIn("  Medium: 1\n    two rows: 1\n", output)
         self.assertIn("Models whose years are in different classes, for the owner to look at (1)", output)
-        self.assertIn("  Toyota RAV4: 2018: Crossovers & Wagons; 2019: Midsize SUVs", output)
+        self.assertIn("  Toyota RAV4: 2018: Medium; 2019: Large", output)
 
 
 class ThirdRowMatchingTests(TestCase):

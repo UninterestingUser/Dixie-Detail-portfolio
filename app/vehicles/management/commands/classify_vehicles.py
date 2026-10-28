@@ -2,11 +2,13 @@
 vehicle catalog (docs/reference/vehicle-classification.md).
 
   python manage.py classify_vehicles [--dry-run] [--refresh]
-  python manage.py classify_vehicles --scheme size --dry-run
 
 First it brings the launch rules and model overrides in step with
-data/vehicle-classes.yaml (leaving alone any the owner edited or deleted)
-and loads the third-row list, data/third-row-seating.yaml. With --dry-run it prints the
+data/size-classes.yaml (leaving alone any the owner edited or deleted)
+and loads the third-row list, data/third-row-seating.yaml. Until
+apply_size_classes has switched the catalog to the size-based classes
+(decision 0083), it leaves the body-type rules in the database as they are
+instead. With --dry-run it prints the
 preview, every model year whose class or size would change or that would
 enter or leave the review queue, and changes nothing. It never changes a
 model override, a customer's vehicle, or anything with source "owner".
@@ -15,9 +17,8 @@ With --refresh, as the monthly refresh runs it, a model year whose class or
 size would change is held in the review queue instead when its model has a
 model override, an approval or customers' jobs (classification.guard).
 
-With --scheme size --dry-run it previews the size-based classes of
-data/size-classes.yaml (decision 0082, classification.sizes) instead, and
-changes nothing. The size-based classes cannot be applied yet.
+The report lists every run of model years smoothed into the class around
+it (classification.sizes).
 """
 
 from collections import Counter, defaultdict
@@ -28,8 +29,8 @@ from django.db import transaction
 from vehicles.classification.engine import apply, change_detail, changes, classify_catalog, record, year_spans, years_text
 from vehicles.classification.guard import hold
 from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
-from vehicles.classification.size_preview import write_report
-from vehicles.classification.sizes import classify_scheme
+from vehicles.classification.size_preview import smoothed_runs
+from vehicles.classification.switch import switched
 from vehicles.models import ClassificationChange, VehicleModel
 
 
@@ -49,22 +50,16 @@ class Command(BaseCommand):
             action="store_true",
             help="As the monthly refresh: hold class changes to models with an override, an approval or jobs in the review queue.",
         )
-        parser.add_argument(
-            "--scheme",
-            choices=("body", "size"),
-            default="body",
-            help="body (the live classes, the default) or size: preview the size-based classes of data/size-classes.yaml.",
-        )
 
-    def handle(self, *args, dry_run, refresh, scheme="body", **options):
+    def handle(self, *args, dry_run, refresh, **options):
         if not VehicleModel.objects.exists():
             raise CommandError("The vehicle catalog is empty: run import_vehicle_data first.")
-        if scheme == "size":
-            return self.preview_sizes(dry_run, refresh)
         seeded = SeedReport()
+        self.live = switched()
         with transaction.atomic():
             try:
-                sync_launch_set(seeded)
+                if self.live:
+                    sync_launch_set(seeded)
                 sync_seat_list(seeded)
             except SeedError as error:
                 raise CommandError(str(error)) from error
@@ -83,24 +78,13 @@ class Command(BaseCommand):
         self.found, self.held = found, held
         self.print_report(dry_run, seeded, results, found, counts, held if refresh else None)
 
-    def preview_sizes(self, dry_run, refresh):
-        """The size-based classes' dry run: loads the third-row list as any
-        run does, classifies in memory, prints, and rolls everything back."""
-        if not dry_run or refresh:
-            raise CommandError("The size-based classes can only be previewed for now: use --scheme size --dry-run, without --refresh.")
-        with transaction.atomic():
-            try:
-                sync_seat_list(SeedReport())
-                found = classify_scheme()
-            except SeedError as error:
-                raise CommandError(str(error)) from error
-            write_report(found, self.stdout)
-            transaction.set_rollback(True)
-
     def print_report(self, dry_run, seeded, results, found, counts, held=None):
         write = self.stdout.write
         write("DRY RUN: nothing was changed. Run again without --dry-run to apply it." if dry_run else "APPLIED: the classifications were saved.")
-        write(f"\nLaunch rules and overrides (data/vehicle-classes.yaml): {len(seeded.launch_set):,} changes")
+        if self.live:
+            write(f"\nLaunch rules and overrides (data/size-classes.yaml): {len(seeded.launch_set):,} changes")
+        else:
+            write("\nThe size-based classes are not applied yet (apply_size_classes): the body-type rules in the database are used as they are.")
         for line in seeded.launch_set:
             write(f"  {line}")
         for line in seeded.unmatched_overrides:
@@ -120,6 +104,9 @@ class Command(BaseCommand):
             ("override", "by a model override"),
             ("decision", "by a review queue decision"),
             ("carried", "from the nearest classified year, the EPA not having published it yet"),
+            ("pickup_line", "a pickup, by the pickup size line"),
+            ("epa_fallback", "by the EPA size class fallback"),
+            ("smoothed", "smoothed into the class around them"),
             ("photo_cards", "sent to the photo cards from the review queue"),
             ("review", "in the review queue"),
         ):
@@ -148,6 +135,11 @@ class Command(BaseCommand):
         rows = [(change.vehicle_model, change.year, f"{change_detail(change)} ({change.because})") for change in found]
         write(f"\n{'Would change' if dry_run else 'Changed'} ({len(found):,} model years)")
         for line in spans(rows):
+            write(f"  {line}")
+
+        runs = smoothed_runs(results)
+        write(f"\nSmoothed: runs of model years given the class around them ({len(runs):,})")
+        for line in runs:
             write(f"  {line}")
 
         if held is not None:

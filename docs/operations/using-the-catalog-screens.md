@@ -4,7 +4,7 @@ summary: A short guide to the control app's Catalog tab - lookup and test prices
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-28
 tags: [operations, vehicles, classification, control-app, phase-2]
 related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0079-approval-list.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/reference/vehicle-classification.md, docs/operations/classifying-vehicles.md, docs/reference/control-app.md]
 ---
@@ -35,7 +35,7 @@ A **customer's vehicle** that is lifted or modified gets its own class on its ed
 
 ## Rules
 
-**Rules** lists the rules in the order they are tried, each written out in plain words, such as "EPA size class Small Sport Utility Vehicle 2WD or Small Sport Utility Vehicle 4WD and curb weight over 4,500 lb → Midsize SUVs". Launch rules from the data file are marked, and so is one you have edited, which the data file then leaves alone.
+**Rules** lists the rules in the order they are tried, each written out in plain words, such as "box volume at least 580 cu ft and under 700 cu ft → Large". Launch rules from the data file are marked, and so is one you have edited, which the data file then leaves alone.
 
 - **Add a rule** or **Edit**: give a name, a position (rules are tried from the lowest up; 75 goes between 70 and 80), the vehicle class, and the conditions, one fact per row. A list fact takes values one per line; a weight, size or year takes one or both ends of a range. Leave a row's fact empty to drop it.
 - **↑ and ↓** move a rule one place; **Disable** and **Enable** switch it off and on.
@@ -67,13 +67,15 @@ A decision applies at once and stays until you clear it on the model's screen. A
 
 - **Keep imported: this vehicle only** makes the vehicle's class its own override, for a lifted or modified vehicle. It beats the catalog from then on.
 - **Accept the catalog's** gives the vehicle the catalog's class, and the catalog's size when it fixes one.
-- **Every 2014 to 2019 RAV4: Midsize SUVs** (the years and class shown are the vehicle's) sets a model override for the years the catalog classes alike around this vehicle's year. A class that differed takes its size from the facts; a size that differed is fixed for those years. Other vehicles of the model in those years may then differ, and show here.
+- **Every 2014 to 2019 RAV4: Large** (the years and class shown are the vehicle's) sets a model override for the years the catalog classes alike around this vehicle's year. A class that differed takes its size from the facts; a size that differed is fixed for those years. Other vehicles of the model in those years may then differ, and show here.
 
 Past jobs keep their prices whichever you pick. A vehicle that no longer differs leaves the list. A vehicle with no year is not listed: its class depends on the year, so it is compared once the year is filled in.
 
+**Left in a retired class** lists, above the differences, each customer's vehicle still in a body-type class after `apply_size_classes` switched to the size-based classes, because it is not linked to the catalog or its model year has no class ([decision 0083](../decisions/0083-applying-the-size-based-classes.md)). Each shows the class proposed from its old one: Coupes & Sedans to Small, Crossovers & Wagons to Medium, Midsize SUVs to Large, and Fullsize SUVs & Minivans to Full-size, or Large for a minivan. Pick the class, the proposed one or another, add an optional note and tap **Save the class**. Past jobs keep their classes and prices.
+
 ## Approvals
 
-**Approvals** is where Phase 2 is signed off ([decision 0079](../decisions/0079-approval-list.md)). It lists every model with the make and name of a vehicle in the job history, whether or not the vehicles have a year, every model on the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml), every model whose years are in different classes, and every model approved before, with how many are approved. It shows the models still waiting; **Show** picks approved ones or all, and **Listed for** filters by why a model is there.
+**Approvals** is where Phase 2 is signed off (decisions [0079](../decisions/0079-approval-list.md) and [0083](../decisions/0083-applying-the-size-based-classes.md)). It started over when the size-based classes were applied. It lists every model with the make and name of a vehicle in the job history, whether or not the vehicles have a year, every model on the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) (only the years an entry names, where it names some, such as the Tahoe before 2007), every model with model years from 2015 on within 5 cubic feet of a size line or the pickup line, and every model approved since, with how many are approved. It shows the models still waiting; **Show** picks approved ones or all, and **Listed for** filters by why a model is there.
 
 Each model shows once, as its year ranges: the years in a row with the same class, size and **How**. For each range:
 
@@ -81,6 +83,10 @@ Each model shows once, as its year ranges: the years in a row with the same clas
 - **Change** picks another class and size, sets a model override for exactly those years, and approves the result.
 
 A range waiting in the review queue can only be changed. When a later change to a rule, an override, the third-row flag, a queue decision or a class setting alters an approved range, by its years, class, size or how, the approval is cleared and the model shows again, saying which change cleared it. Spot-check entries the catalog does not have are listed at the bottom.
+
+## Booked jobs after a new price book
+
+When `apply_size_classes` publishes the new price book, every booked job keeps its quoted price and no choice is made for it ([decision 0083](../decisions/0083-applying-the-size-based-classes.md)). The published version's page on the **Pricebook** tab then says how many booked jobs wait for your choice; its link opens the booked-job review. Each job shows its quoted price and its price under the new book, in its vehicle's new class where the job was booked in a retired one. Pick **Keep quoted price**, **Use new price** or **Custom amount** for each, or **Keep all** or **Use new for all**, and save. Every choice is logged with the old and new amounts, as when a draft is published from the control app. A job that cannot be priced in the new book, such as one whose vehicle is still in a retired class, can be kept or given a custom amount; give the vehicle its class on the **Differences** screen first to see its new price.
 
 ## History
 

@@ -45,7 +45,7 @@ class CatalogTestCase(JobsTestCase):
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-        cls.midsize = VehicleClass.objects.get(name="Midsize SUVs")
+        cls.midsize = VehicleClass.objects.get(name="Large")
         cls.heavy = ClassificationRule.objects.create(
             position=10, name="Small SUVs over 4,500 lb", vehicle_class=cls.midsize,
             conditions={"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 4500}},
@@ -113,7 +113,7 @@ class PermissionTests(CatalogTestCase):
         self.assertEqual(ClassificationRule.objects.count(), 2)
         self.assertTrue(ModelOverride.objects.filter(pk=override.pk).exists())
         self.assertTrue(classified(self.straddler, 2018).in_review)
-        self.assertEqual(VehicleClass.objects.get(pk=self.crossover.pk).size_variant_measures, "seat rows")
+        self.assertEqual(VehicleClass.objects.get(pk=self.crossover.pk).size_variant_measures, "seats")
         self.assertFalse(ClassificationChange.objects.exists())
 
     def test_a_helper_sees_no_controls_to_change(self):
@@ -129,7 +129,7 @@ class LookupScreenTests(CatalogTestCase):
     def test_year_make_and_model_show_the_class_facts_and_how(self):
         page = self.client.get(reverse("catalog"), {"year": 2019, "make": "toyota", "model": "rav-4"})
         self.assertContains(page, "2019 Toyota RAV4")
-        self.assertContains(page, "<strong>Crossovers &amp; Wagons</strong>", html=False)
+        self.assertContains(page, "<strong>Medium</strong>", html=False)
         self.assertContains(page, "two rows")
         self.assertContains(page, "Fixed price list")
         self.assertContains(page, "rule 20: EPA small SUVs")
@@ -168,14 +168,14 @@ class RulePreviewTests(CatalogTestCase):
 
     def test_the_rule_list_is_in_plain_words(self):
         page = self.client.get(reverse("rules"))
-        self.assertContains(page, "EPA size class Small Sport Utility Vehicle 2WD or Small Sport Utility Vehicle 4WD and curb weight over 4,500 lb → Midsize SUVs")
+        self.assertContains(page, "EPA size class Small Sport Utility Vehicle 2WD or Small Sport Utility Vehicle 4WD and curb weight over 4,500 lb → Large")
 
     def test_saving_shows_the_preview_and_changes_nothing(self):
         page = self.client.post(reverse("rule-new"), self.new_rule())
         self.assertContains(page, "Preview")
-        self.assertContains(page, "Crossovers &amp; Wagons → Midsize SUVs")
+        self.assertContains(page, "Medium → Large")
         self.assertContains(page, "1 model year of 1 model")
-        self.assertContains(page, "Toyota RAV4 2019: Crossovers &amp; Wagons (two rows) -&gt; Midsize SUVs (two rows)")
+        self.assertContains(page, "Toyota RAV4 2019: Medium (two rows) -&gt; Large (two rows)")
         self.assertEqual(ClassificationRule.objects.count(), 2)
         self.assertEqual(classified(self.rav4).vehicle_class, self.crossover)
         self.assertFalse(ClassificationChange.objects.exists())
@@ -192,7 +192,7 @@ class RulePreviewTests(CatalogTestCase):
         self.assertEqual(change.made_by, self.owner_user)
         history = self.client.get(f"{reverse('catalog')}?model_id={self.rav4.pk}&year=2019")
         self.assertContains(history, "Add rule 5 (Toyotas are midsize)")
-        self.assertContains(history, "2019: Crossovers &amp; Wagons (two rows) -&gt; Midsize SUVs (two rows)")
+        self.assertContains(history, "2019: Medium (two rows) -&gt; Large (two rows)")
         self.assertContains(history, "owner")
 
     def test_a_preview_that_no_longer_matches_is_shown_again(self):
@@ -229,16 +229,16 @@ class RulePreviewTests(CatalogTestCase):
 
 class ClassSettingsTests(CatalogTestCase):
     def data(self, **changes):
-        data = {"size_variant_measures": "seat rows", "booking": "online", "photo_card": self.crossover.photo_card}
+        data = {"size_variant_measures": "seats", "booking": "online", "photo_card": self.crossover.photo_card}
         data.update(changes)
         return data
 
     def test_a_change_to_what_the_size_measures_is_previewed_then_applied(self):
         url = reverse("vehicle-class", args=[self.crossover.pk])
         page = self.client.post(url, self.data(size_variant_measures="doors"))
-        self.assertContains(page, "Crossovers &amp; Wagons → Crossovers &amp; Wagons")
-        self.assertContains(page, "(two rows) -&gt; Crossovers &amp; Wagons (ask)")
-        self.assertEqual(VehicleClass.objects.get(pk=self.crossover.pk).size_variant_measures, "seat rows")
+        self.assertContains(page, "Medium → Medium")
+        self.assertContains(page, "(two rows) -&gt; Medium (ask)")
+        self.assertEqual(VehicleClass.objects.get(pk=self.crossover.pk).size_variant_measures, "seats")
         fingerprint = re.search(r'name="fingerprint" value="([0-9a-f]+)"', page.content.decode()).group(1)
         self.assertRedirects(self.client.post(url, {**self.data(size_variant_measures="doors"), "confirm": "1", "fingerprint": fingerprint}), reverse("vehicle-classes"))
         self.assertEqual(VehicleClass.objects.get(pk=self.crossover.pk).size_variant_measures, "doors")
@@ -266,7 +266,7 @@ class ReviewQueueScreenTests(CatalogTestCase):
         self.assertContains(page, "no rule matches")
         self.assertContains(page, "its range, 4300 to 4700, spans it")
         self.assertContains(page, "Curb weight 4,300 to 4,700 lb")
-        self.assertContains(page, "Suggested: <strong>Midsize SUVs (asked)</strong>", html=False)
+        self.assertContains(page, "Suggested: <strong>Large (two rows)</strong>", html=False)
         self.assertContains(page, "No suggestion")
 
     def test_filters_by_year_and_reason(self):
@@ -280,7 +280,7 @@ class ReviewQueueScreenTests(CatalogTestCase):
         response = self.client.post(reverse("review-act"), {"do": f"accept:{queued.pk}", "next": reverse("review-queue")})
         self.assertRedirects(response, reverse("review-queue"))
         row = classified(self.straddler, 2018)
-        self.assertEqual((row.in_review, row.vehicle_class, row.ask_size), (False, self.midsize, True))
+        self.assertEqual((row.in_review, row.vehicle_class, row.ask_size), (False, self.midsize, False))
         self.assertEqual(ReviewDecision.objects.get().decided_by, self.owner_user)
 
     def test_pick_another_class_and_set_the_size(self):

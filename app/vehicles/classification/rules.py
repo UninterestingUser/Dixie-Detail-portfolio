@@ -7,8 +7,9 @@ A rule's conditions map a fact to what it must be:
   vPIC vehicle type) or the vehicle type takes a list of values. "none"
   matches a model year no source gives a value for.
 - make takes a list of names; model a list of names the model's name is or
-  begins with in whole words ("ProMaster" matches "ProMaster 2500"); and
-  model_word a list of words or phrases the model's name contains ("HD"
+  begins with in whole words ("ProMaster" matches "ProMaster 2500");
+  not_model a list of such names the model's name must not be or begin
+  with, which keeps the vans out of the pickup rules; and model_word a list of words or phrases the model's name contains ("HD"
   matches "Silverado HD", "Super Duty" matches "F-250 Super Duty"). Names are
   compared on capitals and digits only, as the import matches them.
 - year takes {"from": 2013, "to": 2019}, either end optional.
@@ -56,7 +57,7 @@ class Outcome:
 class Fact:
     key: str
     label: str
-    kind: str  # "model", "names", "model names", "model words", "year", "listed", "measured" or "box volume"
+    kind: str  # "model", "names", "model names", "not model names", "model words", "year", "listed", "measured" or "box volume"
     field: str = ""
     # For seat rows only: the first of these sources with a value is used.
     first_of: tuple = ()
@@ -71,6 +72,7 @@ FACTS = {
         Fact("vehicle_type", "vehicle type", "model", "vehicle_type"),
         Fact("make", "make", "names", "make"),
         Fact("model", "model", "model names", "model"),
+        Fact("not_model", "model", "not model names", "model"),
         Fact("model_word", "model name", "model words", "model"),
         Fact("year", "model year", "year"),
         Fact("epa_size_class", "EPA size class", "listed", "epa_size_classes"),
@@ -264,10 +266,11 @@ def test_condition(model_year, key, wanted, share=Fraction(1)):
     if fact.kind == "names":
         keys = {name_key(name) for name in wanted}
         return Tested(Outcome.HOLDS if name_key(getattr(vehicle_model, fact.field)) in keys else Outcome.FAILS)
-    if fact.kind == "model names":
+    if fact.kind in ("model names", "not model names"):
         found = model_year.model_words
         starts = {"".join(found[:count]) for count in range(1, len(found) + 1)}
-        return Tested(Outcome.HOLDS if {name_key(name) for name in wanted} & starts else Outcome.FAILS)
+        named = bool({name_key(str(name)) for name in wanted} & starts)
+        return Tested(Outcome.HOLDS if named != (fact.kind == "not model names") else Outcome.FAILS)
     if fact.kind == "model words":
         found = model_year.model_words
         return Tested(Outcome.HOLDS if any(contains(found, words(str(phrase))) for phrase in wanted) else Outcome.FAILS)
@@ -321,7 +324,7 @@ def test_rule(model_year, conditions, share=Fraction(1)):
 
 # Writing a rule out in plain words, for the control app's rule list and
 # preview: "EPA size class Small Sport Utility Vehicle 2WD or Small Sport
-# Utility Vehicle 4WD and curb weight over 4,500 lb -> Midsize SUVs".
+# Utility Vehicle 4WD and curb weight over 4,500 lb -> Large".
 
 UNITS = {
     "gvwr": "lb", "curb_weight": "lb", "length": "in", "width": "in", "height": "in", "wheelbase": "in",
@@ -358,6 +361,8 @@ def describe_condition(key, value):
     named = [found for found in values if found != NONE]
     if key == "model":
         return f"model is or begins with {either(named)}"
+    if key == "not_model":
+        return f"model is not and does not begin with {either(named)}"
     if key == "model_word":
         return f"model name contains {either(named)}"
     if key == "seat_rows":

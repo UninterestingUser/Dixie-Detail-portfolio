@@ -1,10 +1,12 @@
 """What classify_vehicles loads from data/ before it classifies.
 
-- The launch rules and model overrides in data/vehicle-classes.yaml. Each
-  one created from the file remembers what it was created as, so a later
-  change to the file reaches it, and a new entry is added, while the owner's
-  own rules and anything the owner edited or deleted are left alone and
-  listed in the report.
+- The launch rules and model overrides in data/size-classes.yaml, with each
+  box-volume line named in a rule replaced by its figure. Each one created
+  from the file remembers what it was created as, so a later change to the
+  file reaches it, and a new entry is added, while the owner's own rules and
+  anything the owner edited or deleted are left alone and listed in the
+  report. Records archived when the scheme they belonged to was replaced
+  (decision 0083) are neither touched nor counted as deleted.
 - The owner-approved third-row list, data/third-row-seating.yaml, on every
   run, as model-year records with source "seat_list": always is three seat
   rows, never is two, and optional is both, so the customer is asked. Its
@@ -32,7 +34,7 @@ SEAT_LIST = VehicleModelYear.Source.SEAT_LIST
 VEHICLE = VehicleModel.VehicleType.VEHICLE
 SEAT_ROWS = {"always": [3], "never": [2], "optional": [2, 3]}
 RULE_STEP = 10
-OVERRIDE_NOTE = "(launch override, data/vehicle-classes.yaml)"
+OVERRIDE_NOTE = "(launch override, data/size-classes.yaml)"
 
 
 class SeedError(ValueError):
@@ -104,14 +106,22 @@ def set_rule(rule, entry):
     rule.seeded_from = entry
 
 
+def deleted_since_archive(model):
+    """History of the model's launch records deleted since its records were
+    last archived (all of it if they never were)."""
+    from .switch import archived_at
+
+    found = model.history.filter(history_type="-").exclude(seeded_from=None)
+    since = archived_at(model)
+    return found.filter(history_date__gt=since) if since else found
+
+
 def sync_rules(data, report):
     entries = {}
-    for index, entry in enumerate(data["launch_rules"], start=1):
+    for index, entry in enumerate(data["rules"], start=1):
         entries[entry["name"]] = rule_entry(entry, index * RULE_STEP)
     seeded = {rule.seeded_from["name"]: rule for rule in ClassificationRule.objects.exclude(seeded_from=None).select_related("vehicle_class")}
-    ever = set(
-        ClassificationRule.history.exclude(seeded_from=None).values_list("seeded_from__name", flat=True)
-    )
+    ever = set(deleted_since_archive(ClassificationRule).values_list("seeded_from__name", flat=True))
     for name, rule in seeded.items():
         entry = entries.get(name)
         if rule_now(rule) != rule.seeded_from:
@@ -190,7 +200,7 @@ def sync_overrides(data, report):
     seeded = list(ModelOverride.objects.exclude(seeded_from=None).select_related("vehicle_class", "vehicle_model"))
     ever = {
         (model_id, tuple(seeded_from["key"]))
-        for model_id, seeded_from in ModelOverride.history.exclude(seeded_from=None).values_list("vehicle_model_id", "seeded_from")
+        for model_id, seeded_from in deleted_since_archive(ModelOverride).values_list("vehicle_model_id", "seeded_from")
     }
     have = set()
     for override in seeded:
@@ -231,8 +241,10 @@ def sync_overrides(data, report):
 
 
 def sync_launch_set(report, data_dir=None):
-    """Bring the launch rules and overrides in step with data/vehicle-classes.yaml."""
-    data = read_data("vehicle-classes.yaml", data_dir)
+    """Bring the launch rules and overrides in step with data/size-classes.yaml."""
+    from .sizes import read_scheme
+
+    data = read_scheme(data_dir)
     sync_rules(data, report)
     sync_overrides(data, report)
 

@@ -26,6 +26,7 @@ from customers.models import Address, Customer, SecondContact
 from pricebook.models import Service
 from promotions.models import Promotion
 from staff.models import Assignment, PayType, StaffMember, StaffPayout
+from vehicles.classification.switch import renames
 from vehicles.models import Vehicle, VehicleClass
 
 from . import parsing
@@ -111,6 +112,10 @@ class Importer:
         self.addresses = {}  # Baserow customer id -> Address
         self.vehicles = {}  # Baserow id -> Vehicle
         self.classes = {vehicle_class.name: vehicle_class for vehicle_class in VehicleClass.objects.all()}
+        # Baserow names two classes as they were before apply_size_classes renamed them (decision 0083).
+        for old, new in renames().items():
+            if new in self.classes:
+                self.classes.setdefault(old, self.classes[new])
         self.services = {service.name: service for service in Service.objects.all()}
         self.batch = None
         self.payment_dates = []

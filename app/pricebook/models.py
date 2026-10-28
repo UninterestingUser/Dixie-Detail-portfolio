@@ -67,6 +67,11 @@ class PricebookVersion(models.Model):
             raise PublishedVersionError(f"Version {self.number} is already published.")
         if effective_date < timezone.localdate():
             raise ValueError("The effective date must be today or later.")
+        if Price.objects.filter(version=self, vehicle_class__pending=True).exists():
+            # Its classes are offered only once the catalog switches to them, in the same step.
+            raise PublishedVersionError(
+                f"Version {self.number} prices classes not offered yet: publish it with apply_size_classes."
+            )
         self.status = self.Status.PUBLISHED
         self.effective_date = effective_date
         self.published_at = timezone.now()

@@ -6,6 +6,11 @@ Vehicle classes and size variants are records, not choices in code: adding,
 renaming or retiring one needs no code change or migration. The launch set is
 in data/vehicle-classes.yaml. Nothing is deleted; a retired class or size
 variant stays for history and is no longer offered or priced.
+
+Rules, model overrides, review queue decisions and approvals are archived,
+not deleted, when the scheme they belong to is replaced, as the body-type
+classes were by the size-based ones (decision 0083): an archived record
+stays for history, and the default manager no longer returns it.
 """
 
 from django.conf import settings
@@ -14,8 +19,22 @@ from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
 
+class VehicleClassQuerySet(models.QuerySet):
+    def offered(self):
+        """The classes booking, quoting and the catalog offer: not retired, and
+        not waiting for an unpublished pricebook draft."""
+        return self.filter(active=True, pending=False)
+
+
+class Live(models.Manager):
+    """Leaves out archived records; all_objects has them too."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(archived_at=None)
+
+
 class VehicleClass(models.Model):
-    """A group of vehicles that share prices, such as Midsize SUVs."""
+    """A group of vehicles that share prices, such as Medium."""
 
     class PriceBasis(models.TextChoices):
         # The only basis built. Another, such as per foot of length for RVs,
@@ -45,6 +64,10 @@ class VehicleClass(models.Model):
     )
     sort_order = models.PositiveSmallIntegerField(default=0)
     active = models.BooleanField(default=True, help_text="Off when the class is retired.")
+    pending = models.BooleanField(
+        default=False,
+        help_text="Made for a pricebook draft not yet published, and not offered until apply_size_classes publishes it.",
+    )
     price_basis = models.CharField(
         max_length=20,
         choices=PriceBasis.choices,
@@ -62,7 +85,14 @@ class VehicleClass(models.Model):
         blank=True,
         help_text="The caption of the class's photo card, shown when a vehicle is not in the catalog.",
     )
+    photo_card_examples = models.JSONField(
+        default=list, blank=True, help_text="A few example models the photo card names, such as Civic and Camry."
+    )
+    photo = models.CharField(
+        max_length=200, blank=True, help_text="The photo card's picture, a static file path. A placeholder shows until there is one."
+    )
 
+    objects = VehicleClassQuerySet.as_manager()
     history = HistoricalRecords()
 
     class Meta:
@@ -360,7 +390,10 @@ class ClassificationRule(models.Model):
     # applied, so classify_vehicles keeps an unedited launch rule in step
     # with the file. Empty for the owner's own rules.
     seeded_from = models.JSONField(null=True, blank=True, editable=False)
+    archived_at = models.DateTimeField(null=True, blank=True, help_text="Set when its scheme was replaced; kept for history.")
 
+    objects = Live()
+    all_objects = models.Manager()
     history = HistoricalRecords()
 
     class Meta:
@@ -381,7 +414,7 @@ class ClassificationRule(models.Model):
 
 class ModelOverride(models.Model):
     """The owner's vehicle class for a vehicle model, which beats every rule,
-    such as Jeep Wrangler to Light Pickups & Offroad. It covers the model's
+    such as the 2022 to 2026 Audi Q4 e-tron to Medium. It covers the model's
     years from year_from to year_to, or all of them when both are empty. The
     size variant is fixed, always asked, or, with neither, worked out from the
     facts as for any vehicle of the class."""
@@ -400,7 +433,10 @@ class ModelOverride(models.Model):
     note = models.TextField(blank=True)
     # As for ClassificationRule: the launch override's entry as last applied.
     seeded_from = models.JSONField(null=True, blank=True, editable=False)
+    archived_at = models.DateTimeField(null=True, blank=True, help_text="Set when its scheme was replaced; kept for history.")
 
+    objects = Live()
+    all_objects = models.Manager()
     history = HistoricalRecords()
 
     class Meta:
@@ -435,12 +471,19 @@ class ReviewDecision(models.Model):
     )
     decided_at = models.DateTimeField(default=timezone.now)
     note = models.TextField(blank=True)
+    archived_at = models.DateTimeField(null=True, blank=True, help_text="Set when its scheme was replaced; kept for history.")
 
+    objects = Live()
+    all_objects = models.Manager()
     history = HistoricalRecords()
 
     class Meta:
         ordering = ["vehicle_model", "year"]
-        constraints = [models.UniqueConstraint(fields=["vehicle_model", "year"], name="one_review_decision_per_model_year")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vehicle_model", "year"], condition=models.Q(archived_at=None), name="one_review_decision_per_model_year"
+            )
+        ]
 
     def __str__(self):
         found = self.vehicle_class or "photo cards"
@@ -474,6 +517,11 @@ class ModelYearClassification(models.Model):
         # from where most measured model years of its EPA size class land
         # (decision 0082).
         EPA_FALLBACK = "epa_fallback", "EPA size class fallback"
+        # A pickup with a box volume, on its side of the pickup line (decision 0083).
+        PICKUP_LINE = "pickup_line", "Pickup size line"
+        # A short run of model years between two runs of one class, given that
+        # class (decision 0083).
+        SMOOTHED = "smoothed", "Smoothed"
         PHOTO_CARDS = "photo_cards", "Photo cards"
         REVIEW = "review", "Review queue"
 
@@ -541,6 +589,8 @@ class ClassificationChange(models.Model):
         LINK = "link", "link_vehicles run"
         VEHICLE_CLASS = "vehicle_class", "Vehicle takes the catalog's class"
         APPROVAL = "approval", "Approval"
+        # apply_size_classes (decision 0083).
+        SIZE_SWITCH = "size_switch", "Switch to the size-based classes"
 
     kind = models.CharField(max_length=20, choices=Kind.choices)
     summary = models.TextField()
@@ -599,6 +649,10 @@ class ModelApproval(models.Model):
         ClassificationChange, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
         help_text="The change that altered the range and cleared the approval.",
     )
+    archived_at = models.DateTimeField(null=True, blank=True, help_text="Set when the approval list started over; kept for history.")
+
+    objects = Live()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ["vehicle_model", "year_from", "-approved_at"]
@@ -634,6 +688,9 @@ class Vehicle(models.Model):
     )
     class_override_at = models.DateTimeField(null=True, blank=True)
     class_override_note = models.TextField(blank=True)
+    # Set when the vehicle, recorded with no year, took the class of its
+    # model's newest generation (decision 0083): confirm the year at the next visit.
+    confirm_year = models.BooleanField(default=False, help_text="Confirm the year at the next visit; the class assumed the newest generation.")
     notes = models.TextField(blank=True)
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)

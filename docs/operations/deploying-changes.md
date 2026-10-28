@@ -4,7 +4,7 @@ summary: The routine for getting a merged pull request onto the server, and what
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-24
+updated: 2026-10-28
 tags: [operations, deploy, git, systemd]
 related: [docs/architecture/server-and-stack.md, docs/architecture/secrets.md, docs/operations/troubleshooting.md, docs/reference/configuration.md]
 ---
@@ -117,7 +117,7 @@ To price a job from the terminal, without storing anything:
 
 ```bash
 sudo docker exec dixie-app-1 python manage.py quote --service "Full Detail" \
-  --class "Crossovers & Wagons" --size 2 --condition 2 --add-on "Seat Extraction"
+  --class "Medium" --size 2 --condition 2 --add-on "Seat Extraction"
 ```
 
 It prints the lines, the total before tax, the service time and the time on site. `--crew 2` prices two people, `--promotion` takes a promotion's name or code, and `--help` lists every option.
