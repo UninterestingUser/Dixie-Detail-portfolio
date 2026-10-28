@@ -34,7 +34,8 @@
       {% for job in jobs %}
         <li class="card">
           <strong><a href="{% url 'appointment' job.appointment.pk %}">{{ job.appointment.customer }}</a>, {{ job.appointment.scheduled_start|date:"D M j, Y" }}</strong>
-          {% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}
+          <span class="sub">Appointment {{ job.appointment.pk }}{% if job.check_by_hand %} · <span class="warn">no vehicle or class: check by hand</span>{% endif %}</span>
+          {% if not job.check_by_hand %}{% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}{% endif %}
           {% if job.becomes_full_day %}<span class="sub warn">The new service hours make this a full day.</span>{% endif %}
           <div class="field">
             <label for="choice-{{ job.appointment.pk }}">Choice</label>
@@ -48,7 +49,7 @@
             <label for="amount-{{ job.appointment.pk }}">Custom amount <span class="muted">(only for a custom amount)</span></label>
             <input id="amount-{{ job.appointment.pk }}" name="amount-{{ job.appointment.pk }}" inputmode="decimal">
           </div>
-          {% if job.new_total is None %}<p class="help">This job can no longer be priced. Keep it as it is or give a custom amount, then change its service from the job page if needed.</p>{% endif %}
+          {% if job.check_by_hand %}<p class="help">Booked in a retired class, and the job has no vehicle, or its vehicle has no class or size yet, so it is not re-priced and keeps its quoted price unless you give a custom amount. Check it by hand.</p>{% elif job.new_total is None %}<p class="help">This job can no longer be priced. Keep it as it is or give a custom amount, then change its service from the job page if needed.</p>{% endif %}
         </li>
       {% endfor %}
     </ul>

@@ -504,3 +504,64 @@ class MinivanTests(SizeClassTestCase):
         self.assertTrue(is_minivan("Grand Caravan SXT", ["Grand Caravan"]))
         self.assertTrue(is_minivan("Town & Country", ["Town & Country"]))
         self.assertFalse(is_minivan("Questor", ["Quest"]))
+
+
+class JobsToCheckByHandTests(BodyTypeWorld):
+    """Booked jobs in a retired class that cannot be re-priced in a vehicle's
+    new class: no vehicle, a vehicle with no class, a vehicle with no size."""
+
+    def setUp(self):
+        super().setUp()
+        inputs = booking.JobInputs(Service.objects.get(name="Full Detail"), self.crossover, self.two_rows, 1)
+        day = timezone.localdate() + datetime.timedelta(days=12)
+        at = lambda hour: timezone.make_aware(datetime.datetime.combine(day, datetime.time(hour)))  # noqa: E731
+        classless = Vehicle.objects.create(customer=self.customer, make="Acme", model="Mystery")
+        sizeless = Vehicle.objects.create(
+            customer=self.customer, make="Acme", model="Hauler", vehicle_class=VehicleClass.objects.get(name="Light Pickups & Offroad")
+        )
+        self.by_hand = [
+            booking.book(self.customer, None, at(8), inputs),
+            booking.book(self.customer, classless, at(10), inputs),
+            booking.book(self.customer, sizeless, at(12), inputs),
+        ]
+
+    def test_the_dry_run_lists_them_in_their_own_section_and_changes_nothing(self):
+        counts = lambda: {model._meta.label: model._base_manager.count() for model in apps.get_models()}  # noqa: E731
+        before = counts()
+        text = self.apply_sizes("--dry-run")
+        self.assertEqual(counts(), before)
+        section = text.split("Booked jobs to check by hand", 1)[1].split("\nBooked jobs from", 1)[0]
+        self.assertIn("(3)", section)
+        for appointment in self.by_hand:
+            self.assertIn(f"appointment {appointment.pk} on ", section)
+        self.assertIn(f"appointment {self.by_hand[0].pk} on {(timezone.localdate() + datetime.timedelta(days=12)):%Y-%m-%d}, no vehicle", section)
+        self.assertEqual(section.count("no vehicle or class: check by hand"), 3)
+        for private in ("Pat", "Example", "4235550101"):
+            self.assertNotIn(private, text)
+
+    def test_they_keep_their_quoted_price_and_wait_on_the_booked_job_review(self):
+        self.apply_sizes()
+        draft = PricebookVersion.objects.get(number=2)
+        jobs = {job.appointment: job for job in undecided_jobs(draft)}
+        for appointment in self.by_hand:
+            appointment.refresh_from_db()
+            self.assertEqual(appointment.total_before_tax, Decimal("250.00"))
+            self.assertTrue(jobs[appointment].check_by_hand)
+            self.assertIsNone(jobs[appointment].new_total)
+        self.assertFalse(jobs[self.future].check_by_hand)
+
+    def test_a_failure_partway_says_what_and_where_and_changes_nothing(self):
+        def broken(appointment, version):
+            raise RuntimeError("an unexpected gap")
+
+        with mock.patch("pricebook.publishing._reprice", broken):
+            with self.assertRaises(CommandError) as raised:
+                self.apply_sizes()
+        message = str(raised.exception)
+        self.assertIn("stopped while publishing the draft and re-pricing booked jobs", message)
+        self.assertRegex(message, r"re-pricing appointment \d+ on \d{4}-\d{2}-\d{2}")
+        self.assertIn("RuntimeError: an unexpected gap. Nothing was changed.", message)
+        self.assertNotIn("Pat", message)
+        self.assertFalse(switched())
+        self.assertFalse(PricebookVersion.objects.get(number=2).is_published)
+        self.assertTrue(ClassificationRule.objects.filter(pk=self.old_rule.pk).exists())

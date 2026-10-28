@@ -10,6 +10,7 @@ from appointments import booking
 from appointments.models import RepricingDecision
 from pricebook import publishing
 from pricebook.models import Price, PricebookVersion
+from vehicles.models import Vehicle, VehicleClass
 
 from .fixtures import JobsTestCase, local
 
@@ -222,3 +223,45 @@ class BookedJobReviewTests(ThreeBookedJobs):
         self.client.force_login(self.helper_user)
         self.assertEqual(self.client.post(self.review, {"all": "use_new"}).status_code, 403)
         self.assertFalse(RepricingDecision.objects.exists())
+
+
+class PublishWithJobsToCheckByHandTests(PricebookTestCase):
+    """Jobs booked in a class retired since, that have no vehicle, or a
+    vehicle with no class or no size variant, published from the price book
+    page: not re-priced, kept at their quoted price, listed to check by hand."""
+
+    def setUp(self):
+        super().setUp()
+        day = timezone.localdate() + datetime.timedelta(days=20)
+        inputs = booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1)
+        large = VehicleClass.objects.get(name="Large")
+        classless = Vehicle.objects.create(customer=self.customer, make="Acme", model="Mystery")
+        sizeless = Vehicle.objects.create(customer=self.customer, make="Acme", model="Wagon", vehicle_class=large)
+        self.jobs = [
+            booking.book(self.customer, None, local(day, 8), inputs),
+            booking.book(self.customer, classless, local(day, 10), inputs),
+            booking.book(self.customer, sizeless, local(day, 12), inputs),
+        ]
+        self.crossover.active = False
+        self.crossover.save()
+        self.draft = self.start_draft()
+        self.url = reverse("pricebook-publish", args=[self.draft.number])
+        self.today = timezone.localdate().isoformat()
+
+    def test_the_publish_screen_lists_them_to_check_by_hand(self):
+        page = self.client.get(self.url, {"effective_date": self.today})
+        self.assertContains(page, "no vehicle or class: check by hand", count=3)
+        for appointment in self.jobs:
+            self.assertContains(page, f"Appointment {appointment.pk}")
+        self.assertNotContains(page, "Use new price (")
+
+    def test_publishing_keeps_their_quoted_price(self):
+        response = self.client.post(self.url, {"effective_date": self.today, "publish": "yes"})
+        self.assertRedirects(response, reverse("pricebook-version", args=[self.draft.number]))
+        self.draft.refresh_from_db()
+        self.assertTrue(self.draft.is_published)
+        for appointment in self.jobs:
+            appointment.refresh_from_db()
+            self.assertEqual(appointment.total_before_tax, Decimal("250.00"))
+        self.assertEqual(set(RepricingDecision.objects.values_list("choice", flat=True)), {"keep"})
+        self.assertEqual(RepricingDecision.objects.count(), 3)
