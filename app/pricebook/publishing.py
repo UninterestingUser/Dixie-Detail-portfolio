@@ -9,7 +9,9 @@ A job booked in a class since retired, as the body-type classes were by the
 switch to the size-based classes (decision 0083), is re-priced in its
 vehicle's class now. apply_size_classes publishes with every booked job
 keeping its quoted price and logs no choice, so the owner decides each later
-on the version's booked-job review (undecided_jobs() and decide()).
+on the version's booked-job review (undecided_jobs() and decide()). Such a
+job with no vehicle, or whose vehicle has no live class or no size variant,
+is not re-priced: it keeps its quoted price and is listed to check by hand.
 """
 
 import datetime
@@ -41,13 +43,30 @@ class AffectedJob:
     # The class and size it is re-priced in, when its own class is retired.
     new_class: object = None
     new_size: object = None
+    # Booked in a retired class with no vehicle, or a vehicle with no live
+    # class or size variant: not re-priced, keeps its quoted price.
+    check_by_hand: bool = False
 
     def describe(self):
         """The job without the customer's name: id, date and vehicle."""
-        appointment = self.appointment
-        vehicle = appointment.vehicle
-        name = " ".join(str(part) for part in (vehicle.year, vehicle.make, vehicle.model) if part) or "no year, make or model"
-        return f"appointment {appointment.pk} on {timezone.localtime(appointment.scheduled_start):%Y-%m-%d}, vehicle {vehicle.pk}: {name}"
+        return describe_appointment(self.appointment)
+
+
+def describe_appointment(appointment):
+    """An appointment as command output shows it: id, date and vehicle, never the customer."""
+    day = f"appointment {appointment.pk} on {timezone.localtime(appointment.scheduled_start):%Y-%m-%d}"
+    vehicle = appointment.vehicle
+    if vehicle is None:
+        return f"{day}, no vehicle"
+    name = " ".join(str(part) for part in (vehicle.year, vehicle.make, vehicle.model) if part) or "no year, make or model"
+    return f"{day}, vehicle {vehicle.pk}: {name}"
+
+
+CHECK_BY_HAND = "no vehicle or class: check by hand"
+
+
+class RepriceFailed(ValueError):
+    """Re-pricing one booked job failed for a reason nobody foresaw."""
 
 
 def affected_jobs(version, effective_date):
@@ -64,10 +83,26 @@ def affected_jobs(version, effective_date):
     )
     affected = []
     for appointment in appointments:
-        job = _reprice(appointment, version)
+        try:
+            job = _reprice(appointment, version)
+        except Exception as error:
+            raise RepriceFailed(f"re-pricing {describe_appointment(appointment)}: {type(error).__name__}: {error}") from error
         if job is not None:
             affected.append(job)
     return affected
+
+
+def vehicle_class_and_size(vehicle):
+    """(class, size variant) to re-price a job in its vehicle's class, or
+    None when the vehicle is missing, has no live class, or has no size
+    variant of a class that has them."""
+    if vehicle is None or vehicle.vehicle_class is None or not vehicle.vehicle_class.active:
+        return None
+    vehicle_class, size_variant = vehicle.vehicle_class, vehicle.size_variant
+    if vehicle_class.size_variants.filter(active=True).exists():
+        if size_variant is None or size_variant.vehicle_class_id != vehicle_class.pk:
+            return None
+    return vehicle_class, size_variant
 
 
 def _reprice(appointment, version):
@@ -81,12 +116,12 @@ def _reprice(appointment, version):
     vehicle_class = main.vehicle_class
     size_variant = next((line.size_variant for line in lines if line.size_variant), None)
     if not vehicle_class.active:
-        vehicle_class, size_variant = appointment.vehicle.vehicle_class, appointment.vehicle.size_variant
-        if vehicle_class is None or not vehicle_class.active:
-            result.reasons.append(
-                f"Can no longer be priced: {main.vehicle_class} is retired, and the vehicle's class waits on the differences screen"
-            )
+        found = vehicle_class_and_size(appointment.vehicle)
+        if found is None:
+            result.check_by_hand = True
+            result.reasons.append(CHECK_BY_HAND)
             return result
+        vehicle_class, size_variant = found
         result.new_class, result.new_size = vehicle_class, size_variant
     try:
         job = price_job(

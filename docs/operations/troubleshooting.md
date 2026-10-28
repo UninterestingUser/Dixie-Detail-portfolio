@@ -4,7 +4,7 @@ summary: Known problems with the server, stack, backups and tools, each with the
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-24
+updated: 2026-10-28
 tags: [operations, troubleshooting, errors]
 related: [docs/operations/deploying-changes.md, docs/operations/backups-and-restore.md, docs/architecture/server-and-stack.md, docs/architecture/secrets.md]
 ---
@@ -68,6 +68,11 @@ Each entry gives the symptom as it appears on screen, the cause, and the fix. Ad
 
 **Cause:** the one-off container was started without the cache folder mounted, or the host folder is not owned by the app container's user (uid 10001). The app container's own file system is read-only.
 **Fix:** run `sudo /srv/dixie-detail/ops/deploy.sh`, which creates the host folder owned by uid 10001 when it is missing, or fix an existing folder's owner with `sudo chown 10001:10001 /srv/dixie-vehicle-data`. Start the command with `-v /srv/dixie-vehicle-data:/srv/vehicle-data`, as in [importing-vehicle-data.md](importing-vehicle-data.md). The monthly refresh mounts it itself.
+
+### apply_size_classes: "AttributeError: 'NoneType' object has no attribute 'vehicle_class'"
+
+**Cause:** found on 2026-10-28 in the first dry run. A booked job in a retired class is re-priced in its vehicle's new class, and at least one upcoming appointment had no vehicle. Re-pricing assumed every appointment had one.
+**Fix:** fixed in the shared publishing code (decision 0084). Such a job, and one whose vehicle has no class or size variant, is no longer re-priced: it keeps its quoted price and is listed under "Booked jobs to check by hand" in the report and on the version's booked-job review. If `apply_size_classes` stops for any other reason, its error says what step it was on and which appointment or vehicle it was working on, and nothing is changed; fix that record and run the dry run again.
 
 ### The vehicle import rejects rows from a make it was asked for
 

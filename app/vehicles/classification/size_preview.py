@@ -294,7 +294,12 @@ class Preview:
             self.write(f"  {vehicle_name(change.vehicle)} | {change.before} -> {change.after} | {change.reason}")
 
     def booked_jobs(self):
-        jobs = self.outcome.jobs
+        jobs = [job for job in self.outcome.jobs if not job.check_by_hand]
+        by_hand = [job for job in self.outcome.jobs if job.check_by_hand]
+        self.write(f"\nBooked jobs to check by hand: booked in a retired class, with no vehicle or a vehicle with no class or size ({len(by_hand):,})")
+        self.write("  Not re-priced: each keeps its quoted price. Give the vehicle its class and size, then decide it on the version's booked-job review.")
+        for job in by_hand:
+            self.write(f"  {job.describe()} | quoted ${job.booked_total} | {'; '.join(job.reasons)}")
         self.write(f"\nBooked jobs from {self.outcome.effective:%Y-%m-%d} on that the new price book prices differently ({len(jobs):,})")
         self.write("  Each keeps its quoted price, the price of record; decide each on the version's booked-job review.")
         for job in jobs:
