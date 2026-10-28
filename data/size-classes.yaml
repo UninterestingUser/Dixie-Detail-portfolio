@@ -5,7 +5,7 @@ meta:
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
-    Decisions 0082 and 0083. The classes themselves, with their size variants, booking and photo
+    Decisions 0082, 0083 and 0085. The classes themselves, with their size variants, booking and photo
     cards, are in data/vehicle-classes.yaml; this file holds the rules. classify_vehicles creates the
     rules and model overrides below as launch rules and overrides and keeps each in step with this
     file, except those the owner has edited or deleted in the database. apply_size_classes switched
@@ -44,29 +44,52 @@ near_line: 5
 # this model year on, plus any older range a customer owns.
 newest_from: 2015
 
-# Seat rows, the size variant of Small, Medium, Large and Full-size: one for
-# these EPA size classes, three when the third-row data says always, asked
-# when it says optional, and otherwise two. Doors are no longer used.
+# Seat rows, the size variant of Small, Medium, Large and Full-size, in this
+# order (decision 0085): always three in these classes; always three for an
+# EPA minivan class, and for a model in minivan_models below that has no EPA
+# size class; one for these EPA size classes, but only in these classes (a
+# two-seater that measures into a larger class counts as two rows); three
+# when the third-row data says always, asked when it says optional, and
+# otherwise two. Doors are no longer used.
 seat_rows:
+  always_three_classes: [Full-size]
+  minivan_epa_classes: [Minivan - 2WD, Minivan - 4WD]
   one_row_epa_classes: [Two Seaters]
+  one_row_only_in: [Small]
 
 # Vans, identified before the pickup rules so no van is ever a pickup. A
 # model name matches when the catalog name is it or begins with it, in whole
 # words, capitals and digits only: Transit covers Transit Connect and ProMaster
 # covers ProMaster City, but "Transit-350" is one word, so it is listed too.
-# Every van is then classed by size like any other vehicle: large vans land
-# in Full-size Vans, small vans (Transit Connect, ProMaster City, NV200,
-# Metris) wherever their box volume puts them.
+# The full-size vans named in full_size_vans below are Full-size Vans by
+# nameplate; the small vans (Transit Connect, ProMaster City, City Express,
+# NV200, Metris) are classed by size like any other vehicle.
 vans: &vans [ProMaster, Transit, Transit-150, Transit-250, Transit-350, Sprinter, eSprinter, Express, City Express,
              Savana, E-Series, Econoline, E150, E250, E350, Club Wagon, NV, NV200, NV Cargo, NV Passenger, Metris,
              Ram Van, Ram Wagon, B150, B250, B350, G10, G20, G30, G15, G25, G35, Chevy Van, Vandura, Rally]
 
+# Full-size vans by nameplate: Full-size Vans in every model year, whatever
+# they measure (decision 0085). Sprinter and eSprinter match every make that
+# sells them. Transit Connect and ProMaster City are left out; they, City
+# Express, NV200 and Metris go by size.
+full_size_vans: &full_size_vans [Express, Savana, E-Series, E150, E250, E350, Econoline, Club Wagon, Ram Van, Ram Wagon,
+                                 B100, B150, B200, B250, B300, B350, B1500, B2500, B3500, G10, G15, G20, G25, G30, G35,
+                                 G1500, G2500, G3500, Chevy Van, Sportvan, Vandura, Rally, Sprinter, eSprinter, Transit,
+                                 Transit-150, Transit-250, Transit-350, ProMaster, NV1500, NV2500, NV3500]
+small_vans_by_size: &small_vans_by_size [Transit Connect, ProMaster City]
+
 # Tried in this order; the first whose conditions all hold gives the class.
 # box_volume names a line above, by its name. not_model leaves out the vans.
+# After the rules, a model that is a pickup in any model year is a pickup in
+# all of them, then the pickup line splits the pickups.
 rules:
   - name: Motorcycles
     class: Motorcycles
     conditions: {vehicle_type: [motorcycle]}
+  - name: Full-size vans by nameplate
+    class: Full-size Vans
+    conditions: {model: *full_size_vans, not_model: *small_vans_by_size}
+    note: Full-size Vans in every model year, whatever they measure. Small vans go by size.
   - name: Heavy pickups the EPA leaves out
     class: Full-size Trucks
     conditions:
@@ -122,6 +145,7 @@ model_overrides:
   - {make: Audi, model: Q4 e-tron, year_from: 2022, year_to: 2026, class: Medium, note: "The owner's call (2026-10-28)"}
   - {make: Porsche, model: Cayenne, year_from: 2026, year_to: 2026, class: Large, note: "The owner's call (2026-10-28)"}
   - {make: BMW, model: iX, year_from: 2026, year_to: 2026, class: Medium, note: "The owner's call (2026-10-28)"}
+  - {make: Cadillac, model: Escalade, year_from: 2007, year_to: 2014, class: Full-size, note: "Like the Tahoe and Yukon of those years (2026-10-28)"}
 
 # A model with no measurements in any year takes the class where most
 # measured model years of its EPA size class land (the EPA size class

@@ -29,7 +29,7 @@ from django.db import transaction
 from vehicles.classification.engine import apply, change_detail, changes, classify_catalog, record, year_spans, years_text
 from vehicles.classification.guard import hold
 from vehicles.classification.seed import SeedError, SeedReport, sync_launch_set, sync_seat_list
-from vehicles.classification.size_preview import smoothed_runs
+from vehicles.classification.size_preview import smoothed_away_from_newest, smoothed_runs
 from vehicles.classification.switch import switched
 from vehicles.models import ClassificationChange, VehicleModel
 
@@ -105,6 +105,7 @@ class Command(BaseCommand):
             ("decision", "by a review queue decision"),
             ("carried", "from the nearest classified year, the EPA not having published it yet"),
             ("pickup_line", "a pickup, by the pickup size line"),
+            ("pickup_model", "a pickup in other model years, with no box volume"),
             ("epa_fallback", "by the EPA size class fallback"),
             ("smoothed", "smoothed into the class around them"),
             ("photo_cards", "sent to the photo cards from the review queue"),
@@ -140,6 +141,10 @@ class Command(BaseCommand):
         runs = smoothed_runs(results)
         write(f"\nSmoothed: runs of model years given the class around them ({len(runs):,})")
         for line in runs:
+            write(f"  {line}")
+        away = smoothed_away_from_newest(results)
+        write(f"\nSmoothed away from the newest generation's class, worth a look ({len(away):,})")
+        for line in away:
             write(f"  {line}")
 
         if held is not None:
