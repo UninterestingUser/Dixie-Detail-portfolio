@@ -14,9 +14,11 @@ The rules are the launch rules classification.seed creates from
 data/size-classes.yaml and are tried in order like any rules. finish()
 then takes three steps, in this order:
 
-1. The pickup line: a pickup a rule caught that has a box volume goes on
-   its side of the pickup line; one with no box volume in any year keeps
-   the class of its rule, from its EPA label.
+1. Pickups in every model year, then the pickup line: a model a pickup rule
+   catches in any model year is a pickup in all of them (decision 0085); a
+   pickup that has a box volume goes on its side of the pickup line, and
+   one with no box volume in any year keeps the class of its rule, from its
+   EPA label.
 2. The EPA size class fallback: a model with no measurements in any year
    matches no box-volume rule; it takes the class where most measured model
    years of its EPA size class land (the fallback table), or, with no EPA
@@ -163,18 +165,39 @@ def save_box_volumes(model_years, partial=False):
 
 
 @lru_cache(maxsize=4)
-def _one_row_classes(data_dir):
-    return frozenset(read_data(DATA_FILE, data_dir)["seat_rows"]["one_row_epa_classes"])
+def _seat_settings(data_dir):
+    data = read_data(DATA_FILE, data_dir)
+    settings_ = data["seat_rows"]
+    return {
+        "one_row": frozenset(settings_["one_row_epa_classes"]),
+        "one_row_only_in": frozenset(settings_["one_row_only_in"]),
+        "always_three_classes": frozenset(settings_["always_three_classes"]),
+        "minivan_epa": frozenset(settings_["minivan_epa_classes"]),
+        "minivan_models": tuple(data["minivan_models"]),
+    }
 
 
-def seat_rows(model_year):
+def seat_rows(model_year, vehicle_class=None):
     """The size variant values a model year's facts give for a size-based
-    class: {1} for an EPA two seater, {3} or {2, 3} (asked) from the
-    third-row data, and otherwise {2}."""
+    class (data/size-classes.yaml, decision 0085): always {3} in Full-size,
+    for an EPA minivan class, and for a listed minivan with no EPA size
+    class; {1} for an EPA two seater, but only in Small (two rows in a larger
+    class); otherwise {3} or {2, 3} (asked) from the third-row data, or {2}."""
+    from .rules import NONE, Outcome, test_condition
+
+    found = _seat_settings(settings.DATA_DIR)
+    if vehicle_class is not None and vehicle_class.name in found["always_three_classes"]:
+        return {3}
     classes = model_year.values("epa_size_class")
-    if classes and classes <= _one_row_classes(settings.DATA_DIR):
-        return {1}
-    rows = {int(count) for count in model_year.values("seat_rows")}
+    if classes & found["minivan_epa"]:
+        return {3}
+    if not classes and test_condition(model_year, "model", list(found["minivan_models"])).outcome == Outcome.HOLDS:
+        return {3}
+    if classes and classes <= found["one_row"]:
+        if vehicle_class is None or vehicle_class.name in found["one_row_only_in"]:
+            return {1}
+        return {2}
+    rows = {int(count) for count in model_year.values("seat_rows") if count != NONE}
     return rows or {2}
 
 
@@ -286,14 +309,51 @@ def classes_by_name():
     return {found.name: found for found in VehicleClass.objects.all()}
 
 
+# What a model's pickup years may turn into a pickup: years the rules, the
+# EPA size class fallback or nothing classed, never an override, a queue
+# decision or the photo cards.
+PICKUP_MODEL_FROM = {Method.RULE, Method.EPA_FALLBACK, Method.REVIEW}
+
+
+def apply_pickup_models(results, line, classes, variants):
+    """Make every model year of a model that a pickup rule catches in any
+    model year a pickup, in place (decision 0085): it takes the class its
+    pickup years mostly have, which the pickup line then settles where it
+    has a box volume. Returns the ids of the models it changed."""
+    from .engine import Result, size_for, year_spans
+
+    sides = {line["below"], line["above"]}
+    pickups = defaultdict(list)
+    for (model_id, year), (model_year, result) in results.items():
+        if result.method == Method.RULE and result.vehicle_class is not None and result.vehicle_class.name in sides:
+            pickups[model_id].append((year, result))
+    changed = set()
+    for key, (model_year, result) in list(results.items()):
+        found = pickups.get(key[0])
+        if not found or result.method not in PICKUP_MODEL_FROM:
+            continue
+        if result.method == Method.RULE and result.vehicle_class is not None and result.vehicle_class.name in sides:
+            continue
+        counts = Counter(found_result.vehicle_class.name for _, found_result in found)
+        vehicle_class = classes[winner(counts)]
+        _, nearest = min(found, key=lambda entry: (abs(entry[0] - key[1]), -entry[0]))
+        spans = year_spans([(model_year.vehicle_model, year, "") for year, _ in found])
+        years = ", ".join(str(first) if first == last else f"{first}-{last}" for _, first, last, _ in spans)
+        reason = f"a pickup in every model year: {years} are pickups by rule {nearest.rule.position} ({nearest.rule.name})"
+        size, ask = size_for(vehicle_class, model_year, variants)
+        results[key] = (model_year, Result(vehicle_class, size, ask, Method.PICKUP_MODEL, rule=nearest.rule, reasons=[reason]))
+        changed.add(key[0])
+    return changed
+
+
 def apply_pickup_line(results, line, classes, variants):
-    """Put each pickup a rule caught that has a box volume on its side of
-    the pickup line, in place. One with no box volume keeps its rule's class."""
+    """Put each pickup that has a box volume on its side of the pickup line,
+    in place. One with no box volume keeps the class its EPA label gives."""
     from .engine import Result, size_for
 
     sides = {line["below"], line["above"]}
     for key, (model_year, result) in results.items():
-        if result.method != Method.RULE or result.vehicle_class is None or result.vehicle_class.name not in sides:
+        if result.method not in (Method.RULE, Method.PICKUP_MODEL) or result.vehicle_class is None or result.vehicle_class.name not in sides:
             continue
         if model_year.box_volume is None:
             continue
@@ -301,7 +361,10 @@ def apply_pickup_line(results, line, classes, variants):
         vehicle_class = classes[line["above"] if above else line["below"]]
         size, ask = size_for(vehicle_class, model_year, variants)
         side = "at or over" if above else "under"
-        reason = f"a pickup by rule {result.rule.position} ({result.rule.name}), {side} the {line['at']} cu ft pickup line"
+        if result.method == Method.PICKUP_MODEL:
+            reason = f"{result.reasons[0]}, {side} the {line['at']} cu ft pickup line"
+        else:
+            reason = f"a pickup by rule {result.rule.position} ({result.rule.name}), {side} the {line['at']} cu ft pickup line"
         results[key] = (model_year, Result(vehicle_class, size, ask, Method.PICKUP_LINE, rule=result.rule, reasons=[reason]))
 
 
@@ -329,7 +392,7 @@ def apply_fallback(results, counts, classes, variants):
 # What smoothing may change: classes the rules and the steps gave, never an
 # override, a queue decision, a year carried from the nearest one, or a year
 # already smoothed.
-SMOOTHABLE = {Method.RULE, Method.PICKUP_LINE, Method.EPA_FALLBACK}
+SMOOTHABLE = {Method.RULE, Method.PICKUP_LINE, Method.PICKUP_MODEL, Method.EPA_FALLBACK}
 
 
 def runs_of(entries):
@@ -385,10 +448,12 @@ def smooth(results, variants, max_years):
 
 
 def finish(results, variants, classes=None, data_dir=None):
-    """The steps after the rules, in place: the pickup line, the EPA size
-    class fallback and smoothing. Returns the smoothed runs."""
+    """The steps after the rules, in place: pickups in every model year,
+    the pickup line, the EPA size class fallback and smoothing. Returns the
+    smoothed runs."""
     data = read_scheme(data_dir)
     classes = classes or classes_by_name()
+    apply_pickup_models(results, data["pickup_line"], classes, variants)
     apply_pickup_line(results, data["pickup_line"], classes, variants)
     apply_fallback(results, fallback_counts(results), classes, variants)
     return smooth(results, variants, data["smoothing"]["max_years"])

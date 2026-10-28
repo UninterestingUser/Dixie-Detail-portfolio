@@ -239,7 +239,7 @@ class SchemeTests(SizeClassTestCase):
         for year in range(2014, 2020):
             result = self.result(results, six, year)
             self.assertEqual((result.vehicle_class.name, result.method), ("Medium", Method.SMOOTHED))
-        self.assertIn("smoothed: 2014-2019 lies between two runs of Medium; rule 90: Large gives Large", result.because)
+        self.assertIn("smoothed: 2014-2019 lies between two runs of Medium; rule 100: Large gives Large", result.because)
         self.assertEqual(self.result(results, six, 2013).method, Method.RULE)
         self.assertEqual({self.result(results, seven, year).vehicle_class.name for year in range(2014, 2021)}, {"Large"})
         out = io.StringIO()
@@ -565,3 +565,120 @@ class JobsToCheckByHandTests(BodyTypeWorld):
         self.assertFalse(switched())
         self.assertFalse(PricebookVersion.objects.get(number=2).is_published)
         self.assertTrue(ClassificationRule.objects.filter(pk=self.old_rule.pk).exists())
+
+
+class FollowUpRuleTests(SizeClassTestCase):
+    """The fixes from the owner's first apply_size_classes dry run (decision 0085)."""
+
+    def test_minivans_are_always_three_rows(self):
+        odyssey = add_model("Honda", "Odyssey", year_from=2020, year_to=2020)
+        self.add_year(odyssey, 2020, lengths=(260,), epa=["Minivan - 2WD"])
+        # A Sienna year with no EPA size class is a minivan by the list in data.
+        sienna = add_model("Toyota", "Sienna", year_from=2021, year_to=2021)
+        add_facts(sienna, Source.VPIC, year=2021, source_vehicle_types=["Multipurpose Passenger Vehicle (MPV)"])
+        add_facts(sienna, Source.CANADA, year=2021, **dimensions([270]))
+        results = self.classified()
+        for model, year in ((odyssey, 2020), (sienna, 2021)):
+            with self.subTest(model=model.model):
+                result = self.result(results, model, year)
+                self.assertEqual((result.vehicle_class.name, result.size_variant.value, result.ask_size), ("Large", 3, False))
+
+    def test_full_size_is_always_three_rows_and_the_check_counts_only_three(self):
+        from vehicles.classification.sizes import produced
+
+        big = add_model("Acme", "Big Two Row", year_from=2024, year_to=2024)
+        self.add_year(big, 2024, lengths=(300,), epa=STANDARD_SUVS, rows=[2])
+        results = self.classified()
+        result = self.result(results, big, 2024)
+        self.assertEqual((result.vehicle_class.name, result.size_variant.value), ("Full-size", 3))
+        found = produced(results, active_variants())
+        self.assertIn(("Full-size", 3), found)
+        self.assertNotIn(("Full-size", 2), found)
+
+    def test_one_row_is_only_in_small(self):
+        sl = add_model("Mercedes-Benz", "500SL", year_from=1990, year_to=1990)
+        self.add_year(sl, 1990, lengths=(200,), epa=["Two Seaters"])
+        roadster = add_model("Acme", "Roadster", year_from=1990, year_to=1990)
+        self.add_year(roadster, 1990, lengths=(170,), epa=["Two Seaters"])
+        results = self.classified()
+        result = self.result(results, sl, 1990)
+        self.assertEqual((result.vehicle_class.name, result.size_variant.value), ("Medium", 2))
+        result = self.result(results, roadster, 1990)
+        self.assertEqual((result.vehicle_class.name, result.size_variant.value), ("Small", 1))
+
+    def test_a_pickup_in_any_model_year_is_a_pickup_in_all_of_them(self):
+        tundra = add_model("Toyota", "Tundra", year_from=1995, year_to=2001)
+        for year in range(1995, 2000):
+            self.add_year(tundra, year, lengths=(260,), epa=["Special Purpose Vehicle 2WD"])
+        for year in (2000, 2001):
+            self.add_year(tundra, year, lengths=(320,), epa=["Standard Pickup Trucks 4WD"])
+        titan = add_model("Nissan", "Titan", year_from=2002, year_to=2006)
+        for year in (2002, 2003):
+            add_facts(titan, Source.CANADA, year=year, **dimensions([290]))
+        for year in (2004, 2005, 2006):
+            self.add_year(titan, year, lengths=(320,), epa=["Standard Pickup Trucks 4WD"])
+        f150 = add_model("Ford", "F-150", year_from=2004, year_to=2004)
+        self.add_year(f150, 2004, lengths=(300,), epa=["Standard Pickup Trucks 4WD"])
+        unmeasured = add_model("Acme", "Old Hauler", year_from=1999, year_to=2000)
+        add_facts(unmeasured, Source.VPIC, year=1999, source_vehicle_types=["Multipurpose Passenger Vehicle (MPV)"])
+        add_facts(unmeasured, year=2000, epa_size_classes=["Standard Pickup Trucks 2WD"])
+        results = self.classified()
+        # Older full-size pickups that measure under 760 cu ft are Light Pickups (the owner's decision).
+        for year in range(1995, 2000):
+            result = self.result(results, tundra, year)
+            self.assertEqual((result.vehicle_class.name, result.method), ("Light Pickups", Method.PICKUP_LINE))
+        self.assertIn("a pickup in every model year: 2000-2001 are pickups by rule", result.because)
+        self.assertEqual({self.result(results, tundra, year).vehicle_class.name for year in (2000, 2001)}, {"Full-size Trucks"})
+        self.assertEqual({self.result(results, titan, year).vehicle_class.name for year in (2002, 2003)}, {"Light Pickups"})
+        self.assertEqual(self.result(results, f150, 2004).vehicle_class.name, "Light Pickups")
+        # With no box volume, it takes the class its pickup years have.
+        result = self.result(results, unmeasured, 1999)
+        self.assertEqual((result.vehicle_class.name, result.method), ("Full-size Trucks", Method.PICKUP_MODEL))
+
+    def test_full_size_vans_by_nameplate_whatever_they_measure(self):
+        express = add_model("Chevrolet", "Express Passenger", year_from=2010, year_to=2010)
+        self.add_year(express, 2010, lengths=(260,), epa=["Vans, Passenger Type"])
+        e250 = add_model("Ford", "E-250", year_from=2008, year_to=2008)
+        add_facts(e250, Source.VPIC, year=2008, source_vehicle_types=["Truck"])
+        add_facts(e250, Source.CANADA, year=2008, **dimensions([280]))
+        sprinter = add_model("Freightliner", "Sprinter", year_from=2008, year_to=2008)
+        self.add_year(sprinter, 2008, lengths=(180,), source_vehicle_types=["Truck"])
+        connect = add_model("Ford", "Transit Connect", year_from=2015, year_to=2015)
+        self.add_year(connect, 2015, lengths=(210,), epa=["Special Purpose Vehicle 2WD"])
+        city = add_model("Ram", "ProMaster City", year_from=2015, year_to=2015)
+        self.add_year(city, 2015, lengths=(220,), epa=["Special Purpose Vehicle 2WD"])
+        results = self.classified()
+        for model, year in ((express, 2010), (e250, 2008), (sprinter, 2008)):
+            with self.subTest(model=model.model):
+                self.assertEqual(self.result(results, model, year).vehicle_class.name, "Full-size Vans")
+        self.assertEqual(self.result(results, connect, 2015).vehicle_class.name, "Medium")
+        self.assertEqual(self.result(results, city, 2015).vehicle_class.name, "Medium")
+
+    def test_the_escalade_override(self):
+        escalade = add_model("Cadillac", "Escalade", year_from=2007, year_to=2015)
+        for year in range(2007, 2016):
+            self.add_year(escalade, year, lengths=(260,), epa=STANDARD_SUVS, rows=[3])
+        results = self.classified()
+        for year in range(2007, 2015):
+            result = self.result(results, escalade, year)
+            self.assertEqual((result.vehicle_class.name, result.method, result.size_variant.value), ("Full-size", Method.OVERRIDE, 3))
+        self.assertEqual(self.result(results, escalade, 2015).vehicle_class.name, "Large")
+
+    def test_the_report_lists_a_smooth_away_from_the_newest_generation(self):
+        model = add_model("Acme", "Backwards", year_from=2001, year_to=2015)
+        for year in range(2001, 2016):
+            if year < 2005 or 2007 <= year <= 2010:
+                length = 240
+            else:
+                length = 200 if year < 2011 else 205
+            self.add_year(model, year, lengths=(length,), epa=SMALL_SUVS)
+        forwards = add_model("Acme", "Forwards", year_from=2010, year_to=2019)
+        for year in range(2010, 2020):
+            self.add_year(forwards, year, lengths=(240 if year in (2014, 2015) else 200,), epa=SMALL_SUVS)
+        out = io.StringIO()
+        self.seed()
+        call_command("classify_vehicles", "--dry-run", stdout=out)
+        text = out.getvalue().split("Smoothed away from the newest generation's class, worth a look", 1)[1].split("\n\n", 1)[0]
+        self.assertIn("(1)", text)
+        self.assertIn("Acme Backwards 2005-2006: Large, smoothed from Medium; the newest generation, 2011-2015, is Medium", text)
+        self.assertNotIn("Forwards", text)
