@@ -30,8 +30,9 @@
     {% for job in jobs %}
       <li class="card">
         <strong><a href="{% url 'appointment' job.appointment.pk %}">{{ job.appointment.customer }}</a>, {{ job.appointment.scheduled_start|date:"D M j, Y" }}</strong>
-        <span class="sub">{{ job.appointment.vehicle }}{% if job.new_class %}: priced in {{ job.new_class }}{% if job.new_size %}, {{ job.new_size.label }}{% endif %}{% endif %}</span>
-        {% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}
+        <span class="sub">Appointment {{ job.appointment.pk }}{% if job.check_by_hand %} · <span class="warn">no vehicle or class: check by hand</span>{% endif %}</span>
+        <span class="sub">{{ job.appointment.vehicle|default:"No vehicle" }}{% if job.new_class %}: priced in {{ job.new_class }}{% if job.new_size %}, {{ job.new_size.label }}{% endif %}{% endif %}</span>
+        {% if not job.check_by_hand %}{% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}{% endif %}
         {% if job.becomes_full_day %}<span class="sub warn">The new service hours make this a full day.</span>{% endif %}
         <div class="field">
           <label for="choice-{{ job.appointment.pk }}">Choice</label>
@@ -45,7 +46,7 @@
           <label for="amount-{{ job.appointment.pk }}">Custom amount <span class="muted">(only for a custom amount)</span></label>
           <input id="amount-{{ job.appointment.pk }}" name="amount-{{ job.appointment.pk }}" inputmode="decimal">
         </div>
-        {% if job.new_total is None %}<p class="help">This job cannot be priced from this version. Keep it as it is or give a custom amount; a vehicle in a retired class gets its class on the differences screen first.</p>{% endif %}
+        {% if job.check_by_hand %}<p class="help">Booked in a retired class, and the job has no vehicle, or its vehicle has no class or size yet, so it was not re-priced and keeps its quoted price. Check it by hand: give the vehicle its class and size on its screen or the differences screen, or keep the price or give a custom amount.</p>{% elif job.new_total is None %}<p class="help">This job cannot be priced from this version. Keep it as it is or give a custom amount.</p>{% endif %}
       </li>
     {% endfor %}
   </ul>

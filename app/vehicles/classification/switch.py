@@ -234,26 +234,36 @@ def update_vehicles(results, variants, data, before):
         by_model[model_id].append((year, model_year, result))
     changes = []
     for vehicle in Vehicle.objects.select_related("vehicle_model", "vehicle_class", "size_variant__vehicle_class").order_by("pk"):
-        old_class = vehicle.vehicle_class
-        if vehicle.class_overridden and old_class.active:
-            changes.append(VehicleChange(vehicle, before.vehicles[vehicle.pk], before.vehicles[vehicle.pk], "its own override stands", "kept"))
-            continue
-        result, reason, confirm = new_result_for(vehicle, results, by_model, data["newest_generation_spread"])
-        if result is None:
-            if old_class is not None and not old_class.active:
-                proposed, why = proposed_class(vehicle, data)
-                changes.append(VehicleChange(vehicle, before.vehicles[vehicle.pk], f"proposed {proposed or 'no class'}", f"{reason}; {why}: on the differences screen", "proposed"))
-            continue
-        size = size_for_vehicle(vehicle, result, variants)
-        if vehicle.class_overridden:
-            reason += "; its own override named a retired class and was cleared"
-            vehicle.class_override_by, vehicle.class_override_at, vehicle.class_override_note = None, None, ""
-        vehicle.vehicle_class, vehicle.size_variant, vehicle.confirm_year = result.vehicle_class, size, confirm
-        vehicle._change_reason = CHANGE_REASON
-        vehicle.save()
-        after = class_label(vehicle.vehicle_class, size.label if size else ("ask" if result.ask_size else ""))
-        changes.append(VehicleChange(vehicle, before.vehicles[vehicle.pk], after, reason, "set"))
+        try:
+            changes.extend(update_vehicle(vehicle, results, by_model, variants, data, before))
+        except Exception as error:
+            raise ValueError(f"{vehicle_name(vehicle)}: {type(error).__name__}: {error}") from error
     return changes
+
+
+def update_vehicle(vehicle, results, by_model, variants, data, before):
+    """[VehicleChange] for one vehicle, set as update_vehicles() says."""
+    from .engine import class_label
+
+    old_class = vehicle.vehicle_class
+    recorded = before.vehicles[vehicle.pk]
+    if vehicle.class_overridden and old_class.active:
+        return [VehicleChange(vehicle, recorded, recorded, "its own override stands", "kept")]
+    result, reason, confirm = new_result_for(vehicle, results, by_model, data["newest_generation_spread"])
+    if result is None:
+        if old_class is not None and not old_class.active:
+            proposed, why = proposed_class(vehicle, data)
+            return [VehicleChange(vehicle, recorded, f"proposed {proposed or 'no class'}", f"{reason}; {why}: on the differences screen", "proposed")]
+        return []
+    size = size_for_vehicle(vehicle, result, variants)
+    if vehicle.class_overridden:
+        reason += "; its own override named a retired class and was cleared"
+        vehicle.class_override_by, vehicle.class_override_at, vehicle.class_override_note = None, None, ""
+    vehicle.vehicle_class, vehicle.size_variant, vehicle.confirm_year = result.vehicle_class, size, confirm
+    vehicle._change_reason = CHANGE_REASON
+    vehicle.save()
+    after = class_label(vehicle.vehicle_class, size.label if size else ("ask" if result.ask_size else ""))
+    return [VehicleChange(vehicle, recorded, after, reason, "set")]
 
 
 @dataclass
@@ -298,34 +308,50 @@ def run(effective, dry_run, out, user=None):
     if draft is None or not draft.prices.filter(vehicle_class__pending=True).exists():
         raise SwitchError("No draft holds the new price book: run load_pricebook first, which loads data/price-matrix.csv as a draft.")
 
-    with transaction.atomic():
-        before = Before.capture()
-        now = timezone.now()
-        classes = switch_classes()
-        archived = {
-            "rules": archive(ClassificationRule, now),
-            "model overrides": archive(ModelOverride, now),
-            "review queue decisions": archive(ReviewDecision, now),
-            "approvals": archive(ModelApproval, now, history=False),
-        }
-        seeded = SeedReport()
-        sync_launch_set(seeded)
-        sync_seat_list(seeded)
-        results = classify_catalog()
-        found = changes(results)
-        counts = apply(results)
-        summary = f"apply_size_classes switched to the size-based classes, effective {effective:%Y-%m-%d}: {len(found):,} model years changed"
-        record(ClassificationChange.Kind.SIZE_SWITCH, summary, found, user=user)
-        variants = active_variants()
-        data = read_scheme()
-        vehicles = update_vehicles(results, variants, data, before)
-        problems = check(version_cells(draft), produced(results, variants))
-        jobs = publish(draft, effective, {}, user=user, log_choices=False)
-        scheme = Scheme(data, results, fallback_counts(results))
-        outcome = Outcome(scheme, before, classes, archived, seeded, counts, vehicles, problems, jobs, draft, effective)
-        write_report(outcome, out, dry_run)
-        if dry_run or problems:
-            transaction.set_rollback(True)
+    step = "starting"
+    try:
+        with transaction.atomic():
+            step = "reading what the switch replaces"
+            before = Before.capture()
+            now = timezone.now()
+            step = "renaming, offering and retiring classes"
+            classes = switch_classes()
+            step = "archiving the old rules, overrides, decisions and approvals"
+            archived = {
+                "rules": archive(ClassificationRule, now),
+                "model overrides": archive(ModelOverride, now),
+                "review queue decisions": archive(ReviewDecision, now),
+                "approvals": archive(ModelApproval, now, history=False),
+            }
+            step = "creating the size-based rules and loading the third-row list"
+            seeded = SeedReport()
+            sync_launch_set(seeded)
+            sync_seat_list(seeded)
+            step = "classifying the catalog"
+            results = classify_catalog()
+            found = changes(results)
+            counts = apply(results)
+            summary = f"apply_size_classes switched to the size-based classes, effective {effective:%Y-%m-%d}: {len(found):,} model years changed"
+            record(ClassificationChange.Kind.SIZE_SWITCH, summary, found, user=user)
+            variants = active_variants()
+            data = read_scheme()
+            step = "setting customers' vehicles' classes"
+            vehicles = update_vehicles(results, variants, data, before)
+            step = "checking the draft price book"
+            problems = check(version_cells(draft), produced(results, variants))
+            step = "publishing the draft and re-pricing booked jobs"
+            jobs = publish(draft, effective, {}, user=user, log_choices=False)
+            step = "writing the report"
+            scheme = Scheme(data, results, fallback_counts(results))
+            outcome = Outcome(scheme, before, classes, archived, seeded, counts, vehicles, problems, jobs, draft, effective)
+            write_report(outcome, out, dry_run)
+            if dry_run or problems:
+                transaction.set_rollback(True)
+    except SwitchError:
+        raise
+    except Exception as error:
+        # The transaction is rolled back: nothing was changed.
+        raise SwitchError(f"apply_size_classes stopped while {step}: {type(error).__name__}: {error}. Nothing was changed.") from error
     if problems and not dry_run:
         raise SwitchError(f"The draft price book fails the check in {len(problems):,} place(s); nothing was changed.")
     return outcome
