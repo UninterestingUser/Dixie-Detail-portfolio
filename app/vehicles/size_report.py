@@ -3,8 +3,10 @@ crossover and SUV classes, gathered for the owner's decision on how to
 split them (docs/operations/classifying-vehicles.md#vehicle-size-report).
 
 It reads only facts already in the database and changes nothing. In scope
-are the catalog model years now in Coupes & Sedans, Crossovers & Wagons and
-Midsize SUVs, Fullsize SUVs & Minivans for comparison, and the model years
+are the catalog model years in the body-type classes Coupes & Sedans,
+Crossovers & Wagons and Midsize SUVs, Fullsize SUVs & Minivans for
+comparison (retired by apply_size_classes, decision 0083, after which only
+the review queue's part is left), and the model years
 waiting in the review queue with no class whose EPA size class is a car,
 station-wagon or SUV class ("in queue").
 

@@ -18,7 +18,7 @@ from django.views.decorators.http import require_POST, require_safe
 from appointments.models import RepricingDecision
 from pricebook.models import PricebookVersion, PublishedVersionError
 from pricebook.pricing import base_price
-from pricebook.publishing import PublishError, affected_jobs, publish
+from pricebook.publishing import PublishError, affected_jobs, decide, publish, undecided_jobs
 from staff.authorization import user_is_manager
 
 from .forms import PublishForm
@@ -105,6 +105,8 @@ def pricebook_version(request, number):
         "decisions": RepricingDecision.objects.filter(pricebook_version=version).select_related("appointment__customer", "decided_by").order_by("decided_at"),
         "can_edit": user_is_manager(request.user),
         "draft": PricebookVersion.objects.filter(status=PricebookVersion.Status.DRAFT).first(),
+        # Only the newest published version's booked jobs can still be decided.
+        "undecided": len(undecided_jobs(version)) if version == PricebookVersion.objects.filter(status=PricebookVersion.Status.PUBLISHED).order_by("-number").first() else 0,
     }
     return render(request, "control/pricebook_version.html", context)
 
@@ -232,3 +234,37 @@ def pricebook_publish(request, number):
             series.setdefault(job.appointment.series, []).append(job)
     context = {"version": version, "form": form, "jobs": jobs, "series": [(s, j) for s, j in series.items() if len(j) > 1]}
     return render(request, "control/pricebook_publish.html", context)
+
+
+def pricebook_booked_jobs(request, number):
+    """The booked-job review of a published version: each booked job it
+    prices differently that has no choice logged yet, as apply_size_classes
+    leaves them (decision 0083), with its quoted price and its new one. Every
+    job keeps its quoted price until the owner chooses."""
+    version = get_object_or_404(PricebookVersion, number=number)
+    if not version.is_published:
+        return redirect("pricebook-publish", number=number)
+    jobs = undecided_jobs(version)
+    if request.method == "POST":
+        require_manager(request)
+        choices = choices_from(request, jobs)
+        try:
+            with transaction.atomic():
+                for job in jobs:
+                    decide(version, job, *choices[job.appointment.pk], user=request.user)
+        except (PublishError, ValueError) as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, f"Saved the choice for {len(jobs)} booked job{'s' if len(jobs) != 1 else ''}.")
+            return redirect("pricebook-version", number=number)
+    series = {}
+    for job in jobs:
+        if job.appointment.series_id:
+            series.setdefault(job.appointment.series, []).append(job)
+    context = {
+        "version": version,
+        "jobs": jobs,
+        "series": [(found, found_jobs) for found, found_jobs in series.items() if len(found_jobs) > 1],
+        "can_edit": user_is_manager(request.user),
+    }
+    return render(request, "control/pricebook_booked_jobs.html", context)

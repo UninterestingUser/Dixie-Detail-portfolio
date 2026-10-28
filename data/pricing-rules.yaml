@@ -1,7 +1,7 @@
 meta:
   title: Pricing rules
   summary: The numbers behind pricing and service time - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
-  updated: 2026-10-17
+  updated: 2026-10-28
   status: current
   explained_in: docs/reference/pricing.md
   note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
@@ -72,12 +72,12 @@ quote:                    # decision 0059; built in Phase 1 Step 3 (app/priceboo
   sales_tax: rate on the day of service; the price before tax never changes. Zero until Phase 3 adds the rate lookup
 
 worked_example:
-  vehicle: 2019 Toyota RAV4 (Crossovers & Wagons, 2 rows)
+  vehicle: 2019 Toyota RAV4 (Medium, 2 rows)
   lines:
-    - {item: Full Detail, price: 250, one_person_service_hours: 5}
-    - {item: "Condition level 2 (+10%)", price: 25, one_person_service_hours: 0.5}
+    - {item: Full Detail, price: 250, one_person_service_hours: 4}
+    - {item: "Condition level 2 (+10%)", price: 25, one_person_service_hours: 0.4}
     - {item: Seat Extraction, price: 80, one_person_service_hours: 1.5}
   total_before_tax: 355
-  one_person_service_hours: 7
-  one_person_time_on_site_hours: 8
-  full_day: true            # 8 hours of one-person time on site
+  one_person_service_hours: 5.9
+  time_on_site_hours: 7     # 6 hours of service time (5.9 rounded to 15 minutes) plus 1 hour of setup and breakdown
+  full_day: false           # 6.9 hours of one-person time on site, under the 8-hour threshold

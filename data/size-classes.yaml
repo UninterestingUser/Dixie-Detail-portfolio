@@ -1,14 +1,16 @@
 meta:
-  title: Size-based vehicle classes
-  summary: The size-based vehicle classes the owner chose on 2026-10-26, the box-volume lines between them, their rules in order, and how customers' vehicles map to them, previewed by classify_vehicles --scheme size --dry-run.
-  updated: 2026-10-26
-  status: draft
+  title: Size-based classification rules
+  summary: The rules that give every model year its size-based vehicle class - the box-volume lines, vans before pickups, the pickup size line, smoothing, the model overrides, the EPA size class fallback and how customers' vehicles map to the classes.
+  updated: 2026-10-28
+  status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
-    Decision 0082. Draft until the classes are applied: classify_vehicles --scheme size only previews
-    them, and the live classes and rules are still those in data/vehicle-classes.yaml. Nothing here is
-    priced yet; data/price-matrix.csv is unchanged. The dry run builds these classes in memory, so no
-    class or pricebook record is created until they are applied.
+    Decisions 0082 and 0083. The classes themselves, with their size variants, booking and photo
+    cards, are in data/vehicle-classes.yaml; this file holds the rules. classify_vehicles creates the
+    rules and model overrides below as launch rules and overrides and keeps each in step with this
+    file, except those the owner has edited or deleted in the database. apply_size_classes switched
+    the catalog to them; until it runs, classify_vehicles keeps the body-type rules already in the
+    database.
 
 # Box volume is length x width x height / 1,728 in cubic feet, from the
 # median trim of each model year (or the nearest measured year of the
@@ -20,78 +22,78 @@ lines:
   - {name: full-size, at: 700, below: Large, above: Full-size}
   - {name: full-size vans, at: 865, below: Full-size, above: Full-size Vans}
 
-# The dry run's near-line list: models within this many cubic feet of a line.
+# The pickup size line: a pickup with a box volume, its own or inherited
+# from the nearest measured year, is a Light Pickup under it and a Full-size
+# Truck at or over it. A pickup with no box volume in any year keeps the
+# class of the pickup rule that caught it, from its EPA label: small pickups
+# are Light Pickups, standard pickups and heavy-duty trucks Full-size Trucks.
+pickup_line: {name: full-size trucks, at: 760, below: Light Pickups, above: Full-size Trucks}
+
+# Smoothing: a run of up to this many model years between two runs of the
+# same class takes that class, so a model does not flip class for a year or
+# two at a line. Model overrides, review queue decisions and next year's
+# models carried from the nearest year are never smoothed. The
+# apply_size_classes and classify_vehicles reports list every smoothed run.
+smoothing:
+  max_years: 6
+
+# The near-line list of the reports and the approval list: models within
+# this many cubic feet of a line, the pickup line included.
 near_line: 5
 # Ladders and the near-line list show each model's newest size range from
 # this model year on, plus any older range a customer owns.
 newest_from: 2015
 
-# Seat rows, the size variant of every size-based class but Full-size Vans:
-# one for these EPA size classes, three when the third-row data says always,
-# asked when it says optional, and otherwise two. Doors are no longer used.
+# Seat rows, the size variant of Small, Medium, Large and Full-size: one for
+# these EPA size classes, three when the third-row data says always, asked
+# when it says optional, and otherwise two. Doors are no longer used.
 seat_rows:
   one_row_epa_classes: [Two Seaters]
 
-classes:
-  - name: Small
-    size_variant_measures: seats
-    size_variants: {1: one row, 2: two rows, 3: three rows}
-    booking: online
-    photo_card: Small cars, small crossovers and two-seaters
-  - name: Medium
-    size_variant_measures: seats
-    size_variants: {1: one row, 2: two rows, 3: three rows}
-    booking: online
-    photo_card: Midsize cars and crossovers, and small three-row vehicles
-  - name: Large
-    size_variant_measures: seats
-    size_variants: {1: one row, 2: two rows, 3: three rows}
-    booking: online
-    photo_card: Large cars and wagons, midsize SUVs and minivans
-  - name: Full-size
-    size_variant_measures: seats
-    size_variants: {1: one row, 2: two rows, 3: three rows}
-    booking: online
-    photo_card: Full-size SUVs
-  - name: Full-size Vans
-    size_variant_measures: none
-    size_variants: {}
-    booking: quote
-    photo_card: Full-size and passenger vans
-  - name: Light Pickups
-    renamed_from: Light Pickups & Offroad   # keeps its cab-style size variants
-  - name: Fullsize Trucks                   # unchanged
-  - name: Motorcycles                       # unchanged
+# Vans, identified before the pickup rules so no van is ever a pickup. A
+# model name matches when the catalog name is it or begins with it, in whole
+# words, capitals and digits only: Transit covers Transit Connect and ProMaster
+# covers ProMaster City, but "Transit-350" is one word, so it is listed too.
+# Every van is then classed by size like any other vehicle: large vans land
+# in Full-size Vans, small vans (Transit Connect, ProMaster City, NV200,
+# Metris) wherever their box volume puts them.
+vans: &vans [ProMaster, Transit, Transit-150, Transit-250, Transit-350, Sprinter, eSprinter, Express, City Express,
+             Savana, E-Series, Econoline, E150, E250, E350, Club Wagon, NV, NV200, NV Cargo, NV Passenger, Metris,
+             Ram Van, Ram Wagon, B150, B250, B350, G10, G20, G30, G15, G25, G35, Chevy Van, Vandura, Rally]
 
 # Tried in this order; the first whose conditions all hold gives the class.
-# box_volume names a line above, by its name. The pickup rules identify
-# pickups as the launch rules in data/vehicle-classes.yaml do, plus pickups
-# the EPA lists as SUVs.
+# box_volume names a line above, by its name. not_model leaves out the vans.
 rules:
   - name: Motorcycles
     class: Motorcycles
     conditions: {vehicle_type: [motorcycle]}
   - name: Heavy pickups the EPA leaves out
-    class: Fullsize Trucks
+    class: Full-size Trucks
     conditions:
+      not_model: *vans
       epa_size_class: [none]
       source_vehicle_type: [Truck]
+      # The heavy-duty series a model's name contains, as whole words.
       model_word: [HD, Super Duty, "2500", "3500", "4500", "5500", 2500HD, 3500HD, C2500, K2500, C3500, K3500,
                    F-250, F-350, F-450, F-550, F-600, F-650, F-750]
+    note: The 2500 and 3500 series, Super Duty and HD pickups from NHTSA vPIC. A van of the same series is not a pickup.
   - name: Heavy pickups over 8,500 lb GVWR the EPA leaves out
-    class: Fullsize Trucks
-    conditions: {epa_size_class: [none], source_vehicle_type: [Truck], gvwr: {over: 8500}}
+    class: Full-size Trucks
+    conditions: {not_model: *vans, epa_size_class: [none], source_vehicle_type: [Truck], gvwr: {over: 8500}}
+    note: No source gives GVWR yet; the owner's own figures can.
   - name: EPA small pickups
     class: Light Pickups
     conditions:
+      not_model: *vans
       epa_size_class: [Small Pickup Trucks, Small Pickup Trucks 2WD, Small Pickup Trucks 4WD]
   - name: Pickups the EPA lists as small SUVs
     class: Light Pickups
     conditions: {make: [Hyundai], model: [Santa Cruz]}
     note: The EPA lists every Santa Cruz as a Small Sport Utility Vehicle, 2WD or 4WD (checked 2026-10-26).
   - name: EPA standard pickups
-    class: Fullsize Trucks
+    class: Full-size Trucks
     conditions:
+      not_model: *vans
       epa_size_class: [Standard Pickup Trucks, Standard Pickup Trucks 2WD, Standard Pickup Trucks 4WD,
                        Standard Pickup Trucks/2wd]
   - name: Full-size Vans
@@ -114,23 +116,43 @@ rules:
     class: Small
     conditions: {box_volume: {under: medium}}
 
-# The dry run checks that these are pickups, and says so if not.
+# The owner's model overrides, which beat every rule. A model is matched by
+# the names in data/vehicle-names.yaml.
+model_overrides:
+  - {make: Audi, model: Q4 e-tron, year_from: 2022, year_to: 2026, class: Medium, note: "The owner's call (2026-10-28)"}
+  - {make: Porsche, model: Cayenne, year_from: 2026, year_to: 2026, class: Large, note: "The owner's call (2026-10-28)"}
+  - {make: BMW, model: iX, year_from: 2026, year_to: 2026, class: Medium, note: "The owner's call (2026-10-28)"}
+
+# A model with no measurements in any year takes the class where most
+# measured model years of its EPA size class land (the EPA size class
+# fallback); with no EPA size class either, it waits in the review queue.
+
+# A customer's vehicle recorded with no year takes the class of its model's
+# newest generation: its newest model years whose length, width and height
+# each stay within this many inches. The vehicle is flagged so the year is
+# confirmed at its next visit.
+newest_generation_spread: 1
+
+# The reports check that these are pickups in every model year, and that the
+# vans are never pickups.
 pickup_checks:
   - {make: Hyundai, model: Santa Cruz}
   - {make: Ford, model: Maverick}
 
-# A customer's vehicle not linked to the catalog gets a proposed class from
-# its recorded class, marked for the owner's review.
+# A customer's vehicle not linked to the catalog, or whose model year has no
+# class, keeps its recorded class until the owner settles it on the
+# differences screen, which proposes the class here.
 unlinked_vehicles:
   Coupes & Sedans: Small
   Crossovers & Wagons: Medium
   Midsize SUVs: Large
   Fullsize SUVs & Minivans: Full-size
   Light Pickups & Offroad: Light Pickups
-  Fullsize Trucks: Fullsize Trucks
+  Fullsize Trucks: Full-size Trucks
   Motorcycles: Motorcycles
 # ...except a minivan recorded in Fullsize SUVs & Minivans, which goes here.
 # A vehicle is a minivan when its model is or begins with one of these names.
+minivans_recorded_in: Fullsize SUVs & Minivans
 minivan_class: Large
 minivan_models: [Caravan, Grand Caravan, Town & Country, Town and Country, Voyager, Grand Voyager, Pacifica, Odyssey,
                  Sienna, Previa, Quest, Villager, Windstar, Freestar, Aerostar, Astro, Venture, Montana, Silhouette,

@@ -1,7 +1,10 @@
-"""The approval list (Phase 2 Step 4, decision 0079): every model in the job history, the
-spot-check list in data/approval-spot-checks.yaml, every model whose years
-are in different classes, and every model approved before, each shown as
-its year ranges for the owner to approve or change.
+"""The approval list (Phase 2 Step 4, decisions 0079 and 0083): every model
+in the job history, the spot-check list in data/approval-spot-checks.yaml,
+every model with recent model years near a size line, and every model
+approved before, each shown as its year ranges for the owner to approve or
+change. The list started over when the size-based classes were applied: the
+approvals before were archived. A spot-check entry or a near-line model
+limited to some years shows only the ranges that overlap them.
 
 A year range is a run of consecutive model years with the same vehicle
 class, size and "how" line. An approval keeps the range as it was approved.
@@ -14,10 +17,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 
 from django.db import transaction
-from django.db.models import Count
 from django.utils import timezone
 
-from vehicles.models import ClassificationChange, ModelApproval, ModelYearClassification, VehicleModel
+from vehicles.models import ClassificationChange, ModelApproval, ModelYearClassification, ModelYearSize, VehicleModel
 from vehicles.vehicle_data.names import load_names
 
 from . import owner
@@ -145,7 +147,7 @@ def clear_changed(change):
 
 JOB_HISTORY = "job history"
 SPOT_CHECK = "spot-check list"
-MIXED = "years in different classes"
+NEAR_LINE = "near a line"
 # A model approved before stays on the list, so one a change cleared shows again.
 APPROVED_BEFORE = "approved before"
 
@@ -155,6 +157,8 @@ class ListedModel:
     vehicle_model: VehicleModel
     reasons: list = field(default_factory=list)
     ranges: list = field(default_factory=list)
+    # The (first, last) years the reasons cover; None for every year.
+    windows: list = None
 
     @property
     def approved(self):
@@ -175,15 +179,53 @@ def spot_checks(data_dir=None):
     ]
 
 
-def mixed_class_models():
-    """The ids of models whose live years are in more than one vehicle class."""
-    return set(
-        ModelYearClassification.objects.exclude(vehicle_class=None)
-        .values("vehicle_model")
-        .annotate(classes=Count("vehicle_class", distinct=True))
-        .filter(classes__gt=1)
-        .values_list("vehicle_model", flat=True)
-    )
+def near_line_models(data_dir=None):
+    """{model id: [(first, last, reason)]} for every run of a model's live
+    model years, from newest_from on, whose box volume is within near_line
+    cubic feet of a size line, or of the pickup line for a pickup
+    (data/size-classes.yaml)."""
+    from .engine import years_text
+    from .sizes import read_scheme
+
+    data = read_scheme(data_dir)
+    near = data["near_line"]
+    lines = [(line, {line["below"], line["above"]}) for line in [*data["lines"], data["pickup_line"]]]
+    classes = {
+        (model_id, year): name
+        for model_id, year, name in ModelYearClassification.objects.filter(year__gte=data["newest_from"], in_review=False)
+        .exclude(vehicle_class=None)
+        .values_list("vehicle_model_id", "year", "vehicle_class__name")
+    }
+    hits = defaultdict(list)
+    for size in ModelYearSize.objects.filter(year__gte=data["newest_from"]).order_by("vehicle_model_id", "year"):
+        name = classes.get((size.vehicle_model_id, size.year))
+        for line, sides in lines:
+            if name in sides and abs(size.box_volume - line["at"]) <= near:
+                hits[(size.vehicle_model_id, line["at"], line["below"], line["above"])].append((size.year, size.box_volume))
+    found = defaultdict(list)
+    for (model_id, at, below, above), years in hits.items():
+        runs = []
+        for year, volume in years:
+            if runs and runs[-1][-1][0] == year - 1:
+                runs[-1].append((year, volume))
+            else:
+                runs.append([(year, volume)])
+        for run in runs:
+            volumes = [volume for _, volume in run]
+            shown = f"{min(volumes)}" if min(volumes) == max(volumes) else f"{min(volumes)} to {max(volumes)}"
+            reason = f"{NEAR_LINE}: {years_text(run[0][0], run[-1][0])} at {shown} cu ft, near the {at} cu ft line ({below} | {above})"
+            found[model_id].append((run[0][0], run[-1][0], reason))
+    return dict(found)
+
+
+def entry_years(entry):
+    """" (2024 on)", " (to 2006)" or "" for a spot-check entry's years."""
+    first, last = entry.get("year_from"), entry.get("year_to")
+    if first and last:
+        return f" ({first} to {last})"
+    if first:
+        return f" ({first} on)"
+    return f" (to {last})" if last else ""
 
 
 def approval_list(data_dir=None):
@@ -192,22 +234,39 @@ def approval_list(data_dir=None):
     from vehicles.linking import job_history_models
 
     reasons = defaultdict(list)
+    # {model id: [(first, last)]}; None in it for a reason that covers every year.
+    windows = defaultdict(list)
     # By make and model, so a model is listed whether or not its vehicles have a year (decision 0080).
     for model_id, count in sorted(job_history_models().items()):
         reasons[model_id].append(f"{JOB_HISTORY} ({count} vehicle{'s' if count != 1 else ''})")
+        windows[model_id].append(None)
     missing = []
     for entry, found in spot_checks(data_dir):
         if not found:
             missing.append(entry)
+        years = entry_years(entry)
         for vehicle_model in found:
-            reasons[vehicle_model.pk].append(f"{SPOT_CHECK}: {entry['why']}" if entry.get("why") else SPOT_CHECK)
-    for model_id in mixed_class_models():
-        reasons[model_id].append(MIXED)
+            reasons[vehicle_model.pk].append(f"{SPOT_CHECK}{years}: {entry['why']}" if entry.get("why") else f"{SPOT_CHECK}{years}")
+            windows[vehicle_model.pk].append((entry.get("year_from"), entry.get("year_to")) if years else None)
+    for model_id, runs in near_line_models(data_dir).items():
+        for first, last, reason in runs:
+            reasons[model_id].append(reason)
+            windows[model_id].append((first, last))
     for model_id in set(ModelApproval.objects.values_list("vehicle_model", flat=True)) - set(reasons):
         reasons[model_id].append(APPROVED_BEFORE)
+        windows[model_id].append(None)
     ranges = model_ranges(list(reasons))
     models = VehicleModel.objects.in_bulk(list(reasons))
-    listed = [ListedModel(models[model_id], found, ranges.get(model_id, [])) for model_id, found in reasons.items()]
+    listed = []
+    for model_id, found in reasons.items():
+        shown = ranges.get(model_id, [])
+        if None not in windows[model_id]:
+            shown = [
+                year_range
+                for year_range in shown
+                if any((first is None or year_range.last >= first) and (last is None or year_range.first <= last) for first, last in windows[model_id])
+            ]
+        listed.append(ListedModel(models[model_id], found, shown, None if None in windows[model_id] else windows[model_id]))
     listed.sort(key=lambda item: (item.vehicle_model.make, item.vehicle_model.model, item.vehicle_model.year_from or 0, item.vehicle_model.pk))
     return listed, missing
 

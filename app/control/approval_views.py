@@ -1,8 +1,9 @@
 """Phase 2 Step 4 in the control app (decisions 0077 and 0079): the differences screen,
 where the owner settles each customer's vehicle whose own class differs
-from the catalog's, and the approval list, where the owner approves or
+from the catalog's, or that was left in a retired class when the size-based
+classes were applied (decision 0083), and the approval list, where the owner approves or
 changes each year range of every model in the job history, the spot-check
-list and every model whose years are in different classes.
+list and every model near a size line.
 
 Every signed-in user can look; only a manager changes anything.
 """
@@ -37,8 +38,27 @@ def differences(request):
         **nav_context(request, "differences"),
         "rows": rows,
         "unlinked": Vehicle.objects.filter(vehicle_model=None).count(),
+        "retired": linking.retired_class_vehicles(),
+        "classes": VehicleClass.objects.offered(),
     }
     return render(request, "control/differences.html", context)
+
+
+@require_POST
+def retired_act(request, pk):
+    """One tap on a vehicle left in a retired class: take the proposed class or another."""
+    require_manager(request)
+    vehicle = get_object_or_404(Vehicle.objects.select_related("vehicle_class", "customer"), pk=pk)
+    if vehicle.vehicle_class is None or vehicle.vehicle_class.active:
+        messages.info(request, f"{vehicle} is no longer in a retired class.")
+        return redirect("differences")
+    vehicle_class = VehicleClass.objects.offered().filter(pk=parse_int(request.POST.get("vehicle_class"))).first()
+    if vehicle_class is None:
+        messages.error(request, "Pick a class.")
+        return redirect("differences")
+    linking.take_class(vehicle, vehicle_class, request.user, request.POST.get("note", "").strip())
+    messages.success(request, f"{vehicle} is now {linking.own_label(vehicle)}.")
+    return redirect("differences")
 
 
 @require_POST
@@ -73,7 +93,7 @@ def difference_act(request, pk):
 # The approval list.
 
 SHOWS = {"waiting": "Waiting", "approved": "Approved", "all": "All"}
-REASONS = [approvals.JOB_HISTORY, approvals.SPOT_CHECK, approvals.MIXED, approvals.APPROVED_BEFORE]
+REASONS = [approvals.JOB_HISTORY, approvals.SPOT_CHECK, approvals.NEAR_LINE, approvals.APPROVED_BEFORE]
 
 
 @require_safe
@@ -90,7 +110,7 @@ def approval_list(request):
     elif show == "approved":
         shown = [item for item in shown if item.approved]
     page = Paginator(shown, APPROVAL_PAGE).get_page(request.GET.get("page"))
-    classes = VehicleClass.objects.filter(active=True)
+    classes = VehicleClass.objects.offered()
     context = {
         **nav_context(request, "approvals"),
         "page": page,

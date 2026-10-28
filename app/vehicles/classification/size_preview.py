@@ -1,22 +1,24 @@
-"""The report classify_vehicles --scheme size --dry-run prints: what the
-size-based classes of data/size-classes.yaml would give (decision 0082),
-worked out in memory by classification.sizes. Customers appear only as
-vehicle ids with year, make and model, never by name.
+"""The report apply_size_classes prints (decision 0083): what the
+size-based classes give, model year by model year, with the switch itself
+(the classes renamed, offered and retired, the records archived, the rules
+created), each customer's vehicle, the price book check and the booked
+jobs. A dry run prints the same report. Customers and booked jobs appear
+only as ids with year, make and model, never by name.
 """
 
 from collections import Counter, defaultdict
 
-from vehicles.models import ModelApproval, ModelOverride, ModelYearClassification, Vehicle, VehicleModel
+from vehicles.models import ModelOverride, VehicleModel
 from vehicles.size_report import customer_counts, ladder, size_ranges, steps, year_facts
-from vehicles.vehicle_data.names import name_key, words
 
-from .engine import Method, class_label, size_label, years_text
+from .engine import Method, class_label, years_text
 from .rules import FACTS
-from .seed import models_named
+from .seed import models_named, read_data
 from .sizes import median, tenth
+from .switch import renames, vehicle_name
 
 UNCLASSIFIED = "unclassified"
-SOURCES = ("measured", "inherited", "no box volume", "EPA-class fallback", UNCLASSIFIED)
+SOURCES = ("measured", "inherited", "no box volume", "EPA-class fallback", "model override", "smoothed", UNCLASSIFIED)
 CABS = ("regular", "extended", "crew")
 
 
@@ -30,6 +32,10 @@ def source_of(model_year, result):
         return UNCLASSIFIED
     if result.method == Method.EPA_FALLBACK:
         return "EPA-class fallback"
+    if result.method == Method.OVERRIDE:
+        return "model override"
+    if result.method == Method.SMOOTHED:
+        return "smoothed"
     if model_year.box_volume is None:
         return "no box volume"
     return model_year.box_volume.source
@@ -46,10 +52,17 @@ def spans(entries):
     return "; ".join(f"{years_text(first, last)} {label}" for first, last, label in joined)
 
 
-def vehicle_name(vehicle):
-    """A customer's vehicle as the report shows it: id, year, make and model only."""
-    name = " ".join(str(part) for part in (vehicle.year, vehicle.make, vehicle.model) if part)
-    return f"vehicle {vehicle.pk}: {name or 'no year, make or model'}"
+def smoothed_runs(results):
+    """["Make Model 2019-2020: Medium, smoothed from Large"] for each run of
+    smoothed model years, joined by model and years."""
+    from .engine import year_spans
+
+    rows = []
+    for model_year, result in results.values():
+        if result.method == Method.SMOOTHED:
+            old = result.reasons[0].rsplit(" gives ", 1)[-1] if result.reasons else "another class"
+            rows.append((model_year.vehicle_model, model_year.year, f"{result.vehicle_class}, smoothed from {old}"))
+    return [f"{model.make} {model.model} {years_text(first, last)}: {detail}" for model, first, last, detail in year_spans(rows)]
 
 
 def customers_note(count):
@@ -57,21 +70,20 @@ def customers_note(count):
 
 
 class Preview:
-    def __init__(self, scheme, out):
-        self.scheme = scheme
+    def __init__(self, outcome, out, dry_run):
+        self.outcome = outcome
+        self.scheme = outcome.scheme
+        self.dry_run = dry_run
         self.write = lambda line="": out.write(line + "\n")
         self.by_model = defaultdict(list)
         self.models = {}
-        for (model_id, year), (model_year, result) in scheme.results.items():
+        for (model_id, year), (model_year, result) in self.scheme.results.items():
             self.by_model[model_id].append((year, model_year, result))
             self.models[model_id] = model_year.vehicle_model
         for found in self.by_model.values():
             found.sort(key=lambda entry: entry[0])
         self.vehicles, _, _, _ = customer_counts()
-        self.stored = {
-            (row.vehicle_model_id, row.year): row.vehicle_class.name if row.vehicle_class_id else "in queue"
-            for row in ModelYearClassification.objects.select_related("vehicle_class")
-        }
+        self.stored = outcome.before.stored
 
     def new_classes(self, model_id, first=None, last=None):
         entries = [
@@ -108,26 +120,59 @@ class Preview:
     # The sections, in order.
 
     def run(self):
-        self.write("DRY RUN (size-based classes, data/size-classes.yaml): nothing was changed.")
-        self.write("Model overrides, review queue decisions and approvals are not carried into the size-based classes.")
+        outcome = self.outcome
+        if self.dry_run:
+            self.write("DRY RUN (apply_size_classes): nothing was changed. Without --dry-run, on the effective date, it applies all of this in one step.")
+        else:
+            self.write("APPLIED: the size-based classes and the new price book are live.")
+        if outcome.problems:
+            self.write(f"REFUSED: the draft price book fails the check in {len(outcome.problems):,} place(s); see the price book check below.")
+        self.write(f"Price book: draft version {outcome.version.number}, effective {outcome.effective:%Y-%m-%d}.")
         self.write("Lines: " + ", ".join(f"{line['above']} from {line['at']} cu ft" for line in self.scheme.lines) + f"; below {self.scheme.lines[0]['at']}: {self.scheme.lines[0]['below']}")
+        line = self.scheme.pickup_line
+        self.write(f"Pickup line: {line['above']} from {line['at']} cu ft; below it {line['below']}; a pickup with no box volume keeps its EPA label's class.")
+        self.switch()
+        self.price_check()
         self.counts()
         self.fallback()
         self.near_lines()
+        self.smoothed()
         self.mixed()
         self.overrides_and_approvals()
         self.customer_vehicles()
+        self.booked_jobs()
         self.old_light_pickups()
         self.pickups()
+
+    def switch(self):
+        outcome = self.outcome
+        self.write("\nThe switch")
+        for line in outcome.classes:
+            self.write(f"  {line}")
+        for name, count in outcome.archived.items():
+            self.write(f"  {name} archived: {count:,}")
+        self.write(f"  launch rules and overrides created from data/size-classes.yaml: {len(outcome.seeded.launch_set):,}")
+        for line in outcome.seeded.launch_set:
+            self.write(f"    {line}")
+        for line in outcome.seeded.unmatched_overrides:
+            self.write(f"    Override not applied: {line}")
+        for name, count in outcome.counts.items():
+            self.write(f"  {name}: {count:,}")
+
+    def price_check(self):
+        problems = self.outcome.problems
+        self.write(f"\nPrice book check: {'passed' if not problems else f'{len(problems):,} problem(s)'}")
+        for problem in problems:
+            self.write(f"  {problem}")
 
     def counts(self):
         results = self.scheme.results.values()
         by_class = defaultdict(Counter)
         for model_year, result in results:
             by_class[class_name(result)][source_of(model_year, result)] += 1
-        order = {name: index for index, name in enumerate(entry["name"] for entry in self.scheme.data["classes"])}
+        order = {name: index for index, name in enumerate(entry["name"] for entry in read_data("vehicle-classes.yaml")["classes"])}
         self.write(f"\nModel years by new class and source of the class ({len(self.scheme.results):,} model years)")
-        self.write("  class: total (measured / inherited / no box volume / EPA-class fallback)")
+        self.write(f"  class: total ({' / '.join(SOURCES[:-1])})")
         for name in sorted(by_class, key=lambda name: (order.get(name, len(order)), name)):
             counts = by_class[name]
             if name == UNCLASSIFIED:
@@ -158,12 +203,22 @@ class Preview:
         label = lambda key: class_name(self.scheme.results[key][1])  # noqa: E731
         return ladder(self.ranges(label, keep), self.scheme.data["newest_from"])
 
+    def pickup_lines(self):
+        pickups = self.scheme.pickup_classes
+        keep = lambda model_year, result: class_name(result) in pickups  # noqa: E731
+        label = lambda key: class_name(self.scheme.results[key][1])  # noqa: E731
+        return ladder(self.ranges(label, keep), self.scheme.data["newest_from"])
+
     def near_lines(self):
         near = self.scheme.data["near_line"]
         found = []
-        for size_range in self.size_lines():
+        for size_range, lines in [(found, self.scheme.lines) for found in self.size_lines()] + [
+            (found, [self.scheme.pickup_line]) for found in self.pickup_lines()
+        ]:
             volume = self.range_volume(size_range)
-            for line in self.scheme.lines:
+            if volume is None:
+                continue
+            for line in lines:
                 distance = volume - line["at"]
                 if abs(distance) <= near:
                     found.append((line["at"], volume, size_range, line, distance))
@@ -176,6 +231,13 @@ class Preview:
                 f" gets {size_range.vehicle_class}{customers_note(size_range.vehicles)}"
             )
 
+    def smoothed(self):
+        runs = smoothed_runs(self.scheme.results)
+        limit = self.scheme.data["smoothing"]["max_years"]
+        self.write(f"\nSmoothed: runs of up to {limit} model years between two runs of one class, given that class ({len(runs):,})")
+        for line in runs:
+            self.write(f"  {line}")
+
     def mixed(self):
         found = []
         for model_id, entries in self.by_model.items():
@@ -187,72 +249,61 @@ class Preview:
             self.write(f"  {line}")
 
     def overrides_and_approvals(self):
+        before = self.outcome.before
         overrides = ModelOverride.objects.select_related("vehicle_model", "vehicle_class").order_by("vehicle_model__make", "vehicle_model__model", "year_from")
-        self.write(f"\nModel overrides, not carried forward ({overrides.count():,}), with what the new rules give instead")
+        self.write(f"\nModel overrides now ({overrides.count():,}), from data/size-classes.yaml")
         for override in overrides:
+            years = f" {override.year_from or ''}-{override.year_to or ''}" if override.year_from or override.year_to else ""
+            self.write(f"  {self.model_label(override.vehicle_model)}{years}: {override.vehicle_class}")
+        self.write(f"\nModel overrides archived ({len(before.overrides):,}), with what the new rules give instead")
+        for override in before.overrides:
             years = f" {override.year_from or ''}-{override.year_to or ''}" if override.year_from or override.year_to else ""
             note = f" ({override.note})" if override.note else ""
             self.write(
                 f"  {self.model_label(override.vehicle_model)}{years}: {override.vehicle_class}{note}"
                 f" -> {self.new_classes(override.vehicle_model_id, override.year_from, override.year_to)}"
             )
-        approvals = ModelApproval.objects.filter(cleared_at=None).select_related("vehicle_model", "vehicle_class").order_by(
-            "vehicle_model__make", "vehicle_model__model", "year_from"
-        )
-        self.write(f"\nApprovals, not carried forward ({approvals.count():,}), with what the new rules give instead")
-        for approval in approvals:
+        self.write(f"\nReview queue decisions archived ({len(before.decisions):,}), with what the new rules give instead")
+        for decision in sorted(before.decisions, key=lambda found: (found.vehicle_model.make, found.vehicle_model.model, found.year)):
+            self.write(
+                f"  {decision.year} {self.model_label(decision.vehicle_model)}: {decision.vehicle_class or 'photo cards'}"
+                f" -> {self.new_classes(decision.vehicle_model_id, decision.year, decision.year)}"
+            )
+        self.write(f"\nApprovals archived; the approval list starts over ({len(before.approvals):,})")
+        for approval in before.approvals:
             self.write(
                 f"  {self.model_label(approval.vehicle_model)} {years_text(approval.year_from, approval.year_to)}:"
                 f" approved as {class_label(approval.vehicle_class, approval.size)}"
                 f" -> {self.new_classes(approval.vehicle_model_id, approval.year_from, approval.year_to)}"
             )
 
-    def proposed_for_unlinked(self, vehicle):
-        """(proposed class, reason) for a vehicle not linked to the catalog."""
-        if vehicle.vehicle_class is None:
-            return UNCLASSIFIED, "not linked and no recorded class: needs a year, make and model"
-        data = self.scheme.data
-        proposed = data["unlinked_vehicles"].get(vehicle.vehicle_class.name)
-        if proposed is None:
-            return UNCLASSIFIED, "not linked, and its recorded class has no proposed class: for review"
-        if vehicle.vehicle_class.name == "Fullsize SUVs & Minivans" and is_minivan(vehicle.model, data["minivan_models"]):
-            return data["minivan_class"], "not linked; a minivan, proposed from its recorded class: for review"
-        return proposed, "not linked; proposed from its recorded class: for review"
-
-    def new_for(self, vehicle):
-        """(new class, reason) for one customer's vehicle."""
-        if vehicle.vehicle_model_id is None:
-            return self.proposed_for_unlinked(vehicle)
-        if vehicle.year is None:
-            names = {class_name(result) for _, _, result in self.by_model.get(vehicle.vehicle_model_id, [])}
-            if len(names) == 1 and UNCLASSIFIED not in names:
-                return next(iter(names)), "no year; every model year of its model is in this class"
-            return "year needed", "no year; its model's years span " + ", ".join(sorted(names) or ["no model years"])
-        found = self.scheme.results.get((vehicle.vehicle_model_id, vehicle.year))
-        if found is None:
-            return UNCLASSIFIED, f"the catalog has no {vehicle.year} for its model"
-        _, result = found
-        if result.vehicle_class is None:
-            return UNCLASSIFIED, result.because
-        return class_label(result.vehicle_class, size_label(result.size_variant, result.ask_size, result.vehicle_class)), result.because
-
     def customer_vehicles(self):
-        vehicles = list(Vehicle.objects.select_related("vehicle_class", "size_variant").order_by("pk"))
-        lines, moves = [], Counter()
-        for vehicle in vehicles:
-            recorded = class_label(vehicle.vehicle_class, vehicle.size_variant.label if vehicle.size_variant else "") if vehicle.vehicle_class else "no class"
-            new, reason = self.new_for(vehicle)
-            moves[(str(vehicle.vehicle_class) if vehicle.vehicle_class else "no class", new.split(" (")[0])] += 1
-            lines.append(f"  {vehicle_name(vehicle)} | {recorded} -> {new} | {reason}")
-        self.write(f"\nCustomer vehicles ({len(vehicles):,}): recorded class -> new class")
+        changes = self.outcome.vehicles
+        moves = Counter()
+        for change in changes:
+            moves[(change.before.split(" (")[0], change.after.split(" (")[0])] += 1
+        self.write(f"\nCustomer vehicles ({len(changes):,} changed or left for the owner): recorded class -> new class")
         for (old, new), count in sorted(moves.items()):
             self.write(f"  {old} -> {new}: {count:,}")
+        confirm = sum(1 for change in changes if change.vehicle.confirm_year and change.kind == "set")
+        proposed = sum(1 for change in changes if change.kind == "proposed")
+        self.write(f"  no year, given the newest generation's class and flagged to confirm the year: {confirm:,}")
+        self.write(f"  left in a retired class, with a proposed class on the differences screen: {proposed:,}")
         self.write("\nCustomer vehicles one by one: recorded class -> new class | reason")
-        for line in lines:
-            self.write(line)
+        for change in changes:
+            self.write(f"  {vehicle_name(change.vehicle)} | {change.before} -> {change.after} | {change.reason}")
+
+    def booked_jobs(self):
+        jobs = self.outcome.jobs
+        self.write(f"\nBooked jobs from {self.outcome.effective:%Y-%m-%d} on that the new price book prices differently ({len(jobs):,})")
+        self.write("  Each keeps its quoted price, the price of record; decide each on the version's booked-job review.")
+        for job in jobs:
+            new = f"${job.new_total}" if job.new_total is not None else "cannot be priced"
+            in_class = f" in {class_label(job.new_class, job.new_size.label if job.new_size else '')}" if job.new_class else ""
+            self.write(f"  {job.describe()} | quoted ${job.booked_total} | new book {new}{in_class} | {'; '.join(job.reasons)}")
 
     def old_light_pickups(self):
-        old = next((entry["renamed_from"] for entry in self.scheme.data["classes"] if entry.get("renamed_from")), None)
+        old = next((old for old, new in renames().items() if new == self.scheme.pickup_line["below"]), None)
         pickups = self.scheme.pickup_classes
         years = defaultdict(list)
         for (model_id, year), name in self.stored.items():
@@ -270,24 +321,29 @@ class Preview:
     def pickups(self):
         pickups = self.scheme.pickup_classes
         keep = lambda model_year, result: class_name(result) in pickups  # noqa: E731
-        label = lambda key: self.stored.get(key, "no class")  # noqa: E731
+        label = lambda key: class_name(self.scheme.results[key][1])  # noqa: E731
         lines = sorted(
             ladder(self.ranges(label, keep), self.scheme.data["newest_from"]),
-            key=lambda found: (self.range_volume(found), found.name),
+            key=lambda found: (self.range_volume(found) or 0, found.name),
         )
-        self.write(f"\nPickup ladder, for placing a pickup size line later; the pickup rules are unchanged ({len(lines):,} lines)")
-        self.write("  box volume, length, model and years, cab styles, EPA size class, GVWR range, current class")
+        self.write(f"\nPickup ladder, with the {self.scheme.pickup_line['at']} cu ft pickup line ({len(lines):,} lines)")
+        self.write("  box volume, length, model and years, cab styles, EPA size class, GVWR range, class before -> class now")
+        marked = False
         for found in lines:
+            volume = self.range_volume(found)
+            if not marked and volume is not None and volume >= self.scheme.pickup_line["at"]:
+                self.write(f"  ---- {self.scheme.pickup_line['at']} cu ft: {self.scheme.pickup_line['above']} from here ----")
+                marked = True
             self.write(
-                f"  {self.range_volume(found):>6} cu ft  {found.measure('length'):>6} in  {found.name}  cabs: {self.cabs(found)}"
-                f"  EPA: {found.epa_main or 'none'}  GVWR: {self.gvwr(found)}  now {found.vehicle_class}{customers_note(found.vehicles)}"
+                f"  {str(volume or 'none'):>6} cu ft  {str(found.measure('length') or 'none'):>6} in  {found.name}  cabs: {self.cabs(found)}"
+                f"  EPA: {found.epa_main or 'none'}  GVWR: {self.gvwr(found)}  {self.before_class(found)} -> {found.vehicle_class}{customers_note(found.vehicles)}"
             )
         for title, key, unit in (
             ("Largest steps in box volume", self.range_volume, "cu ft"),
             ("Largest steps in length", lambda found: found.measure("length"), "in"),
         ):
             self.write(f"\n{title} on the pickup ladder:")
-            for step, lower, upper in steps(lines, key):
+            for step, lower, upper in steps([found for found in lines if key(found) is not None], key):
                 self.write(f"  +{step} {unit}: {lower.name} ({key(lower)} {unit}) | {upper.name} ({key(upper)} {unit})")
         self.write("\nPickup check: models that must be pickups")
         for entry in self.scheme.data["pickup_checks"]:
@@ -298,6 +354,25 @@ class Preview:
                 entries = [(year, class_name(result)) for year, _, result in self.by_model.get(vehicle_model.pk, [])]
                 verdict = "pickup in every model year" if entries and all(name in pickups for _, name in entries) else "NOT A PICKUP IN EVERY MODEL YEAR"
                 self.write(f"  {self.model_label(vehicle_model)}: {verdict}: {spans(entries) or 'no model years'}")
+        self.vans(pickups)
+
+    def vans(self, pickups):
+        from .rules import Outcome, test_condition
+
+        vans = self.scheme.data["vans"]
+        found = []
+        for model_id, entries in self.by_model.items():
+            if entries and test_condition(entries[0][1], "model", vans).outcome == Outcome.HOLDS:
+                classes = [(year, class_name(result)) for year, _, result in entries]
+                flag = "  A PICKUP IN SOME YEARS" if any(name in pickups for _, name in classes) else ""
+                found.append(f"{self.model_label(self.models[model_id])}: {spans(classes)}{flag}")
+        self.write(f"\nVan check: the vans of data/size-classes.yaml, never pickups ({len(found):,} models)")
+        for line in sorted(found):
+            self.write(f"  {line}")
+
+    def before_class(self, size_range):
+        names = {self.stored.get((size_range.vehicle_model.pk, facts.year), "no class") for facts in size_range.years}
+        return " / ".join(sorted(names))
 
     def cabs(self, size_range):
         found = set()
@@ -315,12 +390,5 @@ class Preview:
         return f"{min(lows):,}-{max(highs):,} lb" if lows else "none"
 
 
-def is_minivan(model, names):
-    """Whether a model name is or begins with one of the minivan names, in whole words."""
-    found = words(model or "")
-    starts = {"".join(found[:count]) for count in range(1, len(found) + 1)}
-    return any(name_key(name) in starts for name in names)
-
-
-def write_report(scheme, out):
-    Preview(scheme, out).run()
+def write_report(outcome, out, dry_run):
+    Preview(outcome, out, dry_run).run()

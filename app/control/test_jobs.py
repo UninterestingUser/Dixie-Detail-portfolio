@@ -24,7 +24,7 @@ class ScheduleTests(JobsTestCase):
         page = self.client.get(reverse("schedule"), {"date": self.day.isoformat()})
         self.assertContains(page, "Pat Example")
         self.assertContains(page, "2019 Toyota RAV4, blue")
-        self.assertContains(page, "8:00 AM to 2:00 PM")  # 5 hours of service, plus setup and breakdown
+        self.assertContains(page, "8:00 AM to 1:00 PM")  # 4 hours of service, plus setup and breakdown
         self.assertContains(page, "Full Detail · $250.00")
         self.assertContains(self.client.get(reverse("schedule"), {"date": (self.day + datetime.timedelta(days=1)).isoformat()}), "No jobs on this day.")
 

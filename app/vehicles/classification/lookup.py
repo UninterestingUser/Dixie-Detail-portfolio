@@ -6,8 +6,10 @@ change reaches bookings only once it is applied, by classify_vehicles or
 the control app. A customer's vehicle with its own override beats it. A
 year before the catalog starts, a model not in the catalog, a model year
 waiting in the review queue with no class yet, and one the owner sent to
-the photo cards all fall back to the photo cards, one per active vehicle
-class.
+the photo cards all fall back to the photo cards, one per offered vehicle
+class (decision 0083): each with the class name, its caption, a few example
+models and its photo, or a placeholder until the owner adds one. A class
+booked by quote, Full-size Vans, has a card asking for a photo for a quote.
 """
 
 from dataclasses import dataclass, field
@@ -30,6 +32,10 @@ class How:
     # The EPA has not published the year yet, so it takes the class of the
     # model's nearest classified year.
     NEAREST_YEAR = "nearest classified year"
+    # The size-based classes' steps after the rules (decision 0083).
+    PICKUP_LINE = "pickup size line"
+    EPA_FALLBACK = "EPA size class fallback"
+    SMOOTHED = "smoothed"
     REVIEW_QUEUE = "review queue"
     PHOTO_CARDS = "photo cards"
 
@@ -39,6 +45,9 @@ HOW = {
     Method.OVERRIDE: How.MODEL_OVERRIDE,
     Method.DECISION: How.QUEUE_DECISION,
     Method.CARRIED: How.NEAREST_YEAR,
+    Method.PICKUP_LINE: How.PICKUP_LINE,
+    Method.EPA_FALLBACK: How.EPA_FALLBACK,
+    Method.SMOOTHED: How.SMOOTHED,
 }
 
 
@@ -77,6 +86,15 @@ QUESTIONS[Measures.SEATS] = QUESTIONS[Measures.SEAT_ROWS]
 class PhotoCard:
     vehicle_class: VehicleClass
     caption: str
+    examples: list = field(default_factory=list)
+    # The photo's static path, or None for the placeholder.
+    photo: str = None
+    # Booked by quote: the card asks for a photo instead.
+    quote: bool = False
+
+    @property
+    def name(self):
+        return self.vehicle_class.name
 
 
 @dataclass
@@ -113,8 +131,14 @@ def first_catalog_year():
 
 def photo_cards():
     return [
-        PhotoCard(vehicle_class, vehicle_class.photo_card or vehicle_class.name)
-        for vehicle_class in VehicleClass.objects.filter(active=True)
+        PhotoCard(
+            vehicle_class,
+            vehicle_class.photo_card or vehicle_class.name,
+            list(vehicle_class.photo_card_examples or []),
+            vehicle_class.photo or None,
+            vehicle_class.booking == VehicleClass.Booking.QUOTE,
+        )
+        for vehicle_class in VehicleClass.objects.offered()
     ]
 
 

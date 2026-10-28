@@ -4,6 +4,12 @@ Completed jobs are never touched. affected_jobs() lists every booked job on
 or after the effective date whose price, service hours or service the draft
 would change, so the owner can decide each one; publish() publishes the draft
 and applies and logs the owner's choice for each.
+
+A job booked in a class since retired, as the body-type classes were by the
+switch to the size-based classes (decision 0083), is re-priced in its
+vehicle's class now. apply_size_classes publishes with every booked job
+keeping its quoted price and logs no choice, so the owner decides each later
+on the version's booked-job review (undecided_jobs() and decide()).
 """
 
 import datetime
@@ -32,6 +38,16 @@ class AffectedJob:
     reasons: list = field(default_factory=list)
     # The new service hours push a job that was not a full day into one.
     becomes_full_day: bool = False
+    # The class and size it is re-priced in, when its own class is retired.
+    new_class: object = None
+    new_size: object = None
+
+    def describe(self):
+        """The job without the customer's name: id, date and vehicle."""
+        appointment = self.appointment
+        vehicle = appointment.vehicle
+        name = " ".join(str(part) for part in (vehicle.year, vehicle.make, vehicle.model) if part) or "no year, make or model"
+        return f"appointment {appointment.pk} on {timezone.localtime(appointment.scheduled_start):%Y-%m-%d}, vehicle {vehicle.pk}: {name}"
 
 
 def affected_jobs(version, effective_date):
@@ -42,6 +58,7 @@ def affected_jobs(version, effective_date):
     start = timezone.make_aware(datetime.datetime.combine(effective_date, datetime.time.min))
     appointments = (
         Appointment.objects.filter(status=Appointment.Status.BOOKED, scheduled_start__gte=start)
+        .select_related("vehicle__vehicle_class", "vehicle__size_variant")
         .prefetch_related("lines__service", "lines__promotion", "lines__vehicle_class", "lines__size_variant")
         .order_by("scheduled_start")
     )
@@ -61,11 +78,20 @@ def _reprice(appointment, version):
     booked_total = sum((line.amount for line in lines), Decimal("0.00"))
     booked_hours = sum((line.one_person_service_hours or 0 for line in lines), Decimal("0"))
     result = AffectedJob(appointment, booked_total, booked_hours)
+    vehicle_class = main.vehicle_class
     size_variant = next((line.size_variant for line in lines if line.size_variant), None)
+    if not vehicle_class.active:
+        vehicle_class, size_variant = appointment.vehicle.vehicle_class, appointment.vehicle.size_variant
+        if vehicle_class is None or not vehicle_class.active:
+            result.reasons.append(
+                f"Can no longer be priced: {main.vehicle_class} is retired, and the vehicle's class waits on the differences screen"
+            )
+            return result
+        result.new_class, result.new_size = vehicle_class, size_variant
     try:
         job = price_job(
             main.service,
-            main.vehicle_class,
+            vehicle_class,
             size_variant=size_variant,
             condition_level=main.condition_level,
             add_ons=[line.service for line in lines if line.kind == PricedLine.Kind.ADD_ON],
@@ -92,42 +118,66 @@ class PublishError(ValueError):
     """The draft cannot be published with these choices."""
 
 
+def check_choice(job, choice, amount):
+    if choice == "use_new" and job.new_total is None:
+        raise PublishError(f"{job.describe()} can no longer be priced; keep it or give a custom amount.")
+    if choice == "custom" and (amount is None or amount < 0):
+        raise PublishError(f"Give a custom amount for {job.describe()}.")
+    if choice not in ("keep", "use_new", "custom"):
+        raise PublishError(f"Unknown choice {choice!r}.")
+
+
+def decide(version, job, choice, amount=None, user=None):
+    """Apply and log the owner's choice for one affected job of a published version."""
+    from appointments.booking import inputs_from_appointment, reprice, set_final_price
+    from appointments.models import RepricingDecision
+
+    check_choice(job, choice, amount)
+    appointment = job.appointment
+    if choice == "use_new":
+        inputs = inputs_from_appointment(appointment)
+        if job.new_class is not None:
+            inputs.vehicle_class, inputs.size_variant = job.new_class, job.new_size
+        reprice(appointment, inputs, f"New price from pricebook version {version.number}", version=version)
+    elif choice == "custom":
+        set_final_price(appointment, amount, f"Custom amount chosen for pricebook version {version.number}")
+    appointment.refresh_from_db()
+    return RepricingDecision.objects.create(
+        appointment=appointment,
+        pricebook_version=version,
+        choice=choice,
+        old_amount=job.booked_total,
+        new_amount=appointment.total_before_tax if choice != "keep" else job.booked_total,
+        decided_by=user,
+    )
+
+
 @transaction.atomic
-def publish(version, effective_date, choices, user=None):
+def publish(version, effective_date, choices, user=None, log_choices=True):
     """Publish a draft and apply the owner's choice for every affected job.
 
     choices maps an appointment id to ("keep", None), ("use_new", None) or
     ("custom", amount). A job with no choice keeps its booked price, the
     default. A job the draft can no longer price can only be kept or given a
-    custom amount. Every choice is logged with the old and new amounts.
+    custom amount. Every choice is logged with the old and new amounts;
+    with log_choices off, as apply_size_classes publishes, none is, and the
+    owner decides each job later on the booked-job review.
     """
-    from appointments.booking import inputs_from_appointment, reprice, set_final_price
-    from appointments.models import RepricingDecision
-
     affected = affected_jobs(version, effective_date)
     for job in affected:
-        choice, amount = choices.get(job.appointment.pk, ("keep", None))
-        if choice == "use_new" and job.new_total is None:
-            raise PublishError(f"{job.appointment} can no longer be priced; keep it or give a custom amount.")
-        if choice == "custom" and (amount is None or amount < 0):
-            raise PublishError(f"Give a custom amount for {job.appointment}.")
-        if choice not in ("keep", "use_new", "custom"):
-            raise PublishError(f"Unknown choice {choice!r}.")
+        check_choice(job, *choices.get(job.appointment.pk, ("keep", None)))
     version.publish(effective_date)
-    for job in affected:
-        appointment = job.appointment
-        choice, amount = choices.get(appointment.pk, ("keep", None))
-        if choice == "use_new":
-            reprice(appointment, inputs_from_appointment(appointment), f"New price from pricebook version {version.number}", version=version)
-        elif choice == "custom":
-            set_final_price(appointment, amount, f"Custom amount chosen when pricebook version {version.number} was published")
-        appointment.refresh_from_db()
-        RepricingDecision.objects.create(
-            appointment=appointment,
-            pricebook_version=version,
-            choice=choice,
-            old_amount=job.booked_total,
-            new_amount=appointment.total_before_tax if choice != "keep" else job.booked_total,
-            decided_by=user,
-        )
+    if log_choices:
+        for job in affected:
+            decide(version, job, *choices.get(job.appointment.pk, ("keep", None)), user=user)
     return affected
+
+
+def undecided_jobs(version):
+    """The affected jobs of a published version with no logged choice yet."""
+    from appointments.models import RepricingDecision
+
+    if not version.is_published:
+        return []
+    decided = set(RepricingDecision.objects.filter(pricebook_version=version).values_list("appointment_id", flat=True))
+    return [job for job in affected_jobs(version, version.effective_date) if job.appointment.pk not in decided]

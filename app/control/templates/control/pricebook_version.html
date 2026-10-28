@@ -20,6 +20,7 @@
   {% endif %}
 </nav>
 {% if version.notes %}<p class="muted">{{ version.notes }}</p>{% endif %}
+{% if undecided %}<p class="notice"><a href="{% url 'pricebook-booked-jobs' version.number %}">{{ undecided }} booked job{{ undecided|pluralize }} this version prices differently {{ undecided|pluralize:"waits,wait" }} for your choice</a>; each keeps its quoted price until you choose.</p>{% endif %}
 
 {% if not version.is_published and can_edit %}
 <form method="post" action="{% url 'pricebook-save' version.number %}" class="stack" novalidate>
