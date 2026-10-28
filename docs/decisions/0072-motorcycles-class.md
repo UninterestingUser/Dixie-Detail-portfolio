@@ -4,18 +4,18 @@ title: "Motorcycles become a vehicle class with one service, Motorcycle Detail a
 summary: "Every motorcycle model goes to a new Motorcycles class with one price, booked online; its only service, Motorcycle Detail, is a flat $100 with no condition level or add-ons, 1 hour of service, up to two a day."
 date: 2026-10-22
 area: pricing
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-22
+updated: 2026-10-28
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0083-applying-the-size-based-classes.md]
 related: [data/vehicle-classes.yaml, data/services.yaml, data/price-matrix.csv, data/booking-rules.yaml, docs/reference/pricing.md, docs/reference/vehicle-classification.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md]
 ---
 
 # 0072: Motorcycles become a vehicle class with one service, Motorcycle Detail at $100
 
-**Status:** accepted · **Date:** 2026-10-22 · **Area:** pricing
+**Status:** superseded by [0083](0083-applying-the-size-based-classes.md) for the Motorcycle Detail's time, now 2 hours of service; the rest stands · **Date:** 2026-10-22 · **Area:** pricing
 
 ## Context
 

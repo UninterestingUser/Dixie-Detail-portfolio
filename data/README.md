@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-26
+updated: 2026-10-28
 ---
 
 # Data files
@@ -13,13 +13,13 @@ Structured facts live here so that code and people read the same numbers. Each Y
 
 | File | Holds | Role |
 | --- | --- | --- |
-| [price-matrix.csv](price-matrix.csv) | The 90 prices and one-person service hours (setup and breakdown not included) | Seed for the pricebook (Phase 1); the only price source |
+| [price-matrix.csv](price-matrix.csv) | The 91 prices and one-person service hours (setup and breakdown not included) for the size-based vehicle classes | Loaded by `load_pricebook`, after the price book check, as version 1 or a new draft; the only price source |
 | [services.yaml](services.yaml) | The service catalog | Seed and reference |
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels, maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Seed for pricebook settings |
-| [vehicle-classes.yaml](vehicle-classes.yaml) | The seven vehicle classes, their size variants and settings, the launch classification rules and model overrides, and the possible future classes | Read by `load_pricebook` (classes) and kept in step by `classify_vehicles` (launch rules and overrides the owner has not edited) |
+| [vehicle-classes.yaml](vehicle-classes.yaml) | The eight size-based vehicle classes, their size variants, settings and photo cards, the retired body-type classes, the rule settings, and the possible future classes | Read by `load_pricebook` (classes) and `classify_vehicles` (rule settings) |
 | [vehicle-names.yaml](vehicle-names.yaml) | The names customers know: EPA base models split into nameplates, the other spellings of one vehicle, make spellings, customers' names for vehicles filed under another name or make (some for certain years), and the trim words left off a customer's model name | Read by `import_vehicle_data`, `classify_vehicles`, `link_vehicles` and the booking lookup |
-| [approval-spot-checks.yaml](approval-spot-checks.yaml) | The models near a class boundary the owner approves on the approval list, with why each is there | Read by the control app's approval list |
-| [size-classes.yaml](size-classes.yaml) | The size-based vehicle classes (decision 0082, draft until applied): the box-volume lines, the classes and their rules in order, seat rows, the pickup checks and the proposed classes for unlinked vehicles | Read by `classify_vehicles --scheme size --dry-run` |
+| [approval-spot-checks.yaml](approval-spot-checks.yaml) | The models the owner spot-checks on the approval list, some for certain model years | Read by the control app's approval list |
+| [size-classes.yaml](size-classes.yaml) | The size-based classification rules (decisions 0082 and 0083): the box-volume lines, the pickup line, smoothing, the vans, the rules in order, the model overrides, seat rows, and the proposed classes for vehicles left in a retired class | Kept in step by `classify_vehicles` (launch rules and overrides the owner has not edited); read by `apply_size_classes` |
 | [third-row-seating.yaml](third-row-seating.yaml) | Which crossovers and midsize SUVs since 2010 have a third row always, optionally or never, by model year, checked by the owner | Read by `classify_vehicles` on every run |
 | [booking-rules.yaml](booking-rules.yaml) | Launch values of the scheduling settings: open days, hours, start times, notice, setup and breakdown, capacity, gaps, calendar sync timing, alert timing | Seed for scheduling settings |
 | [vehicle-data-import.yaml](vehicle-data-import.yaml) | The truck, van and motorcycle makes the vehicle data import asks vPIC for (with the makes that sell only motorcycles), the model years, the pacing, and Canadian make names | Read by `import_vehicle_data` and `link_vehicles` |

@@ -38,6 +38,7 @@ urlpatterns = [
     path("pricebook/<int:number>/save/", pricebook_views.pricebook_save_draft, name="pricebook-save"),
     path("pricebook/<int:number>/discard/", pricebook_views.pricebook_discard_draft, name="pricebook-discard"),
     path("pricebook/<int:number>/publish/", pricebook_views.pricebook_publish, name="pricebook-publish"),
+    path("pricebook/<int:number>/booked-jobs/", pricebook_views.pricebook_booked_jobs, name="pricebook-booked-jobs"),
     # The vehicle catalog (decision 0076).
     path("catalog/", catalog_views.catalog, name="catalog"),
     path("catalog/makes/", catalog_views.catalog_makes, name="catalog-makes"),
@@ -59,6 +60,7 @@ urlpatterns = [
     # Customers' vehicles against the catalog, and the approval list (decision 0077).
     path("catalog/differences/", approval_views.differences, name="differences"),
     path("catalog/differences/<int:pk>/", approval_views.difference_act, name="difference-act"),
+    path("catalog/differences/retired/<int:pk>/", approval_views.retired_act, name="retired-act"),
     path("catalog/approvals/", approval_views.approval_list, name="approvals"),
     path("catalog/approvals/act/", approval_views.approval_act, name="approval-act"),
     path("manifest.webmanifest", views.manifest, name="manifest"),

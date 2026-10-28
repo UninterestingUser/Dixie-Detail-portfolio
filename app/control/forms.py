@@ -53,10 +53,10 @@ class VehicleForm(forms.ModelForm):
         # Retired classes and size variants are not offered, except the one the
         # vehicle already has.
         self.fields["vehicle_class"].queryset = VehicleClass.objects.filter(
-            Q(active=True) | Q(pk=self.instance.vehicle_class_id)
+            Q(active=True, pending=False) | Q(pk=self.instance.vehicle_class_id)
         )
         self.fields["size_variant"].queryset = SizeVariant.objects.select_related("vehicle_class").filter(
-            Q(active=True, vehicle_class__active=True) | Q(pk=self.instance.size_variant_id)
+            Q(active=True, vehicle_class__active=True, vehicle_class__pending=False) | Q(pk=self.instance.size_variant_id)
         )
 
     def clean_year(self):
@@ -109,8 +109,8 @@ class AppointmentForm(forms.Form):
         self.fields["service"].queryset = Service.objects.filter(
             on_price_list=True, kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN]
         ).order_by("kind", "name")
-        self.fields["vehicle_class"].queryset = VehicleClass.objects.filter(active=True)
-        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True).select_related("vehicle_class")
+        self.fields["vehicle_class"].queryset = VehicleClass.objects.offered()
+        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True, vehicle_class__pending=False).select_related("vehicle_class")
         self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"
         self.fields["add_ons"].queryset = Service.objects.filter(on_price_list=True, kind=Service.Kind.ADD_ON).order_by("name")
         if editing:
@@ -218,14 +218,14 @@ class YearRangeMixin:
 class ModelOverrideForm(SizeChoiceMixin, YearRangeMixin, forms.Form):
     year_from = year_field("From model year")
     year_to = year_field("To model year")
-    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.offered(), label="Vehicle class")
     size = forms.ChoiceField(required=False, label="Size")
     note = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Why, for the history.")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["year_from"].help_text = "Leave both years empty for every year of the model."
-        self.fields["size"].choices = size_choices(VehicleClass.objects.filter(active=True))
+        self.fields["size"].choices = size_choices(VehicleClass.objects.offered())
 
     def clean(self):
         cleaned = super().clean()
@@ -262,24 +262,24 @@ class RuleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["vehicle_class"].queryset = VehicleClass.objects.filter(Q(active=True) | Q(pk=self.instance.vehicle_class_id))
+        self.fields["vehicle_class"].queryset = VehicleClass.objects.filter(Q(active=True, pending=False) | Q(pk=self.instance.vehicle_class_id))
 
 
 class VehicleClassSettingsForm(forms.ModelForm):
     class Meta:
         model = VehicleClass
-        fields = ["size_variant_measures", "booking", "photo_card"]
-        labels = {"size_variant_measures": "The size variant measures", "photo_card": "Photo card caption"}
+        fields = ["size_variant_measures", "booking", "photo_card", "photo"]
+        labels = {"size_variant_measures": "The size variant measures", "photo_card": "Photo card caption", "photo": "Photo card picture"}
 
 
 class VehicleOverrideForm(forms.Form):
-    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.offered(), label="Vehicle class")
     size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
     note = forms.CharField(required=False, max_length=500, widget=forms.Textarea(attrs={"rows": 2}), help_text="Such as lifted, or a long-bed conversion.")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True).select_related("vehicle_class")
+        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True, vehicle_class__pending=False).select_related("vehicle_class")
         self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"
 
     def clean(self):
@@ -292,7 +292,7 @@ class VehicleOverrideForm(forms.Form):
 
 class TestPriceForm(forms.Form):
     service = forms.ModelChoiceField(queryset=Service.objects.none())
-    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.filter(active=True), label="Vehicle class")
+    vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.offered(), label="Vehicle class")
     size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
     condition_level = forms.TypedChoiceField(
         choices=[(1, "1: adds nothing"), (2, "2"), (3, "3")], coerce=int, initial=1, label="Condition level",
@@ -304,5 +304,5 @@ class TestPriceForm(forms.Form):
         self.fields["service"].queryset = Service.objects.filter(
             on_price_list=True, kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN]
         ).order_by("kind", "name")
-        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True).select_related("vehicle_class")
+        self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True, vehicle_class__pending=False).select_related("vehicle_class")
         self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"

@@ -8,7 +8,9 @@ first that holds gives the vehicle class. A model year that no rule holds
 for, or whose facts straddle a rule or whose sources disagree about one,
 goes to the review queue instead of going live, with a suggested class. The
 size variant is then set from the facts the class's size variant measures,
-or left for the customer to answer.
+or left for the customer to answer. Once the size-based classes are live,
+classification.sizes.finish() then takes its steps: the pickup line, the
+EPA size class fallback and smoothing.
 
 preview() works all of this out for a proposed set of rules and overrides
 without saving anything; apply() saves it as each model year's
@@ -86,6 +88,8 @@ def because(found):
         return "sent to the photo cards from the review queue"
     if found.method == Method.EPA_FALLBACK:
         return "EPA size class fallback: " + "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
+    if found.method in (Method.PICKUP_LINE, Method.SMOOTHED):
+        return "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
     if found.method == Method.DECISION:
         return "review queue decision" + (f" ({found.decision.note})" if found.decision is not None and found.decision.note else "")
     if found.method == Method.REVIEW:
@@ -131,7 +135,7 @@ def fact_sizes(vehicle_class, model_year):
 def size_for(vehicle_class, model_year, variants):
     """(size variant, ask) for a model year in this class. A class with no
     size variants has one price; one with a single size variant, such as
-    Fullsize SUVs & Minivans, always has it. Otherwise the facts must give
+    Full-size, always has it. Otherwise the facts must give
     one size for every trim, or the customer is asked."""
     offered = variants.get(vehicle_class.pk, {})
     if not offered:
@@ -252,15 +256,19 @@ def catalog_model_years(model_ids=None):
 
 
 def classify_catalog(
-    rules=None, overrides=None, model_years=None, share=None, decisions=None, classes=None, window=None, variants=None
+    rules=None, overrides=None, model_years=None, share=None, decisions=None, classes=None, window=None, variants=None,
+    size_steps=None,
 ):
     """{(model id, year): (ModelYear, Result)} for the whole catalog. rules,
     overrides and decisions default to those saved; pass a proposed set to
     preview it. classes, {pk: VehicleClass}, puts proposed class settings in
     place of the saved ones, and variants, {class pk: {value: SizeVariant}},
     proposed size variants in place of the active ones. share and window
-    default to the settings in data/vehicle-classes.yaml."""
-    from .sizes import attach_box_volumes
+    default to the settings in data/vehicle-classes.yaml. size_steps, by
+    default whether the size-based classes are live, takes the steps of
+    classification.sizes.finish() after the rules."""
+    from .sizes import attach_box_volumes, classes_by_name, finish
+    from .switch import switched
 
     share = majority_share() if share is None else share
     window = unpublished_window() if window is None else window
@@ -293,6 +301,11 @@ def classify_catalog(
         if key in pending and key not in decided and not any(found.covers(model_year.year) for found in overridden):
             continue  # Worked out below, from the model's other years.
         results[key] = (model_year, classify_model_year(model_year, rules, overridden, variants, share, decided.get(key)))
+    if switched() if size_steps is None else size_steps:
+        by_name = classes_by_name()
+        for proposed in (classes or {}).values():
+            by_name[proposed.name] = proposed
+        finish(results, variants, by_name)
 
     by_model_years = defaultdict(dict)
     for (model_id, year), (_, result) in results.items():
@@ -367,7 +380,7 @@ def size_label(size_variant, ask, vehicle_class):
 
 
 def class_label(vehicle_class, size):
-    """"Midsize SUVs (two rows)", or "no class"."""
+    """"Medium (two rows)", or "no class"."""
     if vehicle_class is None:
         return "no class"
     return f"{vehicle_class} ({size})" if size else str(vehicle_class)
@@ -547,7 +560,7 @@ def apply(results, partial=False):
     model's ask_size. Returns counts. partial results cover only some
     models, so the others' classifications are left alone."""
     now = timezone.now()
-    stored = {(row.vehicle_model_id, row.year): row for row in ModelYearClassification.objects.all()}
+    stored = {(row.vehicle_model_id, row.year): row for row in ModelYearClassification.objects.select_related("vehicle_class")}
     created, updated = [], []
     counts = defaultdict(int)
     fields = [
@@ -573,8 +586,9 @@ def apply(results, partial=False):
             "carried_from": result.carried_from,
         }
         if result.in_review:
-            # Waits for the owner; one already live keeps its class meanwhile.
-            if row.vehicle_class_id is None:
+            # Waits for the owner; one already live keeps its class meanwhile,
+            # unless that class is retired.
+            if row.vehicle_class_id is None or not row.vehicle_class.active:
                 values.update(vehicle_class=None, size_variant=None, ask_size=False, method=Method.REVIEW)
             else:
                 for name in ("rule", "override", "decision", "carried_from"):

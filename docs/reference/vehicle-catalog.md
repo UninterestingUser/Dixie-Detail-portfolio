@@ -4,7 +4,7 @@ summary: The years, makes and models the system knows, the facts it keeps per mo
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-10-28
 tags: [vehicles, catalog, phase-2]
 related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0074-nameplates-aliases-and-majority.md, data/vehicle-names.yaml, docs/decisions/0073-classification-per-model-year.md, docs/reference/vehicle-classification.md, data/third-row-seating.yaml, docs/operations/importing-vehicle-data.md, data/vehicle-data-import.yaml, data/integrations.yaml, docs/architecture/data-model.md]
 ---
@@ -53,7 +53,7 @@ Each record also keeps the source's own ids (EPA vehicle ids, vPIC make and mode
 
 ## How body styles are worked out
 
-The EPA has no door field. The EPA lists passenger and luggage volume separately for two-door cars, four-door cars and hatchbacks. A body style is recorded when its passenger or luggage volume is not zero. When all six volumes are zero across the model year, as they are for pickups, vans and most SUVs, the body style is "unknown". Cars are priced by doors ([pricing.md](pricing.md)), so this is the fact the Coupes & Sedans size rule will use.
+The EPA has no door field. The EPA lists passenger and luggage volume separately for two-door cars, four-door cars and hatchbacks. A body style is recorded when its passenger or luggage volume is not zero. When all six volumes are zero across the model year, as they are for pickups, vans and most SUVs, the body style is "unknown". Cars were priced by doors until the size-based classes (decision 0082), which price by seat rows instead, so the body style no longer sets a price; it is kept as a fact a rule can test.
 
 ## Where each source's models come from
 

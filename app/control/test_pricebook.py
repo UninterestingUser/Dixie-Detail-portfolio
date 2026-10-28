@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from appointments import booking
 from appointments.models import RepricingDecision
+from pricebook import publishing
 from pricebook.models import Price, PricebookVersion
 
 from .fixtures import JobsTestCase, local
@@ -110,7 +111,9 @@ class DraftTests(PricebookTestCase):
         self.assertFalse(PricebookVersion.objects.filter(number=2).exists())
 
 
-class PublishTests(PricebookTestCase):
+class ThreeBookedJobs(PricebookTestCase):
+    """Three booked jobs, and a draft that raises their Full Detail price to $300."""
+
     def setUp(self):
         super().setUp()
         self.day = timezone.localdate() + datetime.timedelta(days=30)
@@ -124,6 +127,8 @@ class PublishTests(PricebookTestCase):
         self.url = reverse("pricebook-publish", args=[2])
         self.today = timezone.localdate().isoformat()
 
+
+class PublishTests(ThreeBookedJobs):
     def test_the_affected_jobs_screen(self):
         page = self.client.get(self.url, {"effective_date": self.today})
         self.assertContains(page, "3 booked jobs on or after")
@@ -190,3 +195,30 @@ class PublishTests(PricebookTestCase):
         today_job = booking.book(self.customer, self.vehicle, local(timezone.localdate()), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
         later_job = booking.book(self.customer, self.vehicle, local(self.day + datetime.timedelta(days=9)), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
         self.assertEqual((today_job.total_before_tax, later_job.total_before_tax), (Decimal("250.00"), Decimal("300.00")))
+
+
+class BookedJobReviewTests(ThreeBookedJobs):
+    """A version published without logging any choice, as apply_size_classes
+    publishes, leaves each booked job it prices differently for the owner."""
+
+    def setUp(self):
+        super().setUp()
+        publishing.publish(self.draft, timezone.localdate(), {}, log_choices=False)
+        self.review = reverse("pricebook-booked-jobs", args=[2])
+
+    def test_every_booked_job_keeps_its_quoted_price_until_the_owner_chooses(self):
+        self.assertEqual([job.total_before_tax for job in (self.first, self.second, self.third)], [Decimal("250.00")] * 3)
+        self.assertContains(self.client.get(reverse("pricebook-version", args=[2])), "3 booked jobs this version prices differently wait for your choice")
+        page = self.client.get(self.review)
+        self.assertContains(page, "Keep quoted price ($250.00)")
+        self.assertContains(page, "Use new price ($300.00)")
+        self.client.post(self.review, {f"choice-{self.first.pk}": "use_new", f"choice-{self.second.pk}": "keep", f"choice-{self.third.pk}": "keep"})
+        self.first.refresh_from_db()
+        self.assertEqual(self.first.total_before_tax, Decimal("300.00"))
+        self.assertEqual(RepricingDecision.objects.count(), 3)
+        self.assertContains(self.client.get(self.review), "No booked job waits for a choice.")
+
+    def test_only_a_manager_chooses(self):
+        self.client.force_login(self.helper_user)
+        self.assertEqual(self.client.post(self.review, {"all": "use_new"}).status_code, 403)
+        self.assertFalse(RepricingDecision.objects.exists())

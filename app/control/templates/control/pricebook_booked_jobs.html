@@ -1,0 +1,58 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Booked jobs, version {{ version.number }}{% endblock %}
+{% block content %}
+<h1>Booked jobs for version {{ version.number }}</h1>
+<p class="help">Booked jobs on or after {{ version.effective_date|date:"M j, Y" }} that version {{ version.number }} prices differently, still waiting for your choice. Each keeps its quoted price, the price of record, until you choose. A job booked in a retired class is priced in its vehicle's class now. Completed jobs never change.</p>
+
+{% if jobs %}
+<form method="post" class="stack">
+  {% csrf_token %}
+  <h2>{{ jobs|length }} booked job{{ jobs|length|pluralize }}</h2>
+  <p class="help">Keep quoted price is the default. "Use new price" re-prices the job from this version. A custom amount becomes the job's total before tax.</p>
+  {% if can_edit %}
+  <div class="button-row">
+    <button type="submit" name="all" value="keep">Keep all</button>
+    <button type="submit" name="all" value="use_new">Use new for all</button>
+  </div>
+  {% endif %}
+  {% for series_obj, series_jobs in series %}
+    <div class="field">
+      <label for="series-{{ series_obj.pk }}">{{ series_obj }}: every visit left ({{ series_jobs|length }})</label>
+      <select id="series-{{ series_obj.pk }}" name="series-{{ series_obj.pk }}">
+        <option value="">Decide each visit below</option>
+        <option value="keep">Keep quoted price</option>
+        <option value="use_new">Use new price</option>
+      </select>
+    </div>
+  {% endfor %}
+  <ul class="affected list">
+    {% for job in jobs %}
+      <li class="card">
+        <strong><a href="{% url 'appointment' job.appointment.pk %}">{{ job.appointment.customer }}</a>, {{ job.appointment.scheduled_start|date:"D M j, Y" }}</strong>
+        <span class="sub">{{ job.appointment.vehicle }}{% if job.new_class %}: priced in {{ job.new_class }}{% if job.new_size %}, {{ job.new_size.label }}{% endif %}{% endif %}</span>
+        {% for reason in job.reasons %}<span class="sub">{{ reason }}</span>{% endfor %}
+        {% if job.becomes_full_day %}<span class="sub warn">The new service hours make this a full day.</span>{% endif %}
+        <div class="field">
+          <label for="choice-{{ job.appointment.pk }}">Choice</label>
+          <select id="choice-{{ job.appointment.pk }}" name="choice-{{ job.appointment.pk }}">
+            <option value="keep">Keep quoted price ({{ job.booked_total|money }})</option>
+            {% if job.new_total is not None %}<option value="use_new">Use new price ({{ job.new_total|money }})</option>{% endif %}
+            <option value="custom">Custom amount</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="amount-{{ job.appointment.pk }}">Custom amount <span class="muted">(only for a custom amount)</span></label>
+          <input id="amount-{{ job.appointment.pk }}" name="amount-{{ job.appointment.pk }}" inputmode="decimal">
+        </div>
+        {% if job.new_total is None %}<p class="help">This job cannot be priced from this version. Keep it as it is or give a custom amount; a vehicle in a retired class gets its class on the differences screen first.</p>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% if can_edit %}<div class="actions single"><button type="submit" class="primary">Save these choices</button></div>{% else %}<p class="help">Only a manager can choose.</p>{% endif %}
+</form>
+{% else %}
+  <p class="notice">No booked job waits for a choice.</p>
+{% endif %}
+<p><a href="{% url 'pricebook-version' version.number %}">Back to version {{ version.number }}</a></p>
+{% endblock %}

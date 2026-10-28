@@ -7,7 +7,7 @@ area: vehicles
 status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-26
+updated: 2026-10-28
 supersedes: []
 superseded_by: [docs/decisions/0082-size-based-vehicle-classes.md]
 related: [docs/reference/vehicle-classification.md]
@@ -15,7 +15,7 @@ related: [docs/reference/vehicle-classification.md]
 
 # 0029: Vehicle data from EPA FuelEconomy.gov and NHTSA vPIC
 
-**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the EPA size class as the first guess at a class, once the size-based classes are applied; the data sources stand · **Date:** 2026-10-07 · **Area:** vehicles
+**Status:** superseded by [0082](0082-size-based-vehicle-classes.md) for the EPA size class as the first guess at a class, applied by `apply_size_classes` ([0083](0083-applying-the-size-based-classes.md)); the data sources stand · **Date:** 2026-10-07 · **Area:** vehicles
 
 ## Context
 

@@ -6,6 +6,34 @@
 <p class="help">Customers' vehicles whose own class or size, as imported or entered, differs from the catalog's. Nothing changes until you pick one of the three choices. Past jobs keep their prices whatever you pick.</p>
 {% if unlinked %}<p class="muted">{{ unlinked }} vehicle{{ unlinked|pluralize }} {{ unlinked|pluralize:"is,are" }} not linked to the catalog yet; <code>link_vehicles --dry-run</code> on the server lists why.</p>{% endif %}
 
+{% if retired %}
+<h2>Left in a retired class</h2>
+<p class="help">Vehicles whose class was retired when the size-based classes were applied, because they are not linked to the catalog or their model year has no class. Each shows the class proposed from its old one. Past jobs keep their prices and classes whatever you pick.</p>
+<ul class="list">
+  {% for proposal in retired %}
+    {% with vehicle=proposal.vehicle %}
+    <li class="card">
+      <strong>{{ vehicle }}</strong>
+      <span class="sub"><a href="{% url 'customer' vehicle.customer_id %}">{{ vehicle.customer }}</a> · vehicle {{ vehicle.pk }}</span>
+      <dl class="details">
+        <dt>Recorded</dt><dd>{{ vehicle.vehicle_class }} <span class="muted">(retired)</span></dd>
+        <dt>Proposed</dt><dd><strong>{{ proposal.proposed|default:"none" }}</strong> <span class="muted">({{ proposal.reason }})</span></dd>
+      </dl>
+      {% if can_edit %}
+      <form method="post" action="{% url 'retired-act' vehicle.pk %}" class="stack" style="margin-top: 8px">
+        {% csrf_token %}
+        <div class="field"><label for="class-{{ vehicle.pk }}">Class</label>
+          <select id="class-{{ vehicle.pk }}" name="vehicle_class">{% for vehicle_class in classes %}<option value="{{ vehicle_class.pk }}"{% if vehicle_class == proposal.proposed %} selected{% endif %}>{{ vehicle_class }}</option>{% endfor %}</select></div>
+        <div class="field"><label for="retired-note-{{ vehicle.pk }}">Note for the history <span class="muted">(optional)</span></label><input id="retired-note-{{ vehicle.pk }}" name="note" maxlength="500"></div>
+        <div class="button-row"><button type="submit" class="primary">Save the class</button></div>
+      </form>
+      {% endif %}
+    </li>
+    {% endwith %}
+  {% endfor %}
+</ul>
+{% endif %}
+
 {% if rows %}
 <p class="muted">{{ rows|length }} vehicle{{ rows|length|pluralize }} differ{{ rows|length|pluralize:"s," }}.</p>
 <ul class="list">

@@ -745,7 +745,7 @@ def review_queue(request):
         "-year", "vehicle_model__make", "vehicle_model__model", "vehicle_model_id"
     )
     page = Paginator(found, QUEUE_PAGE).get_page(request.GET.get("page"))
-    classes = VehicleClass.objects.filter(active=True)
+    classes = VehicleClass.objects.offered()
     context = {
         **nav_context(request, "queue"),
         "page": page,

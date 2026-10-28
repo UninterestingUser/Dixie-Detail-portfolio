@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-26
+updated: 2026-10-28
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -57,27 +57,31 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Service time.** The time spent working on the vehicle, without setup and breakdown. The price matrix holds one-person service time; two people take 60% of it, rounded to the nearest 15 minutes. The pricing engine returns service time.
 
-**Box volume.** A model year's length × width × height ÷ 1,728, in cubic feet, from the median trim's dimensions: a rough measure of a vehicle's bulk, not its cargo space. A model year with no dimensions takes the nearest measured model year's. The size-based vehicle classes are set by it (decision 0082).
+**Box volume.** A model year's length × width × height ÷ 1,728, in cubic feet, from the median trim's dimensions: a rough measure of a vehicle's bulk, not its cargo space. A model year with no dimensions takes the nearest measured model year's. The size-based vehicle classes are set by it (decisions 0082 and 0083).
 
-**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: doors for cars, cab style for pickups, seat rows for crossovers and SUVs. A class can have none, such as Motorcycles, and then has a single price per service.
+**Size variant.** One size within a vehicle class, numbered in the price matrix's size column (1, 2 or 3 at launch) and also called "seat rows". What it measures depends on the vehicle class: seat rows for Small, Medium, Large and Full-size, cab style for pickups. A class can have none, such as Motorcycles, and then has a single price per service.
 
 **Voucher.** A free promotional offer with a code and a dollar value. It is a kind of promotion and appears on a job as a promotion line.
 
-**Vehicle class.** A group of vehicles that share prices. There are seven at launch: Coupes & Sedans; Crossovers & Wagons; Light Pickups & Offroad; Midsize SUVs; Fullsize SUVs & Minivans; Fullsize Trucks; Motorcycles. Classes are records the owner can add, rename or retire without a code change; a retired class stays for history. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+**Vehicle class.** A group of vehicles that share prices. There are eight, set by size (decisions 0082 and 0083): Small; Medium; Large; Full-size; Full-size Vans, booked by quote; Light Pickups; Full-size Trucks; Motorcycles. Classes are records the owner can add, rename or retire without a code change; a retired class, such as the body-type classes Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, stays for history and is never offered or priced again. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
+
+**Pickup line.** The box volume, 760 cubic feet, that splits pickups: a Light Pickup under it, a Full-size Truck at or over it. A pickup with no box volume keeps the class its EPA label gives (decision 0083). See [data/size-classes.yaml](../../data/size-classes.yaml).
+
+**Smoothing.** Giving a run of up to six model years between two runs of one class that class, so a model does not flip class for a year or two at a size line (decision 0083).
 
 **Vehicle data refresh.** The monthly reload of the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, followed by classification, on the first Sunday of each month. It adds models and model years and updates facts, but holds in the review queue any class or size change to a model with an override, an approval or customers' jobs (decision 0081). See [../operations/monitoring.md](../operations/monitoring.md).
 
 **Vehicle model.** A make and model a customer picks, such as Toyota RAV4, over a range of model years. A vehicle class applies to a vehicle model. Its vehicle type is "car, truck or van" or "motorcycle"; motorcycles are in the same year, make and model lists, labeled, and in the Motorcycles class. Each of its model years gets a vehicle class from the classification rules. See [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md).
 
-**Classification rule.** One rule of the ordered list that gives a model year its vehicle class: conditions on stored facts, such as "EPA small SUV weighing over 4,500 lb", and the class it gives. The first rule whose conditions all hold wins. See [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
+**Classification rule.** One rule of the ordered list that gives a model year its vehicle class: conditions on stored facts, such as "box volume at least 580 and under 700 cubic feet", and the class it gives. The first rule whose conditions all hold wins. See [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
 
-**Model override.** The owner's vehicle class for a vehicle model, or some of its years, which beats every rule, such as Jeep Wrangler to Light Pickups & Offroad. A **vehicle override** is the same for one customer's vehicle, such as a lifted truck, and beats both.
+**Model override.** The owner's vehicle class for a vehicle model, or some of its years, which beats every rule, such as the 2022 to 2026 Audi Q4 e-tron to Medium. A **vehicle override** is the same for one customer's vehicle, such as a lifted truck, and beats both.
 
 **Nameplate.** A vehicle customers know by its own name, such as the Santa Fe Sport, that the EPA files under another base model, such as the Santa Fe. The catalog splits these out with [data/vehicle-names.yaml](../../data/vehicle-names.yaml), which also lists the other spellings of one vehicle, such as "GLE-Class" for the GLE.
 
-**Photo card.** One card per vehicle class, with a picture and caption, that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are seven.
+**Photo card.** One card per vehicle class, with the class name, a caption, a few example models and a picture (a placeholder until the owner adds one), that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are eight; the Full-size Vans card asks for a photo for a quote.
 
-**Approval list.** The control app's **Approvals** screen, where the owner approves the class of each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model whose years are in different classes. A later change that alters an approved range clears its approval (decision 0079).
+**Approval list.** The control app's **Approvals** screen, where the owner approves the class of each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model near a size line. It started over when the size-based classes were applied. A later change that alters an approved range clears its approval (decisions 0079 and 0083).
 
 **Differences screen.** The control app's **Differences** screen, listing each customer's vehicle whose own class or size differs from the catalog's, with three choices: keep the imported class as the vehicle's own override, take the catalog's, or give every vehicle of the model that class (decision 0077).
 
