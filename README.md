@@ -2,7 +2,7 @@
 
 The booking, scheduling, pricing and back-office system for Dixie Detail LLC, a one-person mobile vehicle detailing business in southeast Tennessee. One PostgreSQL database is the single source of truth for customers, vehicles, appointments, prices, payments, staff and bookkeeping. A private control app runs the business, and a fast public website will show live prices and take bookings.
 
-**Status (October 2026):** Phase 0 (foundations) and Phase 1 (core data and control app) are done. The home server runs the database and the control app, with the pricebook, the pricing engine, the imported job history and screens for customers, jobs, staff and the pricebook. Phase 2 (vehicle catalog) is next. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
+**Status (October 2026):** Phase 0 (foundations), Phase 1 (core data and control app) and Phase 2 (vehicle catalog) are done. The home server runs the database and the control app, with the pricebook, the pricing engine, the imported job history, screens for customers, jobs, staff and the pricebook, and a vehicle catalog from EPA and NHTSA data that sets each vehicle's size-based class and refreshes monthly. Phase 3 (scheduling and the website's booking form) is next. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
 
 **About the public copy.** The working repository is private. A public copy is published from it with [tools/publish-portfolio.sh](tools/publish-portfolio.sh), which rewrites every commit to replace server addresses and a few private details with placeholders. Everything else, including the full commit history, is as built.
 
@@ -43,7 +43,7 @@ This is a real system for a real business, built by its owner working with AI to
 | Pricebook and pricing engine, import of the earlier records | Built (Phase 1) |
 | Control app: installable phone-first shell, sign-in, customer search and customer pages | Built (Phase 1) |
 | Control app: schedule and jobs with live prices, maintenance series, staff authorization and assignment, pricebook drafts and publishing | Built (Phase 1) |
-| Vehicle catalog from EPA and NHTSA data, with classification rules the owner can edit | Planned (Phase 2) |
+| Vehicle catalog from EPA and NHTSA data, with classification rules the owner can edit | Built (Phase 2) |
 | Public website with live estimates and online booking, scheduling settings, Google Calendar sync | Planned (Phase 3) |
 | Text messages, time-to-leave alerts, card payments, arrival and departure times | Planned (Phase 4) |
 | GnuCash export, tax reports, promotions and staff pay screens | Planned (Phase 6) |

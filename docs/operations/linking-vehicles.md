@@ -4,7 +4,7 @@ summary: How to run link_vehicles on the server to link each customer's vehicle 
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-24
+updated: 2026-10-29
 tags: [operations, vehicles, classification, phase-2]
 related: [docs/decisions/0080-link-vehicles-follow-up.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0078-imported-motorcycle-jobs-get-their-class.md, docs/decisions/0079-approval-list.md, docs/operations/using-the-catalog-screens.md, docs/operations/classifying-vehicles.md, docs/reference/vehicle-classification.md, data/vehicle-names.yaml, data/approval-spot-checks.yaml]
 ---
@@ -81,7 +81,7 @@ The report starts with "APPLIED". Each vehicle's history records the change as "
 In the control app's **Catalog** tab ([using-the-catalog-screens.md](using-the-catalog-screens.md)):
 
 1. **Differences:** for each vehicle, keep the imported class, take the catalog's, or give every vehicle of the model this vehicle's class.
-2. **Approvals:** approve or change each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model whose years are in different classes ([decision 0079](../decisions/0079-approval-list.md)). Phase 2 is done when every model there is approved.
+2. **Approvals:** approve or change each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model near a size line or the pickup line (decisions [0079](../decisions/0079-approval-list.md) and [0083](../decisions/0083-applying-the-size-based-classes.md)). A model shows again when a later change clears its approval.
 
 ## After a Baserow import rerun
 

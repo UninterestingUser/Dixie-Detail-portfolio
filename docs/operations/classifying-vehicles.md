@@ -4,7 +4,7 @@ summary: How to run classify_vehicles to apply the rules and overrides, read its
 audience: [owner, developer]
 visibility: restricted
 status: current
-updated: 2026-10-28
+updated: 2026-10-29
 tags: [operations, vehicles, classification, phase-2]
 related: [docs/decisions/0083-applying-the-size-based-classes.md, data/size-classes.yaml, docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-classification.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0072-motorcycles-class.md, docs/operations/importing-vehicle-data.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, docs/guides/editing-the-pricebook.md]
 ---
@@ -86,7 +86,7 @@ It adds the Motorcycles class and the Motorcycle Detail service, fills in each c
 
 ## Applying the size-based classes
 
-The size-based classes ([decisions 0082](../decisions/0082-size-based-vehicle-classes.md) and [0083](../decisions/0083-applying-the-size-based-classes.md)) and the new price book in [data/price-matrix.csv](../../data/price-matrix.csv) go live together, in one step, with `apply_size_classes`. It runs in one transaction, so the classes and the prices never disagree, and a dry run does everything, prints the same report and rolls back. The classes, lines and rules are in [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
+The size-based classes ([decisions 0082](../decisions/0082-size-based-vehicle-classes.md) and [0083](../decisions/0083-applying-the-size-based-classes.md)) and the new price book in [data/price-matrix.csv](../../data/price-matrix.csv) go live together, in one step, with `apply_size_classes`. The owner applied them on 2026-10-28; the steps below are kept for a rebuilt server and as the record of how it is done, and a second run says the classes are already applied. It runs in one transaction, so the classes and the prices never disagree, and a dry run does everything, prints the same report and rolls back. The classes, lines and rules are in [../reference/vehicle-classification.md](../reference/vehicle-classification.md).
 
 ```text
 python manage.py apply_size_classes --effective YYYY-MM-DD [--dry-run]

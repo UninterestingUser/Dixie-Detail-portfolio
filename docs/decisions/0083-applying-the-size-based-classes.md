@@ -7,15 +7,15 @@ area: vehicles
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-28
-supersedes: [docs/decisions/0072-motorcycles-class.md, docs/decisions/0079-approval-list.md]
+updated: 2026-10-29
+supersedes: [docs/decisions/0015-crossover-three-row-price.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0079-approval-list.md]
 superseded_by: []
 related: [docs/decisions/0082-size-based-vehicle-classes.md, data/size-classes.yaml, data/vehicle-classes.yaml, data/price-matrix.csv, data/approval-spot-checks.yaml, docs/reference/vehicle-classification.md, docs/reference/pricing.md, docs/operations/classifying-vehicles.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
 
 # 0083: The size-based classes are applied in one step with the new price book, with vans before pickups, a pickup line at 760 cu ft and smoothing
 
-**Status:** accepted · **Date:** 2026-10-28 · **Area:** vehicles
+**Status:** accepted and applied on 2026-10-28; supersedes [0015](0015-crossover-three-row-price.md), whose class the new price book retires · **Date:** 2026-10-28 · **Area:** vehicles
 
 ## Context
 

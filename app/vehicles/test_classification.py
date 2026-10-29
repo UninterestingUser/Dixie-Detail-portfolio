@@ -128,11 +128,11 @@ class RuleOrderTests(ClassificationTestCase):
 
     def test_the_conditions_are_checked(self):
         self.assertEqual(condition_errors({"epa_size_class": SMALL_SUVS, "curb_weight": {"over": 4500}}), [])
-        for bad in ({"colour": ["red"]}, {"curb_weight": 4500}, {"curb_weight": {"above": 4500}}, {"make": "Ford"},
+        for bad in ({"color": ["red"]}, {"curb_weight": 4500}, {"curb_weight": {"above": 4500}}, {"make": "Ford"},
                     {"vehicle_type": ["boat"]}, {"year": {"from": "2019"}}):
             with self.subTest(conditions=bad):
                 self.assertTrue(condition_errors(bad))
-        rule = ClassificationRule(position=1, name="bad", conditions={"colour": ["red"]}, vehicle_class=self.vehicle_class("Midsize SUVs"))
+        rule = ClassificationRule(position=1, name="bad", conditions={"color": ["red"]}, vehicle_class=self.vehicle_class("Midsize SUVs"))
         with self.assertRaises(ValidationError):
             rule.full_clean()
 

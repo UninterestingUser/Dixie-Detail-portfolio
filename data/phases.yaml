@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-24
+  updated: 2026-10-29
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -40,22 +40,34 @@ phases:
       - Bitwarden secret DEPLOY_KEY renamed to DEPLOY_SSH_KEY (2026-10-13)
   - number: 2
     name: Vehicle catalog
-    status: in progress
+    status: done
+    completed: 2026-10-29
+    runbook: docs/operations/phase-2-vehicle-catalog-runbook.md   # historical, as executed
+    note: The owner applied the size-based classes and the new price book with apply_size_classes on 2026-10-28, worked through the booked-job review, the differences screen and the approval list, spot-checked every class, and passed the backup and restore test the same day
     built:
-      - "Step 1: vehicle data import (import_vehicle_data) from the EPA, NHTSA vPIC (gap fill and motorcycles) and the Canadian specifications, with facts per model year and source (decision 0071)"
-      - "Step 2: classification (classify_vehicles and the classify() lookup): ordered rules and per-model and per-vehicle overrides applied per model year, size variants by doors, cab style and the third-row list, the preview and the review queue; the Motorcycles class with Motorcycle Detail at $100 (decisions 0072 and 0073)"
-      - "Step 2 follow-up: nameplates and one name per vehicle (data/vehicle-names.yaml), the full-size SUV overrides, the three-row rule, decisions by a two-thirds majority of rows, narrowed heavy-pickup and older-SUV rules, and launch rules that follow the data file (decision 0074)"
-      - "Step 3: the control app's catalog screens - lookup with facts, how and a test price; model and vehicle overrides and the third-row flag; rules in plain words with a preview before each change applies; class settings; the review queue with suggestions and many-at-once decisions; the change log on each model's screen (decision 0076). The owner's second dry-run fixes: unpublished EPA years take the nearest classified year, Canadian trims split by nameplate, the Wagoneer override from 2022 (decision 0075)"
-      - "Step 4: link_vehicles links customers' vehicles to the catalog by the names data file, with trim words, never guessing between two candidates; the differences screen (keep the imported class, take the catalog's, or a per-model override); the two imported motorcycle jobs get the Motorcycles class and Motorcycle Detail with amounts as imported; the approval list of job-history, spot-check (data/approval-spot-checks.yaml) and mixed-class models, approved per year range and cleared by a later change (decisions 0077 to 0079)"
-      - "Step 4 follow-up: vehicles with no year link by make and model, keeping their class; the approval list's job history by make and model; customer aliases with year limits and other makes (Dodge Ram from 2011 is the Ram 1500); motorcycle-only makes get the Motorcycles class; a name check for every unlinked vehicle (decision 0080)"
-      - "Step 5: monthly vehicle data refresh (refresh_vehicle_data, ops/vehicle-refresh.sh, dixie-vehicle-refresh.timer on the first Sunday of each month at 4:15 AM) with a third Healthchecks check; a refresh adds models and model years and updates facts, and holds class or size changes to models with an override, an approval or jobs in the review queue; the home screen shows the last refresh. Step 4 leftovers: the CLS alias points at CLS-Class, alias reasons no longer repeat the make, and names as the maker writes them (350Z) through the alias list (decision 0081)"
+      - "Step 1 (#33): vehicle data import (import_vehicle_data) from the EPA, NHTSA vPIC (gap fill and motorcycles) and the Canadian specifications, with facts per model year and source (decision 0071)"
+      - "Step 2 (#34): classification (classify_vehicles and the classify() lookup): ordered rules and per-model and per-vehicle overrides applied per model year, size variants by doors, cab style and the third-row list, the preview and the review queue; the Motorcycles class with Motorcycle Detail at $100 (decisions 0072 and 0073)"
+      - "Step 2 follow-up (#35): nameplates and one name per vehicle (data/vehicle-names.yaml), the full-size SUV overrides, the three-row rule, decisions by a two-thirds majority of rows, narrowed heavy-pickup and older-SUV rules, and launch rules that follow the data file (decision 0074)"
+      - "Step 3 (#36): the control app's catalog screens - lookup with facts, how and a test price; model and vehicle overrides and the third-row flag; rules in plain words with a preview before each change applies; class settings; the review queue with suggestions and many-at-once decisions; the change log on each model's screen (decision 0076). The owner's second dry-run fixes: unpublished EPA years take the nearest classified year, Canadian trims split by nameplate, the Wagoneer override from 2022 (decision 0075)"
+      - "Step 4 (#37): link_vehicles links customers' vehicles to the catalog by the names data file, with trim words, never guessing between two candidates; the differences screen (keep the imported class, take the catalog's, or a per-model override); the two imported motorcycle jobs get the Motorcycles class and Motorcycle Detail with amounts as imported; the approval list of job-history, spot-check (data/approval-spot-checks.yaml) and mixed-class models, approved per year range and cleared by a later change (decisions 0077 to 0079)"
+      - "Step 4 follow-up (#38): vehicles with no year link by make and model, keeping their class; the approval list's job history by make and model; customer aliases with year limits and other makes (Dodge Ram from 2011 is the Ram 1500); motorcycle-only makes get the Motorcycles class; a name check for every unlinked vehicle (decision 0080)"
+      - "Step 5 (#39): monthly vehicle data refresh (refresh_vehicle_data, ops/vehicle-refresh.sh, dixie-vehicle-refresh.timer on the first Sunday of each month at 4:15 AM) with a third Healthchecks check; a refresh adds models and model years and updates facts, and holds class or size changes to models with an override, an approval or jobs in the review queue; the home screen shows the last refresh. Step 4 leftovers: the CLS alias points at CLS-Class, alias reasons no longer repeat the make, and names as the maker writes them (350Z) through the alias list (decision 0081)"
+      - "deploy.sh enables every timer in ops/ on the deploy that adds it, and checks each is enabled and active (#40)"
+      - "The vehicle size report, read-only, for the car, crossover and SUV classes (#41)"
+      - "Size-based vehicle classes, rules and dry run: box volume as a stored fact, Small, Medium, Large, Full-size and Full-size Vans by box volume, seat rows instead of doors (decision 0082, #42)"
+      - "apply_size_classes: the new price book and the size-based classes in one transaction, vans before pickups, the 760 cu ft pickup line, smoothing, three model overrides, retired body-type classes, photo cards and a new approval list; the price book check; the refresh classifies with the size rules and logs only its summary and newly queued models (decision 0083, #43)"
+      - "Fixes from the apply dry runs: booked jobs with no vehicle, class or size are checked by hand (decision 0084, #44); seat rows, pickups in every year, full-size vans by nameplate and the Escalade override (decision 0085, #45); the three-row floor after seat rows are final (decision 0086, #46)"
+      - "Size-based classes applied and the new price book published by the owner (2026-10-28)"
     scope_from_plan_review: [classification rules as data, per-model and per-vehicle overrides, preview before saving, vehicle class settings, vPIC Canadian specifications]
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3
     name: Scheduling and website
-    status: planned
+    status: next
     scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
+    carried_from_phase_2:
+      - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)
+      - "Possible future vehicle classes already in data/vehicle-classes.yaml, not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form); each planned with Phase 3 or later"
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4
     name: Texts, alerts and payments
@@ -81,8 +93,11 @@ later_add_ons:              # not scheduled
     decision: "0062"
 
 owner_actions_open:        # answers and checks only the owner can give
-  # Carried over from the Phase 1 runbook; none blocks Phase 2.
-  - Before Phase 2's classification rules are settled - whether to change how vehicles are priced (a factor beyond vehicle class, size variant and condition), cheapest to settle before the booking flow is built
+  # Carried over from the Phase 2 runbook.
+  - Before the booked job on 2026-11-28 - attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review
+  - At each vehicle's next visit - confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083)
+  - Before Phase 3 - add a photo to each class's photo card; each shows a placeholder until then
+  # Carried over from the Phase 1 runbook.
   - Before Phase 3 - confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056)
   - Before Phase 3 - the accountant's view on Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, docs/reference/sales-tax.md)
   - Before Phase 3 - short descriptions in the owner's own words for each service and condition level, for the website

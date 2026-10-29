@@ -4,7 +4,7 @@ summary: Every outside service the system uses or will use, what it does for the
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-10-29
 tags: [integrations, services]
 related: [data/integrations.yaml, data/configuration.yaml, docs/overview/running-costs.md]
 ---
@@ -20,11 +20,14 @@ Every outside service connects to the core app, never straight to the database. 
 - **Bitwarden Secrets Manager.** Holds every secret. See [secrets.md](secrets.md).
 - **GitHub.** Hosts the private repository. The server pulls with a read-only deploy key.
 - **Google Workspace (Drive).** Holds the encrypted off-site backups, through rclone with access only to the files it creates.
-- **Healthchecks.io.** Emails the owner when the backup or the public path stops checking in.
+- **Healthchecks.io.** Emails the owner when the backup, the public path or the monthly vehicle data refresh stops checking in or fails.
+
+## In use since Phase 2
+
+- **EPA FuelEconomy.gov and NHTSA vPIC.** Free government vehicle data: year, make and model menus, EPA size classes, the heavy trucks the EPA leaves out, motorcycle models, and, from vPIC's Canadian vehicle specifications, curb weight and dimensions per trim for the classification rules. The `import_vehicle_data` command loads them into the vehicle catalog, caching each download and pausing between vPIC calls, and `dixie-vehicle-refresh.timer` refreshes them on the first Sunday of each month at 4:15 AM Eastern; see [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md) and [../reference/vehicle-classification.md](../reference/vehicle-classification.md). RockAuto is not used: it has no public API and scraping it may breach its terms.
 
 ## Connected in later phases
 
-- **EPA FuelEconomy.gov and NHTSA vPIC (Phase 2, in progress).** Free government vehicle data: year, make and model menus, EPA size classes, the heavy trucks the EPA leaves out, motorcycle models, and, from vPIC's Canadian vehicle specifications, curb weight and dimensions per trim for the classification rules. The `import_vehicle_data` command loads them into the vehicle catalog, caching each download and pausing between vPIC calls; see [../reference/vehicle-catalog.md](../reference/vehicle-catalog.md) and [../reference/vehicle-classification.md](../reference/vehicle-classification.md). RockAuto is not used: it has no public API and scraping it may breach its terms.
 - **Google Workspace calendars (Phase 3).** Two calendars, Jobs and Time Off, shared with a Google service account: edit on Jobs, read on Time Off. The service account's JSON key is the Bitwarden secret `GOOGLE_SERVICE_ACCOUNT_JSON`, read into memory; there is no key file on disk. Workspace may need one admin setting changed to allow sharing with the service account. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
 - **Google Maps Platform (Phase 3).** Address suggestions on the booking form (Places Autocomplete) and traffic-aware drive times (Routes). Usage is expected to stay inside the free monthly allowance. The billing account is approved; it must sit on the same Google Cloud project as the calendar service account.
 - **Census Bureau geocoder and Tennessee Department of Revenue (Phase 3).** Turn a service address into coordinates and then into a tax jurisdiction and rate. See [../reference/sales-tax.md](../reference/sales-tax.md).
