@@ -4,16 +4,16 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-28
+updated: 2026-10-29
 tags: [roadmap, phases, status]
-related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/decisions/README.md]
+related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/operations/phase-2-vehicle-catalog-runbook.md, docs/decisions/README.md]
 ---
 
 # Roadmap and phase status
 
 The booking path ships first because it earns money; the back-office features follow once real data is flowing. Each phase becomes a GitHub milestone, and each task an issue. A phase ends when the owner runs its test and it passes. The structured list is in [data/phases.yaml](../../data/phases.yaml).
 
-## Where the project stands (2026-10-24)
+## Where the project stands (2026-10-29)
 
 **Phase 0 is complete** (2026-10-14). The server runs the stack under systemd, the control app answers over Tailscale, the public health page answers through the Cloudflare Tunnel, nightly backups reach the RAID and Google Drive, both Healthchecks.io checks are green, and the restore test passed.
 
@@ -26,17 +26,31 @@ The booking path ships first because it earns money; the back-office features fo
 
 The returning-customer review queue, listed for Phase 1 in the first plan, moved to Phase 3 with quiet matching: flags are raised only by website bookings, which start in Phase 3. The data model already holds them.
 
-**Phase 2, the vehicle catalog, is in progress.** Step 1, the vehicle data import, is built: the catalog loads from the EPA, NHTSA vPIC and the Canadian specifications, with each source's facts kept per model year ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071). Step 2, classification, is built: ordered rules and overrides give each model year a vehicle class and size variant, with a preview, a review queue and the lookup the booking form will use, and Motorcycles are a vehicle class with Motorcycle Detail at $100 ([../reference/vehicle-classification.md](../reference/vehicle-classification.md), decisions 0072 and 0073). Step 3, the control app's catalog screens, is built: looking vehicles up with a test price, model and vehicle overrides, the rules with a preview before each change applies, class settings, the review queue and each model's history (decision 0076), with the owner's second dry-run fixes: next year's models take their model's nearest classified year until the EPA publishes them, Canadian trims split by nameplate, and the Jeep Wagoneer override starts in 2022 (decision 0075). Step 4 is built: `link_vehicles` links customers' vehicles to the catalog by name without guessing, the differences screen settles each vehicle whose class differs, the two imported motorcycle jobs get their class and service, and the approval list holds every model in the job history, a spot-check list and every model whose years are in different classes, approved by year range (decisions 0077 to 0079). The fixes from the owner's first dry run link vehicles with no year by make and model, add customer aliases that can hold for some years, give motorcycle-only makes the Motorcycles class and check every unlinked vehicle's name (decision 0080). Step 5 is built: the vehicle data is refreshed on the first Sunday of each month by a timer watched by Healthchecks.io, and a refresh never changes the class or size of a model with an override, an approval or customers' jobs, holding such a change in the review queue with the old and new values; the home screen shows the last refresh (decision 0081). The size-based vehicle classes are built: cars, wagons, crossovers, SUVs, minivans and vans are classed by box volume, pickups by a 760 cubic foot line, and `apply_size_classes` switches the catalog and publishes the new price book in one step, after which the approval list starts over with the job history, a new spot-check list and every model near a size line (decisions 0082 and 0083). Phase 2 is done when every model on the approval list is approved.
+**Phase 2 is complete** (2026-10-29). The owner switched the catalog to the size-based vehicle classes and the new price book with `apply_size_classes` on 2026-10-28, worked through the booked-job review, the differences screen and the approval list, spot-checked every class in catalog search, and passed the backup and restore test the same day. How the phase was run, step by step, is kept in the historical [Phase 2 runbook](../operations/phase-2-vehicle-catalog-runbook.md). Phase 2 built, by pull request:
+
+- **Step 1, the vehicle data import** (#33): `import_vehicle_data` loads the catalog from the EPA, NHTSA vPIC and the Canadian specifications, with each source's facts kept per model year ([../reference/vehicle-catalog.md](../reference/vehicle-catalog.md), decision 0071).
+- **Step 2, classification** (#34, with the first dry run's fixes in #35): ordered rules and overrides give each model year a vehicle class and size variant, with a preview, a review queue and the `classify()` lookup the booking form will use; nameplates and one name per vehicle; Motorcycles are a vehicle class with Motorcycle Detail at $100 ([../reference/vehicle-classification.md](../reference/vehicle-classification.md), decisions 0072 to 0074).
+- **Step 3, the catalog screens** (#36): lookup with a test price, model and vehicle overrides, the rules with a preview before each change applies, class settings, the review queue and each model's history, with the second dry run's fixes (decisions 0075 and 0076).
+- **Step 4, customers' vehicles** (#37, with the first link dry run's fixes in #38): `link_vehicles` links customers' vehicles to the catalog without guessing, the differences screen settles each vehicle whose class differs, the two imported motorcycle jobs get their class and service, and the approval list holds the job history and a spot-check list (decisions 0077 to 0080).
+- **Step 5, the monthly refresh** (#39, with deploy.sh enabling and checking every timer in #40): `dixie-vehicle-refresh.timer` refreshes the vehicle data on the first Sunday of each month, watched by Healthchecks.io, and never changes the class or size of a model with an override, an approval or customers' jobs without the owner (decision 0081).
+- **The size-based vehicle classes** (the vehicle size report in #41, rules and dry run in #42, the switch in #43, and fixes from the apply dry runs in #44 to #46): cars, wagons, crossovers, SUVs, minivans and vans are classed by box volume into Small, Medium, Large, Full-size and Full-size Vans, pickups into Light Pickups and Full-size Trucks by a 760 cubic foot line, and `apply_size_classes` switched the catalog and published the new price book in one step (decisions 0082 to 0086).
+
+**Phase 3, scheduling and the website with the booking form, is next.** It carries these over from Phase 2:
+
+- The photo cards for the size-based classes have placeholders; the booking form shows them, so the owner adds a photo to each (owner action below).
+- The possible future vehicle classes already in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) are not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form). Each is planned with Phase 3 or later.
 
 Phase 1 started with two carry-overs from Phase 0, both done: `DEPLOY_REMOTE` and `DEPLOY_BRANCH` are in the server's `.env` and `ops/deploy.sh` works (confirmed by the owner 2026-10-17; the deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY` on 2026-10-13), and the restore test passed on 2026-10-14. Two more were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
 
 ## Owner actions still open
 
-Answers and checks only the owner can give, including those carried over from Phase 1. None blocks Phase 2. The list is kept in [data/phases.yaml](../../data/phases.yaml) under `owner_actions_open`.
+Answers and checks only the owner can give, including those carried over from Phases 1 and 2. The list is kept in [data/phases.yaml](../../data/phases.yaml) under `owner_actions_open`.
 
 | Needed before | Action |
 | --- | --- |
-| Phase 2's classification rules are settled | Decide whether to change how vehicles are priced, with a factor beyond vehicle class, size variant and condition. It is cheapest to settle before the booking flow is built |
+| The booked job on 2026-11-28 | Attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review |
+| Each vehicle's next visit | Confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083) |
+| Phase 3 | Add a photo to each class's photo card in the control app's class settings; each shows a placeholder until then |
 | Phase 3 | Confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056) |
 | Phase 3 | Ask the accountant about Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, [sales-tax.md](../reference/sales-tax.md)) |
 | Phase 3 | Write short descriptions, in the owner's own words, of each service and condition level for the website |
@@ -45,13 +59,13 @@ Answers and checks only the owner can give, including those carried over from Ph
 
 ## Where the plan review of 2026-10-17 lands
 
-Before Phase 1 Step 3 the owner reviewed the plan and agreed ten changes, recorded as decisions 0056 to 0062 in the [decision index](../decisions/README.md). Each lands in the phase that builds it; the Phase 1 ones are built:
+Before Phase 1 Step 3 the owner reviewed the plan and agreed ten changes, recorded as decisions 0056 to 0062 in the [decision index](../decisions/README.md). Each lands in the phase that builds it; the Phase 1 and Phase 2 ones are built:
 
 | Where | What |
 | --- | --- |
 | Phase 1 Step 3 | Service hours without setup and breakdown in the pricebook load, the quote record, time on site, and room in the pricing engine for another price basis (built) |
 | Phase 1 Step 5b | Staff authorization per service, its two screens, and assigning staff from the qualified list (built) |
-| Phase 2 | Vehicle classification rules as data, with overrides, a preview and vehicle class settings |
+| Phase 2 | Vehicle classification rules as data, with overrides, a preview and vehicle class settings (built) |
 | Phase 3 | The scheduling settings screen, the availability check, the calendar sync and conflict rules, and the assign-staff prompt for website bookings |
 | Phase 4 | Arrival and departure taps |
 
@@ -61,8 +75,8 @@ Before Phase 1 Step 3 the owner reviewed the plan and agreed ten changes, record
 | --- | --- | --- | --- |
 | 0. Foundations | Accounts, the server stack (Docker, PostgreSQL, Caddy, tunnel), Tailscale access, backups, monitoring, the repository | A backup has been restored successfully and the server answers through the tunnel | Done (2026-10-14) |
 | 1. Core data and control app | The data model for all nine areas; screens for customers, vehicles, pricebook, appointments and staff; the Baserow import; pricebook versioning | The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable | Done (2026-10-18) |
-| 2. Vehicle catalog | EPA and NHTSA import (with vPIC's Canadian specifications), owner-editable classification rules with a preview, overrides, vehicle class settings, size-variant flags, review queue, monthly refresh | The owner approves the class for every model in the job history and a spot-check list | In progress |
-| 3. Scheduling and website | Scheduling settings screen, the availability check, Google Calendar sync and conflict rules, the assign-staff prompt for website bookings, sales tax, booking API, quiet customer matching with its review queue (moved from Phase 1), the Astro site with the estimate card on a staging address, carrier registration once the booking form is public | The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved | Planned |
+| 2. Vehicle catalog | EPA and NHTSA import (with vPIC's Canadian specifications), owner-editable classification rules with a preview, overrides, vehicle class settings, size-variant flags, review queue, monthly refresh | The owner approves the class for every model in the job history and a spot-check list | Done (2026-10-29) |
+| 3. Scheduling and website | Scheduling settings screen, the availability check, Google Calendar sync and conflict rules, the assign-staff prompt for website bookings, sales tax, booking API, quiet customer matching with its review queue (moved from Phase 1), the Astro site with the estimate card on a staging address, carrier registration once the booking form is public | The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved | Next |
 | 4. Texts, alerts and payments | Quo messages, STOP and HELP handling, time-to-leave alerts, arrival and departure taps, Stripe links and Tap to Pay matching, "paid" buttons, invoices and receipts | One test appointment runs from booking through reminder, payment by every method and review request | Planned |
 | 5. Launch | Redirects from WordPress, DNS cutover, Search Console check, number port, Setmore retired | Old links redirect, a real customer books, and Setmore is switched off | Planned |
 | 6. Back office | GnuCash export, sales tax reports, promotions, marketing campaigns, staff records and pay | A month's export imports cleanly into GnuCash and matches the bank deposits | Planned |
