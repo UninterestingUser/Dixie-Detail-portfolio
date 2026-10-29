@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-10-24
+  updated: 2026-10-29
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -35,19 +35,19 @@ services:
   - name: EPA FuelEconomy.gov
     purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984
     phase: 2
-    status: In progress; import_vehicle_data --source epa loads the whole table (Phase 2 Step 1); refreshed on the first Sunday of each month by dixie-vehicle-refresh.timer (Phase 2 Step 5)
+    status: Working; import_vehicle_data --source epa loads the whole table; refreshed monthly, on the first Sunday at 4:15 AM Eastern, by dixie-vehicle-refresh.timer
     url: https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip
     plan: Free, no key
   - name: NHTSA vPIC
     purpose: Makes and models the EPA leaves out (heavy pickups and vans) and motorcycle models, from GetModelsForMakeYear; no seat-row data yet (its seat-row fields are per VIN)
     phase: 2
-    status: In progress; import_vehicle_data --source vpic, for the makes in data/vehicle-data-import.yaml (Phase 2 Step 1); refreshed on the first Sunday of each month by dixie-vehicle-refresh.timer (Phase 2 Step 5)
+    status: Working; import_vehicle_data --source vpic, for the makes in data/vehicle-data-import.yaml; refreshed monthly, on the first Sunday at 4:15 AM Eastern, by dixie-vehicle-refresh.timer
     url: https://vpic.nhtsa.dot.gov/api/vehicles/
     plan: Free, no key; rate-limited, so the import pauses between calls and retries 429 and 5xx answers
   - name: NHTSA vPIC Canadian vehicle specifications
     purpose: Curb weight, overall length, width, height and wheelbase per trim, and pickups' cab styles from the trim names, for the classification rules (GetCanadianVehicleSpecifications)
     phase: 2
-    status: In progress; import_vehicle_data --source canada attaches them to matching catalog models and lists the rest (Phase 2 Step 1); refreshed on the first Sunday of each month by dixie-vehicle-refresh.timer (Phase 2 Step 5). Checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
+    status: Working; import_vehicle_data --source canada attaches them to matching catalog models and lists the rest; refreshed monthly, on the first Sunday at 4:15 AM Eastern, by dixie-vehicle-refresh.timer. Checked by hand on 2026-10-17 against a 2019 Toyota RAV4 and the 2025 Ford range. Models sold only in the US may be missing
     url: https://vpic.nhtsa.dot.gov/api/vehicles/
   - name: Google Workspace Calendar
     purpose: Jobs and Time Off calendars

@@ -1,7 +1,7 @@
 meta:
   title: Size-based classification rules
   summary: The rules that give every model year its size-based vehicle class - the box-volume lines, vans before pickups, the pickup size line, smoothing, the model overrides, the EPA size class fallback and how customers' vehicles map to the classes.
-  updated: 2026-10-28
+  updated: 2026-10-29
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
@@ -9,8 +9,7 @@ meta:
     cards, are in data/vehicle-classes.yaml; this file holds the rules. classify_vehicles creates the
     rules and model overrides below as launch rules and overrides and keeps each in step with this
     file, except those the owner has edited or deleted in the database. apply_size_classes switched
-    the catalog to them; until it runs, classify_vehicles keeps the body-type rules already in the
-    database.
+    the catalog to them on 2026-10-28.
 
 # Box volume is length x width x height / 1,728 in cubic feet, from the
 # median trim of each model year (or the nearest measured year of the
