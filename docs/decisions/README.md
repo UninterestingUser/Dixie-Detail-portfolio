@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-26
+updated: 2026-10-29
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -39,7 +39,7 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0012](0012-maintenance-priced-from-full-detail.md) | 2026-10-07 | pricing | Maintenance plans are priced as a share of Full Detail | accepted |
 | [0013](0013-condition-levels.md) | 2026-10-07 | pricing | Three condition levels add 0%, 10% or 20% | accepted |
 | [0014](0014-cars-priced-by-doors.md) | 2026-10-07 | pricing | Cars are priced by doors, not seats | superseded |
-| [0015](0015-crossover-three-row-price.md) | 2026-10-07 | pricing | Crossovers & Wagons gain a three-row price | accepted |
+| [0015](0015-crossover-three-row-price.md) | 2026-10-07 | pricing | Crossovers & Wagons gain a three-row price | superseded |
 | [0016](0016-size-from-vehicle-data.md) | 2026-10-07 | booking | Derive the size variant from vehicle data; ask only when needed | superseded |
 | [0017](0017-two-person-crew-time.md) | 2026-10-07 | crew | Two people take 60% of the one-person time | accepted |
 | [0018](0018-monthly-maintenance-two-person-default.md) | 2026-10-07 | crew | Monthly Maintenance defaults to a two-person crew | accepted |

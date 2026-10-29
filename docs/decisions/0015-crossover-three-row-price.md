@@ -4,18 +4,18 @@ title: "Crossovers & Wagons gain a three-row price"
 summary: "Crossovers & Wagons with three rows: Full Detail $280 and 6.5 hours, Interior Only $180 and 4 hours."
 date: 2026-10-07
 area: pricing
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-13
+updated: 2026-10-29
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0083-applying-the-size-based-classes.md]
 related: [data/price-matrix.csv]
 ---
 
 # 0015: Crossovers & Wagons gain a three-row price
 
-**Status:** accepted · **Date:** 2026-10-07 · **Area:** pricing
+**Status:** superseded by [0083](0083-applying-the-size-based-classes.md): Crossovers & Wagons is retired, and the new price book prices three rows in Medium and Large · **Date:** 2026-10-07 · **Area:** pricing
 
 ## Context
 

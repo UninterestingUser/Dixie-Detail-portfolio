@@ -1,6 +1,6 @@
 # Dixie Detail business system
 
-> Private repository for the business system of Dixie Detail LLC, a mobile vehicle detailing business in Calhoun, Tennessee. One PostgreSQL database on the owner's home server is the single source of truth; a Django core app serves a private control app (over Tailscale) and a small public API (through a Cloudflare Tunnel); an Astro website on Cloudflare will show live prices and take bookings. Status on 2026-10-13: Phase 0 (Foundations) complete, Phase 1 next.
+> Private repository for the business system of Dixie Detail LLC, a mobile vehicle detailing business in Calhoun, Tennessee. One PostgreSQL database on the owner's home server is the single source of truth; a Django core app serves a private control app (over Tailscale) and a small public API (through a Cloudflare Tunnel); an Astro website on Cloudflare will show live prices and take bookings. Status on 2026-10-29: Phases 0 (Foundations), 1 (Core data and control app) and 2 (Vehicle catalog) complete, Phase 3 (Scheduling and website, with the booking form) next.
 
 Every Markdown file under docs/ has a YAML header with title, summary, audience, visibility and status. "status: planned" means the feature is designed but not built. Structured facts are in data/ (YAML, plus the price matrix CSV). Decisions are one file each in docs/decisions/.
 
@@ -48,6 +48,7 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Troubleshooting](docs/operations/troubleshooting.md)
 - [Phase 0 foundations runbook](docs/operations/phase-0-foundations-runbook.md): how the server was built, usable to rebuild it
 - [Phase 1 runbook](docs/operations/phase-1-core-data-runbook.md): historical record of how Phase 1 was run
+- [Phase 2 vehicle catalog runbook](docs/operations/phase-2-vehicle-catalog-runbook.md): historical record of how Phase 2 was run
 - [Publishing the public portfolio copy](docs/operations/publishing-the-portfolio.md)
 
 ## Conventions
