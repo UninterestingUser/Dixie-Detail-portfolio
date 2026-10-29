@@ -281,7 +281,7 @@ class LaunchSetTests(ClassificationTestCase):
         self.assertEqual(ClassificationRule.objects.get(name="Large").note, "Changed in the file.")
         self.assertEqual(ClassificationRule.objects.get(name="Small").note, "The owner's note.")
         self.assertTrue(ClassificationRule.objects.filter(name="A new launch rule").exists())
-        self.assertIn("kept your edited rule 130 (Small); the launch set has a different version", report.launch_set)
+        self.assertIn("kept your edited rule 120 (Small); the launch set has a different version", report.launch_set)
         self.assertIn("updated launch rule 100 (Large)", report.launch_set)
 
     def test_the_first_launch_set_is_brought_in_step(self):
