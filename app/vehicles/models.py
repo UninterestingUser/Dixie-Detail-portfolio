@@ -525,6 +525,9 @@ class ModelYearClassification(models.Model):
         # A short run of model years between two runs of one class, given that
         # class (decision 0083).
         SMOOTHED = "smoothed", "Smoothed"
+        # A Small model year with three seat rows, lifted to Medium once its
+        # seat rows are final (decision 0086).
+        THREE_ROW_FLOOR = "three_rows", "Three-row floor"
         PHOTO_CARDS = "photo_cards", "Photo cards"
         REVIEW = "review", "Review queue"
 

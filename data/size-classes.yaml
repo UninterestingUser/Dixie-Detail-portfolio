@@ -5,7 +5,7 @@ meta:
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
-    Decisions 0082, 0083 and 0085. The classes themselves, with their size variants, booking and photo
+    Decisions 0082, 0083, 0085 and 0086. The classes themselves, with their size variants, booking and photo
     cards, are in data/vehicle-classes.yaml; this file holds the rules. classify_vehicles creates the
     rules and model overrides below as launch rules and overrides and keeps each in step with this
     file, except those the owner has edited or deleted in the database. apply_size_classes switched
@@ -28,6 +28,14 @@ lines:
 # class of the pickup rule that caught it, from its EPA label: small pickups
 # are Light Pickups, standard pickups and heavy-duty trucks Full-size Trucks.
 pickup_line: {name: full-size trucks, at: 760, below: Light Pickups, above: Full-size Trucks}
+
+# The three-row floor, the last step (decision 0086): once seat rows are
+# final, a model year of the class below that has three rows, whatever made
+# it three rows (the third-row data's "always", an EPA minivan class or the
+# minivan list), takes the class above, so every three-row vehicle under the
+# Medium line is Medium. An optional third row does not count. Model
+# overrides and review queue decisions are left alone.
+three_row_floor: {below: Small, above: Medium}
 
 # Smoothing: a run of up to this many model years between two runs of the
 # same class takes that class, so a model does not flip class for a year or
@@ -131,10 +139,6 @@ rules:
   - name: Medium
     class: Medium
     conditions: {box_volume: {at_least: medium, under: large}}
-  - name: Three-row vehicles under the Medium line
-    class: Medium
-    conditions: {seat_rows: [3], box_volume: {under: medium}}
-    note: Every vehicle the third-row data marks "always" three rows is at least Medium. An optional third row does not count.
   - name: Small
     class: Small
     conditions: {box_volume: {under: medium}}

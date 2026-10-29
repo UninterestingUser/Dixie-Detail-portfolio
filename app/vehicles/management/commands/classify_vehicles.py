@@ -108,6 +108,7 @@ class Command(BaseCommand):
             ("pickup_model", "a pickup in other model years, with no box volume"),
             ("epa_fallback", "by the EPA size class fallback"),
             ("smoothed", "smoothed into the class around them"),
+            ("three_rows", "lifted to Medium by the three-row floor"),
             ("photo_cards", "sent to the photo cards from the review queue"),
             ("review", "in the review queue"),
         ):
