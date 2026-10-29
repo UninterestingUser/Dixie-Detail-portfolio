@@ -26,7 +26,15 @@ from vehicles import linking
 from vehicles.classification.engine import Method, active_variants, apply, catalog_model_years, classify_by_rules, classify_catalog
 from vehicles.classification.rules import ModelYear
 from vehicles.classification.seed import SeedReport, sync_launch_set
-from vehicles.classification.sizes import BoxVolume, apply_pickup_line, box_volumes, classes_by_name, newest_generation, read_scheme
+from vehicles.classification.sizes import (
+    BoxVolume,
+    apply_pickup_line,
+    apply_three_row_floor,
+    box_volumes,
+    classes_by_name,
+    newest_generation,
+    read_scheme,
+)
 from vehicles.classification.switch import is_minivan, switched
 from vehicles.models import (
     ClassificationRule,
@@ -123,7 +131,9 @@ class RuleTests(SizeClassTestCase):
         model_year.box_volume = BoxVolume(Decimal(volume)) if volume is not None else None
         model_year.sized = True
         results = {(model.pk, 2019): (model_year, classify_by_rules(model_year, self.rules, self.variants))}
-        apply_pickup_line(results, read_scheme()["pickup_line"], classes_by_name(), self.variants)
+        data = read_scheme()
+        apply_pickup_line(results, data["pickup_line"], classes_by_name(), self.variants)
+        apply_three_row_floor(results, data["three_row_floor"], classes_by_name(), self.variants)
         for row in found:
             row.delete()
         return results[(model.pk, 2019)][1]
@@ -682,3 +692,37 @@ class FollowUpRuleTests(SizeClassTestCase):
         self.assertIn("(1)", text)
         self.assertIn("Acme Backwards 2005-2006: Large, smoothed from Medium; the newest generation, 2011-2015, is Medium", text)
         self.assertNotIn("Forwards", text)
+
+
+class ThreeRowFloorTests(SizeClassTestCase):
+    """The three-row floor runs once seat rows are final (decision 0086)."""
+
+    def test_a_minivan_under_the_medium_line_is_medium_with_three_rows(self):
+        caravan = add_model("Dodge", "Caravan", year_from=1988, year_to=1988)
+        self.add_year(caravan, 1988, lengths=(190,), epa=["Minivan - 2WD"])
+        # A listed minivan with no EPA size class, and a model the third-row data marks always three rows.
+        voyager = add_model("Plymouth", "Voyager", year_from=1990, year_to=1990)
+        add_facts(voyager, Source.VPIC, year=1990, source_vehicle_types=["Multipurpose Passenger Vehicle (MPV)"])
+        add_facts(voyager, Source.CANADA, year=1990, **dimensions([185]))
+        mazda5 = add_model("Mazda", "Mazda5", year_from=2008, year_to=2008)
+        self.add_year(mazda5, 2008, lengths=(180,), epa=["Compact Cars"], rows=[3])
+        # An optional third row does not count: it stays Small, with the size asked.
+        optional = add_model("Acme", "Maybe Three", year_from=2008, year_to=2008)
+        self.add_year(optional, 2008, lengths=(180,), epa=SMALL_SUVS, rows=[2, 3])
+        results = self.classified()
+        for model, year in ((caravan, 1988), (voyager, 1990), (mazda5, 2008)):
+            with self.subTest(model=model.model):
+                result = self.result(results, model, year)
+                self.assertEqual((result.vehicle_class.name, result.size_variant.value, result.method), ("Medium", 3, Method.THREE_ROW_FLOOR))
+        self.assertIn("three seat rows, so at least Medium; rule 120: Small gives Small", self.result(results, caravan, 1988).because)
+        result = self.result(results, optional, 2008)
+        self.assertEqual((result.vehicle_class.name, result.ask_size), ("Small", True))
+
+    def test_the_price_book_check_no_longer_sees_small_with_three_rows(self):
+        from vehicles.classification.sizes import produced
+
+        caravan = add_model("Dodge", "Caravan", year_from=1988, year_to=1988)
+        self.add_year(caravan, 1988, lengths=(190,), epa=["Minivan - 2WD"])
+        found = produced(self.classified(), active_variants())
+        self.assertNotIn(("Small", 3), found)
+        self.assertEqual(check(read_matrix(), found), [])

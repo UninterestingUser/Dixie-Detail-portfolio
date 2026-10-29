@@ -88,7 +88,7 @@ def because(found):
         return "sent to the photo cards from the review queue"
     if found.method == Method.EPA_FALLBACK:
         return "EPA size class fallback: " + "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
-    if found.method in (Method.PICKUP_LINE, Method.PICKUP_MODEL, Method.SMOOTHED):
+    if found.method in (Method.PICKUP_LINE, Method.PICKUP_MODEL, Method.SMOOTHED, Method.THREE_ROW_FLOOR):
         return "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
     if found.method == Method.DECISION:
         return "review queue decision" + (f" ({found.decision.note})" if found.decision is not None and found.decision.note else "")

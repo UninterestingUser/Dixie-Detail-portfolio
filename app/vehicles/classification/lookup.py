@@ -35,6 +35,7 @@ class How:
     # The size-based classes' steps after the rules (decision 0083).
     PICKUP_LINE = "pickup size line"
     PICKUP_MODEL = "pickup in other model years"
+    THREE_ROW_FLOOR = "three-row floor"
     EPA_FALLBACK = "EPA size class fallback"
     SMOOTHED = "smoothed"
     REVIEW_QUEUE = "review queue"
@@ -48,6 +49,7 @@ HOW = {
     Method.CARRIED: How.NEAREST_YEAR,
     Method.PICKUP_LINE: How.PICKUP_LINE,
     Method.PICKUP_MODEL: How.PICKUP_MODEL,
+    Method.THREE_ROW_FLOOR: How.THREE_ROW_FLOOR,
     Method.EPA_FALLBACK: How.EPA_FALLBACK,
     Method.SMOOTHED: How.SMOOTHED,
 }

@@ -26,6 +26,8 @@ then takes three steps, in this order:
    matches does.
 3. Smoothing: a short run of model years between two runs of one class
    takes that class.
+4. The three-row floor: a Small model year with three seat rows, whatever
+   made it three rows, is Medium (decision 0086).
 
 Model overrides and review queue decisions beat all three, and are never
 smoothed.
@@ -230,7 +232,7 @@ def _scheme(data_dir):
             raise SeedError(f"Size rule {rule['name']!r}: {' '.join(errors)}")
         if rule["class"] not in names:
             raise SeedError(f"Size rule {rule['name']!r}: {rule['class']!r} is not a class in vehicle-classes.yaml.")
-    for line in [*data["lines"], data["pickup_line"]]:
+    for line in [*data["lines"], data["pickup_line"], {"name": "three_row_floor", **data["three_row_floor"]}]:
         for side in ("below", "above"):
             if line[side] not in names:
                 raise SeedError(f"Line {line['name']!r}: {line[side]!r} is not a class in vehicle-classes.yaml.")
@@ -449,14 +451,37 @@ def smooth(results, variants, max_years):
 
 def finish(results, variants, classes=None, data_dir=None):
     """The steps after the rules, in place: pickups in every model year,
-    the pickup line, the EPA size class fallback and smoothing. Returns the
-    smoothed runs."""
+    the pickup line, the EPA size class fallback, smoothing and the
+    three-row floor. Returns the smoothed runs."""
     data = read_scheme(data_dir)
     classes = classes or classes_by_name()
     apply_pickup_models(results, data["pickup_line"], classes, variants)
     apply_pickup_line(results, data["pickup_line"], classes, variants)
     apply_fallback(results, fallback_counts(results), classes, variants)
-    return smooth(results, variants, data["smoothing"]["max_years"])
+    smoothed = smooth(results, variants, data["smoothing"]["max_years"])
+    apply_three_row_floor(results, data["three_row_floor"], classes, variants)
+    return smoothed
+
+
+# What the three-row floor may lift: classes the rules and the steps gave,
+# never a model override or a review queue decision.
+FLOOR_FROM = {Method.RULE, Method.EPA_FALLBACK, Method.SMOOTHED}
+
+
+def apply_three_row_floor(results, floor, classes, variants):
+    """Give each model year of the class below that has three seat rows,
+    once seat rows are final, the class above, in place (decision 0086)."""
+    from .engine import Result, size_for
+
+    above = classes[floor["above"]]
+    for key, (model_year, result) in results.items():
+        if result.method not in FLOOR_FROM or result.vehicle_class is None or result.vehicle_class.name != floor["below"]:
+            continue
+        if seat_rows(model_year, result.vehicle_class) != {3}:
+            continue
+        size, ask = size_for(above, model_year, variants)
+        reason = f"three seat rows, so at least {above}; {result.because} gives {result.vehicle_class}"
+        results[key] = (model_year, Result(above, size, ask, Method.THREE_ROW_FLOOR, rule=result.rule, reasons=[reason]))
 
 
 def classify_scheme(model_years=None):
