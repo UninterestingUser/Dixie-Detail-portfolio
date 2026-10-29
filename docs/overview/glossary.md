@@ -65,7 +65,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Vehicle class.** A group of vehicles that share prices. There are eight, set by size (decisions 0082 and 0083): Small; Medium; Large; Full-size; Full-size Vans, booked by quote; Light Pickups; Full-size Trucks; Motorcycles. Classes are records the owner can add, rename or retire without a code change; a retired class, such as the body-type classes Coupes & Sedans, Crossovers & Wagons, Midsize SUVs and Fullsize SUVs & Minivans, stays for history and is never offered or priced again. See [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 
-**Pickup line.** The box volume, 760 cubic feet, that splits pickups: a Light Pickup under it, a Full-size Truck at or over it. A pickup with no box volume keeps the class its EPA label gives (decision 0083). See [data/size-classes.yaml](../../data/size-classes.yaml).
+**Pickup line.** The box volume, 760 cubic feet, that splits pickups: a Light Pickup under it, a Full-size Truck at or over it. A pickup with no box volume keeps the class its EPA label gives (decision 0083). A model that is a pickup in any model year is a pickup in all of them (decision 0085). See [data/size-classes.yaml](../../data/size-classes.yaml).
 
 **Smoothing.** Giving a run of up to six model years between two runs of one class that class, so a model does not flip class for a year or two at a size line (decision 0083).
 

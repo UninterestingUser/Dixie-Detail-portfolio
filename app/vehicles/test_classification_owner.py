@@ -64,7 +64,8 @@ class NotYetPublishedTests(ClassificationTestCase):
         add_facts(old, year=2010, epa_size_classes=PICKUPS)
         add_facts(old, Source.VPIC, year=2011, source_vehicle_types=["Truck"])
         results = classify_catalog()
-        self.assertEqual(results[(old.pk, 2011)][1].reasons, ["no rule matches: no dimensions in any year and no EPA size class"])
+        # It goes by the rules and the steps after them: a pickup in 2010, so a pickup in 2011 too.
+        self.assertEqual(results[(old.pk, 2011)][1].method, "pickup_model")
         self.assertEqual(not_yet_published([found for found, _ in results.values()], 2), {(self.f150.pk, 2027)})
 
     def test_a_model_the_epa_never_lists_goes_by_the_rules(self):

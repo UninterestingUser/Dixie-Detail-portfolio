@@ -34,6 +34,7 @@ class How:
     NEAREST_YEAR = "nearest classified year"
     # The size-based classes' steps after the rules (decision 0083).
     PICKUP_LINE = "pickup size line"
+    PICKUP_MODEL = "pickup in other model years"
     EPA_FALLBACK = "EPA size class fallback"
     SMOOTHED = "smoothed"
     REVIEW_QUEUE = "review queue"
@@ -46,6 +47,7 @@ HOW = {
     Method.DECISION: How.QUEUE_DECISION,
     Method.CARRIED: How.NEAREST_YEAR,
     Method.PICKUP_LINE: How.PICKUP_LINE,
+    Method.PICKUP_MODEL: How.PICKUP_MODEL,
     Method.EPA_FALLBACK: How.EPA_FALLBACK,
     Method.SMOOTHED: How.SMOOTHED,
 }

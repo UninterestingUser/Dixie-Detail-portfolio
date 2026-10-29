@@ -88,7 +88,7 @@ def because(found):
         return "sent to the photo cards from the review queue"
     if found.method == Method.EPA_FALLBACK:
         return "EPA size class fallback: " + "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
-    if found.method in (Method.PICKUP_LINE, Method.SMOOTHED):
+    if found.method in (Method.PICKUP_LINE, Method.PICKUP_MODEL, Method.SMOOTHED):
         return "; ".join(found.review_reasons if hasattr(found, "review_reasons") else found.reasons)
     if found.method == Method.DECISION:
         return "review queue decision" + (f" ({found.decision.note})" if found.decision is not None and found.decision.note else "")
@@ -128,7 +128,7 @@ def fact_sizes(vehicle_class, model_year):
     if vehicle_class.size_variant_measures == Measures.SEATS:
         from .sizes import seat_rows
 
-        return seat_rows(model_year)
+        return seat_rows(model_year, vehicle_class)
     return {None}
 
 

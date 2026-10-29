@@ -281,8 +281,8 @@ class LaunchSetTests(ClassificationTestCase):
         self.assertEqual(ClassificationRule.objects.get(name="Large").note, "Changed in the file.")
         self.assertEqual(ClassificationRule.objects.get(name="Small").note, "The owner's note.")
         self.assertTrue(ClassificationRule.objects.filter(name="A new launch rule").exists())
-        self.assertIn("kept your edited rule 120 (Small); the launch set has a different version", report.launch_set)
-        self.assertIn("updated launch rule 90 (Large)", report.launch_set)
+        self.assertIn("kept your edited rule 130 (Small); the launch set has a different version", report.launch_set)
+        self.assertIn("updated launch rule 100 (Large)", report.launch_set)
 
     def test_the_first_launch_set_is_brought_in_step(self):
         """Rules seeded by the first version, never edited, follow the file:
@@ -342,7 +342,7 @@ class ThreeRowAndMajorityTests(ClassificationTestCase):
         heavy = [vpic_truck("Ford", "F-250"), vpic_truck("Ford", "F-350 Super Duty"), vpic_truck("Chevrolet", "Silverado HD"),
                  vpic_truck("Ram", "2500"), vpic_truck("GMC", "Sierra 3500HD"),
                  vpic_truck("Test", "Big Hauler", **{Source.OWNER: {"gvwr_min": 9900, "gvwr_max": 9900}})]
-        # Vans of the same series are never pickups; with no measurements they wait for the owner.
+        # Vans of the same series are never pickups: full-size vans by nameplate.
         vans = [vpic_truck("Chevrolet", "Express 2500"), vpic_truck("Ram", "ProMaster 3500"), vpic_truck("Ford", "Transit-350 HD")]
         minivans = [vpic_truck("Chevrolet", "Astro"), vpic_truck("Dodge", "Caravan"), vpic_truck("Chevrolet", "Lumina APV")]
         light = [vpic_truck("Dodge", "Dakota"), vpic_truck("Ford", "Explorer Sport Trac")]
@@ -350,7 +350,10 @@ class ThreeRowAndMajorityTests(ClassificationTestCase):
         for vehicle_model in heavy:
             with self.subTest(model=vehicle_model.model):
                 self.assertEqual(results[(vehicle_model.pk, 2019)][1].vehicle_class.name, "Full-size Trucks")
-        for vehicle_model in vans + minivans + light:
+        for vehicle_model in vans:
+            with self.subTest(model=vehicle_model.model):
+                self.assertEqual(results[(vehicle_model.pk, 2019)][1].vehicle_class.name, "Full-size Vans")
+        for vehicle_model in minivans + light:
             with self.subTest(model=vehicle_model.model):
                 self.assertTrue(results[(vehicle_model.pk, 2019)][1].in_review)
 
