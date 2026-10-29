@@ -65,6 +65,34 @@ def smoothed_runs(results):
     return [f"{model.make} {model.model} {years_text(first, last)}: {detail}" for model, first, last, detail in year_spans(rows)]
 
 
+def smoothed_away_from_newest(results, spread=1):
+    """["Make Model 2007-2014: Large, smoothed from Full-size; the newest
+    generation, 2021-2025, is Full-size"] for each smoothed run whose new
+    class is not the class of its model's newest generation: a backwards
+    smooth, worth a look (decision 0085)."""
+    from .engine import year_spans
+    from .sizes import newest_generation
+
+    by_model = defaultdict(list)
+    for (model_id, year), (model_year, result) in results.items():
+        by_model[model_id].append((year, model_year, result))
+    rows = []
+    for entries in by_model.values():
+        smoothed = [(year, model_year, result) for year, model_year, result in entries if result.method == Method.SMOOTHED]
+        if not smoothed:
+            continue
+        newest = newest_generation(entries, spread)
+        if newest is None:
+            continue
+        found, first, last = newest
+        for year, model_year, result in smoothed:
+            if result.vehicle_class.name != found.vehicle_class.name:
+                old = result.reasons[0].rsplit(" gives ", 1)[-1] if result.reasons else "another class"
+                detail = f"{result.vehicle_class}, smoothed from {old}; the newest generation, {years_text(first, last)}, is {found.vehicle_class}"
+                rows.append((model_year.vehicle_model, year, detail))
+    return [f"{model.make} {model.model} {years_text(first, last)}: {detail}" for model, first, last, detail in year_spans(rows)]
+
+
 def customers_note(count):
     return f"  * {count} customer vehicle{'s' if count != 1 else ''}" if count else ""
 
@@ -236,6 +264,10 @@ class Preview:
         limit = self.scheme.data["smoothing"]["max_years"]
         self.write(f"\nSmoothed: runs of up to {limit} model years between two runs of one class, given that class ({len(runs):,})")
         for line in runs:
+            self.write(f"  {line}")
+        away = smoothed_away_from_newest(self.scheme.results, self.scheme.data["newest_generation_spread"])
+        self.write(f"\nSmoothed away from the newest generation's class, worth a look ({len(away):,})")
+        for line in away:
             self.write(f"  {line}")
 
     def mixed(self):

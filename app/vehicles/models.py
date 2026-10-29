@@ -519,6 +519,9 @@ class ModelYearClassification(models.Model):
         EPA_FALLBACK = "epa_fallback", "EPA size class fallback"
         # A pickup with a box volume, on its side of the pickup line (decision 0083).
         PICKUP_LINE = "pickup_line", "Pickup size line"
+        # A model year of a model that is a pickup in other model years,
+        # with no box volume for the pickup line (decision 0085).
+        PICKUP_MODEL = "pickup_model", "Pickup in other model years"
         # A short run of model years between two runs of one class, given that
         # class (decision 0083).
         SMOOTHED = "smoothed", "Smoothed"

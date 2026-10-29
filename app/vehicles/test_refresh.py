@@ -233,7 +233,7 @@ class RefreshCommandTests(CachedFixtures, ClassificationTestCase):
         # The log holds the newly queued model years and the summary, not the two full reports.
         self.assertNotIn("APPLIED", self.output)
         self.assertIn(f"Newly in the review queue ({refresh.sent_to_queue:,} model years):", self.output)
-        self.assertIn("  Ford Transit 2019: review queue: no rule matches", self.output)
+        self.assertIn("  Ford Expedition 2019: review queue: no rule matches", self.output)
         self.assertEqual(self.output.strip().splitlines()[-1], refresh.summary)
         self.assertTrue(refresh.summary.startswith(f"Vehicle data refresh succeeded: {refresh.models_added} models added, 0 changed,"))
 

@@ -76,7 +76,7 @@ Quarterly Maintenance is 80% and Monthly Maintenance 50% of the Full Detail pric
 `load_pricebook` runs the price book check on [data/price-matrix.csv](../../data/price-matrix.csv) before it loads anything, `apply_size_classes` runs it on the draft it publishes, and the tests run it on the file ([decision 0083](../decisions/0083-applying-the-size-based-classes.md)). It refuses a price book, and nothing changes, when:
 
 - **a maintenance plan does not follow Full Detail:** Monthly Maintenance is not 50% and Quarterly Maintenance not 80% of Full Detail for the same class and size, a plan's hours are not Full Detail's, or Full Detail has a price with no maintenance plan price beside it; or
-- **a class and row count the rules can give has no base price:** Full Detail, or for Motorcycles, Motorcycle Detail. Every size variant a class lists in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) counts, and `apply_size_classes` adds every class and size the classified catalog gives, such as a two-row vehicle in Full-size, with the model years that give it. A class booked by quote, Full-size Vans, needs no price.
+- **a class and row count the rules can give has no base price:** Full Detail, or for Motorcycles, Motorcycle Detail. Every size variant a class lists in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) counts, and `apply_size_classes` adds every class and size the classified catalog gives, such as a one-row vehicle in Small, with the model years that give it. A class booked by quote, Full-size Vans, needs no price.
 
 ## Service time and time on site
 

@@ -480,10 +480,10 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
             ("Ford", "F-250"): ("Full-size Trucks", 2),         # vPIC only; CREW CAB
             ("Ford", "F-350"): ("Full-size Trucks", "ask"),     # vPIC only; no box volume, so its rule's class
             ("Harley-Davidson", "Fat Boy"): ("Motorcycles", None),
+            ("Ford", "Transit"): ("Full-size Vans", None),         # a full-size van by nameplate
             # No dimensions in any year: the Civic's EPA class has no measured
-            # model year in the fixtures, and the Transit and Expedition have none.
+            # model year in the fixtures, and the Expedition has none.
             ("Honda", "Civic"): (None, None),
-            ("Ford", "Transit"): (None, None),
             ("Ford", "Expedition"): (None, None),
         }
         for (make, name), (class_name, size) in expected.items():
@@ -491,14 +491,14 @@ class ClassifyVehiclesCommandTests(CachedFixtures, ClassificationTestCase):
                 result = classify(2019, make, name)
                 self.assertEqual(getattr(result.vehicle_class, "name", None), class_name)
                 self.assertEqual("ask" if result.question else getattr(result.size_variant, "value", None), size)
-        self.assertEqual(classify(2019, "Ford", "Transit").how, How.REVIEW_QUEUE)
+        self.assertEqual(classify(2019, "Ford", "Expedition").how, How.REVIEW_QUEUE)
         self.assertEqual(classify(2019, "Ford", "F-250").how, How.PICKUP_LINE)
         self.assertFalse(VehicleModel.objects.get(make="Toyota", model="RAV4").ask_size)
 
     def test_a_dry_run_prints_the_preview_and_changes_nothing(self):
         output = self.command("--dry-run")
         self.assertIn("DRY RUN", output)
-        self.assertIn("Toyota RAV4 2019: no class -> Medium (two rows) (rule 100: Medium)", output)
+        self.assertIn("Toyota RAV4 2019: no class -> Medium (two rows) (rule 110: Medium)", output)
         self.assertFalse(ModelYearClassification.objects.exists())
         self.assertFalse(ClassificationRule.objects.exists())
         self.assertFalse(VehicleModelYear.objects.filter(source=Source.SEAT_LIST).exists())

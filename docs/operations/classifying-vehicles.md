@@ -51,10 +51,10 @@ sudo docker compose run --rm --no-deps app python manage.py classify_vehicles --
 
 - **Launch rules and overrides:** each rule or override added, updated or removed to follow the file, each one kept because you edited or deleted it, and any override whose model is not in the catalog.
 - **Third-row seating list:** model years added, changed, unchanged and removed, and the rows not matched to the catalog, each with the reason. These are left for the owner, not guessed.
-- **Model years:** how many are classified by a rule, by a model override, by a review queue decision, from the nearest classified year (a year the EPA has not published yet), by the pickup size line, by the EPA size class fallback, by smoothing, sent to the photo cards, and wait in the review queue, and how many ask the customer the size.
+- **Model years:** how many are classified by a rule, by a model override, by a review queue decision, from the nearest classified year (a year the EPA has not published yet), by the pickup size line, as a pickup in other model years, by the EPA size class fallback, by smoothing, sent to the photo cards, and wait in the review queue, and how many ask the customer the size.
 - **Model years by class and size:** the classified model years in each vehicle class, and within it by size variant or "ask".
 - **Would change:** every model year whose class or size would change, or that would enter or leave the review queue, joined into year ranges, with the old and new values and the rule or override responsible. On the first run that is every model year.
-- **Smoothed:** every run of up to six model years given the class of the runs on either side, such as "Acme Roamer 2019-2020: Medium, smoothed from Large".
+- **Smoothed:** every run of up to six model years given the class of the runs on either side, such as "Acme Roamer 2019-2020: Medium, smoothed from Large", then those smoothed away from the class of the model's newest generation.
 - **Models whose years are in different classes:** each model with its year ranges and their classes, such as "Toyota Highlander: 2013: Medium; 2014-2026: Large", for you to look at.
 - **Waiting in the review queue:** each model year no rule settles, with the reason: no rule matches, its rows have no clear majority on a rule's condition (the split is shown, such as "3 of 6 rows (50%) meet it"), or its sources disagree.
 
@@ -113,11 +113,11 @@ sudo docker compose run --rm --no-deps app python manage.py apply_size_classes -
 Give the day you will apply it. The report holds vehicle ids, years, makes and models, and booked jobs by appointment id and date, but no customer names. Copy it off the server and delete it there once you have it. It starts with "DRY RUN", or "REFUSED" when the draft fails the price book check, and then lists:
 
 - **The switch:** the classes renamed, offered and retired; how many rules, model overrides, review queue decisions and approvals are archived; the launch rules and overrides created from data/size-classes.yaml, and any override whose model is not in the catalog; and the classification counts.
-- **Price book check:** passed, or each problem, such as a class and row count the catalog gives with no Full Detail price, with the model years that give it. A failed check refuses the switch; add the price, or the size variant, and load the price book again.
+- **Price book check:** passed, or each problem, such as a class and row count the catalog gives with no Full Detail price, with the model years that give it. A failed check refuses the switch; add the price, or the size variant, and load the price book again. Full-size and minivans are always three rows and one row exists only in Small, so the check counts only those rows.
 - **Model years by new class and source of the class:** for each class, how many model years have their own measurements, inherited a box volume, need none (pickups and motorcycles), took the EPA size class fallback, have a model override, or were smoothed; then how many wait in the review queue.
 - **EPA size class fallback:** for each EPA size class, the class most of its measured model years land in, with the counts behind it.
 - **Near a line:** every model within 5 cubic feet of a size line or the pickup line (its newest size range from 2015 on, plus any range a customer owns), with its box volume and customer vehicles.
-- **Smoothed:** every run of model years given the class around it.
+- **Smoothed:** every run of model years given the class around it, then, on their own, the smoothed runs whose new class is not the class of the model's newest generation: a backwards smooth, worth a look ([decision 0085](../decisions/0085-size-class-fixes-after-the-first-dry-run.md)).
 - **Models whose class changes between model years,** as year ranges.
 - **Model overrides now,** the three from data/size-classes.yaml, then the **archived model overrides, review queue decisions and approvals,** each with what the new rules give instead.
 - **Customer vehicles:** counts by recorded and new class, how many had no year and took their model's newest generation (flagged to confirm the year at the next visit), how many stay in a retired class for the differences screen, then each vehicle one by one.
