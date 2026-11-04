@@ -56,8 +56,13 @@ chmod +x "$work/bin/restic"
 
 # in_ops SCRIPT: runs SCRIPT with set -euo pipefail and the restic library
 # loaded, as the ops scripts do; stdout to $work/out, stderr to $work/err.
+# SIGPIPE is set back to its default, as for a script run by hand with sudo,
+# which is how the restore test ran on 2026-11-03. GitHub Actions starts jobs
+# with SIGPIPE ignored (so do systemd units, IgnoreSIGPIPE=yes), and then a
+# writer cut off by an early reader fails with "Broken pipe" instead of being
+# killed. bash cannot reset a signal ignored when it started, so env does it.
 in_ops() {
-	PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" bash -c '
+	PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" env --default-signal=PIPE bash -c '
 		set -euo pipefail
 		cd "$1"
 		. ops/lib/errors.sh
@@ -103,7 +108,7 @@ in_ops 'report_failures test; a=1 | false | true' || true
 grep -q "pipeline parts: 0 1 0" "$work/err" && pass "a pipeline shows each part's status" || fail "printed: $(cat "$work/err")"
 
 echo "test-restic: restic_dump writes to a file, so nothing cuts it off"
-PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" bash -c '
+PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" env --default-signal=PIPE bash -c '
 	set -euo pipefail
 	cd "$1"
 	. ops/lib/errors.sh
