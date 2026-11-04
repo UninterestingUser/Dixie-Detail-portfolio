@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-29
+updated: 2026-11-04
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -86,6 +86,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
 | [Publishing the public portfolio copy](operations/publishing-the-portfolio.md) | How the owner publishes and updates the public copy of this private repository, with every commit rewritten to hide server addresses and private details, and what to do when the publish script stops. | current |
 | [Troubleshooting](operations/troubleshooting.md) | Known problems with the server, stack, backups and tools, each with the exact symptom, the cause and the fix, collected from Phase 0 onward. | current |
+| [Updating the server's kernel](operations/updating-the-kernel.md) | How a new Ubuntu kernel on the server is booted once with grub-reboot and checked with the gosu test before it becomes the GRUB default, and how to go back. | current |
 | [Using the catalog screens](operations/using-the-catalog-screens.md) | A short guide to the control app's Catalog tab - lookup and test prices, overrides, rules and their preview, class settings, the review queue, differences, approvals and each model's history. | current |
 | [Workstation setup](operations/workstation-setup.md) | How the owner's Fedora workstation is set up to work on the repository with Git, the GitHub CLI and Claude Code, without storing secrets in plaintext. | current |
 
@@ -102,7 +103,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 ## Decisions
 
-Every decision has its own record in [decisions/](decisions/README.md): 81 records as of 2026-10-24, from the choice of PostgreSQL and Django to the documentation rules themselves.
+Every decision has its own record in [decisions/](decisions/README.md): 88 records as of 2026-11-04, from the choice of PostgreSQL and Django to the documentation rules themselves.
 
 ## Structured data
 

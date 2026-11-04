@@ -4,7 +4,7 @@ summary: How a year, make and model becomes one of the eight size-based vehicle 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-29
+updated: 2026-11-04
 tags: [vehicles, classification, phase-2]
 related: [docs/decisions/0086-three-row-floor-after-seat-rows.md, docs/decisions/0085-size-class-fixes-after-the-first-dry-run.md, docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, data/size-classes.yaml, docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/decisions/0080-link-vehicles-follow-up.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0078-imported-motorcycle-jobs-get-their-class.md, docs/decisions/0079-approval-list.md, docs/operations/linking-vehicles.md, data/approval-spot-checks.yaml, docs/decisions/0075-unpublished-years-and-canadian-nameplates.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0074-nameplates-aliases-and-majority.md, docs/decisions/0073-classification-per-model-year.md, data/vehicle-names.yaml, docs/decisions/0072-motorcycles-class.md, docs/decisions/0060-vehicle-classification-rules-are-data.md, docs/reference/vehicle-catalog.md, docs/operations/classifying-vehicles.md, data/vehicle-classes.yaml, data/third-row-seating.yaml, data/integrations.yaml, docs/reference/pricing.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0029-vehicle-data-from-epa-and-nhtsa.md, docs/decisions/0016-size-from-vehicle-data.md]
 ---
@@ -189,7 +189,7 @@ EPA size classes are coarser for older SUVs, so those lean more on the rules and
 
 ## The vehicle size report
 
-The `vehicle_size_report` command gathered the facts for decision 0082: the stored dimensions of every model in the body-type classes and the review queue's cars, wagons and SUVs, with their size ranges and box volumes. It reads the body-type classes, so since the switch it finds only the review queue's model years; the `apply_size_classes` and `classify_vehicles` reports replace it ([../operations/classifying-vehicles.md](../operations/classifying-vehicles.md#vehicle-size-report)).
+The `vehicle_size_report` command gathered the facts for decision 0082: the stored dimensions of every model in the body-type classes and the review queue's cars, wagons and SUVs, with their size ranges and box volumes. It read the body-type classes, so once the switch retired them it found only the review queue's model years, and it was removed on 2026-11-04. The `apply_size_classes` and `classify_vehicles` reports replace it ([../operations/classifying-vehicles.md](../operations/classifying-vehicles.md)).
 
 ## Applying the size-based classes
 
