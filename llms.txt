@@ -46,6 +46,7 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Importing the Baserow and Setmore records](docs/operations/importing-baserow.md)
 - [Linking customers' vehicles to the catalog](docs/operations/linking-vehicles.md)
 - [Troubleshooting](docs/operations/troubleshooting.md)
+- [Updating the server's kernel](docs/operations/updating-the-kernel.md): test each new kernel with the gosu test before it becomes the GRUB default
 - [Phase 0 foundations runbook](docs/operations/phase-0-foundations-runbook.md): how the server was built, usable to rebuild it
 - [Phase 1 runbook](docs/operations/phase-1-core-data-runbook.md): historical record of how Phase 1 was run
 - [Phase 2 vehicle catalog runbook](docs/operations/phase-2-vehicle-catalog-runbook.md): historical record of how Phase 2 was run

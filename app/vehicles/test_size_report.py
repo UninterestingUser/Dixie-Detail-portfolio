@@ -1,14 +1,10 @@
-"""The vehicle size report: it changes nothing, groups model years into size
-ranges, takes the median of the trims, works out box volume, and counts
-customers' vehicles and completed jobs without naming anyone."""
+"""The size ranges: they change nothing, group model years into size ranges,
+take the median of the trims, work out box volume, and count customers'
+vehicles and completed jobs without naming anyone."""
 
-import csv
 import datetime
-import io
 from decimal import Decimal
 
-from django.apps import apps
-from django.core.management import call_command
 from django.utils import timezone
 
 from appointments.models import Appointment
@@ -53,11 +49,6 @@ class SizeReportTestCase(ClassificationTestCase):
 
     def ranges(self):
         return size_report.build()
-
-    def run_report(self, output_format="summary"):
-        out = io.StringIO()
-        call_command("vehicle_size_report", "--format", output_format, stdout=out)
-        return out.getvalue()
 
 
 class SizeRangeTests(SizeReportTestCase):
@@ -105,8 +96,7 @@ class SizeRangeTests(SizeReportTestCase):
         self.assertEqual(first.years_label, "2015-2016")
         self.assertFalse(first.has_dimensions)
         self.assertIsNone(first.box_volume)
-        self.assertEqual(first.csv_row()[-1], "missing")
-        self.assertEqual(second.csv_row()[-1], "")
+        self.assertTrue(second.has_dimensions)
 
     def test_scope_is_the_four_classes_and_queue_years_in_car_wagon_or_suv_classes(self):
         sedan = add_model("Acme", "Sedan", year_from=2020, year_to=2020)
@@ -173,38 +163,6 @@ class CustomerCountTests(SizeReportTestCase):
         self.assertEqual((older.vehicles, older.jobs, older.vehicles_no_year), (1, 2, 1))
         self.assertEqual((newer.vehicles, newer.jobs, newer.vehicles_no_year), (1, 0, 1))
 
-    def test_customer_totals_split_linked_with_a_year_with_no_year_and_unlinked(self):
-        totals = dict(size_report.customer_totals())
-        self.assertEqual(totals["Crossovers & Wagons"], (2, 0, 1))
-        self.assertEqual(totals["Midsize SUVs"], (0, 1, 0))
-        self.assertEqual(totals["no class"], (0, 0, 1))
-
     def test_an_older_range_a_customer_owns_joins_the_ladder(self):
-        two, _, _ = size_report.suv_ladders(self.ranges())
-        self.assertEqual([found.years_label for found in two], ["2015", "2016"])
-
-    def test_the_report_changes_no_rows(self):
-        counts = lambda: {model._meta.label: model._default_manager.count() for model in apps.get_models()}  # noqa: E731
-        before = counts()
-        self.run_report("summary")
-        self.run_report("csv")
-        self.assertEqual(counts(), before)
-        # The read-only setting ends with the report.
-        self.vehicle(None, None)
-
-    def test_the_summary_has_every_section_and_names_no_customer(self):
-        text = self.run_report()
-        for heading in ("CROSSOVERS AND SUVS", "CANDIDATE LINES", "CARS AND WAGONS", "CUSTOMER VEHICLES BY THEIR RECORDED CLASS", "DATA GAPS"):
-            self.assertIn(heading, text)
-        self.assertIn("Acme Roamer 2015", text)
-        for private in ("Pat", "Example", "4235550101"):
-            self.assertNotIn(private, text)
-
-    def test_the_csv_has_a_row_per_size_range_with_units_in_the_headers(self):
-        rows = list(csv.DictReader(io.StringIO(self.run_report("csv"))))
-        self.assertEqual([row["years"] for row in rows], ["2015", "2016"])
-        self.assertEqual(rows[0]["length (in)"], "170.0")
-        self.assertEqual(rows[0]["box volume (cu ft)"], "467.5")
-        self.assertEqual(rows[0]["customer vehicles"], "1")
-        self.assertEqual(rows[0]["completed jobs"], "2")
-        self.assertEqual(rows[0]["seat rows"], "2")
+        lines = size_report.ladder(self.ranges())
+        self.assertEqual([found.years_label for found in lines], ["2015", "2016"])

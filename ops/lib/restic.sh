@@ -35,7 +35,51 @@ restic_load_secrets() {
 	bws_forget
 }
 
+# run_restic ARGS...
+# Runs restic with the passwords. restic's stdout must never go into a pipe:
+# a reader that stops early kills restic with SIGPIPE mid-command, and a
+# killed restic leaves its lock in the repository, which makes the next
+# `forget --prune` fail until someone runs `ops/restic.sh unlock` (the
+# 2026-11-03 incident). Capture the output with $(...), which reads it all,
+# or send it to a file with restic_dump. tools/test-restic.sh checks that no
+# ops script pipes it. When the repository is locked, restic's own error is
+# followed by restic_lock_hint.
 run_restic() {
-	RESTIC_PASSWORD="$restic_password" RCLONE_CONFIG_PASS="$rclone_config_pass" \
-		restic "$@"
+	local err rc=0
+	err=$(mktemp /dev/shm/dixie-restic.XXXXXX) || return
+	# restic's errors go to the terminal or log as they come, and to $err to
+	# be checked. The braces make this shell, not restic's, start tee, so
+	# $! is tee's PID and the wait lets it finish before $err is read.
+	{
+		RESTIC_PASSWORD="$restic_password" RCLONE_CONFIG_PASS="$rclone_config_pass" \
+			restic "$@"
+	} 2> >(tee -- "$err" >&2) || rc=$?
+	wait "$!" 2>/dev/null || true
+	# restic 0.17 and later exit with 11 when they cannot lock the repository.
+	if ((rc != 0)) && { ((rc == 11)) || grep -q 'repository is already locked' -- "$err"; }; then
+		restic_lock_hint >&2
+	fi
+	rm -f -- "$err"
+	return "$rc"
+}
+
+# restic_lock_hint
+# Says what to do about a locked repository, naming the unlock command.
+restic_lock_hint() {
+	cat <<-'HINT'
+		restic: the backup repository is locked. If no other restic command is
+		running on the server (`pgrep -a restic` prints nothing), the lock is
+		stale: a restic that was cut off left it behind. Remove it with
+		  sudo /srv/dixie-detail/ops/restic.sh unlock
+		then run this again. `unlock` removes only stale locks. See
+		"The backup repository is locked" in docs/operations/troubleshooting.md.
+	HINT
+}
+
+# restic_dump SNAPSHOT PATH OUT
+# Writes the file PATH from SNAPSHOT to the file OUT. restic writes to the
+# file, not to a pipe, so nothing that reads the dump afterwards can cut it
+# off however little of it that reader wants.
+restic_dump() {
+	run_restic dump "$1" "$2" >"$3"
 }

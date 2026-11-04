@@ -1,14 +1,17 @@
-"""The vehicle size report: the measured size of every model in the car,
-crossover and SUV classes, gathered for the owner's decision on how to
-split them (docs/operations/classifying-vehicles.md#vehicle-size-report).
+"""Size ranges and box volume from the measured dimensions in the vehicle
+catalog. The apply_size_classes report (classification/size_preview.py)
+builds its ladders from them. This began as the vehicle_size_report
+command, which gathered the facts for decision 0082 from the body-type
+classes; the command was removed on 2026-11-04, once those classes were
+retired and the apply_size_classes and classify_vehicles reports had
+replaced it.
 
-It reads only facts already in the database and changes nothing. In scope
-are the catalog model years in the body-type classes Coupes & Sedans,
-Crossovers & Wagons and Midsize SUVs, Fullsize SUVs & Minivans for
-comparison (retired by apply_size_classes, decision 0083, after which only
-the review queue's part is left), and the model years
-waiting in the review queue with no class whose EPA size class is a car,
-station-wagon or SUV class ("in queue").
+It reads only facts already in the database and changes nothing. build()
+covers the catalog model years in the body-type classes Coupes & Sedans,
+Crossovers & Wagons and Midsize SUVs, Fullsize SUVs & Minivans (retired by
+apply_size_classes, decision 0083, after which only the review queue's part
+is left), and the model years waiting in the review queue with no class
+whose EPA size class is a car, station-wagon or SUV class ("in queue").
 
 A model's consecutive model years make one size range while they keep the
 same class and seat rows and their length, width and height each stay
@@ -19,7 +22,6 @@ length x width x height / 1,728, is a rough measure of bulk in cubic feet.
 Customers appear only as counts.
 """
 
-import csv
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -39,7 +41,6 @@ MIDSIZE = "Midsize SUVs"
 FULLSIZE = "Fullsize SUVs & Minivans"
 SCOPE = (COUPES, CROSSOVERS, MIDSIZE, FULLSIZE)
 IN_QUEUE = "in queue"
-NO_CLASS = "no class"
 CAR_CLASSES = ("Two Seaters", "Minicompact Cars", "Subcompact Cars", "Compact Cars", "Midsize Cars", "Large Cars")
 DIMENSIONS = ("length", "width", "height")
 MEASURES = ("length", "width", "height", "wheelbase", "curb_weight")
@@ -49,13 +50,6 @@ CUBIC_INCHES = Decimal(1728)
 NEWEST_FROM = 2015
 DOORS = {"two-door": "2", "four-door": "4", "hatchback": "hatchback"}
 DRIVE = re.compile(r"\s*(?:-\s*|/)?[24]wd$", re.IGNORECASE)
-
-COLUMNS = (
-    "make", "model", "years", "first year", "last year", "current class", "seat rows", "doors", "EPA size class",
-    "length (in)", "width (in)", "height (in)", "wheelbase (in)", "curb weight (lb)", "box volume (cu ft)",
-    "trims with specs", "shortest trim length (in)", "longest trim length (in)", "customer vehicles",
-    "completed jobs", "customer vehicles with no year (whole model)", "missing dimensions",
-)
 
 
 def epa_base(name):
@@ -82,7 +76,7 @@ def whole(value):
 
 @dataclass
 class YearFacts:
-    """One model year's facts as the report uses them."""
+    """One model year's facts as the size ranges use them."""
 
     year: int
     vehicle_class: str
@@ -137,8 +131,7 @@ def year_facts(model_year, class_name):
 @dataclass
 class SizeRange:
     """Consecutive model years of one model with the same class and seat
-    rows whose length, width and height each stay within 1 inch: one row of
-    the report."""
+    rows whose length, width and height each stay within 1 inch."""
 
     vehicle_model: object
     years: list = field(default_factory=list)
@@ -200,10 +193,6 @@ class SizeRange:
         return counts
 
     @property
-    def epa_classes(self):
-        return "; ".join(sorted(self.epa_counts))
-
-    @property
     def epa_main(self):
         """The EPA size class most of the range's rows give, or ""."""
         counts = self.epa_counts
@@ -217,10 +206,6 @@ class SizeRange:
         if not kind and self.vehicle_class == COUPES:
             return "car"
         return kind
-
-    @property
-    def is_car(self):
-        return self.vehicle_class == COUPES or any(epa_kind(name) == "car" for name in self.epa_counts)
 
     def measure(self, name):
         found = median([facts.measures[name] for facts in self.years if facts.measures[name] is not None])
@@ -248,15 +233,6 @@ class SizeRange:
         found = [facts.longest for facts in self.years if facts.longest is not None]
         return tenth(max(found)) if found else None
 
-    def csv_row(self):
-        blank = lambda value: "" if value is None else value  # noqa: E731
-        return [
-            self.vehicle_model.make, self.vehicle_model.model, self.years_label, self.first, self.last,
-            self.vehicle_class, self.seat_rows, self.doors if self.is_car else "", self.epa_classes,
-            *(blank(self.measure(name)) for name in MEASURES), blank(self.box_volume),
-            self.trims or "", blank(self.shortest), blank(self.longest),
-            self.vehicles, self.jobs, self.vehicles_no_year, "" if self.has_dimensions else "missing",
-        ]
 
 
 def size_ranges(vehicle_model, years):
@@ -327,20 +303,10 @@ def build():
     return sorted(ranges, key=lambda found: (found.vehicle_model.make, found.vehicle_model.model, found.vehicle_model.pk, found.first))
 
 
-def write_csv(ranges, out):
-    writer = csv.writer(out, lineterminator="\n")
-    writer.writerow(COLUMNS)
-    for found in ranges:
-        writer.writerow(found.csv_row())
-
-
-# The summary.
-
-
 def ladder(ranges, newest_from=NEWEST_FROM):
     """One line per model, its newest size range from 2015 (newest_from) on,
     plus any older range a customer owns, sorted by box volume. Ranges with
-    no dimensions are left to the data gaps."""
+    no dimensions are left out."""
     by_model = defaultdict(list)
     for found in ranges:
         if found.has_dimensions:
@@ -353,145 +319,8 @@ def ladder(ranges, newest_from=NEWEST_FROM):
     return sorted(chosen, key=lambda found: (found.box_volume, found.measure("length"), found.name))
 
 
-def customers_note(found):
-    count = found.vehicles
-    return f"  * {count} customer vehicle{'s' if count != 1 else ''}" if count else ""
-
-
-def ladder_line(found, epa=False):
-    rows = "" if found.seat_rows in ("2", "3") else f", rows {found.seat_rows or '?'}"
-    detail = f"{found.epa_main or 'no EPA class'}, {found.vehicle_class}" if epa else found.vehicle_class
-    return f"  {found.box_volume:>6} cu ft  {found.measure('length'):>6} in  {found.name}  ({detail}{rows}){customers_note(found)}"
-
-
 def steps(lines, key, count=5):
     """The count largest steps in key between neighbors once sorted by it."""
     ordered = sorted(lines, key=lambda found: (key(found), found.name))
     pairs = [(key(upper) - key(lower), lower, upper) for lower, upper in zip(ordered, ordered[1:])]
     return sorted(pairs, key=lambda pair: (-pair[0], pair[1].name))[:count]
-
-
-def suv_ladders(ranges):
-    """(2-row, 3-row, Fullsize SUVs & Minivans) ladders. An optional third
-    row goes on the 3-row ladder; unknown seat rows on the 2-row."""
-    crossovers = [
-        found for found in ranges
-        if (found.vehicle_class in (CROSSOVERS, MIDSIZE) and found.kind != "wagon")
-        or (found.vehicle_class == IN_QUEUE and found.kind == "suv")
-    ]
-    two = ladder([found for found in crossovers if found.seat_rows in ("2", "")])
-    three = ladder([found for found in crossovers if found.seat_rows in ("3", "optional")])
-    fullsize = ladder([found for found in ranges if found.vehicle_class == FULLSIZE])
-    return two, three, fullsize
-
-
-def summary(ranges, out):
-    write = lambda line="": out.write(line + "\n")  # noqa: E731
-    two, three, fullsize = suv_ladders(ranges)
-    write("VEHICLE SIZE REPORT (read only; nothing was changed)")
-    write("Box volume is length x width x height / 1,728, a rough measure of bulk. Each figure is the median")
-    write("of the trims, then of the model years in the range. * marks lines with customer vehicles.")
-    write("A line is a model's newest size range from 2015 on, plus any older range a customer owns.")
-
-    write()
-    write("CROSSOVERS AND SUVS")
-    for title, lines in (("2-row", two), ("3-row (optional third row included)", three), (f"{FULLSIZE}, for comparison", fullsize)):
-        write()
-        write(f"{title}: {len(lines)} lines")
-        for found in lines:
-            write(ladder_line(found))
-
-    write()
-    write("CANDIDATE LINES ON THE 2-ROW LADDER")
-    for title, key, unit in (
-        ("Largest steps in box volume", lambda found: found.box_volume, "cu ft"),
-        ("Largest steps in length", lambda found: found.measure("length"), "in"),
-    ):
-        write()
-        write(f"{title}:")
-        for step, lower, upper in steps(two, key):
-            write(f"  +{step} {unit}: {lower.name} ({key(lower)} {unit}, {lower.vehicle_class})"
-                  f" | {upper.name} ({key(upper)} {unit}, {upper.vehicle_class})")
-
-    write()
-    write("CARS AND WAGONS")
-    cars = [found for found in ranges if found.vehicle_class == COUPES or (found.vehicle_class == IN_QUEUE and found.kind == "car")]
-    wagons = [found for found in ranges if found.vehicle_class in (CROSSOVERS, IN_QUEUE) and found.kind == "wagon"]
-    for title, lines in ((COUPES, ladder(cars)), (f"Wagons in {CROSSOVERS} (EPA station-wagon classes)", ladder(wagons))):
-        write()
-        write(f"{title}: {len(lines)} lines")
-        for found in lines:
-            write(ladder_line(found, epa=True))
-    write()
-    write(f"EPA car classes in {COUPES} (every size range, by its main EPA size class):")
-    by_epa = defaultdict(lambda: [set(), 0])
-    for found in ranges:
-        if found.vehicle_class == COUPES:
-            by_epa[found.epa_main or "no EPA class"][0].add(found.vehicle_model.pk)
-            by_epa[found.epa_main or "no EPA class"][1] += found.vehicles
-    order = {name: index for index, name in enumerate(CAR_CLASSES)}
-    for name in sorted(by_epa, key=lambda name: (order.get(name, len(order)), name)):
-        model_ids, count = by_epa[name]
-        write(f"  {name}: {len(model_ids)} models, {count} customer vehicles")
-
-    write()
-    write("CUSTOMER VEHICLES BY THEIR RECORDED CLASS")
-    write("  class: linked with a year / linked with no year / unlinked")
-    for name, (dated, undated, unlinked) in customer_totals():
-        write(f"  {name}: {dated} / {undated} / {unlinked}")
-
-    write()
-    write("DATA GAPS")
-    for line in data_gaps(ranges):
-        write(line)
-
-
-def customer_totals():
-    """[(class name, (linked with a year, linked with no year, unlinked))]
-    for every customer vehicle, by the class the vehicle record holds."""
-    counts = defaultdict(lambda: [0, 0, 0])
-    sort = {}
-    for vehicle in Vehicle.objects.select_related("vehicle_class").only("vehicle_model_id", "year", "vehicle_class"):
-        name = vehicle.vehicle_class.name if vehicle.vehicle_class_id else NO_CLASS
-        sort[name] = (vehicle.vehicle_class.sort_order, name) if vehicle.vehicle_class_id else (10**6, name)
-        column = 2 if vehicle.vehicle_model_id is None else (0 if vehicle.year is not None else 1)
-        counts[name][column] += 1
-    return [(name, tuple(counts[name])) for name in sorted(counts, key=lambda name: sort[name])]
-
-
-def data_gaps(ranges):
-    """Lines on the in-scope models with no dimensions in any year, and the
-    years missing them in models that have some."""
-    by_model = defaultdict(list)
-    for found in ranges:
-        by_model[found.vehicle_model.pk].append(found)
-    none, others = [], defaultdict(int)
-    partial_years = partial_vehicles = 0
-    for found in by_model.values():
-        missing = [candidate for candidate in found if not candidate.has_dimensions]
-        if not missing:
-            continue
-        if len(missing) < len(found):
-            partial_years += sum(len(candidate.years) for candidate in missing)
-            partial_vehicles += sum(candidate.vehicles for candidate in missing)
-            continue
-        vehicles = sum(candidate.vehicles for candidate in found) + found[0].vehicles_no_year
-        if vehicles:
-            none.append((found, vehicles))
-        else:
-            others[found[-1].vehicle_class] += 1
-    lines = [
-        f"Models with no dimensions in any year in scope, holding customer vehicles (with or without a year): {len(none)}"
-    ]
-    for found, vehicles in sorted(none, key=lambda pair: (-pair[1], pair[0][0].name)):
-        spans = ", ".join(f"{candidate.years_label} ({candidate.vehicle_class})" for candidate in found)
-        lines.append(f"  {found[0].vehicle_model.make} {found[0].vehicle_model.model} {spans}: {vehicles} customer vehicles")
-    total = sum(others.values())
-    lines.append(f"Models with no dimensions and no customer vehicles, by the class of their newest range: {total}")
-    for name in sorted(others):
-        lines.append(f"  {name}: {others[name]}")
-    lines.append(
-        f"Model years with no dimensions in models that have them in other years: {partial_years},"
-        f" holding {partial_vehicles} customer vehicles"
-    )
-    return lines

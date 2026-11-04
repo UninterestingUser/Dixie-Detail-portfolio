@@ -11,7 +11,9 @@
 # RESTIC_PASSWORD and RCLONE_CONFIG_PASS come from Bitwarden at the start of
 # the run and live only in this script's memory and in the environment of
 # the restic and rclone processes it starts. Healthchecks gets a start ping,
-# then a success or failure ping.
+# then a success or failure ping. A failure prints what failed
+# (ops/lib/errors.sh), and a locked restic repository also names the unlock
+# command (ops/lib/restic.sh), so both reach the failure ping's log.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -21,6 +23,8 @@ cd "$(dirname "$0")/.."
 . ops/lib/restic.sh
 # shellcheck source=lib/healthchecks.sh
 . ops/lib/healthchecks.sh
+# shellcheck source=lib/errors.sh
+. ops/lib/errors.sh
 
 : "${RUNTIME_DIRECTORY:?run this from dixie-backup.service}"
 : "${BWS_PROJECT_ID:?set BWS_PROJECT_ID in .env}"
@@ -87,7 +91,7 @@ backup() {
 log="$RUNTIME_DIRECTORY/backup.log"
 hc_ping "$hc_url" /start
 set +e
-(set -e; backup) 2>&1 | tee "$log"
+(set -e; report_failures backup; backup) 2>&1 | tee "$log"
 rc=${PIPESTATUS[0]}
 set -e
 

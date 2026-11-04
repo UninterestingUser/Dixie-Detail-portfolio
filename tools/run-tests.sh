@@ -4,7 +4,8 @@
 # throwaway PostgreSQL database that lives in memory and is removed afterwards.
 # Then check that the production image cannot load the development settings.
 # First, the ops scripts' Bitwarden helper is tested with a fake bws
-# (tools/test-bws.sh, which needs jq).
+# (tools/test-bws.sh, which needs jq), and their restic and failure-reporting
+# helpers with a fake restic (tools/test-restic.sh).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 # Uses Podman, or Docker where Podman is not installed. CONTAINER_ENGINE=docker
@@ -24,6 +25,8 @@ trap cleanup EXIT
 
 echo "run-tests: testing the Bitwarden helper (ops/lib/bws.sh)"
 "$repo/tools/test-bws.sh" >/dev/null || { "$repo/tools/test-bws.sh"; exit 1; }
+echo "run-tests: testing the restic and failure helpers (ops/lib/restic.sh, ops/lib/errors.sh)"
+"$repo/tools/test-restic.sh" >/dev/null || { "$repo/tools/test-restic.sh"; exit 1; }
 
 echo "run-tests: building the test image"
 "$engine" build -q -t dixie-app-test:local -f "$repo/app/Dockerfile.test" "$repo/app" >/dev/null
