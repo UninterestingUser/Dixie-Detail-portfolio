@@ -75,7 +75,7 @@ services:
     networks: [backend, tunnel]
 
   cloudflared:
-    image: cloudflare/cloudflared:2026.9.1
+    image: cloudflare/cloudflared:2026.10.2
     restart: unless-stopped
     user: "65532:65532"
     command: tunnel --no-autoupdate run --token-file /run/secrets/cloudflared_token
