@@ -5,7 +5,7 @@
 # Then check that the production image cannot load the development settings.
 # First, the ops scripts' Bitwarden helper is tested with a fake bws
 # (tools/test-bws.sh, which needs jq), and their restic and failure-reporting
-# helpers with a fake restic (tools/test-restic.sh).
+# helpers and the backup's retries with a fake restic (tools/test-restic.sh).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 # Uses Podman, or Docker where Podman is not installed. CONTAINER_ENGINE=docker

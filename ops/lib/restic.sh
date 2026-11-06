@@ -5,6 +5,17 @@
 
 RESTIC_HOST=dixie-detail
 
+# Options every restic command gets. restic waits 1 minute by default for
+# rclone to open the repository on Google Drive; on 2026-10-31 and
+# 2026-11-06 a slow Drive took longer and the backup failed before it
+# uploaded anything (decision 0089).
+RESTIC_OPTIONS=(-o rclone.timeout=5m)
+# Drive calls a second for the rclone that restic starts, through rclone's
+# RCLONE_TPSLIMIT, which rclone reads from the environment restic hands it.
+# Not through -o rclone.args, which would replace restic's whole default
+# rclone command line.
+RESTIC_RCLONE_TPSLIMIT=5
+
 # restic_settings_from_env_file
 # For scripts run by hand: exports the non-secret restic settings from .env
 # in the current directory and sets bws_project_id. (Units get these through
@@ -36,7 +47,12 @@ restic_load_secrets() {
 }
 
 # run_restic ARGS...
-# Runs restic with the passwords. restic's stdout must never go into a pipe:
+# Runs restic with the passwords, RESTIC_OPTIONS and RESTIC_RCLONE_TPSLIMIT.
+# When the caller sets restic_time_limit (a duration for timeout(1), such as
+# 8m), restic gets that long: then SIGINT, on which restic removes its lock
+# and stops, and SIGKILL a minute later if it is still running (status 124
+# or 137). The last 1500 bytes of restic's error output are left in
+# restic_last_error for the caller. restic's stdout must never go into a pipe:
 # a reader that stops early kills restic with SIGPIPE mid-command, and a
 # killed restic leaves its lock in the repository, which makes the next
 # `forget --prune` fail until someone runs `ops/restic.sh unlock` (the
@@ -45,16 +61,18 @@ restic_load_secrets() {
 # ops script pipes it. When the repository is locked, restic's own error is
 # followed by restic_lock_hint.
 run_restic() {
-	local err rc=0
+	local err rc=0 limit=()
+	[[ -z ${restic_time_limit:-} ]] || limit=(timeout --signal=INT --kill-after=1m "$restic_time_limit")
 	err=$(mktemp /dev/shm/dixie-restic.XXXXXX) || return
 	# restic's errors go to the terminal or log as they come, and to $err to
 	# be checked. The braces make this shell, not restic's, start tee, so
 	# $! is tee's PID and the wait lets it finish before $err is read.
 	{
 		RESTIC_PASSWORD="$restic_password" RCLONE_CONFIG_PASS="$rclone_config_pass" \
-			restic "$@"
+			RCLONE_TPSLIMIT="$RESTIC_RCLONE_TPSLIMIT" "${limit[@]}" restic "${RESTIC_OPTIONS[@]}" "$@"
 	} 2> >(tee -- "$err" >&2) || rc=$?
 	wait "$!" 2>/dev/null || true
+	restic_last_error=$(tail -c 1500 -- "$err")
 	# restic 0.17 and later exit with 11 when they cannot lock the repository.
 	if ((rc != 0)) && { ((rc == 11)) || grep -q 'repository is already locked' -- "$err"; }; then
 		restic_lock_hint >&2

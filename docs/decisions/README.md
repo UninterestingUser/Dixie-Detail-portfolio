@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-04
+updated: 2026-11-06
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -113,3 +113,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0086](0086-three-row-floor-after-seat-rows.md) | 2026-10-28 | vehicles | The three-row floor runs after seat rows are final, so every three-row vehicle under the Medium line is Medium | accepted |
 | [0087](0087-restic-never-writes-into-a-pipe.md) | 2026-11-04 | backups | restic never writes into a pipe, and the restore test downloads the snapshot into memory first | accepted |
 | [0088](0088-kernels-tested-before-default.md) | 2026-11-04 | infrastructure | A new kernel is booted once and must pass the gosu test before it becomes the GRUB default | accepted |
+| [0089](0089-backup-rides-out-a-slow-drive.md) | 2026-11-06 | backups | The nightly backup waits longer for Google Drive, retries each restic step twice, and calls Drive gently | accepted |
