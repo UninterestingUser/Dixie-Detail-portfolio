@@ -8,7 +8,7 @@ from simple_history.admin import SimpleHistoryAdmin
 # The apps whose records a superuser may need to fix by hand.
 APPS = (
     "customers", "vehicles", "pricebook", "promotions", "appointments",
-    "billing", "staff", "bookkeeping", "marketing", "messaging",
+    "billing", "staff", "bookkeeping", "marketing", "messaging", "geo",
 )
 
 

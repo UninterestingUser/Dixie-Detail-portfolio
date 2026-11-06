@@ -6,13 +6,20 @@ from django.conf import settings
 from django.db import models, transaction
 from django.db.models import Q, Sum
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 from billing.methods import PaymentMethod
 from core.fields import MoneyField, PercentField
 
 
 class TaxJurisdiction(models.Model):
-    """A state, county or city whose sales tax rate applies to an address."""
+    """A state, county or city whose sales tax rate applies to an address.
+
+    Tennessee's come from the Department of Revenue's rate boundaries
+    (import_tax_rates): a city, or a county's unincorporated area, with the
+    state's situs code. A state outside Tennessee, such as Georgia, is one
+    jurisdiction of kind state with the per-state rate (decision 0037).
+    """
 
     class Kind(models.TextChoices):
         STATE = "state", "State"
@@ -22,6 +29,11 @@ class TaxJurisdiction(models.Model):
     state = models.CharField(max_length=2)
     name = models.CharField(max_length=100)
     kind = models.CharField(max_length=10, choices=Kind.choices)
+    # The Department of Revenue's situs code, such as 0601 for Cleveland, or
+    # the state's two letters for a per-state rate. Empty for older rows.
+    code = models.CharField(max_length=10, unique=True, null=True, blank=True)
+    # The county a Tennessee city or unincorporated area is in, such as "Bradley".
+    county = models.CharField(max_length=100, blank=True)
 
     class Meta:
         ordering = ["state", "name"]
@@ -35,7 +47,12 @@ class TaxJurisdiction(models.Model):
 
 class TaxRate(models.Model):
     """A jurisdiction's rates from a date (sales-tax.md). A job is taxed at the
-    rate in effect on the day of service."""
+    approved rate in effect on the day of service.
+
+    A rate the scheduled check finds changed is stored without approved_at:
+    it waits for the owner, who approves it with its effective date or
+    rejects it, and is never used until approved.
+    """
 
     jurisdiction = models.ForeignKey(TaxJurisdiction, on_delete=models.PROTECT, related_name="rates")
     state_rate = PercentField()
@@ -43,6 +60,13 @@ class TaxRate(models.Model):
     effective_from = models.DateField()
     effective_to = models.DateField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    rejected_at = models.DateTimeField(null=True, blank=True)
+    found_at = models.DateTimeField(default=timezone.now, help_text="When the rate was read from the state's data.")
+
+    history = HistoricalRecords()
 
     class Meta:
         ordering = ["jurisdiction", "-effective_from"]
@@ -52,6 +76,38 @@ class TaxRate(models.Model):
 
     def __str__(self):
         return f"{self.jurisdiction}: {self.state_rate}% + {self.local_rate}% from {self.effective_from}"
+
+    @property
+    def combined_rate(self):
+        return self.state_rate + self.local_rate
+
+    @property
+    def is_pending(self):
+        return self.approved_at is None and self.rejected_at is None
+
+
+class TaxBoundary(models.Model):
+    """The area of one Tennessee jurisdiction, from the Department of
+    Revenue's rate boundaries, as a GeoJSON Polygon or MultiPolygon in
+    longitude and latitude. A city is cut out of its county's unincorporated
+    area, so a point is in at most one boundary. The bounding box finds the
+    candidates for a point before the polygon test."""
+
+    jurisdiction = models.OneToOneField(TaxJurisdiction, on_delete=models.CASCADE, related_name="boundary")
+    geometry = models.JSONField()
+    # A hash of the geometry, so an import can tell whether it changed.
+    geometry_hash = models.CharField(max_length=64)
+    min_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    max_latitude = models.DecimalField(max_digits=9, decimal_places=6)
+    min_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    max_longitude = models.DecimalField(max_digits=9, decimal_places=6)
+    imported_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name_plural = "tax boundaries"
+
+    def __str__(self):
+        return f"Boundary of {self.jurisdiction}"
 
 
 class Invoice(models.Model):

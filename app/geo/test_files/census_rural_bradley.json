@@ -1,0 +1,23 @@
+{
+ "result": {
+  "input": {},
+  "addressMatches": [
+   {
+    "coordinates": {
+     "x": -84.948,
+     "y": 35.051
+    },
+    "matchedAddress": "300 PRETEND RD SE, CLEVELAND, TN, 37323",
+    "geographies": {
+     "Counties": [
+      {
+       "BASENAME": "Bradley",
+       "NAME": "Bradley County",
+       "STATE": "47"
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

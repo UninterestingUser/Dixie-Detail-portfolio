@@ -114,3 +114,5 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0087](0087-restic-never-writes-into-a-pipe.md) | 2026-11-04 | backups | restic never writes into a pipe, and the restore test downloads the snapshot into memory first | accepted |
 | [0088](0088-kernels-tested-before-default.md) | 2026-11-04 | infrastructure | A new kernel is booted once and must pass the gosu test before it becomes the GRUB default | accepted |
 | [0089](0089-backup-rides-out-a-slow-drive.md) | 2026-11-06 | backups | The nightly backup waits longer for Google Drive, retries each restic step twice, and calls Drive gently | accepted |
+| [0090](0090-tax-rates-from-the-state-boundaries.md) | 2026-11-06 | tax | Addresses record how they were verified, and tax rates come from the state's boundaries, matched on the server and approved by the owner | accepted |
+| [0091](0091-google-calls-counted-capped-and-cached.md) | 2026-11-06 | maps | Google calls are counted and capped per day, drive times are cached by address pair and hour, and the home base lives in the database | accepted |

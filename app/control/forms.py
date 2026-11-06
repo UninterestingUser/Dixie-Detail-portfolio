@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from core.fields import format_phone, normalize_phone
 from customers.models import Address, Customer
+from geo.models import LocationSettings
 from pricebook.models import Service
 from vehicles.models import ClassificationRule, SizeVariant, Vehicle, VehicleClass
 
@@ -306,3 +307,90 @@ class TestPriceForm(forms.Form):
         ).order_by("kind", "name")
         self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True, vehicle_class__pending=False).select_related("vehicle_class")
         self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"
+
+
+class AddressForm(forms.ModelForm):
+    """A service address the owner types. Saving checks it with the Census
+    geocoder; one the geocoder cannot find can be marked verified by hand."""
+
+    by_hand = forms.BooleanField(
+        required=False, label="Verified by hand",
+        help_text="Tick when the Census geocoder cannot find the address but you know it is right, such as a new street.",
+    )
+    hand_county = forms.CharField(required=False, max_length=100, label="County", help_text="Needed when verified by hand, such as Bradley.")
+    latitude = forms.DecimalField(required=False, max_digits=9, decimal_places=6, help_text="Optional, with verified by hand. Without coordinates the address takes its county's tax rate and is flagged.")
+    longitude = forms.DecimalField(required=False, max_digits=9, decimal_places=6)
+
+    class Meta:
+        model = Address
+        fields = ["line1", "line2", "city", "state", "zip_code", "notes", "active", "approved_out_of_area"]
+        labels = {"line1": "Street", "line2": "Unit or apartment", "zip_code": "ZIP code"}
+        widgets = {"notes": forms.Textarea(attrs={"rows": 3}), "state": forms.TextInput(attrs={"maxlength": 2, "autocapitalize": "characters"})}
+
+    def __init__(self, *args, can_approve=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not can_approve:
+            self.fields["approved_out_of_area"].disabled = True
+            self.fields["approved_out_of_area"].help_text = "Only a manager can approve an address outside the service area."
+        if self.instance.verification == Address.Verification.BY_HAND:
+            self.initial.update(by_hand=True, hand_county=self.instance.county,
+                                latitude=self.instance.latitude, longitude=self.instance.longitude)
+
+    def clean_state(self):
+        state = self.cleaned_data["state"].strip().upper()
+        if len(state) != 2 or not state.isalpha():
+            raise ValidationError("Enter the two-letter state, such as TN.")
+        return state
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("by_hand"):
+            if cleaned.get("state") == "TN" and not cleaned.get("hand_county", "").strip():
+                self.add_error("hand_county", "Give the county of an address verified by hand.")
+            if (cleaned.get("latitude") is None) != (cleaned.get("longitude") is None):
+                self.add_error("longitude", "Give both coordinates, or neither.")
+        return cleaned
+
+    def parts_changed(self):
+        return any(name in self.changed_data for name in Address.PARTS)
+
+
+class LocationSettingsForm(forms.ModelForm):
+    """The home base, Google's daily caps, the drive-time fallback and the
+    tax sourcing rule. A changed home base is checked with the Census
+    geocoder unless coordinates are given."""
+
+    class Meta:
+        model = LocationSettings
+        fields = [
+            "home_line1", "home_city", "home_state", "home_zip_code", "home_latitude", "home_longitude",
+            "place_details_daily_cap", "routes_daily_cap",
+            "estimate_road_factor", "estimate_speed_mph", "drive_time_cache_days", "tax_sourcing",
+        ]
+        help_texts = {
+            "home_latitude": "Leave both coordinates blank to look the home base up with the Census geocoder.",
+            "place_details_daily_cap": "Keep below the Place Details daily limit set in Google Cloud.",
+            "routes_daily_cap": "Keep below the Routes daily limit set in Google Cloud. Past the cap, drive times are estimated.",
+            "tax_sourcing": "Decision 0025. Change only on the accountant's advice.",
+        }
+
+    def clean_home_state(self):
+        return self.cleaned_data["home_state"].strip().upper()
+
+    def clean(self):
+        cleaned = super().clean()
+        if (cleaned.get("home_latitude") is None) != (cleaned.get("home_longitude") is None):
+            self.add_error("home_longitude", "Give both coordinates, or neither.")
+        return cleaned
+
+    def home_changed(self):
+        return any(name in self.changed_data for name in ("home_line1", "home_city", "home_state", "home_zip_code"))
+
+
+class ApproveRateForm(forms.Form):
+    effective_from = forms.DateField(label="In effect from", widget=forms.DateInput(attrs={"type": "date"}))
+
+
+class StateRateForm(forms.Form):
+    percent = forms.DecimalField(label="Rate (%)", min_value=0, max_value=20, max_digits=6, decimal_places=3)
+    effective_from = forms.DateField(label="In effect from", widget=forms.DateInput(attrs={"type": "date"}))

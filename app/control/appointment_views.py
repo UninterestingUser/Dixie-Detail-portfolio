@@ -12,8 +12,11 @@ from django.views.decorators.http import require_POST, require_safe
 from appointments import booking
 from appointments.models import Appointment
 from billing.models import Payment
+from billing.tax import tax_line, tax_line_for_appointment
 from core.scheduling import time_on_site
 from customers.models import Customer
+from geo import service_area
+from geo.drive import drive_from_home
 from pricebook.pricing import PricingError, price_job
 from staff.authorization import CrewError, assign_crew, auto_assign, staff_choices, uncovered_services, job_services, user_is_manager
 from staff.models import Assignment, StaffMember
@@ -177,6 +180,9 @@ def appointment_edit(request, pk):
             appointment.service_address = data.get("address")
             appointment.scheduled_start = form.start()
             appointment.notes = data["notes"]
+            drive = drive_from_home(appointment.service_address, appointment.scheduled_start)
+            appointment.drive_minutes = drive.minutes if drive else None
+            appointment.drive_estimated = drive.estimated if drive else False
             appointment._change_reason = data["reason"] or "Details changed"
             appointment.save()
         except (PricingError, booking.BookingError) as error:
@@ -212,6 +218,10 @@ def appointment_price(request, customer_pk=None, pk=None):
         else:
             context["job"] = job
             context["stay"] = job.time_on_site
+            address = form.cleaned_data.get("address")
+            if address is not None:
+                context["tax"] = tax_line(address, job.total_before_tax, form.cleaned_data["date"])
+                context["total_with_tax"] = job.total_before_tax + context["tax"].sales_tax
             context["changes_price"] = appointment is not None and not same_inputs(booking.inputs_from_appointment(appointment), inputs)
     else:
         context["errors"] = [error for errors in form.errors.values() for error in errors]
@@ -223,7 +233,11 @@ def appointment_context(appointment, **extra):
     assigned = {assignment.staff_member_id: assignment for assignment in appointment.assignments.all()}
     payments = list(appointment.payments.order_by("paid_at"))
     total = appointment.total_before_tax
+    tax = tax_line_for_appointment(appointment)
     context = {
+        "tax": tax,
+        "total_with_tax": total + tax.sales_tax if tax else total,
+        "area": service_area.check(appointment.service_address) if appointment.service_address else None,
         "appointment": appointment,
         "lines": list(appointment.lines.all()),
         "total": total,

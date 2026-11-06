@@ -4,7 +4,7 @@ summary: What the finished system costs to run each month, item by item, with th
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-11-06
 tags: [costs, budget]
 related: [data/integrations.yaml, docs/architecture/integrations.md]
 ---
@@ -21,7 +21,7 @@ The fixed monthly cost of the finished system is the phone service plus Google W
 | Carrier registration for texts | 19.50 once, then 1.50 per month | 2026-10-08 | Business path with an EIN; 15 to resubmit after a rejection |
 | Automated texts | 0.01 per segment | 2026-10-08 | About six one-segment texts per job |
 | Google Workspace Business Starter | About 7 per user per month on annual billing | June 2026 summary | The business was adding Workspace anyway |
-| Google Maps Platform | 0 expected | 2026-10-07 | Free up to 5,000 traffic-aware routes and 10,000 address requests a month; needs a billing account |
+| Google Maps Platform | 0 expected | 2026-10-07 | Free up to 5,000 traffic-aware routes and 10,000 address requests a month; needs a billing account. The app caps its own calls each day (300 Place Details, 150 Routes) below the limits set in Google Cloud, and drive times are cached (decision 0091) |
 | Cloudflare (DNS, Tunnel, website hosting) | 0 | 2026-10-07 | Free plan |
 | Bitwarden Secrets Manager | Existing | 2026-10-13 | Already used by the owner |
 | Tailscale | Existing | 2026-10-07 | Already used by the owner |

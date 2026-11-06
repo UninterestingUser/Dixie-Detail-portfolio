@@ -4,7 +4,7 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-28
+updated: 2026-11-06
 tags: [data-model, database, phase-1]
 related: [docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
@@ -64,7 +64,7 @@ The `customers` and `vehicles` apps.
 
 - **Customer** holds a name, company, mobile number, email, where the customer came from, and notes. Some imported customers have no number; they are kept.
 - **Second contact** holds another person's own name and number on a customer's record, such as a spouse. A booking under that number matches the customer. See [../reference/returning-customers.md](../reference/returning-customers.md).
-- **Address** holds a service address with its coordinates, Google place ID, tax jurisdiction and whether it has been verified. An imported address keeps an import key naming the Baserow customer it came from. An address outside the service area that the owner has allowed is marked as an approved out-of-area address.
+- **Address** holds a service address: its parts, coordinates, county, Google place ID, and how and when it was verified (a Google place, the Census geocoder or by hand). It stores its tax jurisdiction, with a flag and a note when it took its county's rate or has no rate. Changing a part of a verified address clears its verification (decision 0090). An imported address keeps an import key naming the Baserow customer it came from. An address outside the service area that the owner has allowed is marked as an approved out-of-area address.
 - **Consent** holds one answer to a text consent question: appointment or follow-up, yes or no, the number, where it was given (web form, phone, text reply or import) and the wording version. Answers are never edited. A STOP reply adds a "no", so the latest answer counts and the whole history stays. See [../reference/text-messages.md](../reference/text-messages.md).
 - **Vehicle class** is a group of vehicles that share prices, with its settings: what its size variant measures (seat rows, cab style or none; doors for the retired car class), whether customers book it online or ask for a quote, its photo card's caption, example models and photo, and whether it is pending: made for a pricebook draft and not offered until `apply_size_classes` publishes it (decision 0083). Each class also records its price basis: the fixed price list, the only one built, which leaves room for another way of pricing, such as per foot of length (decision 0060). There are eight size-based classes, Motorcycles among them (decisions 0072 and 0082), and the four retired body-type classes, listed in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml).
 - **Size variant** is one size within a vehicle class, such as "two doors" or "three rows", with the number used in the price matrix's size column. A class with no size variants, such as motorcycles, has a single price per service.
@@ -92,14 +92,14 @@ The `pricebook` and `promotions` apps. Prices are loaded from [data/price-matrix
 - **Derived price rule** prices a service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance is 80% and Monthly Maintenance 50% of Full Detail, stored as rules rather than prices, so a Full Detail price change moves both. See [../reference/pricing.md](../reference/pricing.md).
 - **Condition level** holds each of the three condition levels with the percentage it adds, in each version. The same percentage adds to the main service's price and to its service time (decision 0065).
 - **Pricing rules** holds a version's two-person time factor, service-time rounding and full-day threshold, which counts one-person time on site.
-- **Quote** is a priced job issued by the server before booking, the price of record (decision 0059): the service, vehicle class, size variant, condition level, add-ons, promotions and crew size asked for; the pricebook version; the total before tax, tax rate, sales tax and total; the one-person service hours; and the setup, service, breakdown and time-on-site minutes, with the full-day flag. A **quote line** holds each priced line. A quote never changes once issued, and its lines become an appointment's lines exactly when it is booked. Sales tax is zero until Phase 3.
+- **Quote** is a priced job issued by the server before booking, the price of record (decision 0059): the service, vehicle class, size variant, condition level, add-ons, promotions and crew size asked for; the pricebook version; the total before tax; the tax line for its service address: the taxable amount, the jurisdiction, the state and local rates, each tax, their sum and a flag when the rate needs checking (decision 0090); the total; the one-person service hours; and the setup, service, breakdown and time-on-site minutes, with the full-day flag. A **quote line** holds each priced line. A quote never changes once issued, and its lines become an appointment's lines exactly when it is booked. Sales tax is zero until Phase 3.
 - **Promotion** is a named offer, such as Friends & Family, Multi-Vehicle or a seasonal offer. It is a percentage off, a dollar amount off, a fixed price, or a free voucher. A **voucher** must have a code; its dollar value comes off the job as a promotion line, never more than the job's price (decision 0054). It can have dates, a promo code, a website banner, and the services it applies to (none listed means every service).
 
 ## Appointments
 
 The `appointments` app.
 
-- **Appointment** is one job: a customer, a vehicle, a service address and a start (arrival) time, with its status (requested, booked, completed or canceled), where it came from (website, owner or import), crew size, its setup, service and breakdown minutes as booked (decision 0056), the quote it was booked from, preferred payment method and the Jobs calendar event it is mirrored to. Its total before tax is the sum of its lines, and its time on site the sum of its three times. Imported jobs may have no times.
+- **Appointment** is one job: a customer, a vehicle, a service address and a start (arrival) time, with its status (requested, booked, completed or canceled), where it came from (website, owner or import), crew size, its setup, service and breakdown minutes as booked (decision 0056), the drive from the home base in minutes, worked out at booking and marked when it is an estimate (decision 0091), the quote it was booked from, preferred payment method and the Jobs calendar event it is mirrored to. Its total before tax is the sum of its lines, and its time on site the sum of its three times. Imported jobs may have no times.
 - **Appointment line** is the line snapshot (decision 0033). Each priced item on a job is copied onto the appointment when it is booked, from its quote: the description, amount, one-person service hours, the vehicle class name and size variant (number and label) as booked, the condition level, and the pricebook version it came from. A later pricebook change, or renaming or retiring a vehicle class or size variant, cannot alter it. One appointment has several lines: a main service, its add-ons, the condition adjustment, any promotion, and any of these:
   - an **on-site adjustment**, when the final price differs from the list price, always with a reason;
   - a **no charge** line, when a job is given as a gift, with a reason, bringing the total to zero;
@@ -118,7 +118,17 @@ The `billing` app. Every amount of money is an exact decimal (decision 0047).
 - **Payment methods** are card, Cash App Pay, Cash App to the owner's $cashtag, Venmo, PayPal, cash, bitcoin, check, trade and gift card. Check and trade are owner-only and never offered on the website (decision 0053).
 - **Invoice** holds a completed job's bill: the number, the tax jurisdiction, the state and local rates as charged, the taxable amount, each tax and the total. The rates are copied, so a later rate change cannot alter it.
 - **Refund** holds an amount returned on a payment, the tax refunded and the reason.
-- **Tax jurisdiction** is a state, county or city, and **tax rate** is its state and local rates from a start date. A job is taxed at the rate in effect on the day of service. See [../reference/sales-tax.md](../reference/sales-tax.md).
+- **Tax jurisdiction** is a state, a county's unincorporated area or a city, with the Department of Revenue's situs code and its county. A state outside Tennessee, such as Georgia, is one jurisdiction with the per-state rate.
+- **Tax rate** is a jurisdiction's state and local rates from a start date. A rate found changed waits for the owner's approval and is used only once approved; a rejected one is kept. A job is taxed at the approved rate in effect on the day of service. Rates keep their change history.
+- **Tax boundary** is a Tennessee jurisdiction's area from the state's data, as a GeoJSON polygon with its bounding box, used to match an address's coordinates to its jurisdiction (decision 0090). See [../reference/sales-tax.md](../reference/sales-tax.md).
+
+## Locations and outside calls
+
+The `geo` app.
+
+- **Location settings** is a single record, with change history: the home base (the owner's home, where drive times start), Google's daily caps, the drive-time estimate's road factor and speed, how long drive times are cached, and the tax sourcing rule.
+- **API usage** counts the calls made to Google Place Details, Google Routes and the Census geocoder per Pacific day, with the calls refused at a cap (decision 0091).
+- **Drive time** caches a drive time from Google by its two points and the hour of the day. Estimates are never cached.
 
 ## Staff
 
@@ -157,5 +167,5 @@ Everything above describes the code as it is. This section is the exception: it 
 
 ## What is not built yet
 
-- Settings such as working hours, start times, setup and breakdown, the home base and buffers. Their launch values are in `data/` until the scheduling work in Phase 3.
+- Settings such as working hours, start times, setup and breakdown and buffers. Their launch values are in `data/` until the scheduling work in Phase 3. The home base is built, in the location settings.
 - Every screen of the control app, the Django admin and sign-in.

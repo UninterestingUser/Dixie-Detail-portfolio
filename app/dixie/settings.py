@@ -21,7 +21,17 @@ def read_secret(env_name):
     return Path(path).read_text().strip()
 
 
+def read_optional_secret(env_name):
+    """A secret that may not exist yet: empty when its file is empty."""
+    path = os.environ.get(env_name)
+    return Path(path).read_text().strip() if path and Path(path).exists() else ""
+
+
 SECRET_KEY = read_secret("DJANGO_SECRET_KEY_FILE")
+# The server-side Google Maps Platform key (Place Details and Routes). Until
+# the Bitwarden secret exists the file is empty, and the app works without
+# Google: place lookups fail and drive times are estimated (geo.google).
+GOOGLE_MAPS_SERVER_KEY = read_optional_secret("GOOGLE_MAPS_SERVER_KEY_FILE")
 DEBUG = False
 # "localhost" is for the container's own health check.
 ALLOWED_HOSTS = [

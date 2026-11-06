@@ -1,7 +1,7 @@
 meta:
   title: Service area
   summary: The five Tennessee counties Dixie Detail serves, how out-of-area addresses are approved, and how sales tax rates are sourced.
-  updated: 2026-10-13
+  updated: 2026-11-06
   status: current
   explained_in: docs/reference/sales-tax.md
 
@@ -37,6 +37,7 @@ sales_tax:
   reference_note: A June 2026 rate table listed 9.75% combined across the service area except Chattanooga at 9.25%. The system uses the state's data, not these figures.
   per_state_rates:
     GA:
+      name: Georgia
       rate_percent: 0.0
       basis: Georgia generally does not tax car wash and detailing labor (letter ruling LR SUT-2019-11)
       status: To be confirmed by the owner's accountant, including any Georgia income tax filing

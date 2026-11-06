@@ -15,6 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.scheduling import time_on_site
+from geo.drive import drive_from_home
 from pricebook.models import PricebookVersion, PricedLine, PricingRules, Service
 from pricebook.pricing import crew_service_minutes, issue_quote
 
@@ -42,10 +43,11 @@ class JobInputs:
     promotions: list = field(default_factory=list)
     crew_size: int = None
 
-    def quote(self, on, version=None):
+    def quote(self, on, version=None, address=None):
         return issue_quote(
             self.service,
             self.vehicle_class,
+            address=address,
             size_variant=self.size_variant,
             condition_level=self.condition_level,
             add_ons=self.add_ons,
@@ -100,8 +102,10 @@ def local_date(moment):
 @transaction.atomic
 def book(customer, vehicle, start, inputs, *, address=None, notes="", series=None, source=Appointment.Source.OWNER):
     """Book one job: issue a quote priced from the pricebook in effect on its
-    date, and copy the quote's lines onto the new appointment."""
-    quote = inputs.quote(on=local_date(start))
+    date, with the sales tax for its address, copy the quote's lines onto the
+    new appointment, and work out the drive from the home base."""
+    quote = inputs.quote(on=local_date(start), address=address)
+    drive = drive_from_home(address, start)
     return Appointment.book_from_quote(
         quote,
         customer=customer,
@@ -112,6 +116,8 @@ def book(customer, vehicle, start, inputs, *, address=None, notes="", series=Non
         notes=notes,
         series=series,
         status=Appointment.Status.BOOKED,
+        drive_minutes=drive.minutes if drive else None,
+        drive_estimated=drive.estimated if drive else False,
     )
 
 
@@ -173,7 +179,7 @@ def reprice(appointment, inputs, reason, version=None):
         raise BookingError("Only a booked job can be re-priced; completed and canceled jobs keep their prices.")
     if not reason.strip():
         raise BookingError("Give a reason for changing the job's services.")
-    quote = inputs.quote(on=local_date(appointment.scheduled_start), version=version)
+    quote = inputs.quote(on=local_date(appointment.scheduled_start), version=version, address=appointment.service_address)
     _replace_quoted_lines(appointment, quote)
     appointment.quote = quote
     appointment.crew_size = quote.crew_size

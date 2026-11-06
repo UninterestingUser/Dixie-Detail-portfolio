@@ -1,0 +1,62 @@
+{
+ "formattedAddress": "200 Sample Ave, Chattanooga, TN 37402, USA",
+ "addressComponents": [
+  {
+   "longText": "200",
+   "shortText": "200",
+   "types": [
+    "street_number"
+   ]
+  },
+  {
+   "longText": "Sample Avenue",
+   "shortText": "Sample Ave",
+   "types": [
+    "route"
+   ]
+  },
+  {
+   "longText": "Chattanooga",
+   "shortText": "Chattanooga",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Hamilton County",
+   "shortText": "Hamilton County",
+   "types": [
+    "administrative_area_level_2",
+    "political"
+   ]
+  },
+  {
+   "longText": "Tennessee",
+   "shortText": "TN",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  },
+  {
+   "longText": "37402",
+   "shortText": "37402",
+   "types": [
+    "postal_code"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 35.0456,
+  "longitude": -85.3097
+ }
+}

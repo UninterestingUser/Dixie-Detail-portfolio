@@ -1,0 +1,23 @@
+# Morning sales tax rate check; started by dixie-tax-rate-check.timer.
+# Installed to /etc/systemd/system by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-tax-rate-check.service
+[Unit]
+Description=Dixie Detail sales tax rate check
+Wants=network-online.target
+After=network-online.target docker.service dixie-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+# Non-secret settings only.
+EnvironmentFile=/srv/dixie-detail/.env
+# The Bitwarden machine-account token, decrypted into this run's private,
+# in-memory credentials directory, for the Healthchecks ping URL.
+LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+# /run/dixie-tax-rate-check, on tmpfs, for the run's log. Deleted when the run ends.
+RuntimeDirectory=dixie-tax-rate-check
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/tax-rate-check.sh
+Nice=10
+TimeoutStartSec=30min

@@ -41,6 +41,11 @@ put db/postgres_password      POSTGRES_PASSWORD       "$DB_UID"
 put app/postgres_password     POSTGRES_PASSWORD       "$APP_UID"
 put app/django_secret_key     DJANGO_SECRET_KEY       "$APP_UID"
 put tunnel/cloudflared_token  CLOUDFLARE_TUNNEL_TOKEN "$TUNNEL_UID"
+# Optional until the owner creates it: an empty file means the app runs
+# without Google (place lookups refused, drive times estimated).
+bws_get_optional GOOGLE_MAPS_SERVER_KEY >"$secrets_dir/app/google_maps_server_key"
+chown "$APP_UID:0" "$secrets_dir/app/google_maps_server_key"
+chmod 0400 "$secrets_dir/app/google_maps_server_key"
 bws_forget
 
 # Recreate every container so each mounts the files just written. A container

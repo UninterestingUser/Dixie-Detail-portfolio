@@ -1,0 +1,15 @@
+{% extends "control/base.html" %}
+{% block title %}{% if address %}Edit address{% else %}New address{% endif %} · {{ customer }}{% endblock %}
+{% block content %}
+<h1>{% if address %}Edit address{% else %}New address{% endif %}</h1>
+<p class="help">For {{ customer }}. Saving checks the address with the Census Bureau's geocoder, which gives its map location, county and sales tax rate.</p>
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% for field in form %}{% include "control/_field.html" %}{% endfor %}
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <a class="button" href="{% url 'customer' customer.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,18 @@
+# Runs dixie-tax-rate-check.service every day at 5:15 AM Eastern: after the
+# 2:45 AM backup has finished even at its slowest, between the public health
+# check's 10-minute runs, so the two never call Bitwarden in the same minute
+# (a 429 would be retried anyway, ops/lib/bws.sh). The state updates its
+# rates quarterly; checking daily means an approval clears the Healthchecks
+# alert the next morning.
+#
+# Persistent=true: a check missed while the server was off runs at boot. It
+# only reads the state's data and stores changes for approval.
+[Unit]
+Description=Dixie Detail sales tax rate check, every morning
+
+[Timer]
+OnCalendar=*-*-* 05:15:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

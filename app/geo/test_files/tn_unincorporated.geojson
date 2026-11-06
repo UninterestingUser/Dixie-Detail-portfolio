@@ -1,0 +1,38 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "SITUS": "0600",
+    "COUNTY": "BRADLEY",
+    "COUNTYFIPS": "47011",
+    "CITY": "(Unincorporated)",
+    "TAXRATE": "2.75"
+   },
+   "geometry": null
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "SITUS": "3300",
+    "COUNTY": "HAMILTON",
+    "COUNTYFIPS": "47065",
+    "CITY": "(Unincorporated)",
+    "TAXRATE": "2.25"
+   },
+   "geometry": null
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "SITUS": "4700",
+    "COUNTY": "KNOX",
+    "COUNTYFIPS": "47093",
+    "CITY": "(Unincorporated)",
+    "TAXRATE": "2.25"
+   },
+   "geometry": null
+  }
+ ]
+}

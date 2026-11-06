@@ -71,7 +71,7 @@ if run_case other 0 "Unauthorized" >/dev/null; then fail "succeeded on an error"
 echo "test-bws: every ops script fetches through bws_load"
 direct=$(grep -nE 'bws_project_secrets|bws_value|bws_optional_value|bws secret' "$repo"/ops/*.sh "$repo"/ops/lib/restic.sh || true)
 [[ -z $direct ]] && pass "no script calls bws or reads secrets around the helper" || fail "direct use: $direct"
-for script in backup.sh restore-test.sh public-health.sh stack-start.sh deploy.sh restic.sh; do
+for script in backup.sh restore-test.sh public-health.sh stack-start.sh deploy.sh restic.sh vehicle-refresh.sh tax-rate-check.sh; do
 	if grep -qE 'bws_load|restic_load_secrets' "$repo/ops/$script"; then pass "$script uses bws_load"; else fail "$script does not use bws_load"; fi
 done
 

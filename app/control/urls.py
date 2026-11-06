@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import approval_views, appointment_views, catalog_views, pricebook_views, staff_views, views
+from . import approval_views, appointment_views, catalog_views, location_views, pricebook_views, staff_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -14,6 +14,14 @@ urlpatterns = [
     path("customers/<int:pk>/edit/", views.customer_form, name="customer-edit"),
     path("customers/<int:customer_pk>/vehicles/new/", views.vehicle_form, name="vehicle-new"),
     path("vehicles/<int:pk>/edit/", views.vehicle_form, name="vehicle-edit"),
+    # Addresses, location settings and sales tax.
+    path("customers/<int:customer_pk>/addresses/new/", location_views.address_form, name="address-new"),
+    path("addresses/<int:pk>/edit/", location_views.address_form, name="address-edit"),
+    path("settings/location/", location_views.location_settings, name="location-settings"),
+    path("sales-tax/", location_views.sales_tax, name="sales-tax"),
+    path("sales-tax/rates/<int:pk>/approve/", location_views.rate_approve, name="rate-approve"),
+    path("sales-tax/rates/<int:pk>/reject/", location_views.rate_reject, name="rate-reject"),
+    path("sales-tax/states/<int:pk>/", location_views.state_rate, name="state-rate"),
     # Jobs.
     path("schedule/", appointment_views.schedule_day, name="schedule"),
     path("schedule/week/", appointment_views.schedule_week, name="schedule-week"),

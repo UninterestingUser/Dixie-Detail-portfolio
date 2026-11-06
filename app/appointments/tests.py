@@ -285,5 +285,7 @@ class CanceledSpellingMigrationTests(TransactionTestCase):
         )
         executor = MigrationExecutor(connection)
         executor.migrate(self.after)
-        self.assertEqual(Appointment.objects.get(pk=appointment.pk).status, Appointment.Status.CANCELED)
+        # Read through the model as it was at 0006: later migrations add columns.
+        after = executor.loader.project_state(self.after).apps.get_model("appointments", "Appointment")
+        self.assertEqual(after.objects.get(pk=appointment.pk).status, Appointment.Status.CANCELED)
         self.assertEqual(Appointment.Status.CANCELED.label, "Canceled")

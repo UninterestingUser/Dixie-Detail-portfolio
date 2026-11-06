@@ -351,9 +351,25 @@ class Quote(models.Model):
     crew_size = models.PositiveSmallIntegerField(choices=[(1, "1"), (2, "2")])
     # What it came to.
     total_before_tax = MoneyField()
-    # Sales tax is zero until Phase 3 adds the rate for the service address.
+    # Sales tax at the service address's rate on the day of service
+    # (sales-tax.md), or zero when the quote has no address yet. The taxable
+    # amount is the total before tax: promotions have already reduced it, and
+    # tips are never part of a quote.
+    service_address = models.ForeignKey(
+        "customers.Address", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    tax_jurisdiction = models.ForeignKey(
+        "billing.TaxJurisdiction", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    taxable_amount = MoneyField(default=0)
+    state_rate = PercentField(default=0)
+    local_rate = PercentField(default=0)
+    state_tax = MoneyField(default=0)
+    local_tax = MoneyField(default=0)
+    # The combined rate and the sum of state and local tax.
     tax_rate = PercentField(default=0)
     sales_tax = MoneyField(default=0)
+    tax_needs_check = models.BooleanField(default=False, help_text="The address took its county's rate or has no rate.")
     total = MoneyField()
     # The exact sum of the lines' hours, before the crew factor and rounding.
     one_person_service_hours = HoursField(max_digits=10, decimal_places=7)

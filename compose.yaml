@@ -46,11 +46,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      GOOGLE_MAPS_SERVER_KEY_FILE: /run/secrets/google_maps_server_key
     secrets:
       - source: app_django_secret_key
         target: django_secret_key
       - source: app_postgres_password
         target: postgres_password
+      - source: app_google_maps_server_key
+        target: google_maps_server_key
     depends_on:
       db:
         condition: service_healthy
@@ -93,6 +96,8 @@ secrets:
     file: /run/dixie-stack/secrets/app/postgres_password
   app_django_secret_key:
     file: /run/dixie-stack/secrets/app/django_secret_key
+  app_google_maps_server_key:
+    file: /run/dixie-stack/secrets/app/google_maps_server_key
   tunnel_cloudflared_token:
     file: /run/dixie-stack/secrets/tunnel/cloudflared_token
 

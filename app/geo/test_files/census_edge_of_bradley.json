@@ -1,0 +1,23 @@
+{
+ "result": {
+  "input": {},
+  "addressMatches": [
+   {
+    "coordinates": {
+     "x": -84.6,
+     "y": 35.35
+    },
+    "matchedAddress": "900 EDGE RD, CHARLESTON, TN, 37310",
+    "geographies": {
+     "Counties": [
+      {
+       "BASENAME": "Bradley",
+       "NAME": "Bradley County",
+       "STATE": "47"
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

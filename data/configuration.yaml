@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-10-24
+  updated: 2026-11-06
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -121,11 +121,18 @@ secrets:
     used_by: ops/vehicle-refresh.sh
     note: Optional; without it the monthly refresh runs with no pings
     phase: 2
+  - name: HEALTHCHECKS_TAX_RATES_URL
+    purpose: Ping address for the morning sales tax rate check (docs/operations/addresses-and-sales-tax.md)
+    used_by: ops/tax-rate-check.sh
+    note: Optional; without it the check runs with no pings. The check pings failure while a rate change waits for approval
+    phase: 3
   - name: GOOGLE_SERVICE_ACCOUNT_JSON
     purpose: Service account key for the two calendars, read into memory
     phase: 3
   - name: GOOGLE_MAPS_SERVER_KEY
-    purpose: Server-side Maps key for drive times
+    purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked) and Routes (drive times), restricted to those two APIs
+    used_by: ops/stack-start.sh (app container, as the file named by GOOGLE_MAPS_SERVER_KEY_FILE)
+    note: Optional; until it exists the stack writes an empty file and the app runs without Google (drive times estimated, website place lookups refused). Decision 0091
     phase: 3
   - name: CLOUDFLARE_PAGES_DEPLOY_HOOK
     purpose: Triggers a website rebuild when the pricebook is published
@@ -142,6 +149,42 @@ secrets:
     phase: 7
   - name: BTCPAY_WEBHOOK_SECRET
     phase: 7
+
+database_settings:
+  rule: Settings the owner changes in the control app, kept in the database with change history, not in .env. Defaults are set in the code (app/geo/models.py).
+  location_settings:
+    - name: Home base
+      purpose: Where drive times start; the owner's home, so it is never written to the repository or the docs
+      screen: Account, Location settings (managers only)
+      phase: 3
+    - name: Place Details daily cap
+      default: 300
+      purpose: Google Place Details calls allowed per Pacific day, below the 322 a day set in Google Cloud
+      phase: 3
+    - name: Routes daily cap
+      default: 150
+      purpose: Google Routes calls allowed per Pacific day, below the 161 a day set in Google Cloud; past it drive times are estimated
+      phase: 3
+    - name: Estimate road factor
+      default: 1.30
+      purpose: Road distance as a multiple of straight-line distance, for the estimated drive time
+      phase: 3
+    - name: Estimate speed
+      default: 40 mph
+      purpose: Average speed for the estimated drive time
+      phase: 3
+    - name: Drive time cache
+      default: 30 days
+      purpose: How long a drive time from Google is reused for the same two points and hour of the day
+      phase: 3
+    - name: Tax sourcing
+      default: The service address's rate
+      purpose: Decision 0025's single setting; the alternative is the home base's rate
+      phase: 3
+  sales_tax:
+    - name: Per-state rates
+      purpose: The rate for approved addresses outside Tennessee (Georgia 0%), seeded from data/service-area.yaml by import_tax_rates, then changed on the Sales tax screen with an effective date
+      phase: 3
 
 development:
   rule: Development and tests use made-up values written in app/dixie/settings_dev.py, never Bitwarden and never a real secret (decision 0045). The production image leaves that file out, and tools/run-tests.sh fails if it gets in.
@@ -160,6 +203,8 @@ development:
       where: app/dixie/settings_dev.py
     - name: database password
       where: app/dixie/settings_dev.py and tools/run-tests.sh, which starts the throwaway database with it
+    - name: GOOGLE_MAPS_SERVER_KEY
+      where: app/dixie/settings_dev.py leaves it empty, so development never calls Google; tests use a made-up key with the HTTP call replaced by the answers in app/geo/test_files
 
 stored_on_server:
   - name: bws-token

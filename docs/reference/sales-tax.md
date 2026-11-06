@@ -4,30 +4,47 @@ summary: How sales tax is added at the rate for the customer's service address, 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-11-06
 tags: [sales-tax, tennessee, georgia, compliance]
-related: [docs/decisions/0059-quoted-price-is-price-of-record.md, data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
+related: [docs/decisions/0090-tax-rates-from-the-state-boundaries.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/operations/addresses-and-sales-tax.md, docs/decisions/0059-quoted-price-is-price-of-record.md, data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
 ---
 
 # Sales tax
 
-Sales tax is added on top of the final price at the rate for the customer's service address. It appears as its own line on the estimate, the invoice and the receipt. This is the owner's decision; the system applies it from Phase 3. This page is not tax advice.
+Sales tax is added on top of the final price at the rate for the customer's service address. It appears as its own line on the estimate, the invoice and the receipt. This is the owner's decision. Since Phase 3, Step 1, every quote issued with a service address carries the tax line, and the control app shows it on each job; the invoice, the receipt and the remittance reports come in later steps. This page is not tax advice.
 
 ## Tennessee rates
 
-Tennessee charges 7% statewide, and local governments add up to 2.75%. A June 2026 rate table listed 9.75% combined across the service area, except Chattanooga at 9.25%. The system does not rely on those figures: it uses the state's own rate and boundary data, described below.
+Tennessee charges 7% statewide, and local governments add up to 2.75%. The state's data on 2026-11-06 listed local rates of 2.75% in Bradley, McMinn and Polk counties and their cities, 2.25% in Hamilton County and all its cities (Chattanooga included, 9.25% combined), and 2% in Meigs County. The system does not rely on these figures: it loads the state's own data, described below. The 7% state rate is in [data/service-area.yaml](../../data/service-area.yaml).
+
+## Verified addresses
+
+Every address records its parts, its map coordinates, its county and how it was verified ([decision 0090](../decisions/0090-tax-rates-from-the-state-boundaries.md)):
+
+- **Google place.** A website address arrives as the Google place ID the customer picked. The server looks the place up itself with its own key and takes the parts, coordinates and county from Google's answer. Coordinates sent from a browser are never trusted.
+- **Census geocoder.** An address the owner types in the control app is checked with the Census Bureau's free geocoder when it is saved. One the geocoder cannot find is not saved until the owner corrects it or ticks "Verified by hand".
+- **By hand.** For an address neither can find, such as a new street, the owner gives the county and, if known, the coordinates.
+
+Changing the street, unit, city, state or ZIP code of a verified address clears its verification, so it is checked again. `python manage.py verify_addresses` checks every existing customer address with the Census geocoder; see [../operations/addresses-and-sales-tax.md](../operations/addresses-and-sales-tax.md).
 
 ## Finding the rate for a service address
 
-1. The verified address from the booking form gives map coordinates. Addresses entered by the owner are turned into coordinates with the Census Bureau's free geocoder.
-2. The coordinates are matched against the Tennessee Department of Revenue's tax rate boundary data to find the city or county and its rate.
-3. If an address will not match, the job takes its county's rate and is flagged for the owner to check before the invoice goes out.
+1. A Tennessee address's coordinates are matched against the Tennessee Department of Revenue's tax rate boundaries to find its city, or its county's unincorporated area, and that area's rate. Each city is cut out of its county's area, so a point is in only one.
+2. If an address will not match, or has no coordinates, it takes its county's rate and is flagged for the owner to check before the invoice goes out. The flag shows on the customer's address, on the job and on the control app's Sales tax screen.
+3. An address outside Tennessee takes its state's per-state rate (below).
 
-The estimate card shows the tax line as soon as the address is entered; before that it says the estimate is before sales tax.
+The tax is worked out on the taxable amount at the approved rate in effect on the day of service: the state tax and the local tax are each rounded to the cent, an exact half cent up. The quote stores the taxable amount, the state and local rates, each tax, the jurisdiction and the flag.
+
+The control app's booking form shows the tax line as soon as a service address is picked. On the website, the estimate card will show it once the address is entered; before that it says the estimate is before sales tax.
 
 ## Keeping rates current
 
-The state publishes rate tables and boundary data, and its boundary map service is updated quarterly. A scheduled job compares stored rates with the state's and flags any change for the owner's approval. Each job is taxed at the rate in effect for its address on the day of service. If a rate changes after a job is booked, the new rate applies, and the owner gets a push alert with the booked total shown beside the new one in the control app. The price before tax never changes ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
+The state publishes its rate boundaries as a map service, updated quarterly, with each area's local rate.
+
+- `python manage.py import_tax_rates` loads, for the five counties, every city's and unincorporated area's rate and boundary, and for every other Tennessee county its county rate without a boundary, so an approved out-of-area Tennessee address can take its county's rate. A jurisdiction's first rate is approved as it is loaded. Run it by hand at setup and when the check reports a new area or changed boundaries.
+- **The morning check.** `dixie-tax-rate-check.timer` runs `import_tax_rates --check` every day at 5:15 AM. It compares the state's rates with the stored ones and stores any change to wait for the owner's approval. It never changes a rate in use, a boundary or a jurisdiction. While a change waits, the check's Healthchecks ping fails, so the owner gets an email ([../operations/monitoring.md](../operations/monitoring.md)).
+- **Approving a change.** On the Sales tax screen, a manager approves a waiting rate with the date it takes effect, or rejects it. The rate before it ends the day before. A waiting rate is never used, and a rejected one is not flagged again.
+- Each job is taxed at the rate in effect for its address on the day of service. If a rate changes after a job is booked, the new rate applies to its invoice, and the approval message counts the booked jobs it affects. The price before tax never changes ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)). A push alert with the booked total beside the new one comes with push notifications in Phase 4.
 
 ## Approved out-of-area addresses
 
@@ -35,18 +52,18 @@ The owner can mark any address outside the five counties as an exception. Today 
 
 - The address passes the service-area check, can book online and gets normal drive times.
 - It is charged no Tennessee tax, because the work happens in Georgia.
-- Georgia generally does not tax detailing labor (Georgia letter ruling LR SUT-2019-11, on car wash charges), so its rate is kept as a per-state setting at 0%.
+- Georgia generally does not tax detailing labor (Georgia letter ruling LR SUT-2019-11, on car wash charges), so its rate is kept as a per-state setting at 0%. The import seeds it from [data/service-area.yaml](../../data/service-area.yaml); after that a manager changes it on the Sales tax screen, with the date a new rate takes effect.
 - The owner is to confirm both points with the accountant, and ask whether Georgia work creates a Georgia income tax filing.
 
 ## The sourcing rule is one setting
 
-Charging the service address's rate is the owner's decision. The state's guidance for in-state sellers describes the business-location rate for shipped goods, and how it treats mobile services could not be confirmed. The rule is therefore a single setting, in case the accountant ever advises the business-location rate instead.
+Charging the service address's rate is the owner's decision. The state's guidance for in-state sellers describes the business-location rate for shipped goods, and how it treats mobile services could not be confirmed. The rule is therefore a single setting, "Tax sourcing" on the control app's Location settings screen, in case the accountant ever advises the business-location rate instead. With the business-location rule, every job takes the home base's rate.
 
 ## Tracking tax until it is remitted
 
-- Every invoice stores the taxable amount, state tax, local tax and jurisdiction.
-- Tips are kept out of the taxable amount, and promotions reduce it.
-- The control app shows tax collected and not yet remitted, and a report per filing period broken down by jurisdiction.
+- Every quote and invoice stores the taxable amount, state tax, local tax and jurisdiction.
+- Tips are kept out of the taxable amount, and promotions reduce it. Tips are recorded on payments, never as priced lines, so they never reach the taxable amount; promotion lines take their discount off it.
+- The control app will show tax collected and not yet remitted, and a report per filing period broken down by jurisdiction (Phase 6).
 - Tax never counts as income. It posts to Liabilities:Sales Tax Payable in GnuCash and clears when the owner remits it. See [bookkeeping-gnucash.md](bookkeeping-gnucash.md).
 
 ## Sources

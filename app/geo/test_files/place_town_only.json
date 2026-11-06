@@ -1,0 +1,33 @@
+{
+ "formattedAddress": "Cleveland, TN, USA",
+ "addressComponents": [
+  {
+   "longText": "Cleveland",
+   "shortText": "Cleveland",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Tennessee",
+   "shortText": "TN",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 35.1595,
+  "longitude": -84.8766
+ }
+}

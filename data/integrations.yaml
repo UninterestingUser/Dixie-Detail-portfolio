@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-10-29
+  updated: 2026-11-06
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -28,9 +28,9 @@ services:
     phase: 0
     status: In use
   - name: Healthchecks.io
-    purpose: Alerts when the backup, the public path or the monthly vehicle data refresh stops checking in or fails
+    purpose: Alerts when the backup, the public path, the monthly vehicle data refresh or the morning sales tax rate check stops checking in or fails, and when a tax rate change waits for approval
     phase: 0
-    status: In use; three checks
+    status: In use; three checks, a fourth (sales tax rate check) to add with Phase 3, Step 1
     plan: Free
   - name: EPA FuelEconomy.gov
     purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984
@@ -54,17 +54,21 @@ services:
     phase: 3
     status: Calendars created 2026-10-11; service account not yet connected
   - name: Google Maps Platform
-    purpose: Address suggestions (Places Autocomplete) and traffic-aware drive times (Routes)
+    purpose: Address suggestions (Places Autocomplete, in the browser), the server's lookup of the picked address (Place Details, Essentials fields only) and traffic-aware drive times (Routes)
     phase: 3
-    status: Billing account approved, not yet created
+    status: Server side built (Phase 3, Step 1); waits for the server key GOOGLE_MAPS_SERVER_KEY. Daily limits set in Google Cloud, 322 for each Places method and 161 for Routes; the app's caps sit below them and every call is counted (decision 0091). Autocomplete arrives with the booking form
   - name: US Census Bureau geocoder
-    purpose: Address to coordinates for sales tax
+    purpose: Coordinates and county for addresses the owner types, and for the home base; verify_addresses checks existing addresses with it
     phase: 3
-    status: Not started
+    status: Working (Phase 3, Step 1); calls counted, no cap
+    url: https://geocoding.geo.census.gov/geocoder/
+    plan: Free, no key
   - name: Tennessee Department of Revenue
-    purpose: Tax rates and boundaries, updated quarterly
+    purpose: Local sales tax rates and rate boundaries, from its map service, updated quarterly
     phase: 3
-    status: Not started
+    status: Working (Phase 3, Step 1); import_tax_rates loads them, and dixie-tax-rate-check.timer checks the rates every morning at 5:15 AM (decision 0090)
+    url: https://tnmap.tn.gov/arcgis/rest/services/COMMUNITY/REVENUE_TAX_RATE_BOUNDARIES/MapServer
+    plan: Free, no key
   - name: Quo
     purpose: Calls, owner texts and automated texts
     phase: 3-5

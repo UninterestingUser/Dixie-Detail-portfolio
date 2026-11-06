@@ -4,7 +4,7 @@ summary: The private web app the owner and staff use to run the business, the sc
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-24
+updated: 2026-11-06
 tags: [control-app, back-office, staff]
 related: [docs/decisions/0081-monthly-vehicle-data-refresh.md, docs/operations/using-the-catalog-screens.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/guides/booking-a-job.md, docs/guides/assigning-staff.md, docs/guides/editing-the-pricebook.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/guides/finding-a-customer.md, docs/guides/installing-the-control-app.md, docs/decisions/0068-control-app-https-static-and-sign-in.md, docs/architecture/network-and-access.md, docs/overview/roadmap.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/reference/scheduling-and-calendars.md]
 ---
@@ -32,8 +32,8 @@ The areas still to come are described as planned, with the phase that builds eac
 
 | Area | What the owner does or will do there | Phase |
 | --- | --- | --- |
-| Schedule and jobs | The day and week lists, booking and changing jobs, maintenance series, assigning staff, completing and canceling, and the final price (built in Phase 1); the assign-staff prompt for website bookings and the availability check (Phase 3); "on my way", arrival and departure taps, and marking a job paid (Phase 4) | 1, 3, 4 |
-| Customers | Contact details, second contacts, addresses, vehicles, notes, and every appointment and payment (built in Phase 1); texts (Phase 4); resolving quiet-matching flags (Phase 3) | 1, 3, 4 |
+| Schedule and jobs | The day and week lists, booking and changing jobs, maintenance series, assigning staff, completing and canceling, and the final price (built in Phase 1); the sales tax line on the booking form and the job, and the drive from the home base, marked when estimated (Phase 3, Step 1); the assign-staff prompt for website bookings and the availability check (Phase 3); "on my way", arrival and departure taps, and marking a job paid (Phase 4) | 1, 3, 4 |
+| Customers | Contact details, second contacts, addresses, vehicles, notes, and every appointment and payment (built in Phase 1); adding and editing addresses, each checked with the Census geocoder when saved and showing how it was verified, its county, its tax jurisdiction and whether it is in the service area, and a manager's approval of an out-of-area address (Phase 3, Step 1); texts (Phase 4); resolving quiet-matching flags (Phase 3) | 1, 3, 4 |
 | Pricebook | Prices and service times by service and vehicle class, drafts, publishing with an effective date and deciding affected jobs (built in Phase 1); descriptions and photos, and publishing to the website (Phase 3) | 1, 3 |
 | Promotions | Percent or dollar discounts, date windows, promo codes and a website banner | 6 |
 | Billing | Invoices, payments by method, refunds and receipts | 4 |
@@ -42,7 +42,7 @@ The areas still to come are described as planned, with the phase that builds eac
 | Marketing | Where each customer came from, review-request results, and follow-up campaigns to chosen groups | 6 |
 | Messages | Text templates and a log of everything sent and received | 4 |
 | Vehicles | Looking vehicles up, the classification rules with a preview before saving, per-model and per-vehicle overrides, each vehicle class's settings, the review queue, the differences screen and the approval list (built in Phase 2); the monthly refresh's report (Phase 2 Step 5) | 2 |
-| Settings | The scheduling settings (open days, hours, start times, notice, setup and breakdown, jobs per day and gaps; Phase 3), service area, buffers and user logins | 1 onward |
+| Settings | Under Account: the Sales tax screen, with the rates, changes waiting for approval, per-state rates and the addresses to check, for everyone to see and managers to change; and Location settings, for managers only, with the home base, Google's daily caps, the drive-time estimate, the tax sourcing rule and this month's calls to Google and the Census geocoder (Phase 3, Step 1). The scheduling settings (open days, hours, start times, notice, setup and breakdown, jobs per day and gaps; Phase 3), buffers and user logins | 1 onward |
 
 ## Rules the control app follows
 

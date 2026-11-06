@@ -1,0 +1,62 @@
+{
+ "formattedAddress": "300 Pretend Rd SE, Cleveland, TN 37323, USA",
+ "addressComponents": [
+  {
+   "longText": "300",
+   "shortText": "300",
+   "types": [
+    "street_number"
+   ]
+  },
+  {
+   "longText": "Pretend Road Southeast",
+   "shortText": "Pretend Rd SE",
+   "types": [
+    "route"
+   ]
+  },
+  {
+   "longText": "Cleveland",
+   "shortText": "Cleveland",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Bradley County",
+   "shortText": "Bradley County",
+   "types": [
+    "administrative_area_level_2",
+    "political"
+   ]
+  },
+  {
+   "longText": "Tennessee",
+   "shortText": "TN",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  },
+  {
+   "longText": "37323",
+   "shortText": "37323",
+   "types": [
+    "postal_code"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 35.05,
+  "longitude": -84.95
+ }
+}

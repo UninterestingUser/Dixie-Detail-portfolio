@@ -63,7 +63,22 @@ class SecondContact(models.Model):
 
 
 class Address(models.Model):
-    """A place where a job is done. It sets the sales tax and the drive time."""
+    """A place where a job is done. It sets the sales tax and the drive time.
+
+    Its parts, coordinates and county come from how it was verified
+    (geo.verification): a Google place picked on the website, the Census
+    Bureau's geocoder for an address typed in the control app, or the owner
+    by hand. Changing a part of a verified address clears the verification,
+    so the next save verifies it again.
+    """
+
+    class Verification(models.TextChoices):
+        GOOGLE_PLACE = "google_place", "Google place"
+        CENSUS = "census", "Census geocoder"
+        BY_HAND = "by_hand", "By hand"
+
+    # The parts that, when changed, make the address need verifying again.
+    PARTS = ("line1", "line2", "city", "state", "zip_code")
 
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="addresses")
     line1 = models.CharField(max_length=200)
@@ -71,16 +86,22 @@ class Address(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=2)
     zip_code = models.CharField(max_length=10)
-    county = models.CharField(max_length=100, blank=True)
+    county = models.CharField(max_length=100, blank=True, help_text='Without the word "County", such as Bradley.')
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     google_place_id = models.CharField(max_length=300, blank=True)
-    verified = models.BooleanField(
-        default=False, help_text="Picked from Google's suggestions or checked by the owner."
+    verification = models.CharField(
+        max_length=20, choices=Verification.choices, blank=True, help_text="How the address was verified; empty if it is not."
     )
+    verified_at = models.DateTimeField(null=True, blank=True)
     tax_jurisdiction = models.ForeignKey(
         "billing.TaxJurisdiction", on_delete=models.PROTECT, null=True, blank=True
     )
+    # Set when the address did not match a rate boundary and took its
+    # county's rate, or has no rate at all: the owner checks it before the
+    # invoice goes out (sales-tax.md).
+    tax_needs_check = models.BooleanField(default=False)
+    tax_note = models.CharField(max_length=300, blank=True)
     approved_out_of_area = models.BooleanField(
         default=False, help_text="Outside the service area, allowed by the owner (decision 0037)."
     )
@@ -97,6 +118,38 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.line1}, {self.city}, {self.state} {self.zip_code}"
+
+    @property
+    def verified(self):
+        return bool(self.verification)
+
+    @property
+    def point(self):
+        """(latitude, longitude), or None when the address has no coordinates."""
+        if self.latitude is None or self.longitude is None:
+            return None
+        return (self.latitude, self.longitude)
+
+    def clear_verification(self):
+        self.verification = ""
+        self.verified_at = None
+        self.latitude = self.longitude = None
+        self.google_place_id = ""
+        self.county = ""
+        self.tax_jurisdiction = None
+        self.tax_needs_check = False
+        self.tax_note = ""
+
+    def save(self, *args, **kwargs):
+        # A verified address whose parts changed, such as on a re-run of the
+        # Baserow import, is no longer verified. geo.verification sets
+        # _verified_now when it has just verified these parts.
+        if self.pk and self.verification and not getattr(self, "_verified_now", False):
+            stored = Address.objects.filter(pk=self.pk).values(*self.PARTS).first()
+            if stored and any(stored[name] != getattr(self, name) for name in self.PARTS):
+                self.clear_verification()
+        self._verified_now = False
+        super().save(*args, **kwargs)
 
 
 class Consent(models.Model):

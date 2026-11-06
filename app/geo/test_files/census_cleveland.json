@@ -1,0 +1,23 @@
+{
+ "result": {
+  "input": {},
+  "addressMatches": [
+   {
+    "coordinates": {
+     "x": -84.877,
+     "y": 35.1612
+    },
+    "matchedAddress": "100 EXAMPLE ST NW, CLEVELAND, TN, 37311",
+    "geographies": {
+     "Counties": [
+      {
+       "BASENAME": "Bradley",
+       "NAME": "Bradley County",
+       "STATE": "47"
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

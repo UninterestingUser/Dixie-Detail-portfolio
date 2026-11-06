@@ -4,9 +4,9 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-22
+updated: 2026-11-06
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
@@ -134,7 +134,17 @@ Each job sends a push alert when it is time to leave: the drive time plus 10 min
 - **Backup.** A "Drive to job" block on the Jobs calendar from the leave time to the arrival time, with a calendar notification.
 - **Settings.** The 10-minute buffer, the home base and each staff member's starting point are settings.
 
-Drive times come from Google Maps Platform, inside its free monthly allowance.
+## Drive times
+
+Built in Phase 3, Step 1 ([decision 0091](../decisions/0091-google-calls-counted-capped-and-cached.md)). The alert, the "Drive to job" block and the gap between jobs use them as those are built.
+
+- **From Google's Routes API,** with traffic predicted for the time of day. A drive from the home base counts back from the arrival time: traffic is predicted for the departure.
+- **Cached** by the two addresses and the hour of the day, Eastern, for 30 days, so a search over many start times asks Google once per pair and hour.
+- **When Google can't be reached,** or the day's cap on Routes calls is reached, the drive time is estimated from the straight-line distance times 1.3, at 40 mph, and marked "Estimated" wherever it is shown. An estimate is not cached.
+- **The home base** is a database setting on the control app's **Account → Location settings** screen, checked with the Census geocoder. It is the owner's home, so it is never written to the repository or the docs. The road factor, speed, cache time and Google's daily caps are on the same screen.
+- **At booking,** each job records its drive from the home base, in minutes, and whether it was estimated. Changing the job's address or start works it out again.
+
+Drive times come from Google Maps Platform, inside its free monthly allowance; each call is counted, and the month's counts are on the Location settings screen.
 
 ## Arrival and departure times by one tap
 

@@ -1,0 +1,62 @@
+{
+ "formattedAddress": "400 Made Up Ln, Cohutta, GA 30710, USA",
+ "addressComponents": [
+  {
+   "longText": "400",
+   "shortText": "400",
+   "types": [
+    "street_number"
+   ]
+  },
+  {
+   "longText": "Made Up Lane",
+   "shortText": "Made Up Ln",
+   "types": [
+    "route"
+   ]
+  },
+  {
+   "longText": "Cohutta",
+   "shortText": "Cohutta",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Whitfield County",
+   "shortText": "Whitfield County",
+   "types": [
+    "administrative_area_level_2",
+    "political"
+   ]
+  },
+  {
+   "longText": "Georgia",
+   "shortText": "GA",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  },
+  {
+   "longText": "30710",
+   "shortText": "30710",
+   "types": [
+    "postal_code"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 34.96,
+  "longitude": -84.95
+ }
+}

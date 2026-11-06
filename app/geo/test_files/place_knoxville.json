@@ -1,0 +1,62 @@
+{
+ "formattedAddress": "500 Fictional Dr, Knoxville, TN 37902, USA",
+ "addressComponents": [
+  {
+   "longText": "500",
+   "shortText": "500",
+   "types": [
+    "street_number"
+   ]
+  },
+  {
+   "longText": "Fictional Drive",
+   "shortText": "Fictional Dr",
+   "types": [
+    "route"
+   ]
+  },
+  {
+   "longText": "Knoxville",
+   "shortText": "Knoxville",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Knox County",
+   "shortText": "Knox County",
+   "types": [
+    "administrative_area_level_2",
+    "political"
+   ]
+  },
+  {
+   "longText": "Tennessee",
+   "shortText": "TN",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  },
+  {
+   "longText": "37902",
+   "shortText": "37902",
+   "types": [
+    "postal_code"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 35.9606,
+  "longitude": -83.9207
+ }
+}

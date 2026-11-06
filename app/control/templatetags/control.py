@@ -44,3 +44,12 @@ def local_time(moment):
 @register.filter
 def get_item(mapping, key):
     return mapping.get(key) if mapping else None
+
+
+@register.filter
+def percent(value):
+    """9.750 as "9.75", 7.000 as "7", for a tax rate."""
+    if value is None:
+        return ""
+    text = f"{value:f}"
+    return text.rstrip("0").rstrip(".") if "." in text else text

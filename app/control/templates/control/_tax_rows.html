@@ -1,0 +1,6 @@
+{% load control %}{# The sales tax rows of a price table: needs tax (a billing.tax.TaxLine) and total_with_tax. #}
+<tr><td>Sales tax{% if tax.jurisdiction %}, {{ tax.jurisdiction.name }}{% endif %} ({{ tax.rate|percent }}%)
+  <span class="sub">State {{ tax.state_rate|percent }}% {{ tax.state_tax|money }}, local {{ tax.local_rate|percent }}% {{ tax.local_tax|money }}, on {{ tax.taxable_amount|money }}</span>
+  {% if tax.needs_check %}<span class="sub warn">Check the tax: {{ tax.note }}</span>{% endif %}
+</td><td class="amount">{{ tax.sales_tax|money }}</td></tr>
+<tr class="total"><td>Total</td><td class="amount">{{ total_with_tax|money }}</td></tr>

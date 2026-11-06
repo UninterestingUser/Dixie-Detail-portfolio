@@ -1,0 +1,20 @@
+{% load control %}{% if rows %}
+<div class="table-scroll">
+  <table>
+    <thead><tr><th>Jurisdiction</th><th>County</th><th>State</th><th>Local</th><th>Total</th><th>In effect from</th></tr></thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.jurisdiction.name }}{% if not row.has_boundary %} <span class="muted">(rate only)</span>{% endif %}</td>
+          <td>{{ row.jurisdiction.county }}</td>
+          {% if row.rate %}
+            <td>{{ row.rate.state_rate|percent }}%</td><td>{{ row.rate.local_rate|percent }}%</td><td><strong>{{ row.rate.combined_rate|percent }}%</strong></td><td>{{ row.rate.effective_from|date:"M j, Y" }}</td>
+          {% else %}
+            <td colspan="4" class="muted">No approved rate</td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}<p class="muted">None yet: run <code>import_tax_rates</code>.</p>{% endif %}

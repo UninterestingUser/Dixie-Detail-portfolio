@@ -77,6 +77,12 @@ class Appointment(models.Model):
         Quote, on_delete=models.PROTECT, null=True, blank=True, related_name="appointment"
     )
     preferred_payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices, blank=True)
+    # The drive from the home base to the service address, with traffic
+    # predicted for the start time, worked out at booking (geo.drive).
+    # Estimated means it came from straight-line distance because Google
+    # could not be asked. Empty when there was no address or home base.
+    drive_minutes = models.PositiveIntegerField(null=True, blank=True)
+    drive_estimated = models.BooleanField(default=False)
     series = models.ForeignKey(
         RecurringSeries, on_delete=models.PROTECT, null=True, blank=True, related_name="appointments"
     )

@@ -4,7 +4,7 @@ summary: Every outside service the system uses or will use, what it does for the
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-29
+updated: 2026-11-06
 tags: [integrations, services]
 related: [data/integrations.yaml, data/configuration.yaml, docs/overview/running-costs.md]
 ---
@@ -29,8 +29,8 @@ Every outside service connects to the core app, never straight to the database. 
 ## Connected in later phases
 
 - **Google Workspace calendars (Phase 3).** Two calendars, Jobs and Time Off, shared with a Google service account: edit on Jobs, read on Time Off. The service account's JSON key is the Bitwarden secret `GOOGLE_SERVICE_ACCOUNT_JSON`, read into memory; there is no key file on disk. Workspace may need one admin setting changed to allow sharing with the service account. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
-- **Google Maps Platform (Phase 3).** Address suggestions on the booking form (Places Autocomplete) and traffic-aware drive times (Routes). Usage is expected to stay inside the free monthly allowance. The billing account is approved; it must sit on the same Google Cloud project as the calendar service account.
-- **Census Bureau geocoder and Tennessee Department of Revenue (Phase 3).** Turn a service address into coordinates and then into a tax jurisdiction and rate. See [../reference/sales-tax.md](../reference/sales-tax.md).
+- **Google Maps Platform (Phase 3).** Address suggestions on the booking form (Places Autocomplete, in the customer's browser with the public key), the server's own lookup of the address picked (Place Details, asking only for Essentials fields) and traffic-aware drive times (Routes), cached by address pair and hour. Every server call is counted and capped per day below the limits set in Google Cloud, and a drive time falls back to a marked estimate when Google can't be asked ([decision 0091](../decisions/0091-google-calls-counted-capped-and-cached.md)). The server side is built (Phase 3, Step 1); autocomplete comes with the booking form. The billing account is approved; it must sit on the same Google Cloud project as the calendar service account.
+- **Census Bureau geocoder and Tennessee Department of Revenue (Phase 3, Step 1, built).** The geocoder gives the coordinates and county of an address the owner types. The Department of Revenue's map service gives the rate boundaries and local rates, loaded by `import_tax_rates` and checked every morning; the server matches each address to its jurisdiction itself. See [../reference/sales-tax.md](../reference/sales-tax.md) and [decision 0090](../decisions/0090-tax-rates-from-the-state-boundaries.md).
 - **Quo, formerly OpenPhone (Phases 3 to 5).** One business number for calls, the owner's own texts and the automated texts, with an Android app. The core app sends through Quo's API and receives replies by webhook. The account is open on a new number on the Starter plan, which includes the API and webhooks. Carrier registration and the port of (423) 380-9120 wait for the new booking form. See [../reference/text-messages.md](../reference/text-messages.md).
 - **Stripe (Phase 4).** Card payment links, Cash App Pay inside those links, and Tap to Pay on the Pixel through the Stripe Dashboard app. Links report back by webhook; Tap to Pay payments are matched by amount and time, then confirmed with one tap. See [../reference/payments.md](../reference/payments.md).
 - **GnuCash (Phase 6).** The owner's books, fed by a CSV export the owner imports. See [../reference/bookkeeping-gnucash.md](../reference/bookkeeping-gnucash.md).

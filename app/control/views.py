@@ -23,6 +23,7 @@ from vehicles.models import Vehicle
 
 from .context_processors import brand_colors
 from .forms import CustomerForm, VehicleForm, VehicleOverrideForm
+from .location_views import address_summary
 from .search import find_customers
 
 
@@ -67,13 +68,21 @@ def appointment_rows(customer):
     return rows
 
 
+def with_summaries(addresses):
+    """Each address with how it was verified, its tax and its area."""
+    addresses = list(addresses)
+    for address in addresses:
+        address.summary = address_summary(address)
+    return addresses
+
+
 @require_safe
 def customer(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
     context = {
         "customer": customer,
         "second_contacts": customer.second_contacts.all(),
-        "addresses": customer.addresses.order_by("-active", "line1"),
+        "addresses": with_summaries(customer.addresses.select_related("tax_jurisdiction").order_by("-active", "line1")),
         "vehicles": customer.vehicles.select_related("vehicle_class", "size_variant").order_by("make", "model", "year", "color"),
         "appointments": appointment_rows(customer),
     }
@@ -118,7 +127,7 @@ def vehicle_form(request, customer_pk=None, pk=None):
 
 @require_safe
 def account(request):
-    return render(request, "control/account.html")
+    return render(request, "control/account.html", {"is_manager": user_is_manager(request.user)})
 
 
 # Installing the app (decision 0046). These three are reached before sign-in:

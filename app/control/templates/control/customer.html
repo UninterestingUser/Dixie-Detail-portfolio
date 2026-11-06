@@ -47,6 +47,7 @@
 
 <section aria-labelledby="addresses">
   <h2 id="addresses">Addresses</h2>
+  <p><a class="button" href="{% url 'address-new' customer.pk %}">Add address</a></p>
   {% if addresses %}
     <ul class="list">
       {% for address in addresses %}
@@ -55,7 +56,10 @@
           {% if not address.active %}<span class="badge">No longer used</span>{% endif %}
           {% if address.approved_out_of_area %}<span class="badge">Out of area, approved</span>{% endif %}
           {% if not address.verified %}<span class="badge">Not verified</span>{% endif %}
+          {% if address.tax_needs_check %}<span class="badge">Check the tax</span>{% endif %}
+          <span class="sub">{{ address.summary }}</span>
           {% if address.notes %}<span class="sub">{{ address.notes }}</span>{% endif %}
+          <a class="card-action" href="{% url 'address-edit' address.pk %}" aria-label="Edit this address">Edit</a>
         </li>
       {% endfor %}
     </ul>

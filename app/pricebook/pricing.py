@@ -12,8 +12,9 @@ before tax and the service time, as docs/reference/pricing.md describes:
 3. Add-ons, at their own price and hours; the condition level never changes them.
 4. Promotions, each on the lines it applies to, never below zero.
 
-Sales tax is added in Phase 3; until then it is zero. issue_quote() stores
-the result as a quote, the price of record a booking copies.
+Sales tax is not a priced line: issue_quote() adds it for the service
+address at the rate in effect on the day of service (billing.tax), and
+stores the result as a quote, the price of record a booking copies.
 
 How a vehicle class is priced is its price basis. Only the fixed price list
 is built; another basis, such as per foot of length, is a new class in
@@ -27,6 +28,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from billing.tax import tax_line
 from core.scheduling import round_to_nearest, time_on_site
 from vehicles.models import VehicleClass
 
@@ -332,13 +334,17 @@ def price_job(
 
 
 @transaction.atomic
-def issue_quote(service, vehicle_class, **inputs):
+def issue_quote(service, vehicle_class, address=None, **inputs):
     """Price a job and store it as a quote, the price of record (decision 0059).
-    Only a published version can be quoted. Sales tax is zero until Phase 3."""
+    Only a published version can be quoted. With a service address, the quote
+    gets its tax line at that address's rate on the day of service (`on`,
+    today by default); without one, its sales tax is zero until the address
+    is known."""
     job = price_job(service, vehicle_class, **inputs)
     if not job.version.is_published:
         raise PricingError("Quotes are priced from a published pricebook version.")
     stay = job.time_on_site
+    tax = tax_line(address, job.total_before_tax, inputs.get("on") or timezone.localdate()) if address else None
     quote = Quote.objects.create(
         pricebook_version=job.version,
         service=job.service,
@@ -347,9 +353,17 @@ def issue_quote(service, vehicle_class, **inputs):
         condition_level=job.condition_level,
         crew_size=job.crew_size,
         total_before_tax=job.total_before_tax,
-        tax_rate=Decimal("0"),
-        sales_tax=ZERO,
-        total=job.total_before_tax,
+        service_address=address,
+        tax_jurisdiction=tax.jurisdiction if tax else None,
+        taxable_amount=tax.taxable_amount if tax else ZERO,
+        state_rate=tax.state_rate if tax else Decimal("0"),
+        local_rate=tax.local_rate if tax else Decimal("0"),
+        state_tax=tax.state_tax if tax else ZERO,
+        local_tax=tax.local_tax if tax else ZERO,
+        tax_rate=tax.rate if tax else Decimal("0"),
+        sales_tax=tax.sales_tax if tax else ZERO,
+        tax_needs_check=tax.needs_check if tax else False,
+        total=job.total_before_tax + (tax.sales_tax if tax else ZERO),
         one_person_service_hours=job.one_person_service_hours,
         service_minutes=stay.service_minutes,
         setup_minutes=stay.setup_minutes,

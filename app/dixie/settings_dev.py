@@ -9,6 +9,9 @@ from dixie.settings_base import *  # noqa: F403
 
 SECRET_KEY = "dev-only-made-up-key-never-used-in-production"
 DEBUG = True
+# No Google key: development and tests never call Google. Tests replace the
+# HTTP call with recorded answers (geo/test_files).
+GOOGLE_MAPS_SERVER_KEY = ""
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # The throwaway database that tools/run-tests.sh starts, which shares its

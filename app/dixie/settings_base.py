@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "marketing",
     "messaging",
     "importer",
+    "geo",
 ]
 
 MIDDLEWARE = [

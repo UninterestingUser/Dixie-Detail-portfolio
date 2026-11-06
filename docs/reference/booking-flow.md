@@ -4,7 +4,7 @@ summary: The seven steps a customer follows on the website to book a job, how th
 audience: [owner, staff, developer]
 visibility: internal
 status: planned
-updated: 2026-10-29
+updated: 2026-11-06
 tags: [booking, website, estimate-card, phase-3]
 related: [docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0072-motorcycles-class.md, docs/reference/vehicle-classification.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
@@ -41,7 +41,7 @@ The flow follows the Armstrong "Build Your Detail" screens the owner chose as a 
 
 ## Address entry is validated as the customer types
 
-The address field works like a Shopify checkout: suggestions appear as the customer types, and the address must be a real one. The system uses Google Places Autocomplete (New), restricted to US addresses and biased to the service area. Picking a suggestion returns verified address parts and coordinates, which drive the service-area check and the tax lookup. There is no separate "check" button. Addresses outside the service area are refused unless the owner has approved them. The Google Address Validation API may be added later to catch missing unit numbers.
+The address field works like a Shopify checkout: suggestions appear as the customer types, and the address must be a real one. The system uses Google Places Autocomplete (New), restricted to US addresses and biased to the service area, with a session token. Picking a suggestion sends the server only the place ID and the session token. The server looks the place up itself with its own key, asking only for the address parts, formatted address and location; that call ends the session, so the suggestions before it are not billed. The server then runs the service-area check and the tax lookup ([sales-tax.md](sales-tax.md)). Coordinates from the browser are never used. There is no separate "check" button. Addresses outside the service area are refused unless the owner has approved them. The Google Address Validation API may be added later to catch missing unit numbers. The server's side of this, the lookup, the check and the tax, is built (Phase 3, Step 1); the address field itself comes with the booking form.
 
 ## Phone number entry
 

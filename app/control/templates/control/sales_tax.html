@@ -1,0 +1,80 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Sales tax{% endblock %}
+{% block content %}
+<h1>Sales tax</h1>
+<p class="help">Rates come from the Tennessee Department of Revenue (<code>import_tax_rates</code>), checked every morning. A changed rate waits here for approval and is not used until you approve it.</p>
+
+<section aria-labelledby="pending">
+  <h2 id="pending">Waiting for approval</h2>
+  {% if pending %}
+    <ul class="list">
+      {% for item in pending %}
+        <li class="card">
+          <strong>{{ item.rate.jurisdiction }}</strong>
+          <span class="sub">Now {% if item.current %}{{ item.current.combined_rate|percent }}%{% else %}no rate{% endif %}; the state shows {{ item.rate.state_rate|percent }}% state + {{ item.rate.local_rate|percent }}% local = {{ item.rate.combined_rate|percent }}%, found {{ item.rate.found_at|date:"M j, Y" }}.</span>
+          {% if can_edit %}
+            <form method="post" action="{% url 'rate-approve' item.rate.pk %}" class="inline-form" novalidate>
+              {% csrf_token %}
+              {% include "control/_field.html" with field=item.form.effective_from %}
+              <button type="submit" class="primary">Approve</button>
+            </form>
+            <form method="post" action="{% url 'rate-reject' item.rate.pk %}">
+              {% csrf_token %}
+              <button type="submit">Reject</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="flagged">
+  <h2 id="flagged">Addresses to check</h2>
+  <p class="help">These did not match a rate boundary and take their county's rate, or have no rate. Check them before the invoice goes out.</p>
+  {% if flagged %}
+    <ul class="list">
+      {% for address in flagged %}
+        <li><a class="row" href="{% url 'address-edit' address.pk %}"><strong>{{ address.customer }}</strong><span class="sub">{{ address }}</span><span class="sub warn">{{ address.tax_note }}</span></a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">None.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="area-rates">
+  <h2 id="area-rates">Rates in the service area</h2>
+  {% include "control/_tax_rate_table.html" with rows=service_area_rows %}
+</section>
+
+<section aria-labelledby="state-rates">
+  <h2 id="state-rates">Other states</h2>
+  <p class="help">For approved addresses outside Tennessee (decision 0037). Georgia's rate is a setting, 0% until the accountant says otherwise.</p>
+  {% for row in state_rows %}
+    <div class="card">
+      <strong>{{ row.jurisdiction.name }}</strong>
+      <span class="sub">{% if row.rate %}{{ row.rate.combined_rate|percent }}% from {{ row.rate.effective_from|date:"M j, Y" }}{% else %}No rate{% endif %}</span>
+      {% if can_edit %}
+        <form method="post" action="{% url 'state-rate' row.jurisdiction.pk %}" class="inline-form" novalidate>
+          {% csrf_token %}
+          {% include "control/_field.html" with field=state_form.percent %}
+          {% include "control/_field.html" with field=state_form.effective_from %}
+          <button type="submit">Set rate</button>
+        </form>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p class="muted">None yet: run <code>import_tax_rates</code>.</p>
+  {% endfor %}
+</section>
+
+<details>
+  <summary>Other Tennessee counties ({{ other_rows|length }})</summary>
+  <p class="help">County rates only, with no boundaries: an approved out-of-area address in one of these takes its county's rate and is flagged.</p>
+  {% include "control/_tax_rate_table.html" with rows=other_rows %}
+</details>
+{% endblock %}

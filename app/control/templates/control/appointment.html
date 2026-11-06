@@ -10,7 +10,8 @@
 <dl class="details">
   <dt>Customer</dt><dd><a href="{% url 'customer' appointment.customer.pk %}">{{ appointment.customer }}</a>{% if appointment.customer.mobile %} · <a href="tel:+1{{ appointment.customer.mobile }}">{{ appointment.customer.mobile|phone }}</a>{% endif %}</dd>
   <dt>Vehicle</dt><dd>{{ appointment.vehicle|default:"None recorded" }}</dd>
-  <dt>Address</dt><dd>{{ appointment.service_address|default:"None recorded" }}</dd>
+  <dt>Address</dt><dd>{{ appointment.service_address|default:"None recorded" }}{% if area and not area.in_area %} <span class="badge">{{ area.reason }}</span>{% endif %}</dd>
+  {% if appointment.drive_minutes is not None %}<dt>Drive from home base</dt><dd>{{ appointment.drive_minutes|duration }}{% if appointment.drive_estimated %} <span class="badge">Estimated</span>{% endif %}</dd>{% endif %}
   <dt>On site</dt><dd>{% if appointment.ends_at %}{{ appointment.scheduled_start|local_time }} to {{ appointment.ends_at|local_time }}{% else %}<span class="muted">No times recorded</span>{% endif %}</dd>
   {% if stay %}
   <dt>Service time</dt><dd>{{ stay.service_minutes|duration }} for {{ appointment.crew_size }} {% if appointment.crew_size == 1 %}person{% else %}people{% endif %}</dd>
@@ -27,7 +28,9 @@
     <table class="lines">
       {% for line in lines %}<tr><td>{{ line.description }}{% if line.reason %}<span class="sub">{{ line.reason }}</span>{% endif %}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
       <tr class="total"><td>Total before tax</td><td class="amount">{{ total|money }}</td></tr>
+      {% if tax %}{% include "control/_tax_rows.html" %}{% endif %}
     </table>
+    {% if tax %}<span class="sub">Sales tax at the rate in effect on the day of service.</span>{% else %}<span class="sub">No service address, so no sales tax yet.</span>{% endif %}
     {% for payment in payments %}<span class="sub">Paid {{ payment.amount|money }} by {{ payment.get_method_display }}{% if payment.tip %}, tip {{ payment.tip|money }}{% endif %}, {{ payment.paid_at|date:"M j, Y" }}</span>{% endfor %}
   </div>
   {% if appointment.status != 'canceled' %}
