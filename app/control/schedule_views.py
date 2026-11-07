@@ -4,7 +4,8 @@ Schedule, a list of the days with jobs that loads more as it scrolls; Day,
 
 Weeks start on Sunday. Canceled jobs are on none of them. The last view
 used is remembered on each device in a cookie; with none, the screen opens
-in Schedule.
+in Schedule. A bar of icons along the top, one per view, picks the view
+(decision 0097).
 """
 
 import calendar
@@ -24,6 +25,9 @@ from staff.models import Assignment
 from vehicles.models import ModelYearClassification, VehicleDataRefresh
 
 VIEWS = {"schedule": "Schedule", "day": "Day", "3day": "3 Days", "week": "Week", "month": "Month"}
+# Each view's icon in the bar along the top: the Material Symbols the Google
+# Calendar app's views are drawn from, served from the app (decision 0097).
+ICONS = {"schedule": "view_agenda", "day": "calendar_view_day", "3day": "view_column", "week": "calendar_view_week", "month": "calendar_view_month"}
 COOKIE = "schedule_view"
 COOKIE_AGE = 400 * 24 * 60 * 60
 # Days with jobs the Schedule list loads at a time, each way.
@@ -297,6 +301,7 @@ def schedule(request):
     context = {
         "view": view,
         "views": VIEWS,
+        "view_bar": [(key, label, ICONS[key]) for key, label in VIEWS.items()],
         "day": day,
         "today": today,
         # The home screen says when model years wait in the review queue (decision 0076).

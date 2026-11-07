@@ -120,3 +120,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0094](0094-how-the-availability-check-places-and-shares.md) | 2026-11-07 | scheduling | How the availability check places a later job, counts a shared day and lets a manager override | accepted |
 | [0095](0095-canceling-and-removing-jobs.md) | 2026-11-07 | scheduling | Canceling a job, and removing one created by mistake | accepted |
 | [0096](0096-booking-off-hours-inline-and-calendar-views.md) | 2026-11-07 | control-app | Booking off hours inline, calendar-style schedule views and the customer list | accepted |
+| [0097](0097-rules-alert-before-services-and-schedule-view-bar.md) | 2026-11-07 | control-app | The rules alert before the services are chosen, and the schedule's view bar | accepted |

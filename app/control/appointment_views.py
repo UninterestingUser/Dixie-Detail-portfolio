@@ -120,6 +120,18 @@ def rules_broken(form, appointment=None):
     return booking.rules_broken(inputs, [form.start()], data.get("address"), appointment)
 
 
+def rules_broken_so_far(form, appointment=None):
+    """While the services aren't all chosen yet, the rules the date, time and
+    address break on their own, or None without a date and time."""
+    data = form.cleaned_data
+    if data.get("date") is None or data.get("time") is None:
+        return None
+    start = form.start()
+    if appointment is not None and start == appointment.scheduled_start and data.get("address") == appointment.service_address:
+        return []
+    return booking.rules_broken_without_services(start, data.get("address"), appointment)
+
+
 def rules_alert(request, form, broken, submitted=False):
     """The alert under the date and time while the choice breaks a rule, or
     None when it fits. A manager goes ahead by giving a reason; anyone else
@@ -271,14 +283,20 @@ def appointment_price(request, customer_pk=None, pk=None):
             context["changes_price"] = appointment is not None and not same_inputs(booking.inputs_from_appointment(appointment), inputs)
     else:
         context["errors"] = [error for errors in form.errors.values() for error in errors]
-    if form.is_valid():
-        # The availability check, as the date, time or anything else that
-        # affects it changes. Left as it was when the job can't be priced.
+    # The availability check, as the date, time or anything else that
+    # affects it changes: the full check once the job can be priced, and
+    # before that the rules the date and time break on their own.
+    broken = None
+    if form.is_valid() and (appointment is not None or form.inputs() is not None):
         try:
-            context["alert"] = rules_alert(request, form, rules_broken(form, appointment))
-            context["alert_known"] = True
+            broken = rules_broken(form, appointment)
         except (PricingError, booking.BookingError):
             pass
+    if broken is None:
+        broken = rules_broken_so_far(form, appointment)
+    if broken is not None:
+        context["alert"] = rules_alert(request, form, broken)
+        context["alert_known"] = True
     context["form"] = form
     return render(request, "control/_live_price.html", context)
 
