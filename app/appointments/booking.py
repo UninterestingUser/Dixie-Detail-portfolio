@@ -141,6 +141,21 @@ def rules_broken(inputs, starts, address=None, appointment=None):
     return found
 
 
+# The rules that can be judged before the services are chosen: the day, the
+# arrival time, Time Off, and sharing the day, with the new job taken as a
+# regular one that can't share (decision 0097).
+RULES_WITHOUT_SERVICES = {"day", "start_time", "time_off", "capacity"}
+
+
+def rules_broken_without_services(start, address=None, appointment=None):
+    """[(start, [Reason])] for a start, before the job's services are known:
+    only the rules in RULES_WITHOUT_SERVICES."""
+    job = availability.Job(0, None, "a job with no services chosen yet", address.point if address is not None else None)
+    exclude = appointment.pk if appointment is not None else None
+    reasons = [reason for reason in availability.check(job, start, exclude=exclude) if reason.rule in RULES_WITHOUT_SERVICES]
+    return [(start, reasons)] if reasons else []
+
+
 def log_override(appointment, reasons, reason, user, action=RuleOverride.Action.BOOKED):
     """Log a manager's booking or move outside the rules: the rules broken,
     in the alert's plain words, the reason, the start, who and when."""

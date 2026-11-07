@@ -63,11 +63,47 @@ class ViewChoiceTests(ScheduleViewTestCase):
         self.assertEqual(page.context["view"], "schedule")
         self.assertNotIn(schedule_views.COOKIE, page.cookies)
 
-    def test_the_menu_offers_every_view(self):
+    def test_a_bar_of_icons_offers_every_view_in_order(self):
         page = self.get("day", self.day)
-        for label in ("Schedule", "Day", "3 Days", "Week", "Month"):
-            self.assertContains(page, f">{label}</a>")
-        self.assertContains(page, 'class="view-menu"')
+        html = page.content.decode()
+        bar = html[html.index('<nav class="view-bar"'):html.index("</nav>", html.index('<nav class="view-bar"'))]
+        icons = ("view_agenda", "calendar_view_day", "view_column", "calendar_view_week", "calendar_view_month")
+        labels = ("Schedule", "Day", "3 Days", "Week", "Month")
+        positions = [bar.index(f'title="{label}" aria-label="{label}"') for label in labels]
+        self.assertEqual(positions, sorted(positions))
+        for icon in icons:
+            self.assertIn(f'/static/control/icons/view-icons.svg#{icon}"', bar)
+        # The current view's icon is highlighted, and only it.
+        self.assertEqual(bar.count('aria-current="page"'), 1)
+        self.assertIn('title="Day" aria-label="Day" aria-current="page"', bar)
+        self.assertNotContains(page, "view-menu")
+
+    def test_the_bar_is_in_the_part_that_stays_along_the_top(self):
+        html = self.get("schedule").content.decode()
+        top = html[html.index('<div class="top">'):html.index("<main>")]
+        self.assertIn('class="view-bar"', top)
+        self.assertIn('data-swipe="next"', top)
+
+    def test_choosing_each_icon_opens_its_view_and_is_remembered(self):
+        html = self.get("schedule", self.day).content.decode()
+        for view in schedule_views.VIEWS:
+            with self.subTest(view=view):
+                href = f'href="?view={view}&amp;date={self.day.isoformat()}"'
+                self.assertIn(href, html)
+                page = self.client.get(reverse("schedule") + f"?view={view}&date={self.day.isoformat()}")
+                self.assertEqual(page.context["view"], view)
+                self.assertEqual(page.cookies[schedule_views.COOKIE].value, view)
+                self.assertEqual(self.get().context["view"], view)
+                html = page.content.decode()
+
+    def test_the_icons_are_served_by_the_app(self):
+        from django.contrib.staticfiles import finders
+
+        sprite = open(finders.find("control/icons/view-icons.svg")).read()
+        for icon in schedule_views.ICONS.values():
+            self.assertIn(f'<symbol id="{icon}"', sprite)
+        self.assertIn("Apache License 2.0", sprite)
+        self.assertTrue(finders.find("control/icons/material-symbols-LICENSE.txt"))
 
     def test_every_view_has_today_previous_and_next(self):
         for view, step in (("day", 1), ("3day", 3), ("week", 7), ("schedule", 7)):

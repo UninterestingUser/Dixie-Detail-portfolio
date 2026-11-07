@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-07
 tags: [guides, booking, appointments, schedule, maintenance, control-app]
-related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md]
+related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0097-rules-alert-before-services-and-schedule-view-bar.md]
 ---
 
 # Booking a job
@@ -15,7 +15,7 @@ The control app opens on **Schedule**. Every price is worked out by the pricing 
 
 ## Read the schedule
 
-Tap the view icon at the top right of the Schedule screen to pick a view. Each phone or computer remembers the last view you picked, so the phone can open in Schedule while the computer opens in Week. With nothing picked yet, the screen opens in Schedule.
+A bar of icons along the top of the Schedule screen picks the view, in this order: Schedule, Day, 3 Days, Week and Month. The current view's icon is highlighted; on a computer, hover over an icon to see its name. The bar stays at the top while you scroll, with **Today**, **‹** and **›** beside it. Each phone or computer remembers the last view you picked, so the phone can open in Schedule while the computer opens in Week. With nothing picked yet, the screen opens in Schedule.
 
 - **Schedule:** a list of the days with jobs, opening at today. Scroll down for later days and up for earlier ones; they keep loading as you go. Days with no jobs are left out, but today always shows, with "No jobs today." when it is empty. Each job shows its arrival and leaving time, the customer and the vehicle with its color, the services and total, the address and who is assigned.
 - **Day**, **3 Days** and **Week:** an hour on each row and a column for each day. Each job is a block from arrival to leaving time, with the customer, the vehicle and its color, and the services. The hours cover the working day and stretch to fit any job outside it. A closed day is shaded and names why, such as "Sunday is a closed day". Today has a red line at the current time.
@@ -33,7 +33,9 @@ Weeks start on Sunday. Every view has **Today** and **‹** and **›** for the 
 
 ## Book off hours
 
-The scheduling rules are checked as soon as you pick the date or time, and again whenever you change the service, vehicle, crew or anything else that changes the job's length. When the choice breaks a rule, such as a closed day, a time not in the day's start times, a full day or a job that would run past closing, an alert appears right under the date and time:
+The scheduling rules are checked as soon as you pick the date or time, before you choose the services, and again on every change. Until the services are all chosen, only the rules that don't depend on them are checked: closed days, holidays and Time Off, how far ahead the date is, the allowed arrival times, and whether the day already has a job, so a day with a job shows the alert at once ("a job with no services chosen yet can't share a day"). Once the services are chosen the full check runs and the alert updates: it can appear, such as when the job would run past closing time or doesn't fit before or after another job, or go away, such as for a Monthly Maintenance or Motorcycle Detail that may share the day.
+
+When the choice breaks a rule, such as a closed day, a time not in the day's start times, a full day or a job that would run past closing, an alert appears right under the date and time:
 
 1. First the rule or rules it breaks, in plain words, such as "Sunday is a closed day".
 2. Then "Booking off hours is allowed. Give the reason below and it will be logged with the job."

@@ -1,30 +1,30 @@
 {% extends "control/base.html" %}
-{% load control %}
+{% load control static %}
 {% block title %}{{ title }}{% endblock %}
 {% block body_class %}schedule-page{% if view != 'schedule' %} wide{% endif %}{% endblock %}
+{% block top_bar %}
+{# The view bar stays along the top while the Schedule list scrolls (decision 0097). #}
+<div class="schedule-bar">
+  <nav class="view-bar" aria-label="View">
+    {% for key, label, icon in view_bar %}
+      <a href="?view={{ key }}&amp;date={{ day|date:'Y-m-d' }}" title="{{ label }}" aria-label="{{ label }}"{% if key == view %} aria-current="page"{% endif %}>
+        <svg aria-hidden="true"><use href="{% static 'control/icons/view-icons.svg' %}#{{ icon }}"/></svg>
+      </a>
+    {% endfor %}
+  </nav>
+  <nav class="pager schedule-pager" aria-label="Move">
+    <a class="button" href="?view={{ view }}">Today</a>
+    <a class="button" data-swipe="previous" href="?view={{ view }}&amp;date={{ previous|date:'Y-m-d' }}" aria-label="Previous" title="Previous">‹</a>
+    <a class="button" data-swipe="next" href="?view={{ view }}&amp;date={{ next|date:'Y-m-d' }}" aria-label="Next" title="Next">›</a>
+  </nav>
+</div>
+{% endblock %}
 {% block content %}
 {% if queue_count or last_refresh %}<p class="notice">
   {% if queue_count %}<a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.{% endif %}
   {% if last_refresh %}<span class="sub{% if last_refresh.result == 'failed' %} warn{% endif %}">Last vehicle data refresh: {{ last_refresh.started_at|date:"D, M j, g:i A" }}, {{ last_refresh.get_result_display|lower }}{% if last_refresh.result == 'failed' %} ({{ last_refresh.message|truncatechars:160 }}){% endif %}: {{ last_refresh.counts_text }}.</span>{% endif %}
 </p>{% endif %}
-<div class="schedule-head">
-  <h1>{{ title }}</h1>
-  <details class="view-menu">
-    <summary aria-label="Change the view: {{ views|get_item:view }}">
-      <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>
-    </summary>
-    <ul class="menu">
-      {% for key, label in views.items %}
-        <li><a href="?view={{ key }}&amp;date={{ day|date:'Y-m-d' }}"{% if key == view %} aria-current="true"{% endif %}>{{ label }}</a></li>
-      {% endfor %}
-    </ul>
-  </details>
-</div>
-<nav class="pager schedule-pager" aria-label="Move">
-  <a class="button" href="?view={{ view }}">Today</a>
-  <a class="button" data-swipe="previous" href="?view={{ view }}&amp;date={{ previous|date:'Y-m-d' }}" aria-label="Previous">‹</a>
-  <a class="button" data-swipe="next" href="?view={{ view }}&amp;date={{ next|date:'Y-m-d' }}" aria-label="Next">›</a>
-</nav>
+<h1 class="schedule-title">{{ title }}</h1>
 
 <div class="schedule-view view-{{ view }}" data-swipe-area>
 {% if view == 'schedule' %}

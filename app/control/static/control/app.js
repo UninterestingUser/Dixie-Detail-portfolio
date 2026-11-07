@@ -42,13 +42,6 @@ document.addEventListener("click", (event) => {
   }
 });
 
-// The schedule's view menu closes when a choice is tapped or the page is tapped elsewhere.
-document.addEventListener("click", (event) => {
-  document.querySelectorAll("details.view-menu[open]").forEach((menu) => {
-    if (!menu.contains(event.target)) menu.open = false;
-  });
-});
-
 // Swiping left or right on the schedule moves to the next or previous days.
 (() => {
   let startX = null, startY = null;

@@ -55,8 +55,9 @@ class LiveAlertTests(JobsTestCase):
         alert = self.alert(self.live(next_sunday(), override_reason="Customer works weekdays"))
         self.assertIn("Customer works weekdays", alert)
 
-    def test_the_alert_is_left_alone_when_the_job_cant_be_checked(self):
-        self.assertIsNone(self.alert(self.live(next_sunday(), condition_level="")))
+    def test_the_alert_is_left_alone_without_a_date_or_time(self):
+        self.assertIsNone(self.alert(self.live(next_sunday(), time="")))
+        self.assertIsNone(self.alert(self.live(next_sunday(), date="not a date")))
 
     def test_the_form_checks_on_every_change_except_the_reason(self):
         page = self.client.get(reverse("appointment-new", args=[self.customer.pk]))
@@ -69,6 +70,67 @@ class LiveAlertTests(JobsTestCase):
         day = page.context["form"].initial["date"]
         self.assertGreaterEqual(day, timezone.localdate() + datetime.timedelta(days=2))
         self.assertNotEqual(day.weekday(), 6)
+
+
+class BeforeTheServicesTests(JobsTestCase):
+    """The alert appears as soon as a date or time that breaks a rule is
+    picked, before any service is chosen (decision 0097)."""
+
+    def live(self, day, **changes):
+        return self.client.post(reverse("appointment-price-new", args=[self.customer.pk]), self.booking_data(day, **changes))
+
+    def alert(self, response):
+        html = response.content.decode().replace("&#x27;", "'")
+        self.assertIn('id="rules-alert" hx-swap-oob="true"', html)
+        return html[html.index('id="rules-alert"'):]
+
+    def no_services(self, day, **changes):
+        return self.live(day, service="", condition_level="", **changes)
+
+    def test_a_closed_day_shows_the_alert_with_no_services_chosen(self):
+        alert = self.alert(self.no_services(next_sunday()))
+        self.assertIn("Sunday is a closed day", alert)
+        self.assertIn(ALLOWED, alert)
+        self.assertIn('name="override_reason"', alert)
+
+    def test_and_with_the_services_only_partly_chosen(self):
+        self.assertIn("Sunday is a closed day", self.alert(self.live(next_sunday(), condition_level="")))
+
+    def test_the_date_window_and_the_arrival_time(self):
+        self.assertIn("10:15 AM is not a start time", self.alert(self.no_services(open_day(10), time="10:15")))
+        too_soon = timezone.localdate() + datetime.timedelta(days=1)
+        self.assertIn('notice rules-alert', self.alert(self.no_services(too_soon)))
+        self.assertNotIn('notice rules-alert', self.alert(self.no_services(open_day(10))))
+
+    def test_a_day_with_a_job_shows_the_alert_at_once(self):
+        day = open_day(10)
+        booking.book(self.customer, self.vehicle, local(day, 13), booking.JobInputs(self.monthly, self.crossover, self.two_rows))
+        alert = self.alert(self.no_services(day))
+        self.assertIn("The day already has 1 job, and a job with no services chosen yet can't share a day", alert)
+        # Once a service that may share the day is chosen, the alert goes away.
+        alert = self.alert(self.live(day, service=self.monthly.pk, condition_level=""))
+        self.assertNotIn("notice rules-alert", alert)
+        # A Full Detail can't share the day, so it stays.
+        self.assertIn("can't share a day", self.alert(self.live(day)))
+
+    def test_the_rules_that_need_the_services_wait_for_them(self):
+        day = open_day(10)
+        booking.book(self.customer, self.vehicle, local(day, 8), booking.JobInputs(self.monthly, self.crossover, self.two_rows))
+        # Arriving after the morning job: with no services, only sharing the
+        # day is judged, never the length of the job.
+        alert = self.alert(self.no_services(day, time="12:00"))
+        self.assertNotIn("Ends at", alert)
+        self.assertNotIn("past closing", alert)
+        self.assertNotIn("Too close", alert)
+
+    def test_a_job_being_changed_is_checked_before_its_services_are_chosen_too(self):
+        day = open_day(10)
+        job = booking.book(self.customer, self.vehicle, local(day), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1), address=self.address)
+        live = self.client.post(reverse("appointment-price", args=[job.pk]), self.booking_data(next_sunday(), condition_level=""))
+        self.assertIn("Sunday is a closed day", self.alert(live))
+        # Left where it is, its own day doesn't count against it.
+        live = self.client.post(reverse("appointment-price", args=[job.pk]), self.booking_data(day, condition_level=""))
+        self.assertNotIn("notice rules-alert", self.alert(live))
 
 
 class SubmitTests(JobsTestCase):

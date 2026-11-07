@@ -28,8 +28,9 @@ body {
 
 a { color: var(--navy); }
 
+/* The top bar, and below it on some screens a bar that stays with it. */
+.top { position: sticky; top: 0; z-index: 10; }
 .topbar {
-  position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
   background: var(--navy); color: var(--white);
@@ -251,17 +252,18 @@ dialog.popup:not([open]) { display: none; }
 /* The Schedule screen (decision 0096). */
 .wide main { max-width: 84rem; }
 .schedule-page { overflow-anchor: none; }
-.schedule-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.schedule-head h1 { margin: 4px 0 8px; }
-.view-menu { position: relative; }
-.view-menu summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--white); color: var(--navy); cursor: pointer; }
-.view-menu summary::-webkit-details-marker { display: none; }
-.view-menu svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; }
-.view-menu .menu { position: absolute; right: 0; top: 52px; z-index: 15; list-style: none; margin: 0; padding: 6px; min-width: 11rem; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.15); }
-.view-menu .menu a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-weight: 600; }
-.view-menu .menu a[aria-current="true"] { background: var(--paper); color: var(--red); }
-.schedule-pager { grid-template-columns: 2fr 1fr 1fr; }
-.schedule-pager .button { font-size: 1.2rem; }
+.schedule-title { margin: 0 0 10px; }
+/* The view bar and the pager, kept along the top as the page scrolls. */
+.schedule-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px; padding: 8px 12px;
+  background: var(--white); border-bottom: 1px solid var(--line); }
+.schedule-bar .pager { margin: 0; gap: 4px; }
+.schedule-bar .pager .button { min-height: 40px; height: 40px; padding: 0 10px; font-size: 1rem; }
+.view-bar { display: flex; }
+.view-bar a { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius); color: var(--muted); }
+.view-bar a:hover { background: var(--paper); }
+.view-bar a[aria-current="page"] { background: var(--navy); color: var(--white); }
+.view-bar svg { width: 24px; height: 24px; fill: currentColor; }
+.schedule-pager { grid-template-columns: auto 40px 40px; }
 .status-completed { background: #e6f2ea; border-color: #9fcfb0; color: var(--ok); }
 
 .agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
@@ -272,7 +274,7 @@ dialog.popup:not([open]) { display: none; }
 
 .timegrid { --hour: 56px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .timegrid-head, .timegrid-body { display: grid; grid-template-columns: 3rem repeat(var(--days), minmax(0, 1fr)); }
-.timegrid-head { border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+.timegrid-head { border-bottom: 1px solid var(--line); }
 .timegrid-day { padding: 6px 4px; text-align: center; color: var(--ink); text-decoration: none; font-size: 0.85rem; border-left: 1px solid var(--line); line-height: 1.3; }
 .timegrid-day strong { display: block; font-size: 1.15rem; }
 .timegrid-day .sub { font-size: 0.72rem; }

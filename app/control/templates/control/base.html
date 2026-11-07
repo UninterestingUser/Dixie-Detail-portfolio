@@ -14,10 +14,13 @@
   <script src="{% static 'control/app.js' %}" defer></script>
 </head>
 <body class="{% block body_class %}{% endblock %}{% if not user.is_authenticated %} no-tabbar{% endif %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-  <header class="topbar">
-    <a class="brand" href="{% url 'home' %}">Dixie Detail</a>
-    {% block topbar_action %}{% endblock %}
-  </header>
+  <div class="top">
+    <header class="topbar">
+      <a class="brand" href="{% url 'home' %}">Dixie Detail</a>
+      {% block topbar_action %}{% endblock %}
+    </header>
+    {% block top_bar %}{% endblock %}
+  </div>
   <main>
     {% if messages %}
       <ul class="messages" role="status">
