@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-28
+updated: 2026-11-07
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -109,11 +109,17 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Jobs calendar.** The Google calendar "Dixie Detail Jobs", written only by the system. An edit made to it in Google is reset at the next sync.
 
-**Scheduling setting.** One of the rules that decide which days and start times are open, such as working hours, minimum notice or jobs per day. Launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml); live values will be in the database. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
+**Scheduling setting.** One of the rules that decide which days and start times are open, such as working hours, minimum notice or jobs per day. Launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml); the live values are in the database, changed on the control app's scheduling settings screen. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
 
 **Setup time.** The time before the service to unpack and get ready, 30 minutes for one person divided by the number of people on the job. A scheduling setting.
 
 **Start time.** A time a job can begin, offered online from that weekday's list of start times (8:00, 8:30 and 9:00 AM at launch). The start time is the arrival time.
+
+**Placed start.** The earliest start for a later job on a day that already has one: the earlier job's end plus the drive between the two addresses, at least 30 minutes, rounded up to the next quarter hour (decisions 0093 and 0094). The availability check offers it beside the day's start times.
+
+**Rule override.** A manager booking or moving a job outside the scheduling rules in the control app, after a warning naming each rule broken, with a reason that is logged with the job. The website can never override (decision 0094).
+
+**Date exception.** A date closed all day, or open with different hours, set on the control app's scheduling settings screen.
 
 **Time Off calendar.** The Google calendar "Dixie Detail Time Off", written by the owner. An all-day event closes that day for booking; a timed event blocks only its own time.
 

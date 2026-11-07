@@ -2,7 +2,7 @@
 {% block title %}{% if appointment %}Change job{% else %}Book a job{% endif %} · {{ customer }}{% endblock %}
 {% block content %}
 <h1>{% if appointment %}Change job{% else %}Book a job{% endif %}</h1>
-<p class="muted">For <a href="{% url 'customer' customer.pk %}">{{ customer }}</a>. Any date can be booked; the availability rules arrive in Phase 3.</p>
+<p class="muted">For <a href="{% url 'customer' customer.pk %}">{{ customer }}</a>. A time outside the scheduling rules needs a manager and a reason. <a href="{% url 'open-times' %}">Open times</a></p>
 <form method="post" class="stack" novalidate
       hx-post="{% if appointment %}{% url 'appointment-price' appointment.pk %}{% else %}{% url 'appointment-price-new' customer.pk %}{% endif %}"
       hx-trigger="change, load" hx-target="#price" hx-sync="this:replace">
@@ -36,6 +36,26 @@
   {% endif %}
   {% include "control/_field.html" with field=form.notes %}
   {% if form.reason %}{% include "control/_field.html" with field=form.reason %}{% endif %}
+  {% if rule_warning %}
+  <section class="notice" role="alert" aria-labelledby="rules-broken">
+    <h2 id="rules-broken">Outside the scheduling rules</h2>
+    <ul>
+      {% for start, reasons in rule_warning.broken %}
+        <li><strong>{{ start|date:"D M j, Y, g:i A" }}</strong>
+          <ul>{% for reason in reasons %}<li>{{ reason }}</li>{% endfor %}</ul>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if rule_warning.is_manager %}
+      <p class="help">You can still {% if appointment %}save{% else %}book{% endif %} it. Give the reason; it is logged with the job.</p>
+      {% include "control/_field.html" with field=form.override_reason %}
+      {% if rule_warning.needs_reason %}<p class="error">Give the reason for booking outside the rules.</p>{% endif %}
+      <button type="submit" name="override" value="on" class="primary">{% if appointment %}Save{% else %}Book{% endif %} outside the rules</button>
+    {% else %}
+      <p class="help">Only a manager can book outside the scheduling rules. Pick another time.</p>
+    {% endif %}
+  </section>
+  {% endif %}
   <div class="actions">
     <button type="submit" class="primary">{% if appointment %}Save{% else %}Book{% endif %}</button>
     <a class="button" href="{% if appointment %}{% url 'appointment' appointment.pk %}{% else %}{% url 'customer' customer.pk %}{% endif %}">Cancel</a>

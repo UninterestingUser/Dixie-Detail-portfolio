@@ -1,0 +1,41 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Open times{% endblock %}
+{% block content %}
+<h1>Open times</h1>
+<p class="help">The start times the availability check offers a job over 90 days, as the website will, and why each closed time is closed. Use it to test the scheduling settings. All times are Eastern.</p>
+<form method="get" class="stack" novalidate>
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% include "control/_field.html" with field=form.service %}
+  {% include "control/_field.html" with field=form.vehicle_class %}
+  {% include "control/_field.html" with field=form.size_variant %}
+  {% include "control/_field.html" with field=form.condition_level %}
+  {% include "control/_field.html" with field=form.crew_size %}
+  {% include "control/_field.html" with field=form.location %}
+  {% include "control/_field.html" with field=form.first %}
+  <button type="submit" class="primary">Show open times</button>
+</form>
+
+{% if days is not None %}
+<section aria-labelledby="results">
+  <h2 id="results">{{ job.service_name }}, {{ job.minutes|duration }} on site, {{ first|date:"M j" }} to {{ last|date:"M j, Y" }}</h2>
+  {% if not job.point %}<p class="help">No job location given, so the gap after another job is the minimum gap alone.</p>{% endif %}
+  <ul class="list open-times">
+    {% for day in days %}
+      <li class="card">
+        <strong>{{ day.date|date:"D M j" }}</strong>
+        {% if day.jobs %}<span class="sub">Booked: {% for booked in day.jobs %}{{ booked.service_name }} {{ booked.start|date:"g:i A" }} to {{ booked.end|date:"g:i A" }}{% if not forloop.last %}; {% endif %}{% endfor %}</span>{% endif %}
+        {% if day.reasons %}
+          {% for reason in day.reasons %}<span class="sub muted">{{ reason }}</span>{% endfor %}
+        {% else %}
+          {% if day.open_slots %}<span class="sub">Open: {% for slot in day.open_slots %}<strong>{{ slot.start|date:"g:i A" }}</strong>{% if slot.placed_after %} (after the {{ slot.placed_after|date:"g:i A" }} job){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</span>{% else %}<span class="sub warn">No open time.</span>{% endif %}
+          {% for slot in day.closed_slots %}
+            <span class="sub muted">{{ slot.start|date:"g:i A" }}{% if slot.placed_after %} (after the {{ slot.placed_after|date:"g:i A" }} job){% endif %} closed: {% for reason in slot.reasons %}{{ reason }}{% if not forloop.last %}; {% endif %}{% endfor %}</span>
+          {% endfor %}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

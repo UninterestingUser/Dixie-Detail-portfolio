@@ -1,14 +1,15 @@
 meta:
   title: Booking and scheduling rules
   summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
-  updated: 2026-10-22
+  updated: 2026-11-07
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
   note: >-
     Launch values. Every scheduling rule is a setting (decision 0056). These values seed the
-    settings; once the control app's settings screen exists (Phase 3), the live values are in the
-    database, with change history. Until then the app reads the setup, breakdown and rounding values
-    from this file (app/core/scheduling.py). Update this file when a launch value changes.
+    settings in the database the first time they are read (app/scheduling/models.py); from then on
+    the live values are changed on the control app's scheduling settings screen, with change
+    history, and editing this file does not change them. Update this file when a launch value
+    changes, so a new database starts from it.
 
 time_zone: America/New_York
 
@@ -49,15 +50,15 @@ services_sharing_a_day:
 gap_between_jobs:
   rule: a later job starts no earlier than the earlier job's end (after breakdown) plus the drive time between the two addresses
   minimum_minutes: 30
-  round_start_up_to_minutes: 15
-  rounding_status: proposed during planning (decision 0022), not yet confirmed by the owner
+  round_start_up_to_minutes: 15     # up to the next quarter hour
+  rounding_status: confirmed by the owner on 2026-11-04 (decision 0093)
 last_job_ends_by_closing: when the day holds more than one job; a single job may run past closing time
 crews_at_once: 1          # one crew working one job at a time; two crews at once would be a design change
 
 owner_only_services: [Monthly Maintenance, Quarterly Maintenance]
 repeating_series: the owner can book a single visit or a repeating series
 second_vehicle_same_day: accepted as a request the owner approves
-manager_override: a manager can book outside any rule in the control app after a warning, with a reason; the website never can
+manager_override: a manager can book outside any rule in the control app after a warning, with a reason that is logged; the website never can (decision 0094)
 
 # Staff assignment (decision 0061)
 staff_assignment:

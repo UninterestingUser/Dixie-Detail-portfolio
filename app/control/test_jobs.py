@@ -11,13 +11,15 @@ from pricebook.models import PricedLine
 from pricebook.pricing import price_job
 from staff.models import Assignment
 
-from .fixtures import JobsTestCase, local
+from scheduling.models import RuleOverride
+
+from .fixtures import JobsTestCase, local, open_day
 
 
 class ScheduleTests(JobsTestCase):
     def setUp(self):
         super().setUp()
-        self.day = timezone.localdate() + datetime.timedelta(days=10)
+        self.day = open_day(10)
         self.job = booking.book(self.customer, self.vehicle, local(self.day), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
 
     def test_the_day_list(self):
@@ -40,7 +42,7 @@ class ScheduleTests(JobsTestCase):
 
 class LivePriceTests(JobsTestCase):
     def price(self, **changes):
-        day = timezone.localdate() + datetime.timedelta(days=10)
+        day = open_day(10)
         return self.client.post(reverse("appointment-price-new", args=[self.customer.pk]), self.booking_data(day, **changes))
 
     def test_the_price_comes_from_the_pricing_engine(self):
@@ -68,7 +70,7 @@ class LivePriceTests(JobsTestCase):
 class BookingTests(JobsTestCase):
     def setUp(self):
         super().setUp()
-        self.day = timezone.localdate() + datetime.timedelta(days=14)
+        self.day = open_day(14)
 
     def test_book_a_job(self):
         response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(self.day, condition_level="2", add_ons=[self.seats.pk], notes="Gate code 1234"))
@@ -82,10 +84,36 @@ class BookingTests(JobsTestCase):
         self.assertEqual(timezone.localtime(appointment.scheduled_start).time(), datetime.time(8, 0))
         self.assertEqual(appointment.time_on_site_minutes, job.time_on_site.total_minutes)
 
-    def test_any_date_can_be_booked(self):
+    def test_any_date_can_be_booked_by_a_manager_with_a_reason(self):
         sunday = timezone.localdate() - datetime.timedelta(days=timezone.localdate().weekday() + 1)
-        self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(sunday, time="19:30"))
-        self.assertEqual(Appointment.objects.get().scheduled_start, timezone.make_aware(datetime.datetime.combine(sunday, datetime.time(19, 30))))
+        data = self.booking_data(sunday, time="19:30")
+        page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), data)
+        self.assertContains(page, "Outside the scheduling rules")
+        self.assertContains(page, "Open day: Closed on Sundays")
+        self.assertContains(page, "Open day: Too soon")
+        self.assertFalse(Appointment.objects.exists())
+        page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on"})
+        self.assertContains(page, "Give the reason for booking outside the rules.")
+        self.assertFalse(Appointment.objects.exists())
+        self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on", "override_reason": "Entered late"})
+        appointment = Appointment.objects.get()
+        self.assertEqual(appointment.scheduled_start, timezone.make_aware(datetime.datetime.combine(sunday, datetime.time(19, 30))))
+        override = RuleOverride.objects.get()
+        self.assertEqual((override.appointment, override.reason, override.made_by), (appointment, "Entered late", self.owner_user))
+        self.assertIn("Open day: Closed on Sundays", override.rules_broken)
+
+    def test_only_a_manager_can_book_outside_the_rules(self):
+        self.client.force_login(self.helper_user)
+        data = self.booking_data(self.day, time="10:15", override="on", override_reason="Customer asked")
+        page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), data)
+        self.assertContains(page, "Start times: 10:15 AM is not a start time")
+        self.assertContains(page, "Only a manager can book outside the scheduling rules.")
+        self.assertFalse(Appointment.objects.exists())
+
+    def test_a_booking_inside_the_rules_needs_no_reason(self):
+        self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(self.day, time="08:30"))
+        self.assertEqual(Appointment.objects.count(), 1)
+        self.assertFalse(RuleOverride.objects.exists())
 
     def test_the_only_qualified_person_is_assigned_automatically(self):
         self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(self.day))
@@ -113,8 +141,12 @@ class BookingTests(JobsTestCase):
 
     def test_a_maintenance_plan_as_a_repeating_series(self):
         first = datetime.date(timezone.localdate().year + 1, 1, 31)
-        response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(first, service=self.monthly.pk, condition_level="", repeat="monthly", visits="3", time="09:00"))
+        # The visits are more than 90 days ahead, past the furthest bookable date.
+        data = self.booking_data(first, service=self.monthly.pk, condition_level="", repeat="monthly", visits="3", time="09:00")
+        self.assertContains(self.client.post(reverse("appointment-new", args=[self.customer.pk]), data), "Too far ahead")
+        response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on", "override_reason": "Booked for next year"})
         series = RecurringSeries.objects.get()
+        self.assertEqual(RuleOverride.objects.filter(appointment__series=series).count(), 3)
         visits = list(series.appointments.order_by("scheduled_start"))
         self.assertRedirects(response, reverse("appointment", args=[visits[0].pk]))
         self.assertEqual([timezone.localtime(v.scheduled_start).date() for v in visits],
@@ -138,7 +170,7 @@ class BookingTests(JobsTestCase):
 class ChangingAJobTests(JobsTestCase):
     def setUp(self):
         super().setUp()
-        self.day = timezone.localdate() + datetime.timedelta(days=14)
+        self.day = open_day(14)
         self.job = booking.book(self.customer, self.vehicle, local(self.day), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
 
     def test_every_job_screen_loads(self):
@@ -150,10 +182,28 @@ class ChangingAJobTests(JobsTestCase):
     def test_changing_the_time_does_not_reprice(self):
         lines = list(self.job.lines.values_list("description", "amount"))
         quote = self.job.quote_id
-        self.client.post(reverse("appointment-edit", args=[self.job.pk]), self.booking_data(self.day, time="09:30", crew_size="1"))
+        self.client.post(reverse("appointment-edit", args=[self.job.pk]), self.booking_data(self.day, time="09:00", crew_size="1"))
+        self.job.refresh_from_db()
+        self.assertEqual(timezone.localtime(self.job.scheduled_start).time(), datetime.time(9, 0))
+        self.assertEqual((list(self.job.lines.values_list("description", "amount")), self.job.quote_id), (lines, quote))
+
+    def test_moving_a_job_outside_the_rules_needs_a_reason(self):
+        data = self.booking_data(self.day, time="09:30", crew_size="1")
+        self.assertContains(self.client.post(reverse("appointment-edit", args=[self.job.pk]), data), "9:30 AM is not a start time")
+        self.job.refresh_from_db()
+        self.assertEqual(timezone.localtime(self.job.scheduled_start).time(), datetime.time(8, 0))
+        self.client.post(reverse("appointment-edit", args=[self.job.pk]), {**data, "override": "on", "override_reason": "Customer's gate opens at 9:30"})
         self.job.refresh_from_db()
         self.assertEqual(timezone.localtime(self.job.scheduled_start).time(), datetime.time(9, 30))
-        self.assertEqual((list(self.job.lines.values_list("description", "amount")), self.job.quote_id), (lines, quote))
+        self.assertEqual(self.job.rule_overrides.get().reason, "Customer's gate opens at 9:30")
+
+    def test_changing_only_the_notes_is_not_checked(self):
+        self.job.scheduled_start = local(self.day, 10, 15)
+        self.job.service_address = self.address
+        self.job.save()
+        self.client.post(reverse("appointment-edit", args=[self.job.pk]), self.booking_data(self.day, time="10:15", crew_size="1", notes="Dog in the yard"))
+        self.job.refresh_from_db()
+        self.assertEqual(self.job.notes, "Dog in the yard")
 
     def test_changing_the_services_needs_a_reason_and_reprices(self):
         data = self.booking_data(self.day, condition_level="3", crew_size="1")

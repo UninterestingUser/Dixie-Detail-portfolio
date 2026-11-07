@@ -1,7 +1,9 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import approval_views, appointment_views, catalog_views, location_views, pricebook_views, staff_views, views
+from . import (
+    approval_views, appointment_views, catalog_views, location_views, pricebook_views, scheduling_views, staff_views, views,
+)
 
 urlpatterns = [
     path("", views.home, name="home"),
@@ -22,6 +24,13 @@ urlpatterns = [
     path("sales-tax/rates/<int:pk>/approve/", location_views.rate_approve, name="rate-approve"),
     path("sales-tax/rates/<int:pk>/reject/", location_views.rate_reject, name="rate-reject"),
     path("sales-tax/states/<int:pk>/", location_views.state_rate, name="state-rate"),
+    # Scheduling settings and the open-times view (decision 0056).
+    path("settings/scheduling/", scheduling_views.scheduling_settings, name="scheduling-settings"),
+    path("settings/scheduling/exceptions/", scheduling_views.date_exception_add, name="date-exception-add"),
+    path("settings/scheduling/exceptions/<int:pk>/delete/", scheduling_views.date_exception_delete, name="date-exception-delete"),
+    path("settings/scheduling/changes/<int:pk>/", scheduling_views.scheduling_change, name="scheduling-change"),
+    path("settings/scheduling/waiting/", scheduling_views.scheduling_waiting, name="scheduling-waiting"),
+    path("open-times/", scheduling_views.open_times, name="open-times"),
     # Jobs.
     path("schedule/", appointment_views.schedule_day, name="schedule"),
     path("schedule/week/", appointment_views.schedule_week, name="schedule-week"),

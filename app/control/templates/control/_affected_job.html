@@ -1,0 +1,12 @@
+<li class="card">
+  <strong><a href="{% url 'appointment' affected.appointment.pk %}">{{ affected.appointment.customer }}</a>, {{ affected.appointment.scheduled_start|date:"D M j, Y, g:i A" }}</strong>
+  {% for rule in affected.rules_broken %}<span class="sub warn">{{ rule }}</span>{% endfor %}
+  {% if affected.choice %}
+    <span class="sub">{{ affected.get_choice_display }}{% if affected.decided_by %} by {{ affected.decided_by }}{% endif %}, {{ affected.decided_at|date:"M j, Y" }}</span>
+  {% elif can_edit %}
+    <div class="button-row">
+      <label><input type="checkbox" name="keep-{{ affected.pk }}"> Keep as booked</label>
+      <a class="button" href="{% url 'appointment-edit' affected.appointment.pk %}">Reschedule</a>
+    </div>
+  {% endif %}
+</li>

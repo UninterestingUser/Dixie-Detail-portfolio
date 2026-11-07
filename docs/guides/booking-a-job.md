@@ -4,7 +4,7 @@ summary: How to book a job or a repeating maintenance series in the control app 
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-07
 tags: [guides, booking, appointments, schedule, maintenance, control-app]
 related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md]
 ---
@@ -22,23 +22,24 @@ The control app opens on **Schedule**, today's jobs. Every price is worked out b
 ## Book a job
 
 1. Tap **Book a job** on the schedule, find the customer (see [finding-a-customer.md](finding-a-customer.md)), and tap **Book a job** on their page.
-2. **When and where:** pick the vehicle, the service address, the date and the arrival time. Any date can be booked; the availability rules arrive in Phase 3.
+2. **When and where:** pick the vehicle, the service address, the date and the arrival time. The **Open times** link shows the open start times for the next 90 days. Any date and time can be booked, but one outside the scheduling rules shows a warning first (see below).
 3. **What:** pick the service. The vehicle class and size come from the vehicle; change them if they are wrong. Pick the condition level for Full Detail, Interior Only and Exterior Only. Tick any add-ons. Leave the crew as the service's default (one person, or two for Monthly Maintenance) unless you know otherwise.
 4. The **Price** box updates as you change anything: each line, the total before tax, the **service time** for the crew and the **time on site** with setup and breakdown. "Full day: consider a second person" appears for 8 or more hours on site for one person. Sales tax is added from Phase 3.
-5. Tap **Book**. The job opens. When only one active staff member is qualified for a one-person job (today, you), they are assigned at once; otherwise assign staff as in [assigning-staff.md](assigning-staff.md). A warning appears if the job overlaps another that day.
+5. Tap **Book**. If the time breaks a scheduling rule, such as a closed day, a time not in the day's start times or a full day, a warning names each rule. Pick another time, or, as a manager, give the reason and tap **Book outside the rules**; the reason is logged with the job. Then the job opens. When only one active staff member is qualified for a one-person job (today, you), they are assigned at once; otherwise assign staff as in [assigning-staff.md](assigning-staff.md). A warning appears if the job overlaps another that day.
 
 ## Book a maintenance plan
 
 Monthly and Quarterly Maintenance are booked only here, never on the website.
 
 - **A single visit:** book it like any other job, with **Repeat** left at "A single visit".
-- **A repeating series:** set **Repeat** to Monthly or Quarterly and **Visits** to how many, the first included (2 to 24). Monthly visits fall on the same day of each month, Quarterly every three months, at the same time; in a shorter month the visit moves to the last day. Each visit is a job of its own, priced from the pricebook in effect on its date, and the job page shows it is part of a series.
+- **A repeating series:** set **Repeat** to Monthly or Quarterly and **Visits** to how many, the first included (2 to 24). Monthly visits fall on the same day of each month, Quarterly every three months, at the same time; in a shorter month the visit moves to the last day. Each visit is a job of its own, priced from the pricebook in effect on its date, and the job page shows it is part of a series. Visits more than 90 days ahead are past the furthest bookable date, so the warning lists them; give one reason to book the whole series.
+- **A second job the same day:** two Monthly Maintenance jobs, two Motorcycle Details or one of each can share a day. **Open times** shows the second job's placed start: the first job's end plus the drive, at least 30 minutes, rounded up to the quarter hour. Book it at that time or later on the quarter hour.
 
 ## Change a job
 
 Open the job and tap **Change job**.
 
-- **Date, time, vehicle, address or notes:** change them and tap **Save**. The price stays as booked.
+- **Date, time, vehicle, address or notes:** change them and tap **Save**. The price stays as booked. A new date, time or address is checked against the scheduling rules, with the same warning as booking. A job listed after a scheduling settings change is marked rescheduled when you move it.
 - **What the job is priced from** (service, class, size, condition, add-ons or crew): the Price box shows the new price and says the job will be re-priced. Give a reason, such as "Customer added seat extraction", and tap **Save**. The reason is kept in the job's **Changes** list. Completed and canceled jobs keep their prices; use the final price instead.
 
 ## Mark it completed or canceled

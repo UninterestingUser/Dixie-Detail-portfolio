@@ -27,6 +27,13 @@ def local(day, hour=8, minute=0):
     return timezone.make_aware(datetime.datetime.combine(day, datetime.time(hour, minute)))
 
 
+def open_day(days_ahead):
+    """The first Monday to Saturday at least days_ahead from today, so a
+    booking at a launch start time breaks no scheduling rule."""
+    day = timezone.localdate() + datetime.timedelta(days=days_ahead)
+    return day + datetime.timedelta(days=1) if day.weekday() == 6 else day
+
+
 class JobsTestCase(TestCase):
     """The pricebook as loaded from data/, a customer with a crossover, the
     owner (a manager, signed in) and two invented helpers."""

@@ -1,9 +1,11 @@
-"""Time on site, and the scheduling launch values it reads.
+"""Time on site, and the scheduling settings it reads.
 
 Time on site = setup + service time + breakdown, rounded to the nearest 15
 minutes (decision 0056). Setup and breakdown are minutes for one person,
-divided by the number of people on the job. Until Phase 3 adds the settings screen, the values come from
-data/booking-rules.yaml.
+divided by the number of people on the job. The values are the scheduling
+settings in the database (scheduling.models), seeded from
+data/booking-rules.yaml and changed on the control app's scheduling
+settings screen. A booked job keeps the minutes it was booked with.
 """
 
 from dataclasses import dataclass
@@ -21,14 +23,15 @@ class SchedulingValues:
     time_on_site_rounding_minutes: int
 
 
-@cache
-def launch_values():
-    """The setup, breakdown and rounding launch values from data/booking-rules.yaml."""
-    rules = yaml.safe_load((settings.DATA_DIR / "booking-rules.yaml").read_text())
+def current_values():
+    """The setup, breakdown and rounding settings in effect now."""
+    from scheduling.models import SchedulingSettings
+
+    row = SchedulingSettings.get()
     return SchedulingValues(
-        setup_minutes_one_person=int(rules["setup_minutes_one_person"]),
-        breakdown_minutes_one_person=int(rules["breakdown_minutes_one_person"]),
-        time_on_site_rounding_minutes=int(rules["time_on_site_rounding_minutes"]),
+        setup_minutes_one_person=row.setup_minutes_one_person,
+        breakdown_minutes_one_person=row.breakdown_minutes_one_person,
+        time_on_site_rounding_minutes=row.time_on_site_rounding_minutes,
     )
 
 
@@ -62,10 +65,10 @@ class TimeOnSite:
 def time_on_site(service_minutes, crew_size, values=None):
     """Setup and breakdown, divided by the number of people, around the crew's
     service time: 30 + 30 minutes for one person, 15 + 15 for two at launch.
-    The total is rounded to the nearest 15 minutes (the rounding launch value)."""
+    The total is rounded to the nearest 15 minutes (the rounding setting)."""
     if crew_size not in (1, 2):
         raise ValueError("A crew is one or two people.")
-    values = values or launch_values()
+    values = values or current_values()
     setup = round_to_nearest(Decimal(values.setup_minutes_one_person) / crew_size, 1)
     breakdown = round_to_nearest(Decimal(values.breakdown_minutes_one_person) / crew_size, 1)
     total = round_to_nearest(setup + service_minutes + breakdown, values.time_on_site_rounding_minutes)

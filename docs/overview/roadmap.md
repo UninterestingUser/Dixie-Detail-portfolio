@@ -4,7 +4,7 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-29
+updated: 2026-11-07
 tags: [roadmap, phases, status]
 related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/operations/phase-2-vehicle-catalog-runbook.md, docs/decisions/README.md]
 ---
@@ -51,7 +51,6 @@ Answers and checks only the owner can give, including those carried over from Ph
 | The booked job on 2026-11-28 | Attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review |
 | Each vehicle's next visit | Confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083) |
 | Phase 3 | Add a photo to each class's photo card in the control app's class settings; each shows a placeholder until then |
-| Phase 3 | Confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056) |
 | Phase 3 | Ask the accountant about Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, [sales-tax.md](../reference/sales-tax.md)) |
 | Phase 3 | Write short descriptions, in the owner's own words, of each service and condition level for the website |
 | Phase 3 | Collect the Google Business Profile link for the website footer ([data/business.yaml](../../data/business.yaml)) |

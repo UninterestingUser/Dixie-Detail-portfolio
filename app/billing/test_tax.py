@@ -18,6 +18,7 @@ from control.fixtures import JobsTestCase, local
 from customers.models import Address
 from geo.fixtures import FakeServices, import_fixture_rates
 from geo.models import LocationSettings
+from pricebook.models import PricebookVersion
 from pricebook.pricing import issue_quote
 from promotions.models import Promotion
 
@@ -137,9 +138,11 @@ class QuoteTaxTests(JobsTestCase):
         cls.cohutta = address("400 Made Up Ln", "34.9600", "-84.9500", "Whitfield", state="GA", approved_out_of_area=True)
 
     def quote(self, address, **inputs):
+        # The pricebook loaded for the tests takes effect on the real date,
+        # which is after TODAY from 2026-11-07 on, so name its version.
         return issue_quote(
             self.full_detail, self.crossover, size_variant=self.two_rows, condition_level=1,
-            address=address, on=TODAY, **inputs,
+            address=address, on=TODAY, version=PricebookVersion.current(), **inputs,
         )
 
     def test_a_cleveland_quote(self):

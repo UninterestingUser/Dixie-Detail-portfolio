@@ -4,18 +4,18 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
 
-These rules are settled policy. The core app owns scheduling from Phase 3; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml).
+These rules are settled policy. The core app owns scheduling; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml). The settings, the availability check, the manager override and the open-times view are built (Phase 3, Step 2); the calendar sync is built in Step 3.
 
 ## Every scheduling rule is a setting
 
-Every scheduling rule is a setting, so a new working pattern needs only new setting values, not new code ([decision 0056](../decisions/0056-scheduling-rules-are-settings.md)). The launch values are seeded from [data/booking-rules.yaml](../../data/booking-rules.yaml). From Phase 3 the live values will sit in the database and be changed on the control app's settings screen, with change history.
+Every scheduling rule is a setting, so a new working pattern needs only new setting values, not new code ([decision 0056](../decisions/0056-scheduling-rules-are-settings.md)). The live values sit in the database, seeded from [data/booking-rules.yaml](../../data/booking-rules.yaml) the first time they are read, and are changed on the control app's **Account → Scheduling settings** screen, with change history. Only a manager changes them; everyone signed in can see them. The home base, where drive times start, is on the **Location settings** screen, linked from the scheduling settings.
 
 | Setting | Launch value |
 | --- | --- |
@@ -30,16 +30,24 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 | Jobs per day | 1 |
 | Services that can share a day | Monthly Maintenance and Motorcycle Detail, each up to 2 a day (decision 0072) |
 | Gap before a later job the same day | Drive time between the two addresses, at least 30 minutes |
-| Round a later job's start up to | 15 minutes (proposed in decision 0022; the owner has not confirmed it yet) |
+| Round a later job's start up to | The next 15 minutes (confirmed by the owner on 2026-11-04, [decision 0093](../decisions/0093-quarter-hour-rounding-confirmed.md)) |
 | Buffer around a timed Time Off event | 0 minutes |
 | Time Off check | Every 5 minutes, and again when a booking is submitted |
 | Warning when the last Time Off copy is old | Older than 60 minutes |
 
 ## How a scheduling settings change behaves
 
-- **A settings change applies to bookings made after it.** Booked appointments never move. When a change leaves booked jobs outside the new rules, the settings screen will list them for the owner to keep or reschedule, the same way a pricebook publish lists affected jobs.
+- **A settings change applies to bookings made after it.** Booked appointments never move. After each save, and after a date exception is added or removed, every booked job from today on is checked under the rules before and after the change. A job that now breaks a rule it did not break before is listed for the owner to keep or reschedule, the same way a pricebook publish lists affected jobs. The notice and the furthest date are not checked, because a booked job has already passed them ([decision 0094](../decisions/0094-how-the-availability-check-places-and-shares.md)).
+- **Keep or reschedule.** "Keep as booked" records the choice and changes nothing. "Reschedule" opens the job's change screen; a listed job that is moved or canceled is marked rescheduled or canceled. Jobs still waiting for a choice are counted on the settings screen.
 - **Each appointment keeps its times as booked:** its start (arrival) time, setup minutes, service minutes, breakdown minutes and crew size, so a later settings change never alters it.
-- **A manager can book outside any rule** in the control app (a closed day, a Time Off block, a full day) after a warning, with a reason. The website never can.
+
+## The manager override
+
+A manager can book outside any rule in the control app after a warning, with a reason. The website never can: its booking path takes only an open time.
+
+- **What is checked.** Booking a job or a repeating series, and changing a job's date, time, address or what it is priced from, run the availability check. Changing only the notes, the vehicle or the crew is not checked.
+- **The warning** names each rule broken and each date, such as "Start times: 10:15 AM is not a start time on Tuesdays" or "Open day: Closed on Sundays".
+- **Going ahead.** A manager gives a reason and books or saves outside the rules. The rules broken, the reason, who and when are logged with the job as a rule override. Anyone else is asked to pick another time.
 
 ## Time on site
 
@@ -54,7 +62,7 @@ Examples: one person with 5 hours of service is 6 hours on site, so an 8:00 arri
 
 ## The availability check
 
-One availability check covers every case. From Phase 3, a start time will be offered online only when all of these hold:
+One availability check covers every case (`scheduling.availability`). A start time is open only when all of these hold:
 
 1. The day is an open weekday, isn't closed by a date exception or an all-day Time Off event, and falls between the minimum notice and the furthest bookable date.
 2. The start time is in that day's list of start times.
@@ -65,13 +73,37 @@ One availability check covers every case. From Phase 3, a start time will be off
 
 The availability check assumes one crew working one job at a time. Two crews on separate jobs at once would be a later design change.
 
+### What the availability check returns
+
+For each date, the availability check returns the open start times and, for each closed time, the reasons it is closed, each under the name of its rule. A closed day gives the day's reasons instead, such as "Closed on Sundays" or "Too soon: bookings need 2 days' notice". It reads everything for a range of dates in a few database queries, so it answers 90 days at once.
+
+- **Start times.** A day offers its list of start times. A date exception with different hours offers its own start times, or the weekday's start times that fall within its hours.
+- **A placed start.** A day that already has a job also offers the placed start after it: that job's end plus the gap, rounded up. A placed start at or after closing time is not offered. The owner may book a later job at any time after the placed start that falls on the rounding step ([decision 0094](../decisions/0094-how-the-availability-check-places-and-shares.md)).
+- **Drive between jobs** comes from the drive times below, leaving at the earlier job's end. Without a location for both addresses, the gap is the minimum gap alone, and the reason says so.
+- **A shared day** holds up to the jobs-per-day setting or, if higher, the largest per-day maximum among its services: two at launch.
+- **Time Off.** The check reads the local copy of the Time Off calendar. The calendar sync that fills the copy is built in Phase 3, Step 3; until then the copy is empty and blocks nothing.
+- **Canceled jobs** don't count. Requested, booked and completed jobs do.
+
+### Eastern time in every rule
+
+Every scheduling rule is in Eastern time ([decision 0048](../decisions/0048-times-utc-shown-eastern.md)).
+
+- **The notice turns over at midnight Eastern.** At 11:59 PM Eastern on a Monday, two days' notice still makes Wednesday the first bookable date, though it is already Tuesday in UTC.
+- **Start times are Eastern clock times.** 8:00 AM is 8:00 AM on both sides of the change to and from daylight saving time.
+- **Lengths of time are real minutes.** A two-hour job starting at 12:30 AM on the day daylight saving time ends finishes at 1:30 AM standard time, and the next job's placed start is 2:00 AM.
+- **A start time the clocks skip,** such as 2:30 AM on the day daylight saving time starts, is closed with that reason.
+
+## The open-times view
+
+The control app's **Open times** screen, under Account and on the booking form, shows the next 90 days for a job: each open start time, each placed start with the job it follows, and the reasons each closed time is closed. The owner picks a service, vehicle class, size, condition level and crew, and can paste the job's location from Google Maps to count the drive from other jobs that day. The owner uses it to test the settings.
+
 ## Daily capacity at launch
 
 At launch each day takes one job, whatever its length. The only jobs that can share a day are Monthly Maintenance and Motorcycle Detail jobs: two Monthly Maintenance, two Motorcycle Detail, or one of each (decision 0072). Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
 
 New patterns need only settings. Afternoon slots: add 13:00 to the start times, set jobs per day to 2 and let the shorter services share a day. Two regular jobs a day: set jobs per day to 2 and let every service share a day.
 
-The 30-minute minimum gap is the owner's rule. Rounding a later job's start up to the quarter hour was proposed during planning and is not yet confirmed by the owner.
+The 30-minute minimum gap is the owner's rule. Rounding a later job's start up to the next quarter hour was confirmed by the owner on 2026-11-04 ([decision 0093](../decisions/0093-quarter-hour-rounding-confirmed.md)).
 
 ## Maintenance plans are booked by the owner
 
@@ -79,7 +111,7 @@ Monthly and Quarterly Maintenance never appear on the website. The owner books t
 
 - **A Monthly series** repeats on the same day of each month and **a Quarterly series** every three months, at the same arrival time. In a month too short for that day, the visit falls on the month's last day.
 - **Each visit is its own job,** priced from the pricebook in effect on its own date, with its own quote, so a series can span a price change. A series has 2 to 24 visits.
-- **The owner can book any date in the control app,** outside every scheduling rule; the availability check and its manager override arrive in Phase 3. The control app warns when a job overlaps another that day.
+- **Each visit is checked against the scheduling rules.** A visit outside them, such as one more than 90 days ahead, is listed in the warning, and a manager books the series with one reason, logged with each visit outside the rules. The control app also warns when a job overlaps another that day.
 
 ## The two Google Workspace calendars
 

@@ -10,7 +10,7 @@ from billing.models import TaxRate
 from geo.fixtures import FakeServices, import_fixture_rates, with_google_key
 from geo.models import LocationSettings
 
-from .fixtures import JobsTestCase
+from .fixtures import JobsTestCase, open_day
 
 
 class LocationScreensTestCase(JobsTestCase):
@@ -109,7 +109,7 @@ class LocationSettingsTests(LocationScreensTestCase):
         settings.save()
         self.address.latitude, self.address.longitude = Decimal("35.161200"), Decimal("-84.877000")
         self.address.save()
-        day = datetime.date.today() + datetime.timedelta(days=10)
+        day = open_day(10)
         self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(day))
         appointment = self.customer.appointments.get()
         self.assertEqual((appointment.drive_minutes, appointment.drive_estimated), (9, True))
@@ -143,7 +143,7 @@ class SalesTaxScreenTests(LocationScreensTestCase):
     def test_the_job_screen_shows_the_tax_line(self):
         self.address.latitude, self.address.longitude, self.address.county = Decimal("35.161200"), Decimal("-84.877000"), "Bradley"
         self.address.save()
-        day = datetime.date.today() + datetime.timedelta(days=10)
+        day = open_day(10)
         self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(day))
         response = self.client.get(reverse("appointment", args=[self.customer.appointments.get().pk]))
         self.assertContains(response, "Sales tax, Cleveland (9.75%)")
