@@ -1,0 +1,28 @@
+{# The rules alert under the date and time (decision 0096). The live check swaps it in out of band. #}
+<div id="rules-alert"{% if oob %} hx-swap-oob="true"{% endif %}>
+{% if alert %}
+  <section class="notice rules-alert" role="alert" aria-label="Outside the scheduling rules">
+    <ul class="reasons">
+      {% for start, reasons in alert.broken %}
+        {% if alert.dated %}
+          <li><strong>{{ start|date:"D M j, Y, g:i A" }}</strong><ul>{% for reason in reasons %}<li>{{ reason }}</li>{% endfor %}</ul></li>
+        {% else %}
+          {% for reason in reasons %}<li>{{ reason }}</li>{% endfor %}
+        {% endif %}
+      {% endfor %}
+    </ul>
+    {% if alert.is_manager %}
+      <p>Booking off hours is allowed. Give the reason below and it will be logged with the job.</p>
+      {% with field=form.override_reason %}
+      <div class="field{% if field.errors %} has-error{% endif %}">
+        <label for="{{ field.id_for_label }}">Reason</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+      </div>
+      {% endwith %}
+    {% else %}
+      <p>Only a manager can book off hours. Pick another time.</p>
+    {% endif %}
+  </section>
+{% endif %}
+</div>

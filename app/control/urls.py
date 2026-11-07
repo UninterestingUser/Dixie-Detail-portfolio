@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import (
-    approval_views, appointment_views, catalog_views, location_views, pricebook_views, scheduling_views, staff_views, views,
+    approval_views, appointment_views, catalog_views, location_views, pricebook_views, schedule_views, scheduling_views, staff_views, views,
 )
 
 urlpatterns = [
@@ -32,14 +32,15 @@ urlpatterns = [
     path("settings/scheduling/waiting/", scheduling_views.scheduling_waiting, name="scheduling-waiting"),
     path("open-times/", scheduling_views.open_times, name="open-times"),
     # Jobs.
-    path("schedule/", appointment_views.schedule_day, name="schedule"),
-    path("schedule/week/", appointment_views.schedule_week, name="schedule-week"),
+    path("schedule/", schedule_views.schedule, name="schedule"),
+    path("schedule/more/", schedule_views.schedule_more, name="schedule-more"),
     path("customers/<int:customer_pk>/appointments/new/", appointment_views.appointment_new, name="appointment-new"),
     path("customers/<int:customer_pk>/appointments/price/", appointment_views.appointment_price, name="appointment-price-new"),
     path("appointments/<int:pk>/", appointment_views.appointment, name="appointment"),
     path("appointments/<int:pk>/edit/", appointment_views.appointment_edit, name="appointment-edit"),
     path("appointments/<int:pk>/price/", appointment_views.appointment_price, name="appointment-price"),
     path("appointments/<int:pk>/status/", appointment_views.appointment_status, name="appointment-status"),
+    path("appointments/<int:pk>/cancel/", appointment_views.appointment_cancel, name="appointment-cancel"),
     path("appointments/<int:pk>/final-price/", appointment_views.appointment_final_price, name="appointment-final-price"),
     path("appointments/<int:pk>/staff/", appointment_views.appointment_staff, name="appointment-staff"),
     # Staff and the services they are authorized for.

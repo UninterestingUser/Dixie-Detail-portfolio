@@ -102,10 +102,10 @@ class AppointmentForm(forms.Form):
     notes = forms.CharField(widget=forms.Textarea(attrs={"rows": 3}), required=False)
     reason = forms.CharField(required=False, max_length=200, label="Reason for changing the services",
                              help_text="Needed when you change what a booked job is priced from.")
-    # A manager booking outside a scheduling rule gives a reason (decision 0056).
-    override_reason = forms.CharField(required=False, max_length=500, label="Reason for booking outside the rules",
-                                      widget=forms.Textarea(attrs={"rows": 2}))
-    override = forms.BooleanField(required=False, widget=forms.HiddenInput)
+    # A manager booking off hours gives a reason, shown only while the
+    # choice breaks a scheduling rule (decisions 0056 and 0096).
+    override_reason = forms.CharField(required=False, max_length=500, label="Reason for booking off hours",
+                                      widget=forms.Textarea(attrs={"rows": 2, "required": True}))
 
     def __init__(self, *args, customer, editing=False, **kwargs):
         super().__init__(*args, **kwargs)

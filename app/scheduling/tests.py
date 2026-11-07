@@ -124,7 +124,7 @@ class OpenDayTests(SchedulingTestCase):
     def test_sunday_is_closed(self):
         sunday = TUESDAY - datetime.timedelta(days=2)
         day = open_times(self.job(), sunday, sunday, now=NOW)[0]
-        self.assertEqual((rules_text(day.reasons), day.slots), (["Open day: Closed on Sundays"], []))
+        self.assertEqual((rules_text(day.reasons), day.slots), (["Open day: Sunday is a closed day"], []))
 
     def test_a_date_exception_closes_the_day(self):
         DateException.objects.create(date=TUESDAY, kind=DateException.Kind.CLOSED, reason="Family wedding")
@@ -489,7 +489,7 @@ class SettingsScreenTests(SchedulingTestCase):
         page = self.client.get(reverse("open-times"), {"service": self.monthly.pk, "vehicle_class": self.crossover.pk,
                                                        "size_variant": self.two_rows.pk, "crew_size": "2"})
         self.assertContains(page, "Monthly Maintenance")
-        self.assertContains(page, "Closed on Sundays")
+        self.assertContains(page, "Sunday is a closed day")
         self.assertContains(page, "Too soon")
         self.assertContains(page, "8:00 AM")
         self.assertEqual(page.content.decode().count('<li class="card">'), 90)

@@ -1,12 +1,13 @@
 {% load control %}
-{% if not query %}
-  <p class="hint">Type a name or a phone number. Any format works: 423-555-0142, (423) 555-0142, or just the last four digits.</p>
-{% elif customers %}
+{% if customers %}
   <ul class="list">
     {% for customer in customers %}
       <li>
         <a class="row" href="{% url 'customer' customer.pk %}">
-          <strong>{{ customer }}</strong>{% if customer.company %} <span class="muted">· {{ customer.company }}</span>{% endif %}
+          <div class="card-head">
+            <span><strong>{{ customer }}</strong>{% if customer.company %} <span class="muted">· {{ customer.company }}</span>{% endif %}</span>
+            <span class="badge" title="Completed jobs">{{ customer.completed_jobs }} job{{ customer.completed_jobs|pluralize }}</span>
+          </div>
           <span class="sub">{{ customer.mobile|phone|default:"No phone number" }}</span>
           {% with vehicles=customer.vehicles.all contacts=customer.second_contacts.all %}
             {% if vehicles %}<span class="sub">{{ vehicles|join:"; " }}</span>{% endif %}
@@ -17,7 +18,9 @@
     {% endfor %}
   </ul>
   {% if more %}<p class="hint">Showing the first {{ customers|length }}. Type more to narrow it down.</p>{% endif %}
-{% else %}
+{% elif query %}
   <p class="hint">No customer matches “{{ query }}”.</p>
   <p><a class="button" href="{% url 'customer-new' %}">Add a new customer</a></p>
+{% else %}
+  <p class="hint">No customers yet.</p>
 {% endif %}

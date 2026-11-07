@@ -53,3 +53,22 @@ def percent(value):
         return ""
     text = f"{value:f}"
     return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+@register.filter
+def notice_given(delta):
+    """How much notice a cancellation gave, from the time between it and
+    the job's start: "3 days, 4 hours' notice", "5 hours' notice"."""
+    if delta is None:
+        return ""
+    if delta.total_seconds() <= 0:
+        return "Canceled after the start time"
+    hours = int(delta.total_seconds() // 3600)
+    if hours < 1:
+        return "Less than an hour's notice"
+    days, hours = divmod(hours, 24)
+    parts = [f"{days} day{'' if days == 1 else 's'}"] if days else []
+    if hours:
+        parts.append(f"{hours} hour{'' if hours == 1 else 's'}")
+    text = ", ".join(parts)
+    return text + ("' notice" if text.endswith("s") else "'s notice")

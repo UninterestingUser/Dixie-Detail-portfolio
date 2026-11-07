@@ -6,12 +6,12 @@ visibility: internal
 status: current
 updated: 2026-11-07
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
 
-These rules are settled policy. The core app owns scheduling; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml). The settings, the availability check, the manager override and the open-times view are built (Phase 3, Step 2); the calendar sync is built in Step 3.
+These rules are settled policy. The core app owns scheduling; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml). The settings, the availability check, the manager override, canceling and the open-times view are built (Phase 3, Step 2); the calendar sync is built in Step 3.
 
 ## Every scheduling rule is a setting
 
@@ -43,11 +43,21 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 
 ## The manager override
 
-A manager can book outside any rule in the control app after a warning, with a reason. The website never can: its booking path takes only an open time.
+A manager can book off hours, outside any rule, in the control app by giving a reason. The website never can: its booking path takes only an open time.
 
 - **What is checked.** Booking a job or a repeating series, and changing a job's date, time, address or what it is priced from, run the availability check. Changing only the notes, the vehicle or the crew is not checked.
-- **The warning** names each rule broken and each date, such as "Start times: 10:15 AM is not a start time on Tuesdays" or "Open day: Closed on Sundays".
-- **Going ahead.** A manager gives a reason and books or saves outside the rules. The rules broken, the reason, who and when are logged with the job as a rule override. Anyone else is asked to pick another time.
+- **When it is checked.** On the booking and change forms, as soon as the date or time changes, and again when anything else that affects the check changes, such as the services, vehicle or crew ([decision 0096](../decisions/0096-booking-off-hours-inline-and-calendar-views.md)). The server checks again when the form is sent.
+- **The alert** appears right under the date and time while the choice breaks a rule. It names each rule broken in plain words, such as "Sunday is a closed day" or "10:15 AM is not a start time on Tuesdays", by date for a series; then says "Booking off hours is allowed. Give the reason below and it will be logged with the job."; then shows a reason box, required while the alert shows. A choice that fits removes the alert and the box, and nothing is logged.
+- **Going ahead.** A manager types the reason and taps the one **Book** (or **Save**) button. If the form is sent without a reason while a rule is broken, such as when the time was taken in the meantime, it comes back with the alert and the box. Anyone else is told only a manager can book off hours and to pick another time.
+- **The log.** Each override records whether the job was booked, moved or had its services changed, the start it was booked for, the rules broken, the reason, who and when. The job's page lists every one under **Booked off hours**.
+
+## Canceled and removed jobs
+
+A manager cancels a booked job from the **Cancel job** popup on its page ([decision 0095](../decisions/0095-canceling-and-removing-jobs.md)).
+
+- **Customer canceled** or **Dixie Detail canceled** marks the job canceled, with who canceled, who pressed the button and when. Its time is free at once: the availability check, open times, every schedule view and every list of booked jobs leave it out. A canceled job stays canceled.
+- **Created by mistake,** after a second confirmation, deletes the job and everything it left: lines, staff assignments, flags, rule overrides, change history, and its quotes when nothing else uses them. A job with a payment recorded can't be removed this way.
+- **A series visit** is canceled or removed alone, or with the series' later booked visits.
 
 ## Time on site
 
@@ -75,7 +85,7 @@ The availability check assumes one crew working one job at a time. Two crews on 
 
 ### What the availability check returns
 
-For each date, the availability check returns the open start times and, for each closed time, the reasons it is closed, each under the name of its rule. A closed day gives the day's reasons instead, such as "Closed on Sundays" or "Too soon: bookings need 2 days' notice". It reads everything for a range of dates in a few database queries, so it answers 90 days at once.
+For each date, the availability check returns the open start times and, for each closed time, the reasons it is closed, each under the name of its rule. A closed day gives the day's reasons instead, such as "Sunday is a closed day" or "Too soon: bookings need 2 days' notice". It reads everything for a range of dates in a few database queries, so it answers 90 days at once.
 
 - **Start times.** A day offers its list of start times. A date exception with different hours offers its own start times, or the weekday's start times that fall within its hours.
 - **A placed start.** A day that already has a job also offers the placed start after it: that job's end plus the gap, rounded up. A placed start at or after closing time is not offered. The owner may book a later job at any time after the placed start that falls on the rounding step ([decision 0094](../decisions/0094-how-the-availability-check-places-and-shares.md)).
@@ -111,7 +121,7 @@ Monthly and Quarterly Maintenance never appear on the website. The owner books t
 
 - **A Monthly series** repeats on the same day of each month and **a Quarterly series** every three months, at the same arrival time. In a month too short for that day, the visit falls on the month's last day.
 - **Each visit is its own job,** priced from the pricebook in effect on its own date, with its own quote, so a series can span a price change. A series has 2 to 24 visits.
-- **Each visit is checked against the scheduling rules.** A visit outside them, such as one more than 90 days ahead, is listed in the warning, and a manager books the series with one reason, logged with each visit outside the rules. The control app also warns when a job overlaps another that day.
+- **Each visit is checked against the scheduling rules.** A visit outside them, such as one more than 90 days ahead, is listed by date in the alert, and a manager books the series with one reason, logged with each visit outside the rules. The control app also warns when a job overlaps another that day.
 
 ## The two Google Workspace calendars
 

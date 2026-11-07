@@ -52,7 +52,13 @@ METHODS = {
     "gift card": PaymentMethod.GIFT_CARD,
     "bitcoin": PaymentMethod.BITCOIN,
 }
-STATUSES = {"completed": Appointment.Status.COMPLETED, "booked": Appointment.Status.BOOKED}
+STATUSES = {
+    "completed": Appointment.Status.COMPLETED,
+    "booked": Appointment.Status.BOOKED,
+    # A canceled job is imported as canceled, with no detail of who canceled (decision 0095).
+    "canceled": Appointment.Status.CANCELED,
+    "cancelled": Appointment.Status.CANCELED,
+}
 PROMO_KINDS = {"percentage off": Promotion.Kind.PERCENT_OFF, "fixed price": Promotion.Kind.FIXED_PRICE}
 CUSTOMER_FIELDS = {"first_name", "last_name", "email", "company", "phone"}
 ADDRESS_FIELDS = {"address": "line1", "city": "city", "state": "state", "zip": "zip_code"}
@@ -82,6 +88,8 @@ class Report:
     questions: list = field(default_factory=list)
     checks: list = field(default_factory=list)
     helper_pay: list = field(default_factory=list)
+    # Imported booked jobs no longer in the export, left for the owner.
+    missing: list = field(default_factory=list)
 
     def count(self, kind, created=None):
         if created is None:
@@ -442,9 +450,11 @@ class Importer:
         promotions = {}
         staff = self.staff_members()
 
+        seen = set()
         for row in self.tables["Appointments"]:
             where = f"Appointments id {row['id']}"
             baserow_id = int(row["id"])
+            seen.add(baserow_id)
             fix = fixes.pop(baserow_id, {})
             customer = self.customer_for(row["Customer"])
             if customer is None:
@@ -477,6 +487,12 @@ class Importer:
                     vehicle = self.fixed_vehicle(where, value, customer, fix)
                 else:
                     self.report.warn(where, f"the corrections file sets {name!r}, which the import does not know")
+
+            existing = Appointment.objects.filter(baserow_id=baserow_id).first()
+            if existing and existing.canceled_by and status != Appointment.Status.CANCELED:
+                # Canceled in the app since the last run: a fresh export never undoes it.
+                self.report.warn(where, f"canceled in the app ({existing.get_canceled_by_display().lower()}), still {status} in Baserow; kept canceled")
+                status = Appointment.Status.CANCELED
 
             names = parsing.split_list(row["Staff"])
             crew_size = min(max(len(names), 1), 2)
@@ -524,6 +540,15 @@ class Importer:
                 used_bookkeeping.add(book_row["id"])
             self.import_payments(appointment, row, book_row, fix, bookkeeping_fixes, where)
             self.import_staff(appointment, row, book_row, names, staff, fix, where)
+
+        # A booked job imported earlier and missing from this export is never
+        # removed silently: it is listed for the owner to deal with.
+        gone = Appointment.objects.filter(baserow_id__isnull=False, status=Appointment.Status.BOOKED).exclude(baserow_id__in=seen)
+        for appointment in gone.select_related("customer").order_by("scheduled_start"):
+            when = timezone.localtime(appointment.scheduled_start).strftime("%a %b %-d, %Y, %-I:%M %p")
+            self.report.missing.append(
+                f"Appointments id {appointment.baserow_id}: {appointment.customer}, {when}, booked here but not in this export; left as it is"
+            )
 
         for book_row in self.tables["Bookkeeping"]:
             if book_row["id"] not in used_bookkeeping:

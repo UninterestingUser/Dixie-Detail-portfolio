@@ -29,7 +29,7 @@
   {% if user.is_authenticated %}
     {% with here=request.resolver_match.url_name %}
     <nav class="tabbar" aria-label="Main">
-      <a href="{% url 'schedule' %}"{% if here == 'schedule' or here == 'schedule-week' or here == 'appointment' or here == 'appointment-edit' %} aria-current="page"{% endif %}>
+      <a href="{% url 'schedule' %}"{% if here == 'schedule' or here == 'appointment' or here == 'appointment-edit' %} aria-current="page"{% endif %}>
         <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
         <span>Schedule</span>
       </a>

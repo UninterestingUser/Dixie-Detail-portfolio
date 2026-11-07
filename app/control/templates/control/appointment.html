@@ -18,8 +18,27 @@
   <dt>Time on site</dt><dd>{{ stay.total_minutes|duration }}</dd>
   {% endif %}
 </dl>
+{% if appointment.status == 'canceled' %}
+<p class="notice">{% if appointment.canceled_by %}<strong>{{ appointment.get_canceled_by_display }}</strong>{% if appointment.canceled_at %}, {{ appointment.canceled_at|date:"D, M j, Y, g:i A" }}{% endif %}{% if appointment.canceled_by_user %}, by {{ appointment.canceled_by_user }}{% endif %}.{% if appointment.cancel_notice is not None %} <span class="sub">{{ appointment.cancel_notice|notice_given }}</span>{% endif %}{% else %}<strong>Canceled.</strong>{% endif %}</p>
+{% endif %}
 {% if appointment.status == 'booked' or appointment.status == 'completed' %}
 <p><a class="button" href="{% url 'appointment-edit' appointment.pk %}">Change job</a></p>
+{% endif %}
+
+{% if overrides %}
+<section aria-labelledby="overrides-heading">
+  <h2 id="overrides-heading">Booked off hours</h2>
+  <ul class="list">
+    {% for override in overrides %}
+      <li class="card">
+        <strong>{{ override.get_action_display }}{% if override.start %} for {{ override.start|date:"D, M j, Y" }}, {{ override.start|local_time }}{% endif %}</strong>
+        <ul class="reasons">{% for rule in override.rules_broken %}<li>{{ rule }}</li>{% endfor %}</ul>
+        <span class="sub">Reason: {{ override.reason }}</span>
+        <span class="sub">{{ override.made_by|default:"Someone no longer here" }}, {{ override.made_at|date:"M j, Y, g:i A" }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
 {% endif %}
 
 <section aria-labelledby="price-heading">
@@ -84,15 +103,43 @@
   </form>
 </section>
 
+{% if appointment.status != 'canceled' %}
 <section aria-labelledby="status-heading">
   <h2 id="status-heading">Status</h2>
   <form method="post" action="{% url 'appointment-status' appointment.pk %}" class="button-row">
     {% csrf_token %}
     {% if appointment.status != 'completed' %}<button type="submit" name="status" value="completed">Mark completed</button>{% endif %}
     {% if appointment.status != 'booked' %}<button type="submit" name="status" value="booked">Mark booked</button>{% endif %}
-    {% if appointment.status != 'canceled' %}<button type="submit" name="status" value="canceled" class="danger">Cancel job</button>{% endif %}
+    {% if appointment.status == 'booked' and is_manager %}<button type="button" class="danger" data-opens="cancel-dialog">Cancel job</button>{% endif %}
   </form>
 </section>
+{% if appointment.status == 'booked' and is_manager %}
+{# The Cancel job popup (decision 0095). Created by mistake asks once more in a second popup. #}
+<dialog id="cancel-dialog" class="popup" aria-labelledby="cancel-title">
+  <form method="post" action="{% url 'appointment-cancel' appointment.pk %}" class="stack">
+    {% csrf_token %}
+    <h2 id="cancel-title">Cancel this job?</h2>
+    {% if later_visits %}
+    <fieldset>
+      <legend>Which visits</legend>
+      <label class="choice"><input type="radio" name="visits" value="this" checked> <span>This visit only</span></label>
+      <label class="choice"><input type="radio" name="visits" value="later"> <span>This and later visits <span class="sub">This one and the {{ later_visits }} booked after it</span></span></label>
+    </fieldset>
+    {% endif %}
+    <button type="submit" name="cancel" value="customer">Customer canceled</button>
+    <button type="submit" name="cancel" value="business">Dixie Detail canceled</button>
+    <button type="submit" name="cancel" value="mistake" class="danger" data-opens="remove-dialog">Created by mistake</button>
+    <button type="button" data-closes>Keep the job</button>
+    <dialog id="remove-dialog" class="popup" aria-labelledby="remove-title">
+      <p id="remove-title"><strong>Remove this job for good? This can't be undone.</strong></p>
+      <p class="help">It goes with its lines, staff, flags and change history, as if it never existed.</p>
+      <button type="submit" name="remove" value="yes" class="danger">Remove for good</button>
+      <button type="button" data-closes>Keep the job</button>
+    </dialog>
+  </form>
+</dialog>
+{% endif %}
+{% endif %}
 
 {% if appointment.notes %}
 <section aria-labelledby="notes-heading"><h2 id="notes-heading">Notes</h2><div class="card">{{ appointment.notes|linebreaks }}</div></section>

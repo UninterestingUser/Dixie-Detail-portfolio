@@ -278,7 +278,7 @@ def hours_on(rules, day):
         ]
         return Hours(exception.opens_at, exception.closes_at, sorted(starts), "on this date"), None
     if weekday is None or not weekday.is_open:
-        return None, Reason("day", f"Closed on {WEEKDAYS[day.weekday()]}s")
+        return None, Reason("day", f"{WEEKDAYS[day.weekday()]} is a closed day")
     return Hours(weekday.opens_at, weekday.closes_at, sorted(weekday.start_times), f"on {WEEKDAYS[day.weekday()]}s"), None
 
 

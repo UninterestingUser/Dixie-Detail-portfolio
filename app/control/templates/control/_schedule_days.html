@@ -1,0 +1,21 @@
+{# Days of the Schedule list, with the sentinel that loads more as it scrolls into view. #}
+{% if earlier %}
+  {% if before %}<li class="agenda-more" data-earlier hx-get="{% url 'schedule-more' %}?before={{ before|date:'Y-m-d' }}" hx-trigger="intersect once" hx-swap="outerHTML"><span class="muted">Loading earlier days…</span></li>
+  {% elif not only_sentinel %}<li class="agenda-end muted">No earlier jobs.</li>{% endif %}
+{% endif %}
+{% if not only_sentinel %}
+{% for day, appointments in days %}
+  <li class="agenda-day{% if day == today %} today{% endif %}" id="day-{{ day|date:'Y-m-d' }}">
+    <h2><a href="?view=day&amp;date={{ day|date:'Y-m-d' }}">{% if day == today %}Today, {% endif %}{{ day|date:"l, F j" }}</a>{% if day.year != today.year %} <span class="muted">{{ day.year }}</span>{% endif %}</h2>
+    {% if appointments %}
+      <ul class="list">{% for appointment in appointments %}{% include "control/_appointment_row.html" %}{% endfor %}</ul>
+    {% else %}
+      <p class="muted">No jobs today.</p>
+    {% endif %}
+  </li>
+{% endfor %}
+{% if not earlier %}
+  {% if after %}<li class="agenda-more" hx-get="{% url 'schedule-more' %}?after={{ after|date:'Y-m-d' }}" hx-trigger="revealed" hx-swap="outerHTML"><span class="muted">Loading later days…</span></li>
+  {% else %}<li class="agenda-end muted">No later jobs booked.</li>{% endif %}
+{% endif %}
+{% endif %}
