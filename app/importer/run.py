@@ -488,12 +488,6 @@ class Importer:
                 else:
                     self.report.warn(where, f"the corrections file sets {name!r}, which the import does not know")
 
-            existing = Appointment.objects.filter(baserow_id=baserow_id).first()
-            if existing and existing.canceled_by and status != Appointment.Status.CANCELED:
-                # Canceled in the app since the last run: a fresh export never undoes it.
-                self.report.warn(where, f"canceled in the app ({existing.get_canceled_by_display().lower()}), still {status} in Baserow; kept canceled")
-                status = Appointment.Status.CANCELED
-
             names = parsing.split_list(row["Staff"])
             crew_size = min(max(len(names), 1), 2)
             values = current_values()
@@ -519,6 +513,10 @@ class Importer:
                     "source": Appointment.Source.IMPORT,
                     "crew_size": crew_size,
                     "completed_at": start if status == Appointment.Status.COMPLETED else None,
+                    # Baserow's status wins over a cancellation made in the app
+                    # (decision 0095): its details go with it unless Baserow
+                    # also has the job canceled.
+                    **({} if status == Appointment.Status.CANCELED else {"canceled_by": "", "canceled_at": None, "canceled_by_user": None}),
                     "notes": notes,
                     **times,
                 },

@@ -30,7 +30,7 @@ Until now **Cancel job** only set a job's status. A canceled job stayed on the s
 - **Created by mistake** asks once more ("Remove this job for good? This can't be undone."), then deletes the job as if it never existed: its lines, staff assignments, flags, rule overrides, settings-change listings, change history, and every quote it was priced from that nothing else uses. A series left with no visits is deleted too.
 - **A job with a payment, an invoice or a paid helper can't be removed.** The message says so; cancel it instead.
 - **A series visit** adds a choice in the popup: **This visit only** or **This and later visits**. The button pressed applies to that choice: the visit, or the visit and the series' later booked visits. A series with no booked visits left stops repeating.
-- **The Baserow importer** imports a status of Canceled as a canceled job. An imported booked job missing from a fresh export is listed in the report for the owner, never removed. A job canceled in the app stays canceled when Baserow still has it booked. A job removed in the app comes back on the next run while it is still in Baserow, until the last import.
+- **The Baserow importer** imports a status of Canceled as a canceled job. An imported booked job missing from a fresh export is listed in the report for the owner, never removed. Baserow takes precedence over the app until the last import, before launch: a job canceled or removed only in the app comes back as Baserow has it on the next run. After that Baserow is retired.
 
 ## Alternatives considered
 

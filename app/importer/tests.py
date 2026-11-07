@@ -519,11 +519,10 @@ class CanceledJobTests(ImportTestCase):
         self.assertIn("Booked jobs missing from this export, left for you to deal with (1)", report)
         self.assertIn("Appointments id 25: Pat Example, Fri Dec 11, 2026, 8:00 AM, booked here but not in this export; left as it is", report)
 
-    def test_a_job_canceled_in_the_app_stays_canceled(self):
+    def test_baserow_takes_precedence_over_a_cancellation_in_the_app(self):
         self.run_import("--apply")
         job = Appointment.objects.get(baserow_id=25)
         Appointment.objects.filter(pk=job.pk).update(status=Appointment.Status.CANCELED, canceled_by="customer", canceled_at=timezone.now())
-        report = self.run_import("--apply")
+        self.run_import("--apply")
         job.refresh_from_db()
-        self.assertEqual((job.status, job.canceled_by), (Appointment.Status.CANCELED, "customer"))
-        self.assertIn("Appointments id 25: canceled in the app (customer canceled), still booked in Baserow; kept canceled", report)
+        self.assertEqual((job.status, job.canceled_by, job.canceled_at), (Appointment.Status.BOOKED, "", None))
