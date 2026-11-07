@@ -26,11 +26,12 @@ class LocationSettings(models.Model):
     home_latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     home_longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
 
-    # Daily caps on paid Google calls, counted per Pacific day as Google
-    # counts its quotas. They sit below the limits set in Google Cloud (322 a
-    # day for each Places method, 161 for Routes), so the fallbacks start
-    # before Google refuses.
+    # Daily caps on Google calls, counted per Pacific day as Google counts
+    # its quotas. They sit below the limits set in Google Cloud (322 a day
+    # for each Places method, 161 for Routes), so the fallbacks start before
+    # Google refuses.
     place_details_daily_cap = models.PositiveIntegerField(default=300)
+    text_search_daily_cap = models.PositiveIntegerField(default=300)
     routes_daily_cap = models.PositiveIntegerField(default=150)
 
     # The fallback drive time, from straight-line distance, when Google can't
@@ -81,6 +82,7 @@ class ApiUsage(models.Model):
 
     class Api(models.TextChoices):
         PLACE_DETAILS = "place_details", "Google Place Details"
+        TEXT_SEARCH = "text_search", "Google Text Search"
         ROUTES = "routes", "Google Routes"
         CENSUS_GEOCODER = "census_geocoder", "Census geocoder"
 

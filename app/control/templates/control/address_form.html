@@ -2,7 +2,7 @@
 {% block title %}{% if address %}Edit address{% else %}New address{% endif %} · {{ customer }}{% endblock %}
 {% block content %}
 <h1>{% if address %}Edit address{% else %}New address{% endif %}</h1>
-<p class="help">For {{ customer }}. Saving checks the address with the Census Bureau's geocoder, which gives its map location, county and sales tax rate.</p>
+<p class="help">For {{ customer }}. Saving checks the address with the Census Bureau's geocoder, then with Google if the geocoder cannot find it. That gives its map location, county and sales tax rate. A Google match is used only when its house number, street and ZIP code agree with what you typed.</p>
 <form method="post" class="stack" novalidate>
   {% csrf_token %}
   {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}

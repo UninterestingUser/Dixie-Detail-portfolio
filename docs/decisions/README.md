@@ -116,3 +116,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0089](0089-backup-rides-out-a-slow-drive.md) | 2026-11-06 | backups | The nightly backup waits longer for Google Drive, retries each restic step twice, and calls Drive gently | accepted |
 | [0090](0090-tax-rates-from-the-state-boundaries.md) | 2026-11-06 | tax | Addresses record how they were verified, and tax rates come from the state's boundaries, matched on the server and approved by the owner | accepted |
 | [0091](0091-google-calls-counted-capped-and-cached.md) | 2026-11-06 | maps | Google calls are counted and capped per day, drive times are cached by address pair and hour, and the home base lives in the database | accepted |
+| [0092](0092-google-fallback-and-locations-set-by-hand.md) | 2026-11-06 | maps | A typed address the Census geocoder cannot find is searched with Google and used only if it agrees, or its location is set by hand | accepted |

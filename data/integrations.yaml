@@ -54,9 +54,9 @@ services:
     phase: 3
     status: Calendars created 2026-10-11; service account not yet connected
   - name: Google Maps Platform
-    purpose: Address suggestions (Places Autocomplete, in the browser), the server's lookup of the picked address (Place Details, Essentials fields only) and traffic-aware drive times (Routes)
+    purpose: Address suggestions (Places Autocomplete, in the browser), the server's lookup of the picked address (Place Details, Essentials fields only), Text Search (place IDs only) for typed addresses the Census geocoder cannot find, and traffic-aware drive times (Routes)
     phase: 3
-    status: Server side built (Phase 3, Step 1); waits for the server key GOOGLE_MAPS_SERVER_KEY. Daily limits set in Google Cloud, 322 for each Places method and 161 for Routes; the app's caps sit below them and every call is counted (decision 0091). Autocomplete arrives with the booking form
+    status: Server side built (Phase 3, Step 1); waits for the server key GOOGLE_MAPS_SERVER_KEY. Daily limits set in Google Cloud, 322 for each Places method and 161 for Routes; the app's caps sit below them and every call is counted (decisions 0091 and 0092). Autocomplete arrives with the booking form
   - name: US Census Bureau geocoder
     purpose: Coordinates and county for addresses the owner types, and for the home base; verify_addresses checks existing addresses with it
     phase: 3

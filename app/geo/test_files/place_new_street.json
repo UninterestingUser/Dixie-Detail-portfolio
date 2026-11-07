@@ -1,0 +1,62 @@
+{
+ "formattedAddress": "410 Newbuild Way NE, Cleveland, TN 37312, USA",
+ "addressComponents": [
+  {
+   "longText": "410",
+   "shortText": "410",
+   "types": [
+    "street_number"
+   ]
+  },
+  {
+   "longText": "Newbuild Way Northeast",
+   "shortText": "Newbuild Way NE",
+   "types": [
+    "route"
+   ]
+  },
+  {
+   "longText": "Cleveland",
+   "shortText": "Cleveland",
+   "types": [
+    "locality",
+    "political"
+   ]
+  },
+  {
+   "longText": "Bradley County",
+   "shortText": "Bradley County",
+   "types": [
+    "administrative_area_level_2",
+    "political"
+   ]
+  },
+  {
+   "longText": "Tennessee",
+   "shortText": "TN",
+   "types": [
+    "administrative_area_level_1",
+    "political"
+   ]
+  },
+  {
+   "longText": "United States",
+   "shortText": "US",
+   "types": [
+    "country",
+    "political"
+   ]
+  },
+  {
+   "longText": "37312",
+   "shortText": "37312",
+   "types": [
+    "postal_code"
+   ]
+  }
+ ],
+ "location": {
+  "latitude": 35.18,
+  "longitude": -84.86
+ }
+}

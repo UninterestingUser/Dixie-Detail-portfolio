@@ -82,7 +82,7 @@ def customer(request, pk):
     context = {
         "customer": customer,
         "second_contacts": customer.second_contacts.all(),
-        "addresses": with_summaries(customer.addresses.select_related("tax_jurisdiction").order_by("-active", "line1")),
+        "addresses": with_summaries(customer.addresses.select_related("tax_jurisdiction", "verified_by").order_by("-active", "line1")),
         "vehicles": customer.vehicles.select_related("vehicle_class", "size_variant").order_by("make", "model", "year", "color"),
         "appointments": appointment_rows(customer),
     }

@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-06
 tags: [sales-tax, tennessee, georgia, compliance]
-related: [docs/decisions/0090-tax-rates-from-the-state-boundaries.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/operations/addresses-and-sales-tax.md, docs/decisions/0059-quoted-price-is-price-of-record.md, data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
+related: [docs/decisions/0090-tax-rates-from-the-state-boundaries.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0092-google-fallback-and-locations-set-by-hand.md, docs/operations/addresses-and-sales-tax.md, docs/decisions/0059-quoted-price-is-price-of-record.md, data/service-area.yaml, docs/decisions/0025-sales-tax-by-service-address.md, docs/decisions/0037-approved-out-of-area-addresses.md, docs/reference/bookkeeping-gnucash.md]
 ---
 
 # Sales tax
@@ -22,10 +22,13 @@ Tennessee charges 7% statewide, and local governments add up to 2.75%. The state
 Every address records its parts, its map coordinates, its county and how it was verified ([decision 0090](../decisions/0090-tax-rates-from-the-state-boundaries.md)):
 
 - **Google place.** A website address arrives as the Google place ID the customer picked. The server looks the place up itself with its own key and takes the parts, coordinates and county from Google's answer. Coordinates sent from a browser are never trusted.
-- **Census geocoder.** An address the owner types in the control app is checked with the Census Bureau's free geocoder when it is saved. One the geocoder cannot find is not saved until the owner corrects it or ticks "Verified by hand".
-- **By hand.** For an address neither can find, such as a new street, the owner gives the county and, if known, the coordinates.
+- **Census geocoder.** An address the owner types in the control app is checked with the Census Bureau's free geocoder when it is saved.
+- **Google address search.** The Census map lacks streets in newly built neighborhoods. When the geocoder finds no match, the server asks Google's Text Search for the address, then looks up its best match with Place Details, asking only for address components, formatted address and location. The match is used only if its house number, street and ZIP code agree with the typed address, after both are written the same way ("Road" as "Rd", "Southeast" as "SE", any unit dropped). Otherwise the address stays unmatched. The owner's spelling is kept; Google gives the coordinates and county. Both calls count against Google's daily caps ([decision 0092](../decisions/0092-google-fallback-and-locations-set-by-hand.md)).
+- **Location set by hand.** For an address neither finds, the owner pastes its latitude and longitude from Google Maps. The address is marked "Location set by hand" and records who set it; the change history records it too.
 
-Changing the street, unit, city, state or ZIP code of a verified address clears its verification, so it is checked again. `python manage.py verify_addresses` checks every existing customer address with the Census geocoder; see [../operations/addresses-and-sales-tax.md](../operations/addresses-and-sales-tax.md).
+An address that none of these verifies is not saved. Whichever way it is verified, the tax comes from its location and the Tennessee boundaries (below), which also give its county.
+
+Changing the street, unit, city, state or ZIP code of a verified address clears its verification, so it is checked again. `python manage.py verify_addresses` checks every existing customer address the same way and reports how each matched: by Census, by Google or set by hand. See [../operations/addresses-and-sales-tax.md](../operations/addresses-and-sales-tax.md).
 
 ## Finding the rate for a service address
 

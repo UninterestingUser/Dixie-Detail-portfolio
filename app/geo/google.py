@@ -10,6 +10,10 @@ for the fewest fields, to stay at the cheapest price tier:
   rate. The website's autocomplete session token is passed on, so the
   details call ends the session and the autocomplete requests before it are
   not billed.
+- Text Search (New): place IDs only (field mask places.id), the IDs Only
+  tier, which Google does not charge for. It is the fallback for an address
+  the owner typed that the Census geocoder cannot find; the one place ID it
+  gives is then looked up with Place Details as above, without a session.
 - Routes computeRoutes: duration and distance only, with traffic predicted
   for the departure time (routing preference TRAFFIC_AWARE).
 
@@ -32,7 +36,9 @@ from .models import ApiUsage, LocationSettings
 PACIFIC = ZoneInfo("America/Los_Angeles")
 PLACES_URL = "https://places.googleapis.com/v1/places"
 ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
+TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 PLACE_DETAILS_FIELDS = "addressComponents,formattedAddress,location"
+TEXT_SEARCH_FIELDS = "places.id"
 ROUTES_FIELDS = "routes.duration,routes.distanceMeters"
 # Place IDs and session tokens are letters, digits, "-" and "_".
 PLACE_ID = re.compile(r"^[A-Za-z0-9_-]{10,300}$")
@@ -100,6 +106,24 @@ def place_details(place_id, session_token=""):
         )
     except http.FetchError as error:
         raise GoogleUnavailable(str(error)) from error
+
+
+def text_search(query):
+    """The place ID of Google's best match for query, a typed address, or
+    None when Google finds nothing."""
+    key = server_key()
+    take_call(ApiUsage.Api.TEXT_SEARCH, LocationSettings.get().text_search_daily_cap)
+    body = {"textQuery": query, "languageCode": "en", "regionCode": "us", "pageSize": 1}
+    try:
+        answer = http.request_json(
+            TEXT_SEARCH_URL, method="POST", body=body,
+            headers={"X-Goog-Api-Key": key, "X-Goog-FieldMask": TEXT_SEARCH_FIELDS},
+        )
+    except http.FetchError as error:
+        raise GoogleUnavailable(str(error)) from error
+    places = answer.get("places") or []
+    place_id = places[0].get("id", "") if places else ""
+    return place_id if PLACE_ID.match(place_id) else None
 
 
 def _lat_lng(point):
