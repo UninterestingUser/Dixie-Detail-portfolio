@@ -130,7 +130,7 @@ secrets:
     purpose: Service account key for the two calendars, read into memory
     phase: 3
   - name: GOOGLE_MAPS_SERVER_KEY
-    purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked) and Routes (drive times), restricted to those two APIs
+    purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked), Text Search (finding a typed address the Census geocoder cannot) and Routes (drive times), restricted to the Places API (New) and the Routes API
     used_by: ops/stack-start.sh (app container, as the file named by GOOGLE_MAPS_SERVER_KEY_FILE)
     note: Optional; until it exists the stack writes an empty file and the app runs without Google (drive times estimated, website place lookups refused). Decision 0091
     phase: 3
@@ -160,6 +160,10 @@ database_settings:
     - name: Place Details daily cap
       default: 300
       purpose: Google Place Details calls allowed per Pacific day, below the 322 a day set in Google Cloud
+      phase: 3
+    - name: Text Search daily cap
+      default: 300
+      purpose: Google Text Search calls allowed per Pacific day, below the 322 a day set in Google Cloud; used for typed addresses the Census geocoder cannot find
       phase: 3
     - name: Routes daily cap
       default: 150

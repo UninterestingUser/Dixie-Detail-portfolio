@@ -23,12 +23,15 @@ class FakeServices:
     """Answers request_json like the real services, from the test files.
 
     places: {place_id: file name}; census: {street: file name};
-    routes: a file name, or None to fail. Records every call in calls.
+    searches: {street: file name} for Google Text Search, keyed by the text
+    before the first comma of the query; routes: a file name, or None to
+    fail. Records every call in calls.
     """
 
-    def __init__(self, places=None, census=None, routes="routes_answer.json"):
+    def __init__(self, places=None, census=None, searches=None, routes="routes_answer.json"):
         self.places = places or {}
         self.census = census or {}
+        self.searches = searches or {}
         self.routes = routes
         self.calls = []
 
@@ -36,6 +39,9 @@ class FakeServices:
         from geo import http
 
         self.calls.append((url, kwargs))
+        if url == "https://places.googleapis.com/v1/places:searchText":
+            street = kwargs["body"]["textQuery"].split(",", 1)[0]
+            return load(self.searches.get(street, "search_no_match.json"))
         if url.startswith("https://places.googleapis.com/"):
             name = self.places.get(url.rsplit("/", 1)[1])
             if name is None:

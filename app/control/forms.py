@@ -10,6 +10,7 @@ from django.utils import timezone
 from core.fields import format_phone, normalize_phone
 from customers.models import Address, Customer
 from geo.models import LocationSettings
+from geo.verification import VerificationError, parse_location
 from pricebook.models import Service
 from vehicles.models import ClassificationRule, SizeVariant, Vehicle, VehicleClass
 
@@ -311,15 +312,21 @@ class TestPriceForm(forms.Form):
 
 class AddressForm(forms.ModelForm):
     """A service address the owner types. Saving checks it with the Census
-    geocoder; one the geocoder cannot find can be marked verified by hand."""
+    geocoder, then Google; for one neither finds, the owner pastes its
+    location from Google Maps."""
 
     by_hand = forms.BooleanField(
-        required=False, label="Verified by hand",
-        help_text="Tick when the Census geocoder cannot find the address but you know it is right, such as a new street.",
+        required=False, label="Set the location by hand",
+        help_text="When neither the Census geocoder nor Google finds the address, such as a street in a new neighborhood.",
     )
-    hand_county = forms.CharField(required=False, max_length=100, label="County", help_text="Needed when verified by hand, such as Bradley.")
-    latitude = forms.DecimalField(required=False, max_digits=9, decimal_places=6, help_text="Optional, with verified by hand. Without coordinates the address takes its county's tax rate and is flagged.")
-    longitude = forms.DecimalField(required=False, max_digits=9, decimal_places=6)
+    location = forms.CharField(
+        required=False, max_length=60, label="Latitude, longitude",
+        help_text="In Google Maps, right-click the driveway, click the numbers at the top of the menu to copy them, and paste them here, such as 35.16123, -84.87701.",
+    )
+    hand_county = forms.CharField(
+        required=False, max_length=100, label="County",
+        help_text="Optional. In Tennessee the location gives the county; give it for an address in another state, such as Whitfield.",
+    )
 
     class Meta:
         model = Address
@@ -333,8 +340,9 @@ class AddressForm(forms.ModelForm):
             self.fields["approved_out_of_area"].disabled = True
             self.fields["approved_out_of_area"].help_text = "Only a manager can approve an address outside the service area."
         if self.instance.verification == Address.Verification.BY_HAND:
+            point = self.instance.point
             self.initial.update(by_hand=True, hand_county=self.instance.county,
-                                latitude=self.instance.latitude, longitude=self.instance.longitude)
+                                location=f"{point[0]}, {point[1]}" if point else "")
 
     def clean_state(self):
         state = self.cleaned_data["state"].strip().upper()
@@ -344,11 +352,12 @@ class AddressForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        cleaned["point"] = None
         if cleaned.get("by_hand"):
-            if cleaned.get("state") == "TN" and not cleaned.get("hand_county", "").strip():
-                self.add_error("hand_county", "Give the county of an address verified by hand.")
-            if (cleaned.get("latitude") is None) != (cleaned.get("longitude") is None):
-                self.add_error("longitude", "Give both coordinates, or neither.")
+            try:
+                cleaned["point"] = parse_location(cleaned.get("location", ""))
+            except VerificationError as error:
+                self.add_error("location", str(error))
         return cleaned
 
     def parts_changed(self):
@@ -364,12 +373,13 @@ class LocationSettingsForm(forms.ModelForm):
         model = LocationSettings
         fields = [
             "home_line1", "home_city", "home_state", "home_zip_code", "home_latitude", "home_longitude",
-            "place_details_daily_cap", "routes_daily_cap",
+            "place_details_daily_cap", "text_search_daily_cap", "routes_daily_cap",
             "estimate_road_factor", "estimate_speed_mph", "drive_time_cache_days", "tax_sourcing",
         ]
         help_texts = {
             "home_latitude": "Leave both coordinates blank to look the home base up with the Census geocoder.",
             "place_details_daily_cap": "Keep below the Place Details daily limit set in Google Cloud.",
+            "text_search_daily_cap": "Keep below the Text Search daily limit set in Google Cloud. Used for typed addresses the Census geocoder cannot find.",
             "routes_daily_cap": "Keep below the Routes daily limit set in Google Cloud. Past the cap, drive times are estimated.",
             "tax_sourcing": "Decision 0025. Change only on the accountant's advice.",
         }

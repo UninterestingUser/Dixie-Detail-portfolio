@@ -1,5 +1,6 @@
 """Customers, their second contacts, service addresses and text consents."""
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
@@ -65,17 +66,20 @@ class SecondContact(models.Model):
 class Address(models.Model):
     """A place where a job is done. It sets the sales tax and the drive time.
 
-    Its parts, coordinates and county come from how it was verified
-    (geo.verification): a Google place picked on the website, the Census
-    Bureau's geocoder for an address typed in the control app, or the owner
-    by hand. Changing a part of a verified address clears the verification,
-    so the next save verifies it again.
+    Its coordinates and county come from how it was verified
+    (geo.verification): a Google place picked on the website; for an address
+    typed in the control app, the Census Bureau's geocoder or, when that
+    finds nothing, a Google address search whose answer agrees with the
+    typed address; or a location the owner pasted by hand. Changing a part
+    of a verified address clears the verification, so the next save
+    verifies it again.
     """
 
     class Verification(models.TextChoices):
         GOOGLE_PLACE = "google_place", "Google place"
         CENSUS = "census", "Census geocoder"
-        BY_HAND = "by_hand", "By hand"
+        GOOGLE_SEARCH = "google_search", "Google address search"
+        BY_HAND = "by_hand", "Location set by hand"
 
     # The parts that, when changed, make the address need verifying again.
     PARTS = ("line1", "line2", "city", "state", "zip_code")
@@ -94,6 +98,11 @@ class Address(models.Model):
         max_length=20, choices=Verification.choices, blank=True, help_text="How the address was verified; empty if it is not."
     )
     verified_at = models.DateTimeField(null=True, blank=True)
+    # Who set the location by hand; empty for the other methods. The change
+    # history records who saved every change as well.
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
     tax_jurisdiction = models.ForeignKey(
         "billing.TaxJurisdiction", on_delete=models.PROTECT, null=True, blank=True
     )
@@ -133,6 +142,7 @@ class Address(models.Model):
     def clear_verification(self):
         self.verification = ""
         self.verified_at = None
+        self.verified_by = None
         self.latitude = self.longitude = None
         self.google_place_id = ""
         self.county = ""

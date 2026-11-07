@@ -24,7 +24,7 @@ from customers.models import Address, Customer
 from geo import census, http, service_area
 from geo.google import quota_day
 from geo.models import ApiUsage, LocationSettings
-from geo.verification import verify_by_hand, verify_with_census
+from geo.verification import verify_by_hand, verify_typed
 from staff.authorization import user_is_manager
 
 from .forms import AddressForm, ApproveRateForm, LocationSettingsForm, StateRateForm
@@ -36,9 +36,19 @@ def require_manager(request, what):
         raise PermissionDenied(f"Only a manager can {what}.")
 
 
+def verification_text(address):
+    """How the address was verified, with who set a location by hand."""
+    if not address.verified:
+        return "Not verified"
+    if address.verification == Address.Verification.BY_HAND and address.verified_by:
+        who = address.verified_by.get_full_name() or address.verified_by.get_username()
+        return f"Verified (location set by hand by {who})"
+    return f"Verified ({address.get_verification_display()})"
+
+
 def address_summary(address):
     """One line on how an address verified and what tax and area it gets."""
-    parts = [f"Verified ({address.get_verification_display()})" if address.verified else "Not verified"]
+    parts = [verification_text(address)]
     if address.county:
         parts.append(f"{address.county} County")
     if address.tax_jurisdiction:
@@ -59,17 +69,21 @@ def address_form(request, customer_pk=None, pk=None):
     if request.method == "POST" and form.is_valid():
         address = form.save(commit=False)
         data = form.cleaned_data
+        reason = "Saved in the control app"
         if data["by_hand"]:
-            verify_by_hand(address, data["hand_county"].strip(), data["latitude"], data["longitude"])
+            verify_by_hand(address, *data["point"], user=request.user, county=data["hand_county"].strip())
+            reason = "Location set by hand in the control app"
         elif form.parts_changed() or not address.verified or address.verification == Address.Verification.BY_HAND:
             try:
-                if not verify_with_census(address):
-                    form.add_error(None, "The Census geocoder did not find this address. Check the street, city and ZIP code, "
-                                         "or tick Verified by hand and give the county.")
+                outcome = verify_typed(address)
             except http.FetchError:
-                form.add_error(None, "The Census geocoder could not be reached. Try again in a minute, or tick Verified by hand.")
+                form.add_error(None, "The Census geocoder could not be reached. Try again in a minute, or set the location by hand.")
+            else:
+                if not outcome.matched:
+                    form.add_error(None, f"Neither the Census geocoder nor Google found this address ({outcome.reason}). "
+                                         "Check the street, city and ZIP code, or set the location by hand.")
         if not form.errors:
-            address._change_reason = "Saved in the control app"
+            address._change_reason = reason
             address.save()
             messages.success(request, f"Saved {address}. {address_summary(address)}.")
             if address.tax_needs_check:
@@ -85,7 +99,11 @@ def month_usage(day):
     totals = {row["api"]: row for row in ApiUsage.objects.filter(day__gte=first, day__lte=day).values("api").annotate(calls=Sum("calls"), refused=Sum("refused"))}
     today = {usage.api: usage for usage in ApiUsage.objects.filter(day=day)}
     settings = LocationSettings.get()
-    caps = {ApiUsage.Api.PLACE_DETAILS: settings.place_details_daily_cap, ApiUsage.Api.ROUTES: settings.routes_daily_cap}
+    caps = {
+        ApiUsage.Api.PLACE_DETAILS: settings.place_details_daily_cap,
+        ApiUsage.Api.TEXT_SEARCH: settings.text_search_daily_cap,
+        ApiUsage.Api.ROUTES: settings.routes_daily_cap,
+    }
     return [
         {
             "label": label,

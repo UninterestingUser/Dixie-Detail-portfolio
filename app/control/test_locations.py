@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from billing import tax_rates
 from billing.models import TaxRate
-from geo.fixtures import FakeServices, import_fixture_rates
+from geo.fixtures import FakeServices, import_fixture_rates, with_google_key
 from geo.models import LocationSettings
 
 from .fixtures import JobsTestCase
@@ -21,7 +21,7 @@ class LocationScreensTestCase(JobsTestCase):
 
     def address_data(self, **changes):
         data = {"line1": "100 Example St NW", "line2": "", "city": "Cleveland", "state": "tn", "zip_code": "37311",
-                "notes": "", "active": "on", "by_hand": "", "hand_county": "", "latitude": "", "longitude": ""}
+                "notes": "", "active": "on", "by_hand": "", "location": "", "hand_county": ""}
         data.update(changes)
         return data
 
@@ -29,7 +29,12 @@ class LocationScreensTestCase(JobsTestCase):
 class AddressFormTests(LocationScreensTestCase):
     def post(self, data, pk=None):
         url = reverse("address-edit", args=[pk]) if pk else reverse("address-new", args=[self.customer.pk])
-        with FakeServices(census={"100 Example St NW": "census_cleveland.json"}).patch():
+        fake = FakeServices(
+            census={"100 Example St NW": "census_cleveland.json"},
+            searches={"410 Newbuild Way NE": "search_new_street.json", "412 Newbuild Way NE": "search_new_street.json"},
+            places={"ChIJmadeUpNewbuild00001": "place_new_street.json"},
+        )
+        with fake.patch():
             return self.client.post(url, data, follow=True)
 
     def test_a_typed_address_is_verified_with_the_census_geocoder(self):
@@ -39,15 +44,39 @@ class AddressFormTests(LocationScreensTestCase):
         self.assertEqual(address.tax_jurisdiction.name, "Cleveland")
         self.assertContains(response, "Verified (Census geocoder), Bradley County, tax: Cleveland, Bradley County")
 
-    def test_an_address_the_geocoder_cannot_find_is_not_saved_unless_verified_by_hand(self):
+    @with_google_key
+    def test_an_address_the_census_map_lacks_is_matched_by_google(self):
+        response = self.post(self.address_data(line1="410 Newbuild Way NE", zip_code="37312"))
+        address = self.customer.addresses.get(line1="410 Newbuild Way NE")
+        self.assertEqual((address.verification, address.tax_jurisdiction.name), ("google_search", "Cleveland"))
+        self.assertContains(response, "Verified (Google address search), Bradley County, tax: Cleveland")
+
+    @with_google_key
+    def test_an_address_neither_finds_is_not_saved_until_its_location_is_set_by_hand(self):
+        data = self.address_data(line1="412 Newbuild Way NE", zip_code="37312")
+        response = self.post(data)
+        self.assertContains(response, "Neither the Census geocoder nor Google found this address "
+                                      "(Google&#x27;s best match has a different house number)")
+        self.assertFalse(self.customer.addresses.filter(line1="412 Newbuild Way NE").exists())
+        response = self.post({**data, "by_hand": "on"})
+        self.assertContains(response, "Paste the latitude and longitude from Google Maps")
+        response = self.post({**data, "by_hand": "on", "location": "-84.86, 35.18"})
+        self.assertContains(response, "That point is not in the United States")
+        response = self.post({**data, "by_hand": "on", "location": "35.18, -84.86"})
+        address = self.customer.addresses.get(line1="412 Newbuild Way NE")
+        self.assertEqual((address.verification, address.verified_by, address.tax_jurisdiction.name, address.tax_needs_check),
+                         ("by_hand", self.owner_user, "Cleveland", False))
+        self.assertEqual(address.county, "Bradley")
+        self.assertEqual(address.history.first().history_user, self.owner_user)
+        self.assertEqual(address.history.first().history_change_reason, "Location set by hand in the control app")
+        self.assertContains(response, "location set by hand by")
+        # Editing it again shows the location it was given.
+        form = self.client.get(reverse("address-edit", args=[address.pk]))
+        self.assertContains(form, 'value="35.180000, -84.860000"')
+
+    def test_without_a_google_key_the_message_says_so(self):
         response = self.post(self.address_data(line1="12 New Street"))
-        self.assertContains(response, "The Census geocoder did not find this address")
-        self.assertFalse(self.customer.addresses.filter(line1="12 New Street").exists())
-        response = self.post(self.address_data(line1="12 New Street", by_hand="on"))
-        self.assertContains(response, "Give the county of an address verified by hand")
-        self.post(self.address_data(line1="12 New Street", by_hand="on", hand_county="Bradley"))
-        address = self.customer.addresses.get(line1="12 New Street")
-        self.assertEqual((address.verification, address.tax_jurisdiction.name, address.tax_needs_check), ("by_hand", "Bradley County", True))
+        self.assertContains(response, "Google not asked: no Google Maps server key")
 
     def test_only_a_manager_approves_an_out_of_area_address(self):
         self.client.force_login(self.helper_user)
@@ -58,7 +87,7 @@ class AddressFormTests(LocationScreensTestCase):
 class LocationSettingsTests(LocationScreensTestCase):
     def settings_data(self, **changes):
         data = {"home_line1": "100 Example St NW", "home_city": "Cleveland", "home_state": "TN", "home_zip_code": "37311",
-                "home_latitude": "", "home_longitude": "", "place_details_daily_cap": "300", "routes_daily_cap": "150",
+                "home_latitude": "", "home_longitude": "", "place_details_daily_cap": "300", "text_search_daily_cap": "300", "routes_daily_cap": "150",
                 "estimate_road_factor": "1.30", "estimate_speed_mph": "40", "drive_time_cache_days": "30",
                 "tax_sourcing": "service_address"}
         data.update(changes)
