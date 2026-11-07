@@ -1,0 +1,13 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Remove this job?{% endblock %}
+{% block content %}
+<h1>Remove this job for good?</h1>
+<p><strong>This can't be undone.</strong> The job for <a href="{% url 'appointment' appointment.pk %}">{{ appointment.customer }} on {{ appointment.scheduled_start|date:"D, M j, Y" }}, {{ appointment.scheduled_start|local_time }}</a>{% if later %} and the later visits of its series{% endif %} goes with its lines, staff, flags and change history, as if it never existed.</p>
+<form method="post" action="{% url 'appointment-cancel' appointment.pk %}" class="button-row">
+  {% csrf_token %}
+  <input type="hidden" name="visits" value="{% if later %}later{% else %}this{% endif %}">
+  <button type="submit" name="remove" value="yes" class="danger">Remove for good</button>
+  <a class="button" href="{% url 'appointment' appointment.pk %}">Keep the job</a>
+</form>
+{% endblock %}

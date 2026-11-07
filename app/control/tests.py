@@ -87,7 +87,6 @@ class SearchTests(ControlTestCase):
         self.assertEqual(self.names("Pat 0102"), [])
 
     def test_too_little_to_search(self):
-        self.assertEqual(self.names(""), [])
         self.assertEqual(self.names("42"), [])
 
     def test_phone_digits(self):

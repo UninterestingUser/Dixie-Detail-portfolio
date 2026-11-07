@@ -1,9 +1,9 @@
-"""The schedule, booking and changing jobs, and assigning staff to them."""
+"""Booking, changing and canceling jobs, and assigning staff to them. The
+schedule's views are in schedule_views."""
 
 import datetime
 
 from django.contrib import messages
-from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -11,7 +11,6 @@ from django.views.decorators.http import require_POST, require_safe
 
 from appointments import booking
 from appointments.models import Appointment
-from billing.models import Payment
 from billing.tax import tax_line, tax_line_for_appointment
 from core.scheduling import time_on_site
 from customers.models import Customer
@@ -19,64 +18,32 @@ from geo import service_area
 from geo.drive import drive_from_home
 from pricebook.pricing import PricingError, price_job
 from scheduling import changes as scheduling_changes
+from scheduling.models import DateException, OpenWeekday, RuleOverride, SchedulingSettings
 from staff.authorization import CrewError, assign_crew, auto_assign, staff_choices, uncovered_services, job_services, user_is_manager
-from staff.models import Assignment, StaffMember
-from vehicles.models import ModelYearClassification, VehicleDataRefresh
+from staff.models import StaffMember
 
 from .forms import AppointmentForm, FinalPriceForm
 
 
-def parse_date(text):
+def parse_date(text, default=None):
     try:
         return datetime.date.fromisoformat(text)
     except (TypeError, ValueError):
-        return timezone.localdate()
+        return default or timezone.localdate()
 
 
-def day_appointments(first, last):
-    """Jobs from the first to the last day, by start, with what the list shows."""
-    return (
-        Appointment.objects.filter(scheduled_start__date__gte=first, scheduled_start__date__lte=last)
-        .select_related("customer", "vehicle", "service_address")
-        .prefetch_related("lines", Prefetch("assignments", queryset=Assignment.objects.select_related("staff_member")))
-        .order_by("scheduled_start")
-    )
-
-
-@require_safe
-def schedule_day(request):
-    day = parse_date(request.GET.get("date"))
-    context = {
-        "day": day,
-        "today": timezone.localdate(),
-        "previous": day - datetime.timedelta(days=1),
-        "next": day + datetime.timedelta(days=1),
-        "appointments": day_appointments(day, day),
-        # The home screen says when model years wait in the review queue (decision 0076).
-        "queue_count": ModelYearClassification.objects.filter(in_review=True).count(),
-        # And, beside it, how the last monthly vehicle data refresh went (decision 0081).
-        "last_refresh": VehicleDataRefresh.objects.first(),
-    }
-    return render(request, "control/schedule_day.html", context)
-
-
-@require_safe
-def schedule_week(request):
-    day = parse_date(request.GET.get("date"))
-    monday = day - datetime.timedelta(days=day.weekday())
-    days = [monday + datetime.timedelta(days=offset) for offset in range(7)]
-    by_day = {d: [] for d in days}
-    for appointment in day_appointments(days[0], days[-1]):
-        by_day[timezone.localtime(appointment.scheduled_start).date()].append(appointment)
-    context = {
-        "monday": monday,
-        "sunday": days[-1],
-        "today": timezone.localdate(),
-        "previous": monday - datetime.timedelta(days=7),
-        "next": monday + datetime.timedelta(days=7),
-        "days": [(d, by_day[d]) for d in days],
-    }
-    return render(request, "control/schedule_week.html", context)
+def first_bookable_date():
+    """The first date past the minimum notice that is open, for a new
+    booking's date: a date that needs no reason, as far as the day goes."""
+    settings = SchedulingSettings.get()
+    day = timezone.localdate() + datetime.timedelta(days=settings.minimum_notice_days)
+    open_weekdays = set(OpenWeekday.objects.filter(is_open=True).values_list("weekday", flat=True))
+    closed_dates = set(DateException.objects.filter(kind=DateException.Kind.CLOSED, date__gte=day).values_list("date", flat=True))
+    for _ in range(366):
+        if day.weekday() in open_weekdays and day not in closed_dates:
+            return day
+        day += datetime.timedelta(days=1)
+    return timezone.localdate()
 
 
 def initial_for_vehicle(vehicle):
@@ -89,21 +56,20 @@ def appointment_new(request, customer_pk):
     customer = get_object_or_404(Customer, pk=customer_pk)
     vehicle = customer.vehicles.filter(pk=request.GET.get("vehicle")).first() or customer.vehicles.order_by("pk").first()
     initial = {
-        "date": parse_date(request.GET.get("date")),
+        "date": parse_date(request.GET.get("date"), default=first_bookable_date()),
         "time": datetime.time(8, 0),
         "vehicle": vehicle,
         "address": customer.addresses.filter(active=True).first(),
         **initial_for_vehicle(vehicle),
     }
     form = AppointmentForm(request.POST or None, customer=customer, initial=initial)
-    rule_warning = None
+    alert = None
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         try:
-            starts = booking.series_starts(form.start(), data["repeat"], data["visits"]) if data.get("repeat") else [form.start()]
-            broken = booking.rules_broken(form.inputs(), starts, data.get("address"))
-            rule_warning = override_warning(request, form, broken)
-            if rule_warning:
+            broken = rules_broken(form)
+            alert = rules_alert(request, form, broken, submitted=True)
+            if alert and not alert["go_ahead"]:
                 raise booking.RulesBroken(broken)
             if data.get("repeat"):
                 series = booking.book_series(
@@ -120,39 +86,67 @@ def appointment_new(request, customer_pk):
         except (PricingError, booking.BookingError) as error:
             form.add_error(None, str(error))
         else:
-            log_overrides(request, appointments, broken, data)
+            log_overrides(request, appointments, broken, data, RuleOverride.Action.BOOKED)
             for appointment in appointments:
                 after_booking(request, appointment)
             return redirect("appointment", pk=appointments[0].pk)
-    context = {"form": form, "customer": customer, "appointment": None, "rule_warning": rule_warning}
+    context = {"form": form, "customer": customer, "appointment": None, "alert": alert}
     return render(request, "control/appointment_form.html", context)
 
 
-def override_warning(request, form, broken):
-    """The warning to show before booking outside the rules, or None to go
-    ahead: no rule broken, or a manager confirmed with a reason. Only a
-    manager can book outside the rules; the website never can."""
+def is_moved(form, appointment):
+    data = form.cleaned_data
+    return form.start() != appointment.scheduled_start or data.get("address") != appointment.service_address
+
+
+def services_changed(form, appointment):
+    new_inputs = form.inputs()
+    return new_inputs is not None and not same_inputs(booking.inputs_from_appointment(appointment), new_inputs)
+
+
+def rules_broken(form, appointment=None):
+    """[(start, [Reason])] for each start the form's choice puts outside the
+    scheduling rules: each visit of a new booking, or a changed job when its
+    date, time, address or services changed. A change to anything else, such
+    as the notes, is not checked. May raise PricingError."""
+    data = form.cleaned_data
+    if appointment is None:
+        repeat = data.get("repeat")
+        starts = booking.series_starts(form.start(), repeat, data["visits"]) if repeat else [form.start()]
+        return booking.rules_broken(form.inputs(), starts, data.get("address"))
+    if not (is_moved(form, appointment) or services_changed(form, appointment)):
+        return []
+    inputs = form.inputs() or booking.inputs_from_appointment(appointment)
+    return booking.rules_broken(inputs, [form.start()], data.get("address"), appointment)
+
+
+def rules_alert(request, form, broken, submitted=False):
+    """The alert under the date and time while the choice breaks a rule, or
+    None when it fits. A manager goes ahead by giving a reason; anyone else
+    picks another time. At submit, a manager without a reason gets an error
+    on the reason box. The website never books outside the rules."""
     if not broken:
         return None
-    data = form.cleaned_data
     is_manager = user_is_manager(request.user)
-    if is_manager and data.get("override") and data.get("override_reason", "").strip():
-        return None
+    reason = form.cleaned_data.get("override_reason", "").strip()
+    if submitted and is_manager and not reason:
+        form.add_error("override_reason", "Give the reason for booking off hours.")
     return {
-        "broken": [(start, [str(reason) for reason in reasons]) for start, reasons in broken],
+        "broken": [(start, [r.text for r in reasons]) for start, reasons in broken],
+        "dated": len(broken) > 1 or bool(form.cleaned_data.get("repeat")),
         "is_manager": is_manager,
-        "needs_reason": bool(data.get("override")) and not data.get("override_reason", "").strip(),
+        "go_ahead": is_manager and bool(reason),
     }
 
 
-def log_overrides(request, appointments, broken, data):
+def log_overrides(request, appointments, broken, data, action):
     by_start = {start: reasons for start, reasons in broken}
     for appointment in appointments:
         reasons = by_start.get(appointment.scheduled_start)
         if reasons:
-            booking.log_override(appointment, reasons, data["override_reason"], request.user)
+            booking.log_override(appointment, reasons, data["override_reason"], request.user, action)
     if broken:
-        messages.warning(request, "Booked outside the scheduling rules. The reason is logged.")
+        messages.warning(request, "Booked off hours. The reason is logged with the job.")
 
 
 def after_booking(request, appointment):
@@ -206,20 +200,18 @@ def appointment_edit(request, pk):
     appointment = get_object_or_404(Appointment.objects.select_related("customer"), pk=pk)
     initial, old_inputs = edit_initial(appointment)
     form = AppointmentForm(request.POST or None, customer=appointment.customer, editing=True, initial=initial)
-    rule_warning = None
+    alert = None
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         new_inputs = form.inputs()
         broken = []
         try:
             changed_services = new_inputs is not None and not same_inputs(old_inputs, new_inputs)
-            moved = form.start() != appointment.scheduled_start or data.get("address") != appointment.service_address
-            # Only a change to when, where or what is checked against the rules.
-            if moved or changed_services:
-                broken = booking.rules_broken(new_inputs or old_inputs, [form.start()], data.get("address"), appointment)
-                rule_warning = override_warning(request, form, broken)
-                if rule_warning:
-                    raise booking.RulesBroken(broken)
+            moved = is_moved(form, appointment)
+            broken = rules_broken(form, appointment)
+            alert = rules_alert(request, form, broken, submitted=True)
+            if alert and not alert["go_ahead"]:
+                raise booking.RulesBroken(broken)
             if changed_services:
                 booking.reprice(appointment, new_inputs, data["reason"])
             appointment.refresh_from_db()
@@ -238,19 +230,21 @@ def appointment_edit(request, pk):
             form.add_error("reason" if "reason" in str(error) else None, str(error))
         else:
             messages.success(request, "Saved." + (" The job was re-priced." if changed_services else ""))
-            log_overrides(request, [appointment], broken, data)
+            action = RuleOverride.Action.MOVED if moved else RuleOverride.Action.CHANGED
+            log_overrides(request, [appointment], broken, data, action)
             if moved:
                 scheduling_changes.job_moved(appointment, request.user)
             warn_overlaps(request, appointment)
             return redirect("appointment", pk=appointment.pk)
-    context = {"form": form, "customer": appointment.customer, "appointment": appointment, "rule_warning": rule_warning}
+    context = {"form": form, "customer": appointment.customer, "appointment": appointment, "alert": alert}
     return render(request, "control/appointment_form.html", context)
 
 
 @require_POST
 def appointment_price(request, customer_pk=None, pk=None):
     """The live price for the booking form, from the pricing engine, as the
-    owner changes the service, add-ons, condition, crew or date (htmx)."""
+    owner changes the service, add-ons, condition, crew or date, and the
+    rules alert below the date and time, swapped in out of band (htmx)."""
     appointment = get_object_or_404(Appointment, pk=pk) if pk else None
     customer = appointment.customer if appointment else get_object_or_404(Customer, pk=customer_pk)
     form = AppointmentForm(request.POST, customer=customer, editing=bool(appointment))
@@ -277,10 +271,19 @@ def appointment_price(request, customer_pk=None, pk=None):
             context["changes_price"] = appointment is not None and not same_inputs(booking.inputs_from_appointment(appointment), inputs)
     else:
         context["errors"] = [error for errors in form.errors.values() for error in errors]
+    if form.is_valid():
+        # The availability check, as the date, time or anything else that
+        # affects it changes. Left as it was when the job can't be priced.
+        try:
+            context["alert"] = rules_alert(request, form, rules_broken(form, appointment))
+            context["alert_known"] = True
+        except (PricingError, booking.BookingError):
+            pass
+    context["form"] = form
     return render(request, "control/_live_price.html", context)
 
 
-def appointment_context(appointment, **extra):
+def appointment_context(appointment, user=None, **extra):
     choices = staff_choices(appointment)
     assigned = {assignment.staff_member_id: assignment for assignment in appointment.assignments.all()}
     payments = list(appointment.payments.order_by("paid_at"))
@@ -301,6 +304,9 @@ def appointment_context(appointment, **extra):
         "final_form": FinalPriceForm(initial={"final_price": total}),
         "history": appointment.history.order_by("-history_date")[:10],
         "series_count": appointment.series.appointments.count() if appointment.series_id else 0,
+        "later_visits": later_visits(appointment),
+        "overrides": list(appointment.rule_overrides.select_related("made_by").order_by("made_at")),
+        "is_manager": user_is_manager(user) if user is not None else False,
     }
     context.update(extra)
     return context
@@ -311,7 +317,7 @@ def appointment(request, pk):
     appointment = get_object_or_404(
         Appointment.objects.select_related("customer", "vehicle", "service_address", "series", "quote"), pk=pk
     )
-    return render(request, "control/appointment.html", appointment_context(appointment))
+    return render(request, "control/appointment.html", appointment_context(appointment, request.user))
 
 
 @require_POST
@@ -322,9 +328,53 @@ def appointment_status(request, pk):
     except booking.BookingError as error:
         messages.error(request, str(error))
     else:
-        if appointment.status == Appointment.Status.CANCELED:
-            scheduling_changes.job_moved(appointment, request.user, canceled=True)
         messages.success(request, f"Marked {appointment.get_status_display().lower()}.")
+    return redirect("appointment", pk=pk)
+
+
+def later_visits(appointment):
+    """How many booked visits of the job's series come after it."""
+    if appointment.series_id is None or appointment.status != Appointment.Status.BOOKED:
+        return 0
+    return appointment.series.appointments.filter(
+        status=Appointment.Status.BOOKED, scheduled_start__gt=appointment.scheduled_start
+    ).count()
+
+
+@require_POST
+def appointment_cancel(request, pk):
+    """The Cancel job popup's buttons, managers only (decision 0095): the
+    customer canceled or Dixie Detail canceled marks the job canceled;
+    created by mistake removes it for good after a second confirmation
+    (remove=yes). For a series visit, visits=later applies to it and the
+    later visits too."""
+    appointment = get_object_or_404(Appointment.objects.select_related("customer", "series"), pk=pk)
+    if not user_is_manager(request.user):
+        messages.error(request, "Only a manager can cancel a job.")
+        return redirect("appointment", pk=pk)
+    later = request.POST.get("visits") == "later"
+    if request.POST.get("remove") == "yes":
+        customer = appointment.customer
+        try:
+            count = booking.remove(appointment, later)
+        except booking.BookingError as error:
+            messages.error(request, str(error))
+            return redirect("appointment", pk=pk)
+        messages.success(request, "Removed the job for good." if count == 1 else f"Removed {count} visits for good.")
+        return redirect("customer", pk=customer.pk)
+    choice = request.POST.get("cancel", "")
+    if choice == "mistake":
+        # Without the popup's second step: ask once more on a page.
+        return render(request, "control/appointment_remove.html", {"appointment": appointment, "later": later})
+    try:
+        jobs = booking.cancel(appointment, choice, request.user, later)
+    except booking.BookingError as error:
+        messages.error(request, str(error))
+        return redirect("appointment", pk=pk)
+    for job in jobs:
+        scheduling_changes.job_moved(job, request.user, canceled=True)
+    who = Appointment.CanceledBy(choice).label
+    messages.success(request, f"{who}. The time is free again." if len(jobs) == 1 else f"{who}: {len(jobs)} visits canceled. Their times are free again.")
     return redirect("appointment", pk=pk)
 
 
@@ -340,7 +390,7 @@ def appointment_final_price(request, pk):
         else:
             messages.success(request, "Final price saved.")
             return redirect("appointment", pk=pk)
-    return render(request, "control/appointment.html", appointment_context(appointment, final_form=form), status=400)
+    return render(request, "control/appointment.html", appointment_context(appointment, request.user, final_form=form), status=400)
 
 
 @require_POST
@@ -364,7 +414,7 @@ def appointment_staff(request, pk):
             "reason": reason,
             "needs_reason": confirmed and not reason.strip(),
         }
-        return render(request, "control/appointment.html", appointment_context(appointment, staff_warning=warning), status=400)
+        return render(request, "control/appointment.html", appointment_context(appointment, request.user, staff_warning=warning), status=400)
     try:
         assign_crew(appointment, members, training_reason=reason, by_manager=user_is_manager(request.user))
     except CrewError as error:

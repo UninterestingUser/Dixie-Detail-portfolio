@@ -20,12 +20,12 @@ from django.utils import timezone
 
 from core.scheduling import time_on_site
 from geo.drive import drive_from_home
-from pricebook.models import PricebookVersion, PricedLine, PricingRules, Service
+from pricebook.models import PricebookVersion, PricedLine, PricingRules, Quote, Service
 from pricebook.pricing import crew_service_minutes, issue_quote, price_job
 from scheduling import availability
 from scheduling.models import RuleOverride
 
-from .models import Appointment, AppointmentLine, RecurringSeries
+from .models import Appointment, AppointmentLine, MatchFlag, RecurringSeries
 
 # The lines a quote gives a job. Custom, on-site adjustment and no-charge
 # lines are the owner's own and are kept when a job is re-priced.
@@ -141,10 +141,12 @@ def rules_broken(inputs, starts, address=None, appointment=None):
     return found
 
 
-def log_override(appointment, reasons, reason, user):
-    """Log a manager's booking or move outside the rules, with the reason."""
+def log_override(appointment, reasons, reason, user, action=RuleOverride.Action.BOOKED):
+    """Log a manager's booking or move outside the rules: the rules broken,
+    in the alert's plain words, the reason, the start, who and when."""
     return RuleOverride.objects.create(
-        appointment=appointment, rules_broken=[str(r) for r in reasons], reason=reason.strip(), made_by=user
+        appointment=appointment, action=action, start=appointment.scheduled_start,
+        rules_broken=[broken.text for broken in reasons], reason=reason.strip(), made_by=user,
     )
 
 
@@ -309,9 +311,12 @@ def overlapping(appointment):
 
 @transaction.atomic
 def set_status(appointment, status):
-    """Booked, completed or canceled. Completing records when."""
-    if status not in (Appointment.Status.BOOKED, Appointment.Status.COMPLETED, Appointment.Status.CANCELED):
-        raise BookingError("A job is booked, completed or canceled.")
+    """Booked or completed. Completing records when. A job is canceled with
+    cancel(), and a canceled job stays canceled."""
+    if appointment.status == Appointment.Status.CANCELED:
+        raise BookingError("A canceled job stays canceled. Book a new job instead.")
+    if status not in (Appointment.Status.BOOKED, Appointment.Status.COMPLETED):
+        raise BookingError("A job is marked booked or completed. Use Cancel job to cancel it.")
     appointment.status = status
     if status == Appointment.Status.COMPLETED:
         appointment.completed_at = appointment.completed_at or timezone.now()
@@ -349,3 +354,91 @@ def set_final_price(appointment, final_price, reason):
             reason=reason.strip(),
         )
     return appointment
+
+
+# Canceling and removing jobs (decision 0095).
+
+
+def visits_from(appointment, later=False):
+    """The job, or with later, it and its series' later booked visits."""
+    if not later or appointment.series_id is None:
+        return [appointment]
+    return list(
+        Appointment.objects.filter(
+            series_id=appointment.series_id, scheduled_start__gte=appointment.scheduled_start, status=Appointment.Status.BOOKED,
+        ).order_by("scheduled_start")
+    )
+
+
+def end_series_if_done(series):
+    """A series with no booked visits left stops repeating."""
+    if series is not None and not series.appointments.filter(status=Appointment.Status.BOOKED).exists():
+        series.active = False
+        series.save(update_fields=["active"])
+
+
+@transaction.atomic
+def cancel(appointment, canceled_by, user, later=False):
+    """Cancel a booked job, or with later, it and its series' later visits.
+    Each stays as the same record, marked canceled, with who canceled (the
+    customer or the business), who pressed the button and when. A canceled
+    job frees its time at once: the availability check and every list of
+    booked jobs leave it out."""
+    if appointment.status != Appointment.Status.BOOKED:
+        raise BookingError("Only a booked job can be canceled.")
+    if canceled_by not in Appointment.CanceledBy.values:
+        raise BookingError("Say who canceled: the customer or Dixie Detail.")
+    now = timezone.now()
+    jobs = visits_from(appointment, later)
+    for job in jobs:
+        job.status = Appointment.Status.CANCELED
+        job.canceled_by = canceled_by
+        job.canceled_at = now
+        job.canceled_by_user = user
+        job.completed_at = None
+        job._change_reason = Appointment.CanceledBy(canceled_by).label
+        job.save()
+    end_series_if_done(appointment.series)
+    return jobs
+
+
+def removal_refused(jobs):
+    """Why these jobs can't be removed for good, or None."""
+    for job in jobs:
+        if job.payments.exists():
+            return "This job has a payment recorded, so it can't be removed. Cancel it instead." if len(jobs) == 1 else (
+                f"The {local_date(job.scheduled_start):%b %-d} visit has a payment recorded, so these visits can't be removed. Cancel them instead."
+            )
+        if hasattr(job, "invoice"):
+            return "This job has an invoice, so it can't be removed. Cancel it instead."
+        if job.assignments.filter(payout__isnull=False).exists():
+            return "A staff member was paid for this job, so it can't be removed. Cancel it instead."
+    return None
+
+
+@transaction.atomic
+def remove(appointment, later=False):
+    """Delete a job created by mistake, or with later, it and its series'
+    later visits, as if they never existed: their lines, staff assignments,
+    flags, override and review records, change history, and every quote
+    they were priced from that nothing else uses. A series left with no
+    visits goes too. A job with a payment can't be removed."""
+    jobs = visits_from(appointment, later)
+    refused = removal_refused(jobs)
+    if refused:
+        raise BookingError(refused)
+    ids = [job.pk for job in jobs]
+    quote_ids = set(Appointment.history.filter(id__in=ids, quote__isnull=False).values_list("quote_id", flat=True))
+    series = appointment.series
+    MatchFlag.objects.filter(appointment_id__in=ids).delete()
+    Appointment.objects.filter(pk__in=ids).delete()
+    # Deleting adds a last history record; remove it with the rest.
+    Appointment.history.filter(id__in=ids).delete()
+    AppointmentLine.history.filter(appointment_id__in=ids).delete()
+    Quote.objects.filter(pk__in=quote_ids, appointment__isnull=True).delete()
+    if series is not None:
+        if series.appointments.exists():
+            end_series_if_done(series)
+        else:
+            series.delete()
+    return len(ids)

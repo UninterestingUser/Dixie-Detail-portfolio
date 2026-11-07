@@ -66,6 +66,7 @@ phases:
     scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
     built:
       - "Step 2: the scheduling settings in the database with change history and their screen, date exceptions, the booked jobs a change leaves outside the rules, the availability check, the manager override and the open-times view (decisions 0093 and 0094)"
+      - "Step 2 follow-up: booking off hours inline with the reason shown on the job, the Schedule, Day, 3 Days, Week and Month views, canceling or removing a job from a popup, canceled jobs in the Baserow import, and the customer list sorted by completed jobs (decisions 0095 and 0096)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
       - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)

@@ -1,0 +1,87 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}{{ title }}{% endblock %}
+{% block body_class %}schedule-page{% if view != 'schedule' %} wide{% endif %}{% endblock %}
+{% block content %}
+{% if queue_count or last_refresh %}<p class="notice">
+  {% if queue_count %}<a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.{% endif %}
+  {% if last_refresh %}<span class="sub{% if last_refresh.result == 'failed' %} warn{% endif %}">Last vehicle data refresh: {{ last_refresh.started_at|date:"D, M j, g:i A" }}, {{ last_refresh.get_result_display|lower }}{% if last_refresh.result == 'failed' %} ({{ last_refresh.message|truncatechars:160 }}){% endif %}: {{ last_refresh.counts_text }}.</span>{% endif %}
+</p>{% endif %}
+<div class="schedule-head">
+  <h1>{{ title }}</h1>
+  <details class="view-menu">
+    <summary aria-label="Change the view: {{ views|get_item:view }}">
+      <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 9v12M15 9v12"/></svg>
+    </summary>
+    <ul class="menu">
+      {% for key, label in views.items %}
+        <li><a href="?view={{ key }}&amp;date={{ day|date:'Y-m-d' }}"{% if key == view %} aria-current="true"{% endif %}>{{ label }}</a></li>
+      {% endfor %}
+    </ul>
+  </details>
+</div>
+<nav class="pager schedule-pager" aria-label="Move">
+  <a class="button" href="?view={{ view }}">Today</a>
+  <a class="button" data-swipe="previous" href="?view={{ view }}&amp;date={{ previous|date:'Y-m-d' }}" aria-label="Previous">‹</a>
+  <a class="button" data-swipe="next" href="?view={{ view }}&amp;date={{ next|date:'Y-m-d' }}" aria-label="Next">›</a>
+</nav>
+
+<div class="schedule-view view-{{ view }}" data-swipe-area>
+{% if view == 'schedule' %}
+  <ol class="agenda" aria-label="Jobs by day">
+    {% include "control/_schedule_days.html" with earlier=True only_sentinel=True %}
+    {% include "control/_schedule_days.html" %}
+  </ol>
+{% elif view == 'month' %}
+  <div class="month" role="grid" aria-label="{{ title }}">
+    <div class="month-row month-names" role="row">{% for name in "SMTWTFS" %}<span role="columnheader">{{ name }}</span>{% endfor %}</div>
+    {% for week in weeks %}
+      <div class="month-row" role="row">
+        {% for cell in week %}
+          <div role="gridcell" class="month-day{% if not cell.in_month %} other-month{% endif %}{% if cell.closed %} closed{% endif %}{% if cell.day == today %} today{% endif %}">
+            <a class="month-date" href="?view=day&amp;date={{ cell.day|date:'Y-m-d' }}" aria-label="{{ cell.day|date:'l, F j' }}{% if cell.jobs %}, {{ cell.jobs|length|add:cell.more }} job{{ cell.jobs|length|add:cell.more|pluralize }}{% endif %}">{{ cell.day.day }}</a>
+            {% for appointment in cell.jobs %}
+              <a class="month-job status-{{ appointment.status }}" href="{% url 'appointment' appointment.pk %}"><span class="month-time">{{ appointment.scheduled_start|local_time }}</span> {{ appointment.customer }}</a>
+            {% endfor %}
+            {% if cell.more %}<a class="month-more" href="?view=day&amp;date={{ cell.day|date:'Y-m-d' }}">+{{ cell.more }} more</a>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="timegrid" style="--days: {{ columns|length }}; --hours: {{ hours|length }}" data-first-minute="{{ first_minute }}" data-last-minute="{{ last_minute }}">
+    <div class="timegrid-head">
+      <span></span>
+      {% for column in columns %}
+        <a class="timegrid-day{% if column.day == today %} today{% endif %}{% if column.closed %} closed{% endif %}" href="?view=day&amp;date={{ column.day|date:'Y-m-d' }}">
+          <span>{{ column.day|date:"D" }}</span> <strong>{{ column.day.day }}</strong>
+          {% if column.closed %}<span class="sub">{{ column.closed|first }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </div>
+    <div class="timegrid-body">
+      <div class="timegrid-hours" aria-hidden="true">{% for hour in hours %}<span>{{ hour|time:"g A" }}</span>{% endfor %}</div>
+      {% for column in columns %}
+        <div class="timegrid-column{% if column.closed %} closed{% endif %}{% if column.day == today %} today{% endif %}" aria-label="{{ column.day|date:'l, F j' }}{% if column.closed %}, closed{% endif %}">
+          {% for block in column.blocks %}
+            {% with appointment=block.appointment %}
+            <a class="timegrid-job status-{{ appointment.status }}" style="{{ block.style }}" href="{% url 'appointment' appointment.pk %}">
+              <strong>{{ appointment.customer }}</strong>
+              <span>{{ appointment.scheduled_start|local_time }}{% if appointment.ends_at %} to {{ appointment.ends_at|local_time }}{% endif %}{% if appointment.status == 'completed' %} · Completed{% endif %}</span>
+              <span>{{ appointment.vehicle|default:"No vehicle recorded" }}</span>
+              <span>{% for line in appointment.lines.all %}{% if line.kind == 'service' or line.kind == 'add_on' or line.kind == 'custom' %}{{ line.description }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}</span>
+              {% if appointment.status == 'booked' and not appointment.assignments.all %}<span class="no-staff">No staff assigned</span>{% endif %}
+            </a>
+            {% endwith %}
+          {% endfor %}
+          {% if column.day == today %}<div class="now-line"{% if column.now %} style="{{ column.now }}"{% else %} hidden{% endif %}></div>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+</div>
+<p class="hint">To book a job, find the customer and tap <strong>Book a job</strong>.</p>
+<div class="actions single"><a class="button primary" href="{% url 'customers' %}">Book a job</a></div>
+{% endblock %}

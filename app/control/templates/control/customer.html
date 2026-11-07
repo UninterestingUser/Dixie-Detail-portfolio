@@ -95,7 +95,7 @@
     <ul class="list">
       {% for row in appointments %}
         {% with appointment=row.appointment %}
-        <li class="card{% if row.is_canceled %} faded{% endif %}">
+        <li class="card">
           <div class="card-head">
             <strong><a href="{% url 'appointment' appointment.pk %}">{{ appointment.scheduled_start|date:"D, M j, Y, g:i A" }}</a></strong>
             <span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>
@@ -115,11 +115,9 @@
               {% endfor %}
             </ul>
           {% endif %}
-          {% if not row.is_canceled %}
-            {% if not row.payments %}{% if row.total and appointment.status == "completed" %}<span class="sub warn">Not paid</span>{% endif %}
-            {% elif row.balance > 0 %}<span class="sub warn">Balance {{ row.balance|money }}</span>
-            {% elif row.payments %}<span class="sub ok">Paid in full</span>{% endif %}
-          {% endif %}
+          {% if not row.payments %}{% if row.total and appointment.status == "completed" %}<span class="sub warn">Not paid</span>{% endif %}
+          {% elif row.balance > 0 %}<span class="sub warn">Balance {{ row.balance|money }}</span>
+          {% elif row.payments %}<span class="sub ok">Paid in full</span>{% endif %}
           {% if appointment.notes %}<span class="sub">{{ appointment.notes|linebreaksbr }}</span>{% endif %}
         </li>
         {% endwith %}
@@ -129,4 +127,25 @@
     <p class="muted">No appointments yet.</p>
   {% endif %}
 </section>
+
+{% if canceled %}
+<section aria-labelledby="canceled">
+  <h2 id="canceled">Canceled jobs</h2>
+  <ul class="list">
+    {% for row in canceled %}
+      {% with appointment=row.appointment %}
+      <li class="card faded">
+        <div class="card-head">
+          <strong><a href="{% url 'appointment' appointment.pk %}">{{ appointment.scheduled_start|date:"D, M j, Y, g:i A" }}</a></strong>
+          <span class="badge status-canceled">{% if appointment.canceled_by %}{{ appointment.get_canceled_by_display }}{% else %}Canceled{% endif %}</span>
+        </div>
+        <span class="sub">{{ appointment.vehicle|default:"No vehicle recorded" }}</span>
+        <span class="sub">{{ row.services|join:", "|default:"No services recorded" }} · Quoted {{ row.total|money }}</span>
+        {% if appointment.cancel_notice is not None %}<span class="sub">{{ appointment.cancel_notice|notice_given }}</span>{% endif %}
+      </li>
+      {% endwith %}
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 {% endblock %}

@@ -227,3 +227,92 @@ details.panel[open] { padding-bottom: 14px; }
 .change-group summary { font-weight: 600; }
 .change-group ul { margin: 6px 0 0; padding-left: 18px; font-size: 0.9rem; }
 @media (min-width: 900px) { .queue-bar { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; } }
+
+/* The Customers screen: the search box at the top, full width, and the
+   Add a customer button fixed at the bottom, above the tab bar on a phone. */
+.search-page .search-bar { position: static; order: 0; display: block; margin: 0 0 12px; padding: 0; background: none; border: 0; }
+.search-page .bottom-action { position: sticky; bottom: var(--tabbar); margin: 12px -16px 0; padding: 10px 16px; background: var(--paper); border-top: 1px solid var(--line); }
+@media (min-width: 900px) { .search-page .bottom-action { position: sticky; bottom: 0; } .search-page { min-height: calc(100dvh - 90px); } }
+
+/* The rules alert under the date and time (decision 0096). */
+.rules-alert { display: grid; gap: 8px; }
+.rules-alert p { margin: 0; }
+.reasons { margin: 0; padding-left: 20px; }
+.reasons ul { margin: 2px 0 6px; padding-left: 18px; }
+
+/* Popups: the Cancel job popup and its second confirmation. */
+dialog.popup { border: 0; border-radius: var(--radius); padding: 18px; width: min(26rem, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
+dialog.popup::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog.popup h2 { margin-top: 0; }
+dialog.popup button { width: 100%; }
+dialog.popup .stack, dialog.popup { display: grid; gap: 8px; }
+dialog.popup:not([open]) { display: none; }
+
+/* The Schedule screen (decision 0096). */
+.wide main { max-width: 84rem; }
+.schedule-page { overflow-anchor: none; }
+.schedule-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.schedule-head h1 { margin: 4px 0 8px; }
+.view-menu { position: relative; }
+.view-menu summary { list-style: none; display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--white); color: var(--navy); cursor: pointer; }
+.view-menu summary::-webkit-details-marker { display: none; }
+.view-menu svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; }
+.view-menu .menu { position: absolute; right: 0; top: 52px; z-index: 15; list-style: none; margin: 0; padding: 6px; min-width: 11rem; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / 0.15); }
+.view-menu .menu a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-weight: 600; }
+.view-menu .menu a[aria-current="true"] { background: var(--paper); color: var(--red); }
+.schedule-pager { grid-template-columns: 2fr 1fr 1fr; }
+.schedule-pager .button { font-size: 1.2rem; }
+.status-completed { background: #e6f2ea; border-color: #9fcfb0; color: var(--ok); }
+
+.agenda { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.agenda-day h2 { margin: 18px 0 8px; }
+.agenda-day h2 a { color: inherit; text-decoration: none; }
+.agenda-day.today h2 { color: var(--red); }
+.agenda-more, .agenda-end { padding: 12px 0; text-align: center; }
+
+.timegrid { --hour: 56px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.timegrid-head, .timegrid-body { display: grid; grid-template-columns: 3rem repeat(var(--days), minmax(0, 1fr)); }
+.timegrid-head { border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+.timegrid-day { padding: 6px 4px; text-align: center; color: var(--ink); text-decoration: none; font-size: 0.85rem; border-left: 1px solid var(--line); line-height: 1.3; }
+.timegrid-day strong { display: block; font-size: 1.15rem; }
+.timegrid-day .sub { font-size: 0.72rem; }
+.timegrid-day.today strong { color: var(--white); background: var(--red); border-radius: 999px; display: inline-block; min-width: 2em; }
+.timegrid-body { height: calc(var(--hours) * var(--hour)); }
+.timegrid-hours { display: grid; grid-template-rows: repeat(var(--hours), var(--hour)); font-size: 0.72rem; color: var(--muted); text-align: right; padding-right: 4px; }
+.timegrid-hours span { transform: translateY(-0.6em); }
+.timegrid-hours span:first-child { transform: none; }
+.timegrid-column { position: relative; border-left: 1px solid var(--line);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--hour) - 1px), var(--line) calc(var(--hour) - 1px), var(--line) var(--hour)); }
+.timegrid-column.closed, .timegrid-day.closed { background-color: #eceef2; }
+.timegrid-job { position: absolute; overflow: hidden; margin: 1px 2px; padding: 3px 5px; border-radius: 6px; font-size: 0.78rem; line-height: 1.25; text-decoration: none;
+  background: var(--navy); color: var(--white); border: 1px solid var(--navy); box-sizing: border-box; width: calc(100% - 4px); }
+.timegrid-job span { display: block; }
+.timegrid-job.status-completed { background: #e6f2ea; color: var(--ok); border-color: #9fcfb0; }
+.timegrid-job.status-requested { background: var(--white); color: var(--red); border-color: var(--red); }
+.timegrid-job .no-staff { font-weight: 700; color: #ffd6c2; }
+.timegrid-job.status-completed .no-staff { color: var(--warn); }
+.now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--red); z-index: 2; pointer-events: none; }
+.now-line::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+
+.month { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.month-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.month-names span { text-align: center; font-size: 0.8rem; font-weight: 700; color: var(--muted); padding: 4px 0; border-bottom: 1px solid var(--line); }
+.month-day { position: relative; min-height: 5.5rem; padding: 2px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.month-row .month-day:first-child { border-left: 0; }
+.month-day.other-month { color: var(--muted); background: #fafbfc; }
+.month-day.closed { background-color: #eceef2; }
+.month-date { align-self: center; font-size: 0.85rem; font-weight: 700; color: inherit; text-decoration: none; min-width: 1.8em; text-align: center; border-radius: 999px; }
+/* Tapping anywhere in a day's box opens it in Day view; the jobs sit above. */
+.month-date::after { content: ""; position: absolute; inset: 0; }
+.month-day.today .month-date { background: var(--red); color: var(--white); }
+.month-job, .month-more { position: relative; z-index: 1; display: block; font-size: 0.7rem; line-height: 1.3; padding: 1px 3px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+.month-job { background: var(--navy); color: var(--white); }
+.month-job.status-completed { background: #e6f2ea; color: var(--ok); }
+.month-more { color: var(--navy); font-weight: 700; }
+@media (min-width: 900px) { .month-day { min-height: 7rem; } .month-job, .month-more { font-size: 0.8rem; } .timegrid { --hour: 64px; } }
+/* On a phone the month's jobs show the customer, and the week's columns stay compact. */
+@media (max-width: 599px) {
+  .month-time { display: none; }
+  .view-week .timegrid-day .sub { display: none; }
+  .view-week .timegrid-job { font-size: 0.68rem; padding: 2px 3px; }
+}

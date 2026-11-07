@@ -18,3 +18,4 @@
 {% else %}
   <p class="muted">Pick the service to see the price.</p>
 {% endif %}
+{% if alert_known %}{% include "control/_rules_alert.html" with oob=True %}{% endif %}

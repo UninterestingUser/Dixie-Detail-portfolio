@@ -51,6 +51,10 @@ class Appointment(models.Model):
         OWNER = "owner", "Owner"
         IMPORT = "import", "Imported"
 
+    class CanceledBy(models.TextChoices):
+        CUSTOMER = "customer", "Customer canceled"
+        BUSINESS = "business", "Dixie Detail canceled"
+
     customer = models.ForeignKey(
         "customers.Customer", on_delete=models.PROTECT, related_name="appointments"
     )
@@ -92,6 +96,14 @@ class Appointment(models.Model):
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    # Who canceled a canceled job, who pressed the button and when (decision
+    # 0095). Empty on jobs canceled before these were recorded, and on
+    # imported canceled jobs.
+    canceled_by = models.CharField(max_length=10, choices=CanceledBy.choices, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+    canceled_by_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
 
     history = HistoricalRecords()
 
@@ -125,6 +137,14 @@ class Appointment(models.Model):
         if minutes is None:
             return None
         return self.scheduled_start.astimezone(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
+
+    @property
+    def cancel_notice(self):
+        """How long before the start the job was canceled, or None when not
+        recorded. Negative when canceled after the start time."""
+        if self.canceled_at is None:
+            return None
+        return self.scheduled_start - self.canceled_at
 
     @classmethod
     @transaction.atomic

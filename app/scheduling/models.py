@@ -171,8 +171,16 @@ class RuleOverride(models.Model):
     control app: the rules broken, as the warning named them, and the
     reason. The website can never override."""
 
+    class Action(models.TextChoices):
+        BOOKED = "booked", "Booked"
+        MOVED = "moved", "Moved"
+        CHANGED = "changed", "Services changed"
+
     appointment = models.ForeignKey("appointments.Appointment", on_delete=models.CASCADE, related_name="rule_overrides")
-    # The warning's lines, such as "Start times: 10:00 AM is not a start time on Tuesdays".
+    action = models.CharField(max_length=10, choices=Action.choices, default=Action.BOOKED)
+    # The start the job was booked or moved to, outside the rules.
+    start = models.DateTimeField(null=True, blank=True)
+    # The alert's lines, such as "Sunday is a closed day".
     rules_broken = ArrayField(models.CharField(max_length=300))
     reason = models.TextField()
     made_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")

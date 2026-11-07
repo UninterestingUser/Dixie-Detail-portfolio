@@ -2,8 +2,9 @@
 
 import re
 
-from django.db.models import Q
+from django.db.models import Count, F, Max, Q
 
+from appointments.models import Appointment
 from customers.models import Customer
 
 LETTERS = re.compile(r"[^\W\d_]")
@@ -37,9 +38,23 @@ def name_matches(word):
     )
 
 
+def ranked(customers):
+    """Those with the most completed jobs first, then the most recent
+    completed visit, then by last name. Each has completed_jobs."""
+    completed = Q(appointments__status=Appointment.Status.COMPLETED)
+    return (
+        customers.annotate(
+            completed_jobs=Count("appointments", filter=completed),
+            last_visit=Max("appointments__scheduled_start", filter=completed),
+        )
+        .prefetch_related("vehicles", "second_contacts")
+        .order_by("-completed_jobs", F("last_visit").desc(nulls_last=True), "last_name", "first_name", "pk")
+    )
+
+
 def find_customers(query):
-    """Customers matching the query, best known first, and whether there are
-    more than LIMIT.
+    """Customers matching the query, ranked, and whether there are more than
+    LIMIT. With nothing typed, every customer.
 
     A query with no letters is a phone number, whole or in part, in any
     format. Otherwise every word must match the customer's first or last
@@ -48,7 +63,7 @@ def find_customers(query):
     """
     query = query.strip()
     if not query:
-        return [], False
+        return list(ranked(Customer.objects.all())), False
     if not LETTERS.search(query):
         digits = phone_digits(query)
         if len(digits) < MIN_PHONE_DIGITS:
@@ -61,9 +76,5 @@ def find_customers(query):
                 condition &= name_matches(word)
             elif len(phone_digits(word)) >= MIN_PHONE_DIGITS:
                 condition &= phone_matches(phone_digits(word))
-    found = list(
-        Customer.objects.filter(pk__in=Customer.objects.filter(condition).values("pk"))
-        .prefetch_related("vehicles", "second_contacts")
-        .order_by("last_name", "first_name", "pk")[: LIMIT + 1]
-    )
+    found = list(ranked(Customer.objects.filter(pk__in=Customer.objects.filter(condition).values("pk")))[: LIMIT + 1])
     return found[:LIMIT], len(found) > LIMIT

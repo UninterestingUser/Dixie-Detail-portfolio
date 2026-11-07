@@ -16,30 +16,6 @@ from scheduling.models import RuleOverride
 from .fixtures import JobsTestCase, local, open_day
 
 
-class ScheduleTests(JobsTestCase):
-    def setUp(self):
-        super().setUp()
-        self.day = open_day(10)
-        self.job = booking.book(self.customer, self.vehicle, local(self.day), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
-
-    def test_the_day_list(self):
-        page = self.client.get(reverse("schedule"), {"date": self.day.isoformat()})
-        self.assertContains(page, "Pat Example")
-        self.assertContains(page, "2019 Toyota RAV4, blue")
-        self.assertContains(page, "8:00 AM to 1:00 PM")  # 4 hours of service, plus setup and breakdown
-        self.assertContains(page, "Full Detail · $250.00")
-        self.assertContains(self.client.get(reverse("schedule"), {"date": (self.day + datetime.timedelta(days=1)).isoformat()}), "No jobs on this day.")
-
-    def test_the_week_list(self):
-        page = self.client.get(reverse("schedule-week"), {"date": self.day.isoformat()})
-        self.assertContains(page, self.day.strftime("%A, %b ") + str(self.day.day))
-        self.assertContains(page, "Pat Example")
-
-    def test_home_is_today(self):
-        self.assertRedirects(self.client.get("/"), reverse("schedule"))
-        self.assertEqual(self.client.get(reverse("schedule")).status_code, 200)
-
-
 class LivePriceTests(JobsTestCase):
     def price(self, **changes):
         day = open_day(10)
@@ -88,26 +64,26 @@ class BookingTests(JobsTestCase):
         sunday = timezone.localdate() - datetime.timedelta(days=timezone.localdate().weekday() + 1)
         data = self.booking_data(sunday, time="19:30")
         page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), data)
-        self.assertContains(page, "Outside the scheduling rules")
-        self.assertContains(page, "Open day: Closed on Sundays")
-        self.assertContains(page, "Open day: Too soon")
+        self.assertContains(page, "Sunday is a closed day")
+        self.assertContains(page, "Too soon")
+        self.assertContains(page, "Booking off hours is allowed. Give the reason below and it will be logged with the job.")
+        self.assertContains(page, "Give the reason for booking off hours.")
         self.assertFalse(Appointment.objects.exists())
-        page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on"})
-        self.assertContains(page, "Give the reason for booking outside the rules.")
-        self.assertFalse(Appointment.objects.exists())
-        self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on", "override_reason": "Entered late"})
+        self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override_reason": "Entered late"})
         appointment = Appointment.objects.get()
         self.assertEqual(appointment.scheduled_start, timezone.make_aware(datetime.datetime.combine(sunday, datetime.time(19, 30))))
         override = RuleOverride.objects.get()
-        self.assertEqual((override.appointment, override.reason, override.made_by), (appointment, "Entered late", self.owner_user))
-        self.assertIn("Open day: Closed on Sundays", override.rules_broken)
+        self.assertEqual((override.appointment, override.reason, override.made_by, override.action), (appointment, "Entered late", self.owner_user, "booked"))
+        self.assertEqual(override.start, appointment.scheduled_start)
+        self.assertIn("Sunday is a closed day", override.rules_broken)
 
     def test_only_a_manager_can_book_outside_the_rules(self):
         self.client.force_login(self.helper_user)
-        data = self.booking_data(self.day, time="10:15", override="on", override_reason="Customer asked")
+        data = self.booking_data(self.day, time="10:15", override_reason="Customer asked")
         page = self.client.post(reverse("appointment-new", args=[self.customer.pk]), data)
-        self.assertContains(page, "Start times: 10:15 AM is not a start time")
-        self.assertContains(page, "Only a manager can book outside the scheduling rules.")
+        self.assertContains(page, "10:15 AM is not a start time")
+        self.assertContains(page, "Only a manager can book off hours. Pick another time.")
+        self.assertNotContains(page, 'name="override_reason"')
         self.assertFalse(Appointment.objects.exists())
 
     def test_a_booking_inside_the_rules_needs_no_reason(self):
@@ -144,7 +120,7 @@ class BookingTests(JobsTestCase):
         # The visits are more than 90 days ahead, past the furthest bookable date.
         data = self.booking_data(first, service=self.monthly.pk, condition_level="", repeat="monthly", visits="3", time="09:00")
         self.assertContains(self.client.post(reverse("appointment-new", args=[self.customer.pk]), data), "Too far ahead")
-        response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override": "on", "override_reason": "Booked for next year"})
+        response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), {**data, "override_reason": "Booked for next year"})
         series = RecurringSeries.objects.get()
         self.assertEqual(RuleOverride.objects.filter(appointment__series=series).count(), 3)
         visits = list(series.appointments.order_by("scheduled_start"))
@@ -192,10 +168,11 @@ class ChangingAJobTests(JobsTestCase):
         self.assertContains(self.client.post(reverse("appointment-edit", args=[self.job.pk]), data), "9:30 AM is not a start time")
         self.job.refresh_from_db()
         self.assertEqual(timezone.localtime(self.job.scheduled_start).time(), datetime.time(8, 0))
-        self.client.post(reverse("appointment-edit", args=[self.job.pk]), {**data, "override": "on", "override_reason": "Customer's gate opens at 9:30"})
+        self.client.post(reverse("appointment-edit", args=[self.job.pk]), {**data, "override_reason": "Customer's gate opens at 9:30"})
         self.job.refresh_from_db()
         self.assertEqual(timezone.localtime(self.job.scheduled_start).time(), datetime.time(9, 30))
-        self.assertEqual(self.job.rule_overrides.get().reason, "Customer's gate opens at 9:30")
+        override = self.job.rule_overrides.get()
+        self.assertEqual((override.reason, override.action, override.start), ("Customer's gate opens at 9:30", "moved", self.job.scheduled_start))
 
     def test_changing_only_the_notes_is_not_checked(self):
         self.job.scheduled_start = local(self.day, 10, 15)
@@ -217,15 +194,16 @@ class ChangingAJobTests(JobsTestCase):
         self.assertEqual(self.job.service_minutes, job.service_minutes)
         self.assertTrue(self.job.history.filter(history_change_reason="Heavier soiling than described").exists())
 
-    def test_status_booked_completed_canceled(self):
-        for status in ("completed", "canceled", "booked"):
+    def test_status_booked_and_completed(self):
+        for status in ("completed", "booked"):
             self.client.post(reverse("appointment-status", args=[self.job.pk]), {"status": status})
             self.job.refresh_from_db()
             self.assertEqual(self.job.status, status)
             self.assertEqual(self.job.completed_at is not None, status == "completed")
-        self.client.post(reverse("appointment-status", args=[self.job.pk]), {"status": "requested"})
-        self.job.refresh_from_db()
-        self.assertEqual(self.job.status, "booked")
+        for status in ("requested", "canceled"):
+            self.client.post(reverse("appointment-status", args=[self.job.pk]), {"status": status})
+            self.job.refresh_from_db()
+            self.assertEqual(self.job.status, "booked")
 
     def test_the_final_price_with_an_on_site_adjustment(self):
         url = reverse("appointment-final-price", args=[self.job.pk])

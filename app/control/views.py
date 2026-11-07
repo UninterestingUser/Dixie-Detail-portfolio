@@ -17,6 +17,7 @@ from django.views.decorators.http import require_safe
 from appointments.models import Appointment
 from billing.models import Payment
 from customers.models import Customer
+from pricebook.models import PricedLine
 from staff.authorization import user_is_manager
 from vehicles.classification.lookup import classify
 from vehicles.models import Vehicle
@@ -46,6 +47,9 @@ def customers(request):
     return response
 
 
+SERVICE_KINDS = (PricedLine.Kind.SERVICE, PricedLine.Kind.ADD_ON, PricedLine.Kind.CUSTOM)
+
+
 def appointment_rows(customer):
     """Every appointment, newest first, with its price and what was paid."""
     appointments = customer.appointments.select_related("vehicle", "service_address").prefetch_related(
@@ -56,9 +60,11 @@ def appointment_rows(customer):
         total = appointment.total_before_tax
         payments = list(appointment.payments.all())
         paid = sum((payment.amount for payment in payments), Decimal("0.00"))
+        lines = list(appointment.lines.all())
         rows.append({
             "appointment": appointment,
-            "lines": list(appointment.lines.all()),
+            "lines": lines,
+            "services": [line.description for line in lines if line.kind in SERVICE_KINDS],
             "total": total,
             "payments": payments,
             "paid": paid,
@@ -84,8 +90,11 @@ def customer(request, pk):
         "second_contacts": customer.second_contacts.all(),
         "addresses": with_summaries(customer.addresses.select_related("tax_jurisdiction", "verified_by").order_by("-active", "line1")),
         "vehicles": customer.vehicles.select_related("vehicle_class", "size_variant").order_by("make", "model", "year", "color"),
-        "appointments": appointment_rows(customer),
     }
+    # Canceled jobs are listed apart, below the appointments (decision 0095).
+    rows = appointment_rows(customer)
+    context["appointments"] = [row for row in rows if not row["is_canceled"]]
+    context["canceled"] = [row for row in rows if row["is_canceled"]]
     return render(request, "control/customer.html", context)
 
 

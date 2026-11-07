@@ -492,3 +492,37 @@ class PricebookFirstTests(TestCase):
         with self.assertRaisesMessage(CommandError, "run load_pricebook"):
             call_command("import_baserow", str(folder), "--apply", stdout=io.StringIO())
         self.assertFalse(Customer.objects.exists())
+
+
+class CanceledJobTests(ImportTestCase):
+    """A Baserow status of Canceled, and booked jobs missing from a fresh
+    export (decision 0095)."""
+
+    def write_appointments(self, rows):
+        write_csv(self.folder / "export - Appointments.csv", BASEROW_TABLES["Appointments"], rows)
+
+    def test_a_canceled_status_becomes_a_canceled_job(self):
+        rows = [row[:] for row in APPOINTMENTS]
+        rows[4][3] = "Canceled"
+        self.write_appointments(rows)
+        report = self.run_import("--apply")
+        job = Appointment.objects.get(baserow_id=25)
+        self.assertEqual((job.status, job.canceled_by, job.canceled_at), (Appointment.Status.CANCELED, "", None))
+        self.assertIn("canceled appointments created: 1", report)
+        self.assertNotIn("unknown status", report)
+
+    def test_a_booked_job_missing_from_a_fresh_export_is_listed_never_removed(self):
+        self.run_import("--apply")
+        self.write_appointments([row for row in APPOINTMENTS if row[0] != "25"])
+        report = self.run_import("--apply")
+        self.assertTrue(Appointment.objects.filter(baserow_id=25, status=Appointment.Status.BOOKED).exists())
+        self.assertIn("Booked jobs missing from this export, left for you to deal with (1)", report)
+        self.assertIn("Appointments id 25: Pat Example, Fri Dec 11, 2026, 8:00 AM, booked here but not in this export; left as it is", report)
+
+    def test_baserow_takes_precedence_over_a_cancellation_in_the_app(self):
+        self.run_import("--apply")
+        job = Appointment.objects.get(baserow_id=25)
+        Appointment.objects.filter(pk=job.pk).update(status=Appointment.Status.CANCELED, canceled_by="customer", canceled_at=timezone.now())
+        self.run_import("--apply")
+        job.refresh_from_db()
+        self.assertEqual((job.status, job.canceled_by, job.canceled_at), (Appointment.Status.BOOKED, "", None))
