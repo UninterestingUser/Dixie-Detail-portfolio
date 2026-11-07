@@ -7,15 +7,15 @@ area: booking
 status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-17
+updated: 2026-11-07
 supersedes: []
-superseded_by: [docs/decisions/0056-scheduling-rules-are-settings.md]
+superseded_by: [docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md]
 related: [docs/reference/scheduling-and-calendars.md]
 ---
 
 # 0022: Timing of the second Monthly Maintenance job
 
-**Status:** superseded by [0056](0056-scheduling-rules-are-settings.md) · **Date:** 2026-10-07 · **Area:** booking
+**Status:** superseded by [0056](0056-scheduling-rules-are-settings.md) and, for the rounding, [0093](0093-quarter-hour-rounding-confirmed.md) · **Date:** 2026-10-07 · **Area:** booking
 
 ## Context
 
@@ -36,3 +36,5 @@ Open point: the rounding to the quarter hour was proposed during planning and is
 ## Superseded
 
 Superseded on 2026-10-17 by [decision 0056](0056-scheduling-rules-are-settings.md): the gap and its rounding are now the launch values of the gap-before-a-later-job and rounding settings, and they apply to any two jobs allowed to share a day. The quarter-hour rounding is still not confirmed by the owner.
+
+The owner confirmed the quarter-hour rounding on 2026-11-04 ([decision 0093](0093-quarter-hour-rounding-confirmed.md)): a later job's earliest start is rounded up to the next quarter hour, the launch value of the rounding setting.

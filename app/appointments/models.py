@@ -1,4 +1,5 @@
-"""Appointments, their line snapshots, repeating series and closed days."""
+"""Appointments, their line snapshots and repeating series. Closed days are
+scheduling settings (scheduling.models.DateException)."""
 
 import datetime
 from decimal import Decimal
@@ -117,9 +118,13 @@ class Appointment(models.Model):
 
     @property
     def ends_at(self):
-        """When the crew leaves: the start plus the time on site, or None."""
+        """When the crew leaves: the start plus the time on site, or None.
+        Added in UTC, so a job across the change to or from daylight saving
+        time lasts exactly its minutes."""
         minutes = self.time_on_site_minutes
-        return None if minutes is None else self.scheduled_start + datetime.timedelta(minutes=minutes)
+        if minutes is None:
+            return None
+        return self.scheduled_start.astimezone(datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
 
     @classmethod
     @transaction.atomic
@@ -270,21 +275,3 @@ class RepricingDecision(models.Model):
     def __str__(self):
         return f"{self.get_choice_display()} for {self.appointment}"
 
-
-class DayClosure(models.Model):
-    """A day closed for booking: a holiday, a day off or a Time Off calendar event."""
-
-    class Source(models.TextChoices):
-        CONTROL_APP = "control_app", "Control app"
-        TIME_OFF_CALENDAR = "time_off_calendar", "Time Off calendar"
-
-    date = models.DateField(unique=True)
-    reason = models.CharField(max_length=200, blank=True)
-    source = models.CharField(max_length=20, choices=Source.choices)
-    calendar_event_id = models.CharField(max_length=200, blank=True)
-
-    class Meta:
-        ordering = ["date"]
-
-    def __str__(self):
-        return f"Closed {self.date}"

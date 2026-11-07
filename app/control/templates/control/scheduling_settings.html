@@ -1,0 +1,109 @@
+{% extends "control/base.html" %}
+{% block title %}Scheduling settings{% endblock %}
+{% block content %}
+<h1>Scheduling settings</h1>
+<p class="help">Every scheduling rule is a setting (decision 0056). A change applies to bookings made after it; booked jobs keep their times. When a change leaves booked jobs outside the new rules, they are listed for you to keep or reschedule. All times are Eastern.</p>
+{% if waiting %}<p class="notice"><a href="{% url 'scheduling-waiting' %}">{{ waiting }} booked job{{ waiting|pluralize }}</a> outside the rules still wait{{ waiting|pluralize:"s," }} for keep or reschedule.</p>{% endif %}
+<p><a class="button" href="{% url 'open-times' %}">Open times for the next 90 days</a></p>
+
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Open weekdays, hours and start times</legend>
+    <p class="help">The start time is the arrival time, when setup starts. These are the times offered online; a later job on a day with a job is placed after it by the gap.</p>
+    {% for number, name, day_form in days %}
+      <div class="card stack">
+        <strong>{{ name }}</strong>
+        {% include "control/_field.html" with field=day_form.is_open %}
+        <div class="two">
+          {% include "control/_field.html" with field=day_form.opens_at %}
+          {% include "control/_field.html" with field=day_form.closes_at %}
+        </div>
+        {% include "control/_field.html" with field=day_form.start_times %}
+      </div>
+    {% endfor %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>When bookings can be made</legend>
+    {% include "control/_field.html" with field=form.minimum_notice_days %}
+    {% include "control/_field.html" with field=form.furthest_bookable_days %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Time on site</legend>
+    <p class="help">Time on site = setup + service time + breakdown. Setup and breakdown are divided by the number of people on the job.</p>
+    {% include "control/_field.html" with field=form.setup_minutes_one_person %}
+    {% include "control/_field.html" with field=form.breakdown_minutes_one_person %}
+    {% include "control/_field.html" with field=form.time_on_site_rounding_minutes %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Jobs per day</legend>
+    {% include "control/_field.html" with field=form.jobs_per_day %}
+    <p class="help">A day with a job takes another only when both services can share a day, each within its own maximum.</p>
+    {% for service, share_form in sharing %}
+      <div class="two">
+        <div class="field"><span class="label">{{ service }}</span>{{ share_form.shares }} <label for="{{ share_form.shares.id_for_label }}">Can share a day</label></div>
+        {% include "control/_field.html" with field=share_form.max_per_day %}
+      </div>
+      {% for error in share_form.non_field_errors %}<p class="error">{{ error }}</p>{% endfor %}
+    {% endfor %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Gap between jobs</legend>
+    <p class="help">A later job starts no earlier than the earlier job's end plus the drive between the two addresses, at least the minimum, rounded up.</p>
+    {% include "control/_field.html" with field=form.minimum_gap_minutes %}
+    {% include "control/_field.html" with field=form.round_start_up_to_minutes %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Time Off calendar</legend>
+    <p class="help">The calendar is copied from Google in Phase 3, Step 3; until then the copy is empty.</p>
+    {% include "control/_field.html" with field=form.time_off_buffer_minutes %}
+    {% include "control/_field.html" with field=form.time_off_check_minutes %}
+    {% include "control/_field.html" with field=form.stale_copy_warning_minutes %}
+  </fieldset>
+  {% if can_edit %}
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <a class="button" href="{% url 'account' %}">Cancel</a>
+  </div>
+  {% else %}<p class="help">Only a manager can change these.</p>{% endif %}
+</form>
+
+<section aria-labelledby="exceptions">
+  <h2 id="exceptions">Date exceptions</h2>
+  <p class="help">A date closed all day, or open with different hours. A Time Off event on Google closes a day or a time the same way, once the calendar sync is built.</p>
+  {% if exceptions %}
+  <ul class="list">
+    {% for exception in exceptions %}
+      <li class="card">
+        <strong>{{ exception.date|date:"D M j, Y" }}</strong>: {{ exception.get_kind_display }}{% if exception.kind == "hours" %}, {{ exception.opens_at|time:"g:i A" }} to {{ exception.closes_at|time:"g:i A" }}{% if exception.start_times %}, start times {% for t in exception.start_times %}{{ t|time:"g:i A" }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% endif %}
+        {% if exception.reason %}<span class="sub">{{ exception.reason }}</span>{% endif %}
+        {% if can_edit %}
+        <form method="post" action="{% url 'date-exception-delete' exception.pk %}">{% csrf_token %}<button type="submit">Remove</button></form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">No date exceptions from today on.</p>{% endif %}
+  {% if can_edit %}
+  <form method="post" action="{% url 'date-exception-add' %}" class="stack" novalidate>
+    {% csrf_token %}
+    {% for field in exception_form %}{% include "control/_field.html" %}{% endfor %}
+    <button type="submit">Add the date exception</button>
+  </form>
+  {% endif %}
+</section>
+
+<section aria-labelledby="home-base">
+  <h2 id="home-base">Home base</h2>
+  <p>{% if home %}The home base is set. Drive times to the first job start there.{% else %}<span class="warn">The home base is not set.</span>{% endif %}
+  {% if can_edit %}<a href="{% url 'location-settings' %}">Change it in the location settings</a>, with the drive-time settings and Google's daily caps.{% endif %}</p>
+</section>
+
+{% if history %}
+<section aria-labelledby="changes">
+  <h2 id="changes">Recent changes</h2>
+  <ul>{% for record in history %}<li>{{ record.history_date|date:"M j, Y g:i A" }}{% if record.history_user %} by {{ record.history_user }}{% endif %}{% if record.history_change_reason %}: {{ record.history_change_reason }}{% endif %}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% endblock %}

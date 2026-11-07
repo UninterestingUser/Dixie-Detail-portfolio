@@ -2,8 +2,12 @@
 
 Every price comes from the pricing engine through a quote (decision 0059):
 booking issues a quote and copies its lines, and changing a job's services
-issues a new quote, with the owner's reason kept in the change history. The
-owner may book any date; the availability rules arrive in Phase 3.
+issues a new quote, with the owner's reason kept in the change history.
+
+Every booking is checked against the scheduling rules (scheduling.availability).
+The website can only book an open time. The owner can book outside a rule in
+the control app after a warning naming it, with a reason that is logged
+(RuleOverride).
 """
 
 import calendar
@@ -17,7 +21,9 @@ from django.utils import timezone
 from core.scheduling import time_on_site
 from geo.drive import drive_from_home
 from pricebook.models import PricebookVersion, PricedLine, PricingRules, Service
-from pricebook.pricing import crew_service_minutes, issue_quote
+from pricebook.pricing import crew_service_minutes, issue_quote, price_job
+from scheduling import availability
+from scheduling.models import RuleOverride
 
 from .models import Appointment, AppointmentLine, RecurringSeries
 
@@ -29,6 +35,14 @@ ZERO = Decimal("0.00")
 
 class BookingError(ValueError):
     """The job cannot be booked or changed as asked."""
+
+
+class RulesBroken(BookingError):
+    """The job breaks scheduling rules. broken is [(start, [Reason])]."""
+
+    def __init__(self, broken):
+        self.broken = broken
+        super().__init__("; ".join(f"{timezone.localtime(start):%a %b %-d, %-I:%M %p}: {', '.join(map(str, reasons))}" for start, reasons in broken))
 
 
 @dataclass
@@ -99,6 +113,50 @@ def local_date(moment):
     return timezone.localtime(moment).date()
 
 
+def job_to_place(inputs, day, address=None, appointment=None):
+    """The job as the availability check sees it: the time on site priced
+    for its date, its main service and its address's location. A job not
+    priced from the pricebook keeps its booked time on site."""
+    point = address.point if address is not None else None
+    if inputs is None:
+        minutes = appointment.time_on_site_minutes if appointment is not None else None
+        return availability.Job(minutes or 0, point=point)
+    job = price_job(
+        inputs.service, inputs.vehicle_class, size_variant=inputs.size_variant, condition_level=inputs.condition_level,
+        add_ons=inputs.add_ons, crew_size=inputs.crew_size, on=day, version=version_for(day), check_promotion_dates=False,
+    )
+    return availability.Job(job.time_on_site.total_minutes, inputs.service.pk, inputs.service.name, point)
+
+
+def rules_broken(inputs, starts, address=None, appointment=None):
+    """[(start, [Reason])] for each start that breaks a scheduling rule.
+    appointment is the job being changed, left out of its own day."""
+    exclude = appointment.pk if appointment is not None else None
+    found = []
+    for start in starts:
+        job = job_to_place(inputs, local_date(start), address, appointment)
+        reasons = availability.check(job, start, exclude=exclude)
+        if reasons:
+            found.append((start, reasons))
+    return found
+
+
+def log_override(appointment, reasons, reason, user):
+    """Log a manager's booking or move outside the rules, with the reason."""
+    return RuleOverride.objects.create(
+        appointment=appointment, rules_broken=[str(r) for r in reasons], reason=reason.strip(), made_by=user
+    )
+
+
+@transaction.atomic
+def book_online(customer, vehicle, start, inputs, *, address=None, notes=""):
+    """A booking from the website: only an open time, never an override."""
+    broken = rules_broken(inputs, [start], address)
+    if broken:
+        raise RulesBroken(broken)
+    return book(customer, vehicle, start, inputs, address=address, notes=notes, source=Appointment.Source.WEBSITE)
+
+
 @transaction.atomic
 def book(customer, vehicle, start, inputs, *, address=None, notes="", series=None, source=Appointment.Source.OWNER):
     """Book one job: issue a quote priced from the pricebook in effect on its
@@ -132,6 +190,15 @@ def series_dates(first, frequency, visits):
     """The visit dates of a repeating series, from the first visit."""
     step = 1 if frequency == RecurringSeries.Frequency.MONTHLY else 3
     return [add_months(first, step * number) for number in range(visits)]
+
+
+def series_starts(first_start, frequency, visits):
+    """The start of each visit of a series, at the same Eastern time of day."""
+    first = timezone.localtime(first_start)
+    return [
+        timezone.make_aware(datetime.datetime.combine(day, first.time().replace(tzinfo=None)))
+        for day in series_dates(first.date(), frequency, visits)
+    ]
 
 
 @transaction.atomic

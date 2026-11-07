@@ -21,7 +21,7 @@ from billing.methods import PaymentMethod
 from billing.models import Payment
 from bookkeeping.models import ExportBatch
 from core.fields import normalize_phone
-from core.scheduling import launch_values, round_to_nearest
+from core.scheduling import current_values, round_to_nearest
 from customers.models import Address, Customer, SecondContact
 from pricebook.models import Service
 from promotions.models import Promotion
@@ -480,7 +480,7 @@ class Importer:
 
             names = parsing.split_list(row["Staff"])
             crew_size = min(max(len(names), 1), 2)
-            values = launch_values()
+            values = current_values()
             times = {"setup_minutes": None, "service_minutes": None, "breakdown_minutes": None}
             if hours is not None:
                 # Hours is the whole time on site; setup and breakdown are split by the crew.

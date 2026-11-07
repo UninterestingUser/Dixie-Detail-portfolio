@@ -4,9 +4,9 @@ summary: The records the database holds across all nine business areas, as built
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [data-model, database, phase-1]
-related: [docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
+related: [docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0077-linking-vehicles-to-the-catalog.md, docs/decisions/0079-approval-list.md, docs/decisions/0076-catalog-screens-in-the-control-app.md, docs/reference/vehicle-catalog.md, docs/reference/vehicle-classification.md, docs/decisions/0071-vehicle-facts-per-model-year-and-source.md, docs/decisions/0073-classification-per-model-year.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/reference/pricing.md, docs/reference/pricebook-changes.md, docs/reference/returning-customers.md, docs/reference/payments.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md]
 ---
 
 # Data model
@@ -107,7 +107,6 @@ The `appointments` app.
 - **Recurring series** ties repeating Monthly or Quarterly Maintenance visits for one vehicle together.
 - **Match flag** records a difference in name, address or vehicle between a booking and the customer it was quietly matched to, and which of the four actions the owner chose (decision 0034).
 - **Repricing decision** logs the owner's choice for a booked job when a pricebook version is published: keep the booked price, use the new price, or a custom amount, with both amounts.
-- **Day closure** is a day closed for booking, set in the control app or read from the Time Off calendar.
 
 ## Billing and sales tax
 
@@ -129,6 +128,18 @@ The `geo` app.
 - **Location settings** is a single record, with change history: the home base (the owner's home, where drive times start), Google's daily caps, the drive-time estimate's road factor and speed, how long drive times are cached, and the tax sourcing rule.
 - **API usage** counts the calls made to Google Place Details, Google Text Search, Google Routes and the Census geocoder per Pacific day, with the calls refused at a cap (decision 0091).
 - **Drive time** caches a drive time from Google by its two points and the hour of the day. Estimates are never cached.
+
+## Scheduling
+
+The `scheduling` app. Every scheduling rule is a setting (decision 0056), seeded from [data/booking-rules.yaml](../../data/booking-rules.yaml) the first time it is read. See [../reference/scheduling-and-calendars.md](../reference/scheduling-and-calendars.md).
+
+- **Scheduling settings** is a single record, with change history: the minimum notice and the furthest bookable date in days, setup and breakdown minutes for one person, the time-on-site rounding, jobs per day, the minimum gap before a later job and the rounding of its start, the Time Off buffer, how often Time Off is copied and when its copy counts as old.
+- **Open weekday** is one weekday's record, with change history: open or closed, its opening and closing times and its list of start times.
+- **Shared service** lets one service share a day with another job, with how many of it a day can hold. Monthly Maintenance and Motorcycle Detail, two each, at launch.
+- **Date exception** is one date closed all day or open with different hours and, optionally, its own start times, with a reason and change history. It replaces the unused day closure record.
+- **Time Off event** is the local copy of one event on the Dixie Detail Time Off calendar: all day over a range of dates, or timed. The calendar sync fills it from Phase 3, Step 3; until then it is empty.
+- **Rule override** logs a manager booking or moving a job outside the scheduling rules: the job, the rules broken as the warning named them, the reason, who and when (decision 0094).
+- **Settings change** records one save of the scheduling settings that left booked jobs outside the new rules. Each **affected job** holds one such job, the rules it now breaks, and the owner's choice: kept as booked, rescheduled or canceled, with who and when.
 
 ## Staff
 
@@ -153,7 +164,7 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 - **Phone numbers** are stored as 10 digits, with no formatting or country code. A number typed in any common format is reduced to its digits when it is saved or searched for, and the database refuses anything else (decision 0049).
 - **Times** are stored in UTC and shown in Eastern time (decision 0048).
 - **Money** is stored as exact decimals, never floating point (decision 0047).
-- **Change history.** Every change to the pricebook, promotions, customers, their second contacts and addresses, vehicles, and appointments and their lines keeps the earlier version: who changed it, when, and the old values. This is done with django-simple-history (decision 0050).
+- **Change history.** Every change to the pricebook, promotions, customers, their second contacts and addresses, vehicles, appointments and their lines, and the scheduling settings, weekdays, shared services and date exceptions keeps the earlier version: who changed it, when, and the old values. This is done with django-simple-history (decision 0050).
 - **Imported records** keep the id of the Baserow row they came from, on customers, vehicles and appointments, and an import key on addresses, payments and helper payouts, so the import can be re-run before launch (decision 0051). Imported payments and payouts belong to the export batch "Already in GnuCash: Baserow import" (decision 0066).
 - **Nothing is deleted from under a job.** A customer, vehicle, address, service, promotion or pricebook version that a job refers to cannot be deleted.
 
@@ -162,10 +173,8 @@ The `bookkeeping`, `messaging` and `marketing` apps.
 Everything above describes the code as it is. This section is the exception: it describes records the owner decided on 2026-10-17 that the code does not have yet. Each will move into the sections above, in the present tense, when it is built.
 
 - **Staff authorization** links one staff member to one service they may perform: every active service, add-ons included, but not history-only services or custom lines. The staff page and the service page both edit these records, with their change history. Managers (staff with the owner role, so only the owner today) are authorized for every service without a record, so a new service starts with only managers authorized (decisions 0061 and 0069).
-- **Scheduling settings** will hold the live values of the rules in [data/booking-rules.yaml](../../data/booking-rules.yaml), with change history. Built in Phase 3 (decision 0056).
 - **Arrival and departure** will be stored on each appointment, each with how it was recorded (tap, automatic or edited), and corrections logged. Built in Phase 4 (decision 0062).
 
 ## What is not built yet
 
-- Settings such as working hours, start times, setup and breakdown and buffers. Their launch values are in `data/` until the scheduling work in Phase 3. The home base is built, in the location settings.
 - Every screen of the control app, the Django admin and sign-in.

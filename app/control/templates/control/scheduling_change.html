@@ -1,0 +1,17 @@
+{% extends "control/base.html" %}
+{% block title %}Jobs outside the new rules{% endblock %}
+{% block content %}
+<h1>Jobs outside the new rules</h1>
+<p class="help">{{ change.summary }}, {{ change.made_at|date:"M j, Y g:i A" }}{% if change.made_by %} by {{ change.made_by }}{% endif %}. These booked jobs now break a rule they did not break before. Booked jobs never move on their own: keep each as booked, or reschedule it on its own screen. A job moved or canceled is marked as such here.</p>
+<form method="post" class="stack">
+  {% csrf_token %}
+  <ul class="list">{% for affected in jobs %}{% include "control/_affected_job.html" %}{% endfor %}</ul>
+  {% if can_edit %}
+  <div class="button-row">
+    <button type="submit" class="primary">Save</button>
+    <button type="submit" name="all" value="keep">Keep all as booked</button>
+  </div>
+  {% else %}<p class="help">Only a manager can choose.</p>{% endif %}
+</form>
+<p><a href="{% url 'scheduling-settings' %}">Back to the scheduling settings</a></p>
+{% endblock %}

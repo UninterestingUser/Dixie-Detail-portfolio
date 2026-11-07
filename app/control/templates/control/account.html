@@ -5,6 +5,8 @@
 <p>Signed in as <strong>{{ user.get_full_name|default:user.get_username }}</strong>.</p>
 <ul class="list">
   <li><a class="row" href="{% url 'sales-tax' %}"><strong>Sales tax</strong><span class="sub">Rates, changes waiting for approval and addresses to check</span></a></li>
+  <li><a class="row" href="{% url 'scheduling-settings' %}"><strong>Scheduling settings</strong><span class="sub">Open days and hours, date exceptions, start times, notice, setup and breakdown, jobs per day, the gap between jobs and the Time Off buffer</span></a></li>
+  <li><a class="row" href="{% url 'open-times' %}"><strong>Open times</strong><span class="sub">The next 90 days of start times for a job, and why closed times are closed</span></a></li>
   {% if is_manager %}<li><a class="row" href="{% url 'location-settings' %}"><strong>Location settings</strong><span class="sub">Home base, Google's daily caps, drive-time estimates and this month's calls</span></a></li>{% endif %}
 </ul>
 {% if user.is_superuser %}

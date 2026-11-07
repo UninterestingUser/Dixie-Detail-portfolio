@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-10-29
+  updated: 2026-11-07
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -64,6 +64,8 @@ phases:
     name: Scheduling and website
     status: next
     scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
+    built:
+      - "Step 2: the scheduling settings in the database with change history and their screen, date exceptions, the booked jobs a change leaves outside the rules, the availability check, the manager override and the open-times view (decisions 0093 and 0094)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
       - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)
@@ -98,7 +100,6 @@ owner_actions_open:        # answers and checks only the owner can give
   - At each vehicle's next visit - confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083)
   - Before Phase 3 - add a photo to each class's photo card; each shows a placeholder until then
   # Carried over from the Phase 1 runbook.
-  - Before Phase 3 - confirm or drop the quarter-hour rounding of a second Monthly job's start (decisions 0022 and 0056)
   - Before Phase 3 - the accountant's view on Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, docs/reference/sales-tax.md)
   - Before Phase 3 - short descriptions in the owner's own words for each service and condition level, for the website
   - Before Phase 3 - collect the Google Business Profile link for the website footer (data/business.yaml)

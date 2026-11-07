@@ -1,0 +1,12 @@
+{% extends "control/base.html" %}
+{% block title %}Jobs waiting for keep or reschedule{% endblock %}
+{% block content %}
+<h1>Jobs waiting for keep or reschedule</h1>
+<p class="help">Booked jobs that scheduling settings changes left outside the rules, with no choice yet.</p>
+{% if jobs %}
+<ul class="list">{% for affected in jobs %}
+  <li class="card"><a href="{% url 'scheduling-change' affected.change.pk %}">{{ affected.change.summary }}</a>: {{ affected.appointment.customer }}, {{ affected.appointment.scheduled_start|date:"D M j, Y, g:i A" }}</li>
+{% endfor %}</ul>
+{% else %}<p class="notice">No booked job waits for a choice.</p>{% endif %}
+<p><a href="{% url 'scheduling-settings' %}">Back to the scheduling settings</a></p>
+{% endblock %}

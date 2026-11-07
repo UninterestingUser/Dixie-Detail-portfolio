@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "messaging",
     "importer",
     "geo",
+    "scheduling",
 ]
 
 MIDDLEWARE = [
