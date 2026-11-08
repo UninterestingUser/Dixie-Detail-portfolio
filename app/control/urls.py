@@ -2,11 +2,13 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import (
-    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, schedule_views, scheduling_views, staff_views, views,
+    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, review_views, schedule_views,
+    scheduling_views, staff_views, views,
 )
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("needs-you/seen/", views.needs_you_seen, name="needs-you-seen"),
     path("sign-in/", auth_views.LoginView.as_view(template_name="control/sign_in.html", redirect_authenticated_user=True), name="sign-in"),
     path("sign-out/", auth_views.LogoutView.as_view(), name="sign-out"),
     path("account/", views.account, name="account"),
@@ -42,13 +44,23 @@ urlpatterns = [
     path("appointments/<int:pk>/status/", appointment_views.appointment_status, name="appointment-status"),
     path("appointments/<int:pk>/cancel/", appointment_views.appointment_cancel, name="appointment-cancel"),
     path("calendar-flags/<int:pk>/", calendar_views.calendar_flag, name="calendar-flag"),
-    # Website requests: quote requests with photos, and offline requests.
+    # Website requests: quote requests with photos, offline requests and a
+    # second vehicle the same day; the review queue for quiet matching.
     path("requests/", request_views.requests, name="requests"),
     path("requests/quotes/<int:pk>/", request_views.quote_request, name="quote-request"),
-    path("requests/quotes/<int:pk>/status/", request_views.quote_request_status, name="quote-request-status"),
+    path("requests/quotes/<int:pk>/price/", request_views.quote_request_price, name="quote-request-price"),
+    path("requests/quotes/<int:pk>/book/", request_views.quote_request_book, name="quote-request-book"),
+    path("requests/quotes/<int:pk>/decline/", request_views.quote_request_decline, name="quote-request-decline"),
     path("requests/photos/<int:pk>/", request_views.quote_photo, name="quote-photo"),
     path("requests/offline/<int:pk>/", request_views.time_request, name="time-request"),
-    path("requests/offline/<int:pk>/status/", request_views.time_request_status, name="time-request-status"),
+    path("requests/offline/<int:pk>/book/", request_views.time_request_book, name="time-request-book"),
+    path("requests/offline/<int:pk>/decline/", request_views.time_request_decline, name="time-request-decline"),
+    path("requests/second-vehicle/<int:pk>/", request_views.second_vehicle_request, name="second-vehicle-request"),
+    path("requests/second-vehicle/<int:pk>/book/", request_views.second_vehicle_book, name="second-vehicle-book"),
+    path("requests/second-vehicle/<int:pk>/decline/", request_views.second_vehicle_decline, name="second-vehicle-decline"),
+    path("review/", review_views.match_reviews, name="match-reviews"),
+    path("review/<int:pk>/", review_views.match_review, name="match-review"),
+    path("review/flags/<int:pk>/", review_views.match_resolve, name="match-resolve"),
     path("appointments/<int:pk>/final-price/", appointment_views.appointment_final_price, name="appointment-final-price"),
     path("appointments/<int:pk>/staff/", appointment_views.appointment_staff, name="appointment-staff"),
     # Staff and the services they are authorized for.

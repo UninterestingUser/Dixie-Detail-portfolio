@@ -146,6 +146,17 @@ def by_quote_vehicle(vehicle):
     return found
 
 
+def vehicle_fields(found):
+    """The request's vehicle as Vehicle fields. A van picked from the photo
+    cards with no make or model typed has nothing to match on, so it is
+    always flagged against a returning customer's vehicles."""
+    size = found.size_variant
+    return {
+        "vehicle_model": found.vehicle_model, "year": found.year, "make": found.make or "", "model": found.model or "",
+        "color": "", "vehicle_class": found.vehicle_class, "size_variant": size,
+    }
+
+
 def send(request, data):
     form = parse(data)
     found = by_quote_vehicle(form["vehicle"])
@@ -160,14 +171,17 @@ def send(request, data):
             if len(kept) != len(form["photos"]):
                 raise bad_request("photos", "A photo didn't finish uploading. Please add it again.")
             smoke_test = smoke_test or session.is_smoke_test
-        customer = bookings.new_customer(form["first_name"], form["last_name"], form["mobile"], smoke_test)
-        address = place.as_address(customer)
-        address.save()
-        consent.record(customer, form["mobile"], form["consents"])
+        # Matched quietly like a booking; an address or vehicle it brings is
+        # kept off the record until the request is booked.
+        typed = bookings.given(form["first_name"], form["last_name"], form["mobile"], place, vehicle_fields(found), smoke_test)
+        intake = bookings.take_in(typed, form["consents"], form["mobile"], hold=True)
+        customer = intake.customer
         quote_request = QuoteRequest.objects.create(
-            reference=bookings.unique_reference(QuoteRequest),
+            reference=bookings.unique_reference(),
             customer=customer,
-            service_address=address,
+            service_address=intake.address,
+            vehicle=intake.vehicle,
+            intake=intake.as_json(),
             vehicle_year=found.year,
             vehicle_make=found.make or "",
             vehicle_model_name=found.model or "",

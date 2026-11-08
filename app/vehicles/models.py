@@ -698,6 +698,10 @@ class Vehicle(models.Model):
     # model's newest generation (decision 0083): confirm the year at the next visit.
     confirm_year = models.BooleanField(default=False, help_text="Confirm the year at the next visit; the class assumed the newest generation.")
     notes = models.TextField(blank=True)
+    # A vehicle the customer no longer has, or one a website booking brought
+    # that the owner chose not to keep on the record (returning-customers.md).
+    # Kept for the jobs done on it; left out of matching and the booking form.
+    active = models.BooleanField(default=True, db_default=True)
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,6 +1,0 @@
-{# New website requests on the home screen (public-api.md). #}
-{% if website_requests.quote_requests or website_requests.time_requests %}
-<p class="notice" role="status"><a href="{% url 'requests' %}">
-  {% if website_requests.quote_requests %}{{ website_requests.quote_requests }} new quote request{{ website_requests.quote_requests|pluralize }}{% endif %}{% if website_requests.quote_requests and website_requests.time_requests %} and {% endif %}{% if website_requests.time_requests %}{{ website_requests.time_requests }} offline request{{ website_requests.time_requests|pluralize }}{% if website_requests.price_differs %}, {{ website_requests.price_differs }} with a different price{% endif %}{% endif %}
-</a></p>
-{% endif %}

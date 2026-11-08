@@ -1,0 +1,17 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+<p class="help">Website bookings from returning customers whose name, address or vehicle differs from the record. Each job is booked already, with the details as booked; your choice only changes the record.</p>
+<ul class="list">
+  {% for job in jobs %}
+    <li><a class="row" href="{% url 'match-review' job.pk %}">
+      <strong>{{ job.customer }}</strong>{% if job.is_test %} <span class="badge">Test</span>{% endif %}
+      <span class="sub">{{ job.open_flags }} difference{{ job.open_flags|pluralize }} · job {{ job.scheduled_start|date:"D, M j" }}, {{ job.scheduled_start|local_time }}</span>
+    </a></li>
+  {% empty %}
+    <li class="muted">Nothing to check.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

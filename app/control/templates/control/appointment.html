@@ -25,6 +25,26 @@
 <p><a class="button" href="{% url 'appointment-edit' appointment.pk %}">Change job</a></p>
 {% endif %}
 
+{% if appointment.reference or open_flags or resolved_flags %}
+<section aria-labelledby="website-heading">
+  <h2 id="website-heading">Website booking</h2>
+  <div class="card">
+    {% if appointment.reference %}<span>Reference <strong>{{ appointment.reference }}</strong>{% if appointment.is_test %} <span class="badge">Test</span>{% endif %}</span>{% endif %}
+    {% if appointment.intake %}<span class="sub">{% if appointment.intake.matched %}Matched to this returning customer by mobile number{% if appointment.intake.contact_id %}, a second contact's{% endif %}.{% else %}A new customer.{% endif %}</span>{% endif %}
+    {% if open_flags %}<p><a class="button primary" href="{% url 'match-review' appointment.pk %}">Check {{ open_flags }} difference{{ open_flags|pluralize }} from the record</a></p>
+    {% elif resolved_flags %}<span class="sub"><a href="{% url 'match-review' appointment.pk %}">Differences from the record: all resolved</a></span>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% for request_item in quote_requests %}
+<section aria-labelledby="quote-request-heading-{{ request_item.pk }}">
+  <h2 id="quote-request-heading-{{ request_item.pk }}">From quote request <a href="{% url 'quote-request' request_item.pk %}">{{ request_item.reference }}</a></h2>
+  <p class="prewrap">{{ request_item.description }}</p>
+  {% include "control/_quote_photos.html" with item=request_item %}
+</section>
+{% endfor %}
+
 {% if calendar_flags %}
 <section aria-labelledby="calendar-heading">
   <h2 id="calendar-heading">Calendar</h2>

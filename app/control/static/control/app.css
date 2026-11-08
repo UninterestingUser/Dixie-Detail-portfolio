@@ -334,3 +334,16 @@ dialog.popup:not([open]) { display: none; }
 dl.facts { grid-template-columns: max-content 1fr; }
 dl.facts dt { font-weight: 600; }
 dl.facts dd { margin: 0; }
+
+/* The "needs you" list and the review queue (control-app.md). */
+.needs-you { margin: 0 0 16px; }
+.needs-you h2 { display: flex; align-items: center; gap: 8px; }
+.needs-you form { margin-top: 8px; }
+.review-flag { display: grid; gap: 10px; margin-bottom: 14px; }
+.review-flag h2 { margin: 0; }
+.side-by-side { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.side-by-side h3 { margin: 0 0 4px; font-size: 0.9rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.side-by-side p { margin: 0 0 4px; overflow-wrap: anywhere; }
+@media (max-width: 420px) { .side-by-side { grid-template-columns: 1fr; } }
+.review-flag fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.review-flag legend { font-weight: 600; margin-bottom: 4px; }

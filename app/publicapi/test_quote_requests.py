@@ -247,7 +247,7 @@ class ControlAppTests(QuoteRequestTestCase):
         self.assertEqual(shown["Content-Type"], "image/jpeg")
         self.assertTrue(b"".join(shown.streaming_content).startswith(b"\xff\xd8"))
         schedule = tailnet.get("/schedule/")
-        self.assertContains(schedule, "1 new quote request")
+        self.assertContains(schedule, "Quote request: Morgan Fleet")
 
 
 class CleanupTests(QuoteRequestTestCase):
@@ -309,11 +309,12 @@ class TestRecordTests(QuoteRequestTestCase):
         self.send(session=session, photos=[uploaded["photo"]], mobile="4235550199")
         quote = self.quote(place=self.place_token)
         self.client.post_json("bookings", self.booking_body(quote, eastern(open_day(3), 8), mobile="4235550199"))
-        self.assertEqual(Customer.objects.filter(is_test=True).count(), 2)
+        # The booking matched the request's test customer quietly.
+        self.assertEqual(Customer.objects.filter(is_test=True).count(), 1)
         self.assertTrue(Appointment.objects.get().is_test)
         output = io.StringIO()
         call_command("delete_test_records", stdout=output)
-        self.assertIn("Deleted 2 test customer(s), 1 appointment(s), 1 quote request(s) with 1 photo(s)", output.getvalue())
+        self.assertIn("Deleted 1 test customer(s), 1 appointment(s), 1 quote request(s) with 1 photo(s)", output.getvalue())
         self.assertEqual(list(Customer.objects.all()), [real])
         self.assertFalse(Appointment.objects.exists())
         self.assertFalse(QuoteRequest.objects.exists())
@@ -348,7 +349,8 @@ class SmokeTestTests(ApiTestCase):
         text = output.getvalue()
         self.assertIn("api-smoke-test: booked", text)
         self.assertIn("api-smoke-test: quote request", text)
-        self.assertIn("Deleted 2 test customer(s), 1 appointment(s), 1 quote request(s) with 1 photo(s)", text)
+        # The quote request matched the booking's test customer.
+        self.assertIn("Deleted 1 test customer(s), 1 appointment(s), 1 quote request(s) with 1 photo(s)", text)
         self.assertTrue(text.strip().endswith("api-smoke-test: PASS"))
         self.assertFalse(Customer.objects.exists())
         self.assertFalse(Appointment.objects.exists())
@@ -418,8 +420,9 @@ class TimeRequestTests(ApiTestCase):
         owner = get_user_model().objects.create_user("owner", password="an-invented-password-1")
         tailnet = TailnetClient()
         tailnet.force_login(owner)
-        self.assertContains(tailnet.get("/schedule/"), "with a different price")
-        self.assertContains(tailnet.get(f"/requests/offline/{request.pk}/"), "differs from the 330.00 the customer saw")
+        self.assertContains(tailnet.get("/schedule/"), "Offline request: Avery")
+        self.assertContains(tailnet.get("/schedule/"), "price differs")
+        self.assertContains(tailnet.get(f"/requests/offline/{request.pk}/"), "differs from the $330.00 the customer saw")
 
     def test_an_address_outside_the_area_is_kept_with_the_problem(self):
         self.send(self.body(place_id=KNOXVILLE))

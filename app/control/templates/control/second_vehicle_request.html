@@ -1,0 +1,38 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Second vehicle {{ item.reference }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'requests' %}">Website requests</a></p>
+<h1>Second vehicle the same day</h1>
+{% if item.is_test %}<p class="notice">A test record.</p>{% endif %}
+<p class="help">A returning customer booked another job on a day they already have one, so it came in as a request, not a job. Approve it to book it, at the time they picked or another, or decline it. The customer was told you'd confirm.</p>
+<dl class="facts">
+  <dt>Request</dt><dd>{{ item.reference }} · {{ item.get_status_display }}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
+  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a></dd>
+  <dt>Wants</dt><dd>{{ item.start|date:"D, M j, Y" }}, {{ item.start|local_time }}</dd>
+  <dt>Vehicle</dt><dd>{{ item.vehicle }}</dd>
+  <dt>Address</dt><dd>{{ item.service_address }}</dd>
+  <dt>Already booked</dt><dd>{% if item.same_day_appointment %}<a href="{% url 'appointment' item.same_day_appointment.pk %}">{{ item.same_day_appointment.scheduled_start|local_time }}: {{ item.same_day_appointment.vehicle|default:"no vehicle" }}</a>{% else %}<span class="muted">No longer on file</span>{% endif %}</dd>
+  <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment.scheduled_start|date:"D, M j, Y" }}, {{ item.appointment.scheduled_start|local_time }}</a>{% else %}None yet{% endif %}</dd>
+</dl>
+{% include "control/_contact.html" %}
+<h2>The quote</h2>
+<div class="card">
+  <table class="lines">
+    {% for line in lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+    <tr><td>Sales tax, {{ quote.tax_rate|percent }}%</td><td class="amount">{{ quote.sales_tax|money }}</td></tr>
+    <tr class="total"><td>Total</td><td class="amount">{{ quote.total|money }}</td></tr>
+  </table>
+  <span class="sub">The price the customer was shown, booked as issued (decision 0059). {{ quote.time_on_site_minutes|duration }} on site.</span>
+</div>
+{% if is_open %}
+<h2 id="book">Approve and book it</h2>
+{% url 'second-vehicle-book' item.pk as action %}
+{% include "control/_book_time.html" with form=book_form action=action label="Approve and book" %}
+{% if is_manager %}
+<h2>Decline it</h2>
+{% url 'second-vehicle-decline' item.pk as action %}
+{% include "control/_decline.html" with form=decline_form action=action %}
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -9,9 +9,15 @@ appointment's line snapshot (decisions 0033 and 0059). An expired quote, or
 one the day of service would price differently, returns a fresh quote to
 confirm, never a silent new price.
 
-Until quiet matching (Phase 3 Step 5), each booking creates a new customer.
-Nothing in the answer comes from a customer's record: the summary is built
-from the quote, the place and what this booking sent.
+Each booking is matched quietly on its mobile number (customers.matching,
+returning-customers.md): a returning customer's booking goes on their
+record, and any difference is flagged for the owner. A returning customer
+who already has a job that day gets a request the owner approves instead
+of a booking (SecondVehicleRequest). Nothing in the answer comes from a
+customer's record: the summary is built from the quote, the place and what
+this booking sent. A one-person job with exactly one qualified staff member
+is assigned to them; any other job waits on the home screen for a manager
+(decisions 0061 and 0069).
 """
 
 import datetime
@@ -24,12 +30,13 @@ from django.utils import timezone
 from appointments import booking
 from appointments.models import Appointment
 from billing.methods import website_methods
-from customers.models import Customer
-from vehicles.models import Vehicle
+from customers import matching
+from scheduling.availability import local_midnight
+from staff.authorization import auto_assign
 
 from . import consent, quotes, turnstile, validate
 from .http import ApiError, bad_request
-from .models import new_reference
+from .models import SecondVehicleRequest, new_reference
 
 ORIGIN_SOURCE = "Website"
 
@@ -58,19 +65,57 @@ def is_test_number(mobile):
     return mobile in listed
 
 
-def new_customer(first_name, last_name, mobile, smoke_test=False):
-    """A new customer for a website booking or request. Quiet matching
-    (Phase 3 Step 5) will put returning customers on their record instead."""
-    return Customer.objects.create(
-        first_name=first_name, last_name=last_name, mobile=mobile, source=ORIGIN_SOURCE,
+def given(first_name, last_name, mobile, place=None, vehicle=None, smoke_test=False):
+    """A booking or request as typed, for quiet matching. place is the
+    verified place; vehicle holds Vehicle fields."""
+    return matching.Given(
+        first_name=first_name, last_name=last_name, mobile=mobile,
+        address=place.as_address() if place is not None else None, vehicle=vehicle,
         is_test=smoke_test or is_test_number(mobile),
     )
 
 
-def unique_reference(model, length=8):
+def take_in(form_given, answers, mobile, hold=False, when=None):
+    """Match the booking or request, put it on its customer and record the
+    consent answers there. Returns the Intake."""
+    intake = matching.take_in(form_given, source=ORIGIN_SOURCE, hold=hold)
+    intake.consent_ids = [row.pk for row in consent.record(intake.customer, mobile, answers, when=when)]
+    return intake
+
+
+def quote_vehicle(web, color=""):
+    """The vehicle of a website quote, as Vehicle fields."""
+    quote = web.quote
+    return {
+        "vehicle_model": web.vehicle_model, "year": web.vehicle_year, "make": web.vehicle_make, "model": web.vehicle_model_name,
+        "color": color, "vehicle_class": quote.vehicle_class, "size_variant": quote.size_variant,
+    }
+
+
+def same_day_job(customer, day):
+    """The customer's job on that day, not canceled, or None."""
+    if customer is None:
+        return None
+    return (
+        Appointment.objects.filter(
+            customer=customer, scheduled_start__gte=local_midnight(day),
+            scheduled_start__lt=local_midnight(day + datetime.timedelta(days=1)),
+        ).exclude(status=Appointment.Status.CANCELED).order_by("scheduled_start").first()
+    )
+
+
+REFERENCE_MODELS = ("appointments.Appointment", "publicapi.QuoteRequest", "publicapi.SecondVehicleRequest")
+
+
+def unique_reference(model=None, length=8):
+    """A reference no booking or request has, so one the customer reads out
+    always finds one record."""
+    from django.apps import apps
+
+    models = [apps.get_model(name) for name in REFERENCE_MODELS]
     for _ in range(10):
         reference = new_reference(length)
-        if not model.objects.filter(reference=reference).exists():
+        if not any(found.objects.filter(reference=reference).exists() for found in models):
             return reference
     raise RuntimeError("No free reference after 10 tries.")
 
@@ -146,6 +191,12 @@ def fresh_quote_error(code, message, web, day=None):
     return ApiError(409, code, message, quote=quotes.quote_json(fresh))
 
 
+SECOND_VEHICLE_MESSAGE = (
+    "Thanks! We've got your request for this time. Because there's already a booking for this number that day, "
+    "we'll confirm this one by text or call. Your request number is {reference}."
+)
+
+
 def book(request, data):
     """Book a website quote. Returns (status, answer)."""
     form = parse(data)
@@ -157,7 +208,7 @@ def book(request, data):
     # One transaction: the token, the quote's age, the time and the booking.
     with transaction.atomic():
         smoke_test = turnstile.check(request, form["turnstile"])
-        if Appointment.objects.filter(quote_id=web.quote_id).exists():
+        if Appointment.objects.filter(quote_id=web.quote_id).exists() or SecondVehicleRequest.objects.filter(web_quote=web).exists():
             raise ApiError(409, "quote_used", "That quote has already been booked. Please start again for another booking.")
         if web.expired:
             error = fresh_quote_error("quote_expired", "Your quote has expired. Here is a fresh one to confirm.", web, day)
@@ -167,9 +218,18 @@ def book(request, data):
                 "quote_changed", "The price for that date is different. Please confirm the new price to book it.", web, day
             )
             return error.status, {"error": error.code, "message": error.message, **error.extra}
+        typed = given(form["first_name"], form["last_name"], form["mobile"], web.place, quote_vehicle(web, form["color"]), smoke_test)
+        # The day is locked before looking for the customer's job that day, so
+        # two bookings at once can't both miss each other.
+        booking.lock_day(day)
+        customer, _ = matching.find_match(typed.mobile, typed.is_test, typed.first_name, typed.last_name)
+        other = same_day_job(customer, day)
         try:
             with transaction.atomic():
-                appointment = write_booking(web, form, start, smoke_test)
+                if other is not None:
+                    second = write_second_vehicle_request(web, form, start, typed, other)
+                    return 202, second_vehicle_answer(web, second, form)
+                appointment = write_booking(web, form, start, typed)
         except booking.RulesBroken as error:
             raise ApiError(409, "time_taken", "That time is no longer open. Please pick another time.") from error
         except IntegrityError as error:
@@ -177,28 +237,52 @@ def book(request, data):
     return 201, booking_answer(web, appointment, form)
 
 
-def write_booking(web, form, start, smoke_test):
-    quote = web.quote
-    customer = new_customer(form["first_name"], form["last_name"], form["mobile"], smoke_test)
-    address = web.place.as_address(customer)
-    address.save()
-    vehicle = Vehicle.objects.create(
-        customer=customer,
-        vehicle_model=web.vehicle_model,
-        year=web.vehicle_year,
-        make=web.vehicle_make,
-        model=web.vehicle_model_name,
-        color=form["color"],
-        vehicle_class=quote.vehicle_class,
-        size_variant=quote.size_variant,
-    )
-    consent.record(customer, form["mobile"], form["consents"])
-    return booking.book_online(
-        customer, vehicle, start, None, address=address, quote=quote,
+def write_booking(web, form, start, typed):
+    """Match the booking, then book the quote as issued on the customer it
+    matched, with the address and vehicle as booked; raise the review flags
+    and assign the only qualified staff member."""
+    intake = take_in(typed, form["consents"], form["mobile"])
+    appointment = booking.book_online(
+        intake.customer, intake.vehicle, start, None, address=intake.address, quote=web.quote,
         preferred_payment_method=form["payment_method"],
-        reference=unique_reference(Appointment),
-        is_test=customer.is_test,
+        reference=unique_reference(),
+        is_test=intake.customer.is_test,
+        intake=intake.as_json(),
     )
+    matching.raise_flags(appointment, appointment.intake)
+    auto_assign(appointment)
+    return appointment
+
+
+def write_second_vehicle_request(web, form, start, typed, other):
+    """A returning customer already has a job that day: the time must still
+    be open, but the booking becomes a request the owner approves."""
+    from calendars.sync import refresh_time_off_for_booking
+
+    refresh_time_off_for_booking()
+    booking.check_online(None, start, web.place.as_address(), web.quote)
+    intake = take_in(typed, form["consents"], form["mobile"], hold=True)
+    return SecondVehicleRequest.objects.create(
+        reference=unique_reference(),
+        web_quote=web,
+        customer=intake.customer,
+        service_address=intake.address,
+        vehicle=intake.vehicle,
+        start=start,
+        payment_method=form["payment_method"],
+        same_day_appointment=other,
+        intake=intake.as_json(),
+        is_test=intake.customer.is_test,
+    )
+
+
+def second_vehicle_answer(web, second, form):
+    return {
+        "request": second.reference,
+        "status": "requested",
+        "message": SECOND_VEHICLE_MESSAGE.format(reference=second.reference),
+        "summary": summary(web, second.start, form["color"], form["payment_method"]),
+    }
 
 
 def booking_answer(web, appointment, form):

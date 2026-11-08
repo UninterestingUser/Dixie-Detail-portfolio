@@ -5,38 +5,43 @@
 <p><a href="{% url 'requests' %}">Website requests</a></p>
 <h1>Offline request</h1>
 {% if item.is_test %}<p class="notice">A test record.</p>{% endif %}
-{% if item.price_differs %}<p class="notice warn-notice" role="status">The price today, {{ item.quote.total_before_tax }} before tax, differs from the {{ item.shown_total }} the customer saw (pricebook version {{ item.shown_pricebook_version }}).</p>{% endif %}
+{% if item.price_differs %}<p class="notice warn-notice" role="status">Today's price, {{ item.quote.total_before_tax|money }} before tax, differs from the {{ item.shown_total|money }} the customer saw (pricebook version {{ item.shown_pricebook_version }}).</p>{% endif %}
 {% if item.problem %}<p class="notice warn-notice" role="status">{{ item.problem }}</p>{% endif %}
-<p class="help">Sent while the server was offline, so nothing is booked. Book the job from the customer's page, then mark this booked.</p>
+<p class="help">Sent while the server was offline, so nothing is booked yet. Book it into a time, priced for that day, or decline it.</p>
 <dl class="facts">
-  <dt>Status</dt><dd>{{ item.get_status_display }}</dd>
+  <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
   <dt>Sent</dt><dd>{{ item.submitted_at|date:"D, M j, Y, g:i A" }} (arrived {{ item.received_at|date:"D, M j, g:i A" }})</dd>
-  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>, {{ item.customer.mobile_display }}</dd>
+  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>{% if item.intake.matched %} <span class="badge">Returning customer</span>{% endif %}</dd>
   <dt>Wants</dt><dd>{% if item.preferred_start %}{{ item.preferred_start|date:"D, M j, Y" }}, {{ item.preferred_start|local_time }}{% else %}No time given{% endif %}{% if item.preferred_note %}. {{ item.preferred_note }}{% endif %}</dd>
   <dt>Vehicle</dt><dd>{{ item.inputs.vehicle_text|default:"Not priced" }}{% if item.inputs.color %}, {{ item.inputs.color }}{% endif %}</dd>
   <dt>Service</dt><dd>{{ item.inputs.service }}{% for add_on in item.inputs.add_ons %}, {{ add_on }}{% endfor %}</dd>
   <dt>Address</dt><dd>{{ item.service_address|default:"Not looked up" }}</dd>
+  {% if drive %}<dt>Drive</dt><dd>{{ drive.minutes|duration }} from the home base{% if drive.estimated %} <span class="badge">Estimated</span>{% endif %}</dd>{% endif %}
   <dt>Payment</dt><dd>{{ item.inputs.payment_method }}</dd>
+  <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment.scheduled_start|date:"D, M j, Y" }}</a>{% else %}None yet{% endif %}</dd>
 </dl>
+{% include "control/_contact.html" %}
 {% if lines %}
-<h2>Priced on arrival</h2>
-<ul class="list">
-  {% for line in lines %}<li class="row"><span>{{ line.description }}</span> <strong>{{ line.amount }}</strong></li>{% endfor %}
-  <li class="row"><span>Total before tax</span> <strong>{{ item.quote.total_before_tax }}</strong></li>
-  <li class="row"><span>Customer saw</span> <strong>{{ item.shown_total }}</strong></li>
-</ul>
+<h2>The price</h2>
+<div class="card">
+  <table class="lines">
+    {% for line in lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+    <tr class="total"><td>Today's price before tax</td><td class="amount">{{ item.quote.total_before_tax|money }}</td></tr>
+    <tr><td>The customer saw</td><td class="amount">{{ item.shown_total|money }}</td></tr>
+  </table>
+  <span class="sub">Booked, the job is priced from the pricebook in effect on its day, with the tax at its address then. Tick "Honor the price the customer saw" to book it at {{ item.shown_total|money }} before tax instead; the difference becomes an adjustment line with the reason.</span>
+</div>
 {% endif %}
-{% if is_manager %}
-<h2>Update</h2>
-<form method="post" action="{% url 'time-request-status' item.pk %}" class="stack">
-  {% csrf_token %}
-  <label>Status
-    <select name="status">{% for value, label in statuses %}<option value="{{ value }}"{% if value == item.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-  </label>
-  <label>Job booked from it
-    <select name="appointment"><option value="">None</option>{% for job in jobs %}<option value="{{ job.pk }}"{% if job.pk == item.appointment_id %} selected{% endif %}>{{ job.scheduled_start|date:"D, M j, Y" }}</option>{% endfor %}</select>
-  </label>
-  <button type="submit">Save</button>
-</form>
+{% if can_book %}
+<h2 id="book">Book it</h2>
+{% url 'time-request-book' item.pk as action %}
+{% include "control/_book_time.html" with form=book_form action=action %}
+{% elif item.status == 'new' %}
+<p class="notice">This request couldn't be priced{% if item.problem %} ({{ item.problem }}){% endif %}. Book the job from <a href="{% url 'customer' item.customer.pk %}">the customer's page</a>, then decline this request with that as the reason.</p>
+{% endif %}
+{% if item.status == 'new' and is_manager %}
+<h2>Decline it</h2>
+{% url 'time-request-decline' item.pk as action %}
+{% include "control/_decline.html" with form=decline_form action=action %}
 {% endif %}
 {% endblock %}

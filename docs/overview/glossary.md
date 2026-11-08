@@ -139,7 +139,13 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Match flag.** A difference in name, address or vehicle between a booking and the customer it was quietly matched to, waiting for the owner to choose one of four actions. See [../reference/returning-customers.md](../reference/returning-customers.md).
 
-**Quiet matching.** Linking a new booking to an existing customer by mobile number, without showing the customer anything. See [../reference/returning-customers.md](../reference/returning-customers.md).
+**Quiet matching.** Linking a website booking or request to an existing customer by mobile number, without showing the customer anything. A difference from the record raises a match flag for the review queue. See [../reference/returning-customers.md](../reference/returning-customers.md).
+
+**Review queue (customers).** The website bookings whose name, address or vehicle differs from the customer record they were matched to, each with the four actions: update the record, keep the record, add alongside, or move the booking to a new customer. Under **Account → Review queue** in the control app. Not the same as the vehicle review queue.
+
+**Second vehicle request.** A returning customer's website booking on a day they already have a job, taken as a request the owner approves or declines instead of an appointment.
+
+**Needs you.** The list at the top of the control app's home screen of everything waiting for the owner, newest first: new website bookings, review flags, website jobs with no staff, requests waiting for a decision, Time Off over a booked job and sales tax rates to approve.
 
 **Second contact.** A second person with their own name and number on a customer's record, such as a spouse, who can book under that record.
 

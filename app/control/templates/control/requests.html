@@ -3,7 +3,7 @@
 {% block title %}Website requests{% endblock %}
 {% block content %}
 <h1>Website requests</h1>
-<p class="help">Quote requests are jobs the website can't price, such as full-size vans. Offline requests were sent while the server was down and are priced as they arrive. Neither is a booked job.</p>
+<p class="help">Quote requests are jobs the website can't price, such as full-size vans. Offline requests were sent while the server was down and are priced as they arrive. A second vehicle the same day is a returning customer's booking on a day they already have a job. None is a booked job until you book it. Differences from customers' records are in the <a href="{% url 'match-reviews' %}">review queue</a>.</p>
 <p class="button-row">{% if show_all %}<a class="button" href="{% url 'requests' %}">Open requests only</a>{% else %}<a class="button" href="{% url 'requests' %}?show=all">Show all, closed too</a>{% endif %}</p>
 
 <h2>Quote requests</h2>
@@ -16,6 +16,19 @@
     </a></li>
   {% empty %}
     <li class="muted">No quote requests.</li>
+  {% endfor %}
+</ul>
+
+<h2>Second vehicle the same day</h2>
+<ul class="list">
+  {% for item in second_vehicle_requests %}
+    <li><a class="row{% if item.status != 'new' %} faded{% endif %}" href="{% url 'second-vehicle-request' item.pk %}">
+      <strong>{{ item.customer }}: {{ item.vehicle }}</strong>
+      <span class="badge">{{ item.get_status_display }}</span>{% if item.is_test %} <span class="badge">Test</span>{% endif %}
+      <span class="sub">Wants {{ item.start|date:"D, M j" }}, {{ item.start|local_time }} · sent {{ item.created_at|date:"D, M j, g:i A" }}</span>
+    </a></li>
+  {% empty %}
+    <li class="muted">No second vehicle requests.</li>
   {% endfor %}
 </ul>
 

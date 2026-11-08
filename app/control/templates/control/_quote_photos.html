@@ -1,0 +1,12 @@
+{# A quote request's photos: tap one to see it full size (decision 0099). #}
+{% with photos=item.photos.all %}
+{% if photos %}
+  <div class="photo-grid">
+    {% for photo in photos %}<a href="{% url 'quote-photo' photo.pk %}" target="_blank" rel="noopener" aria-label="Photo {{ forloop.counter }}, full size"><img src="{% url 'quote-photo' photo.pk %}" alt="Photo {{ forloop.counter }} of the vehicle" loading="lazy" width="{{ photo.width }}" height="{{ photo.height }}"></a>{% endfor %}
+  </div>
+{% elif item.photos_deleted_at %}
+  <p class="muted">{{ item.photos_deleted_count }} photo{{ item.photos_deleted_count|pluralize }} deleted {{ item.photos_deleted_at|date:"M j, Y" }}, after the request closed.</p>
+{% else %}
+  <p class="muted">No photos sent.</p>
+{% endif %}
+{% endwith %}

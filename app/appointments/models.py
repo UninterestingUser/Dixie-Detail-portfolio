@@ -105,6 +105,11 @@ class Appointment(models.Model):
     # A test record (public-api.md): kept out of reports and the Jobs
     # calendar, and removed by delete_test_records.
     is_test = models.BooleanField("test record", default=False, db_default=False)
+    # How quiet matching placed a website booking (customers.matching): the
+    # name and vehicle as typed, whether it matched, and the address,
+    # vehicle and consent records the booking added, so the review queue can
+    # undo them. Empty for jobs booked any other way.
+    intake = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     # Who canceled a canceled job, who pressed the button and when (decision
@@ -255,7 +260,12 @@ class AppointmentLine(PricedLine):
 
 class MatchFlag(models.Model):
     """A difference between a booking and the customer record it was quietly
-    matched to, waiting for the owner (returning-customers.md, decision 0034)."""
+    matched to, waiting for the owner (returning-customers.md, decision 0034).
+
+    A vehicle flag about identical vehicles (decision 0067) lists the
+    customer's vehicles with the booking's make, model and year in
+    record_choices, for the owner to say which one it was.
+    """
 
     class Field(models.TextChoices):
         NAME = "name", "Name"
@@ -273,15 +283,30 @@ class MatchFlag(models.Model):
     field = models.CharField(max_length=10, choices=Field.choices)
     booked_value = models.TextField()
     record_value = models.TextField(blank=True)
+    # The address or vehicle the booking added to the record, which the job uses.
+    booked_address = models.ForeignKey("customers.Address", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    booked_vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    # The record's versions, as ids of the customer's addresses or vehicles.
+    record_choices = models.JSONField(default=list, blank=True)
+    identical_vehicles = models.BooleanField(default=False)
     resolution = models.CharField(max_length=30, choices=Resolution.choices, blank=True)
+    # What the choice did, in plain words, such as "Picked 2019 Toyota RAV4, white".
+    resolution_note = models.CharField(max_length=300, blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["created_at", "id"]
+
     def __str__(self):
         return f"{self.get_field_display()} differs on {self.appointment}"
+
+    @property
+    def is_open(self):
+        return not self.resolution
 
 
 class RepricingDecision(models.Model):

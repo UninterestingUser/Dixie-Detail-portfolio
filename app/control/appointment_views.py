@@ -55,7 +55,7 @@ def initial_for_vehicle(vehicle):
 
 def appointment_new(request, customer_pk):
     customer = get_object_or_404(Customer, pk=customer_pk)
-    vehicle = customer.vehicles.filter(pk=request.GET.get("vehicle")).first() or customer.vehicles.order_by("pk").first()
+    vehicle = customer.vehicles.filter(pk=request.GET.get("vehicle")).first() or customer.vehicles.filter(active=True).order_by("pk").first()
     initial = {
         "date": parse_date(request.GET.get("date"), default=first_bookable_date()),
         "time": datetime.time(8, 0),
@@ -333,6 +333,11 @@ def appointment_context(appointment, user=None, **extra):
         "overrides": list(appointment.rule_overrides.select_related("made_by").order_by("made_at")),
         "calendar_flags": list(appointment.calendar_flags.order_by("-created_at")[:10]),
         "is_manager": user_is_manager(user) if user is not None else False,
+        # A website booking's review flags, and the quote request a job was
+        # booked from, with its description and photos for whoever does it.
+        "open_flags": appointment.match_flags.filter(resolution="").count(),
+        "resolved_flags": appointment.match_flags.exclude(resolution="").count(),
+        "quote_requests": list(appointment.quote_requests.prefetch_related("photos")),
     }
     context.update(extra)
     return context
