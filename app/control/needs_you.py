@@ -90,7 +90,8 @@ def items(user):
         ))
     for item in QuoteRequest.objects.filter(status=QuoteRequest.Status.NEW).select_related("customer"):
         found.append(Item(
-            "quote_request", item.created_at, f"Quote request: {item.customer}", item.vehicle_text or "Vehicle not given",
+            "quote_request", item.created_at, f"Quote request: {item.customer}",
+            (item.vehicle_text or "Vehicle not given") + (" · priced, not booked" if item.quote_id else ""),
             reverse("quote-request", args=[item.pk]), item.is_test,
         ))
     for item in TimeRequest.objects.filter(status=TimeRequest.Status.NEW).select_related("customer"):

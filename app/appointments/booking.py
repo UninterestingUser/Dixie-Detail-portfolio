@@ -15,7 +15,8 @@ import datetime
 from dataclasses import dataclass, field
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import models, transaction
+from django.db.models import ProtectedError, RestrictedError
 from django.utils import timezone
 
 from core.scheduling import time_on_site
@@ -510,8 +511,68 @@ def cancel(appointment, canceled_by, user, later=False):
         job.completed_at = None
         job._change_reason = Appointment.CanceledBy(canceled_by).label
         job.save()
+    close_requests(jobs, now)
     end_series_if_done(appointment.series)
     return jobs
+
+
+def reopen_requests(ids):
+    """A website request booked as one of these jobs goes back to waiting
+    for the owner when the job is removed as created by mistake: a quote
+    request keeps its quote, description and photos (decision 0102)."""
+    from publicapi.models import QuoteRequest, SecondVehicleRequest, TimeRequest
+
+    QuoteRequest.objects.filter(appointment_id__in=ids).update(status=QuoteRequest.Status.NEW, appointment=None, closed_at=None)
+    TimeRequest.objects.filter(appointment_id__in=ids).update(status=TimeRequest.Status.NEW, appointment=None, decided_at=None, decided_by=None)
+    SecondVehicleRequest.objects.filter(appointment_id__in=ids).update(
+        status=SecondVehicleRequest.Status.NEW, appointment=None, decided_at=None, decided_by=None,
+    )
+
+
+def close_requests(jobs, now):
+    """A quote request booked as a canceled job closes with it, so its photos
+    are deleted QUOTE_REQUEST_PHOTO_DAYS later (decision 0099)."""
+    from publicapi.models import QuoteRequest
+
+    QuoteRequest.objects.filter(appointment__in=jobs, status=QuoteRequest.Status.BOOKED).update(
+        status=QuoteRequest.Status.CANCELED, closed_at=now,
+    )
+
+
+# A quote's own parts, deleted with it: its lines and its website number.
+QUOTE_PARTS = {"lines", "web"}
+
+
+def quote_in_use(quote):
+    """Whether anything but the quote's own parts refers to it: a job, a
+    quote request, an offline request or any other record, hidden
+    references included. Change history (which never protects) is not
+    counted."""
+    for relation in Quote._meta.get_fields(include_hidden=True):
+        if not (relation.auto_created and not relation.concrete):
+            continue
+        if relation.get_accessor_name() in QUOTE_PARTS or relation.on_delete is models.DO_NOTHING:
+            continue
+        if relation.related_model._base_manager.filter(**{relation.field.name: quote}).exists():
+            return True
+    return False
+
+
+def delete_unused_quotes(quote_ids):
+    """Delete the quotes nothing refers to any more; keep the rest. A quote
+    whose parts are still protected, such as a website number a second
+    vehicle request holds, is kept too. Returns how many were deleted."""
+    deleted = 0
+    for quote in Quote.objects.filter(pk__in=quote_ids):
+        if quote_in_use(quote):
+            continue
+        try:
+            with transaction.atomic():
+                quote.delete()
+        except (ProtectedError, RestrictedError):
+            continue
+        deleted += 1
+    return deleted
 
 
 def removal_refused(jobs):
@@ -542,12 +603,13 @@ def remove(appointment, later=False):
     ids = [job.pk for job in jobs]
     quote_ids = set(Appointment.history.filter(id__in=ids, quote__isnull=False).values_list("quote_id", flat=True))
     series = appointment.series
+    reopen_requests(ids)
     MatchFlag.objects.filter(appointment_id__in=ids).delete()
     Appointment.objects.filter(pk__in=ids).delete()
     # Deleting adds a last history record; remove it with the rest.
     Appointment.history.filter(id__in=ids).delete()
     AppointmentLine.history.filter(appointment_id__in=ids).delete()
-    Quote.objects.filter(pk__in=quote_ids, appointment__isnull=True).delete()
+    delete_unused_quotes(quote_ids)
     if series is not None:
         if series.appointments.exists():
             end_series_if_done(series)

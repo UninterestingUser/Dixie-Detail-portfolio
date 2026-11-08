@@ -41,7 +41,9 @@ A quote request is a job the website can't price, such as a full-size van. The s
 1. **Price it by hand** (managers): pick the service and vehicle class, then enter the price before tax, the time on site in minutes, setup and breakdown included, and the crew. **Save the price** makes a quote with the sales tax added. That quote is the price the job is booked at. Pricing again makes a new quote.
 2. **Send the price yourself,** by text or call, until Phase 4's texts. **Text** opens your messages with the price filled in, starting "Dixie Detail:". It appears only when the customer agreed to appointment texts; otherwise call.
 3. **Book it** when the customer picks a day: enter the date and arrival time. The time is checked against the scheduling rules like any booking; see [booking-a-job.md](booking-a-job.md#book-off-hours) for booking off hours. The job shows the description and photos, so whoever does it sees them.
-4. Or **Decline it** with a reason, and tell the customer yourself. Photos are deleted 90 days after the request is declined or its job is done.
+4. Or **Decline it** with a reason, and tell the customer yourself. Photos are deleted 90 days after the request is declined, or its job is done or canceled.
+
+If you booked the job by mistake, remove it with **Cancel job → Created by mistake**: the request comes back to **Needs you**, marked "priced, not booked", with its price, description and photos, ready to book again. Canceling the job (customer or Dixie Detail) closes the request.
 
 ## Offline requests
 

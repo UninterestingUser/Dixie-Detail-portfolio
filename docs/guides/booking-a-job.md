@@ -4,7 +4,7 @@ summary: How to read the schedule's five views, book a job or a maintenance seri
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [guides, booking, appointments, schedule, maintenance, control-app]
 related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0097-rules-alert-before-services-and-schedule-view-bar.md]
 ---
@@ -71,7 +71,7 @@ Under **Status**, tap **Mark completed**, or **Mark booked** to undo it.
 Only a manager can cancel a job. Open the booked job and tap **Cancel job**. A popup asks what happened:
 
 - **Customer canceled** or **Dixie Detail canceled:** the job is marked canceled at once. It leaves every schedule view, and its time is free again for the website and for you. The job keeps its record: the job page and the customer's page say who canceled, when, who pressed the button, and how much notice was given, such as "2 days, 3 hours' notice". The customer's page lists it under **Canceled jobs**, below the appointments. A canceled job stays canceled; book a new job if it is back on.
-- **Created by mistake:** asks once more, "Remove this job for good? This can't be undone." **Remove for good** deletes the job with its lines, staff, flags and change history, as if it never existed. A job with a payment recorded can't be removed; the message says so, and you can cancel it instead.
+- **Created by mistake:** asks once more, "Remove this job for good? This can't be undone." **Remove for good** deletes the job with its lines, staff, flags and change history, as if it never existed. A job booked from a website request sends the request back to the "needs you" list, a quote request with its price, to book again. A job with a payment recorded can't be removed; the message says so, and you can cancel it instead.
 - **Keep the job** closes the popup without changing anything.
 
 For a visit of a repeating series, the popup also asks **This visit only** or **This and later visits**; the button you tap applies to that choice. A series with no booked visits left stops repeating.
