@@ -596,3 +596,97 @@ class SmokeScenarioTests(ControlTestCase):
         self.assertEqual(item.photos.count(), 2)
         self.assertEqual(item.vehicle_class, self.vans)
         self.assertContains(self.tailnet.get(f"/requests/quotes/{item.pk}/"), "Ford Transit")
+
+
+class BookedQuoteRequestTests(QuoteRequestScreenTests):
+    """A job booked from a quote request: removing it as created by mistake
+    reopens the request; canceling it closes the request (decision 0102)."""
+
+    def booked(self, photos=2):
+        item = self.send(photos=photos)
+        self.price(item)
+        item.refresh_from_db()
+        self.book(item, eastern(open_day(4), 8))
+        item.refresh_from_db()
+        return item, item.appointment
+
+    def press(self, job, **data):
+        return self.tailnet.post(f"/appointments/{job.pk}/cancel/", data)
+
+    def test_created_by_mistake_removes_only_the_job_and_reopens_the_request(self):
+        item, job = self.booked()
+        quote = item.quote
+        response = self.press(job, remove="yes")
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Appointment.objects.filter(pk=job.pk).exists())
+        item.refresh_from_db()
+        self.assertEqual((item.status, item.appointment, item.closed_at), (QuoteRequest.Status.NEW, None, None))
+        self.assertEqual(item.quote, quote)
+        self.assertEqual(item.photos.count(), 2)
+        self.assertEqual(item.description, "Work van, very dirty inside.")
+        self.assertContains(self.tailnet.get("/schedule/"), "Quote request: Morgan Fleet")
+        # It can be booked again from the same quote.
+        self.assertEqual(self.book(item, eastern(open_day(5), 8)).status_code, 302)
+        item.refresh_from_db()
+        self.assertEqual(item.appointment.quote, quote)
+
+    def cancel_closes_the_request(self, who):
+        item, job = self.booked()
+        self.press(job, cancel=who)
+        job.refresh_from_db()
+        item.refresh_from_db()
+        self.assertEqual(job.status, Appointment.Status.CANCELED)
+        self.assertEqual(item.status, QuoteRequest.Status.CANCELED)
+        self.assertIsNotNone(item.closed_at)
+        self.assertNotContains(self.tailnet.get("/schedule/"), "Quote request: Morgan Fleet")
+        # Its photos follow the 90-day rule.
+        from publicapi import cleanup
+
+        self.assertEqual(cleanup.run().closed_request_photos, 0)
+        QuoteRequest.objects.filter(pk=item.pk).update(closed_at=timezone.now() - datetime.timedelta(days=91))
+        self.assertEqual(cleanup.run().closed_request_photos, 2)
+
+    def test_customer_canceled_closes_the_request(self):
+        self.cancel_closes_the_request("customer")
+
+    def test_dixie_detail_canceled_closes_the_request(self):
+        self.cancel_closes_the_request("business")
+
+    def test_delete_test_records_after_a_booked_test_quote_request(self):
+        from pricebook.models import Quote
+
+        with override_settings(TEST_PHONE_NUMBERS=["4235550160"]):
+            item, job = self.booked()
+        self.assertTrue(job.is_test)
+        quote_id = item.quote_id
+        output = io.StringIO()
+        call_command("delete_test_records", stdout=output)
+        text = output.getvalue()
+        self.assertIn("Deleted 1 test customer(s), 1 appointment(s), 1 quote request(s) with 2 photo(s)", text)
+        self.assertIn("with 1 quote(s)", text)
+        self.assertNotIn("Kept", text)
+        self.assertFalse(Appointment.objects.filter(pk=job.pk).exists())
+        self.assertFalse(QuoteRequest.objects.exists())
+        self.assertFalse(Quote.objects.filter(pk=quote_id).exists())
+        self.assertFalse(Customer.objects.filter(is_test=True).exists())
+
+
+class QuoteRemovalTests(ControlTestCase):
+    def test_remove_keeps_a_quote_anything_else_refers_to(self):
+        from appointments import booking
+        from pricebook.models import Quote
+
+        appointment, _ = self.book()
+        quote = appointment.quote
+        TimeRequest.objects.create(request_id=uuid.uuid4(), customer=appointment.customer, submitted_at=timezone.now(), quote=quote)
+        booking.remove(appointment)
+        self.assertTrue(Quote.objects.filter(pk=quote.pk).exists())
+
+    def test_remove_deletes_a_quote_nothing_refers_to(self):
+        from appointments import booking
+        from pricebook.models import Quote
+
+        appointment, _ = self.book()
+        quote = appointment.quote
+        booking.remove(appointment)
+        self.assertFalse(Quote.objects.filter(pk=quote.pk).exists())

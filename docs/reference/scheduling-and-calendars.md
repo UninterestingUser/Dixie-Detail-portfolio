@@ -57,7 +57,7 @@ A manager can book off hours, outside any rule, in the control app by giving a r
 A manager cancels a booked job from the **Cancel job** popup on its page ([decision 0095](../decisions/0095-canceling-and-removing-jobs.md)).
 
 - **Customer canceled** or **Dixie Detail canceled** marks the job canceled, with who canceled, who pressed the button and when. Its time is free at once: the availability check, open times, every schedule view and every list of booked jobs leave it out. A canceled job stays canceled.
-- **Created by mistake,** after a second confirmation, deletes the job and everything it left: lines, staff assignments, flags, rule overrides, change history, and its quotes when nothing else uses them. A job with a payment recorded can't be removed this way.
+- **Created by mistake,** after a second confirmation, deletes the job and everything it left: lines, staff assignments, flags, rule overrides, change history, and its quotes when nothing else refers to them. A website request the job was booked from goes back to open, a quote request with its quote, description and photos ([decision 0102](../decisions/0102-removing-or-canceling-a-job-booked-from-a-request.md)). A job with a payment recorded can't be removed this way. Canceling a job booked from a quote request closes the request.
 - **A series visit** is canceled or removed alone, or with the series' later booked visits.
 
 ## Time on site
