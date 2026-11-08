@@ -4,9 +4,9 @@ summary: Which automated texts the system sends, the two kinds of consent each o
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-13
+updated: 2026-11-08
 tags: [texting, sms, consent, compliance, quo]
-related: [data/message-templates.yaml, docs/decisions/0026-carrier-registration-timing.md, docs/decisions/0030-two-text-consents.md, docs/decisions/0007-quo-phone-and-texts.md]
+related: [data/consent-wording.yaml, docs/reference/public-api.md, data/message-templates.yaml, docs/decisions/0026-carrier-registration-timing.md, docs/decisions/0030-two-text-consents.md, docs/decisions/0007-quo-phone-and-texts.md]
 ---
 
 # Text messages and consent
@@ -31,9 +31,11 @@ The booking form has two separate checkboxes, both unchecked by default, neither
 | Appointment texts | Confirmations, reminders, arrival updates, payment links, receipts and replies about the job |
 | Follow-up texts | Review requests, service-due reminders and occasional offers |
 
-Each consent is recorded with its date, source (web form or phone) and the wording version. Follow-up texts go only to customers with follow-up consent. Every message starts with "Dixie Detail:" and carries opt-out wording where required.
+Each consent is recorded with its date, source (web form or phone) and the wording version. An answer from the website is also recorded with the exact words shown: the wording lives in [data/consent-wording.yaml](../../data/consent-wording.yaml) by version, the public API serves the current version to the form, and the server records the words of the version sent back, never words from the browser ([public-api.md](public-api.md#consent-is-recorded-with-its-exact-wording)). A wording change is a new version in that file. Follow-up texts go only to customers with follow-up consent. Every message starts with "Dixie Detail:" and carries opt-out wording where required.
 
 ## Consent wording
+
+The wording below is version 2026-10-13, the current version in [data/consent-wording.yaml](../../data/consent-wording.yaml); the file is the source the website and the server use.
 
 **Checkbox 1, appointment texts:**
 

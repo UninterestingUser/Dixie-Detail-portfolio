@@ -50,9 +50,12 @@ def estimate(origin, destination, settings=None):
     return Drive(minutes, round(road_miles * METERS_PER_MILE), True, "estimate")
 
 
-def drive_time(origin, destination, departure):
+def drive_time(origin, destination, departure, ask_google=True):
     """The drive from origin to destination, each (latitude, longitude),
-    leaving at departure (an aware datetime)."""
+    leaving at departure (an aware datetime). Without ask_google, a drive
+    not in the cache is estimated instead of asking Google: the public
+    open-times list uses that, so visitors browsing times never spend the
+    day's Routes calls (public-api.md)."""
     settings = LocationSettings.get()
     (olat, olon), (dlat, dlon) = _key(origin), _key(destination)
     hour = timezone.localtime(departure).hour
@@ -64,6 +67,8 @@ def drive_time(origin, destination, departure):
     cached = DriveTime.objects.filter(**pair, fetched_at__gte=fresh_after).first()
     if cached:
         return Drive(math.ceil(cached.seconds / 60), cached.meters, False, "cache")
+    if not ask_google:
+        return estimate(origin, destination, settings)
     try:
         seconds, meters = google.compute_route(origin, destination, departure)
     except google.GoogleUnavailable:

@@ -55,6 +55,11 @@ put_optional() {
 # service account key means the calendar sync waits (decision 0098).
 put_optional app/google_maps_server_key       GOOGLE_MAPS_SERVER_KEY      "$APP_UID"
 put_optional app/google_service_account_json  GOOGLE_SERVICE_ACCOUNT_JSON "$APP_UID"
+# The public API (docs/reference/public-api.md): an empty Turnstile key means
+# every booking and quote request is refused; an empty signing key means
+# offline requests are refused (decision 0100).
+put_optional app/turnstile_secret_key          TURNSTILE_SECRET_KEY          "$APP_UID"
+put_optional app/offline_requests_signing_key  OFFLINE_REQUESTS_SIGNING_KEY  "$APP_UID"
 bws_forget
 
 # Recreate every container so each mounts the files just written. A container

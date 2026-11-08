@@ -334,17 +334,20 @@ def price_job(
 
 
 @transaction.atomic
-def issue_quote(service, vehicle_class, address=None, **inputs):
+def issue_quote(service, vehicle_class, address=None, tax_address=None, **inputs):
     """Price a job and store it as a quote, the price of record (decision 0059).
     Only a published version can be quoted. With a service address, the quote
     gets its tax line at that address's rate on the day of service (`on`,
     today by default); without one, its sales tax is zero until the address
-    is known."""
+    is known. tax_address is a verified address not saved to a customer yet,
+    such as a place picked on the website: it sets the tax, and the quote
+    keeps no link to it."""
     job = price_job(service, vehicle_class, **inputs)
     if not job.version.is_published:
         raise PricingError("Quotes are priced from a published pricebook version.")
     stay = job.time_on_site
-    tax = tax_line(address, job.total_before_tax, inputs.get("on") or timezone.localdate()) if address else None
+    taxed = address or tax_address
+    tax = tax_line(taxed, job.total_before_tax, inputs.get("on") or timezone.localdate()) if taxed else None
     quote = Quote.objects.create(
         pricebook_version=job.version,
         service=job.service,

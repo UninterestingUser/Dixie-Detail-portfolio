@@ -147,7 +147,8 @@ def drive_event(appointment, buffer_minutes):
 def appointment_events(appointment, buffer_minutes):
     """{event ID: (kind, body)} for one appointment; empty when it is not
     on the calendar."""
-    if appointment is None or appointment.status not in ON_THE_CALENDAR:
+    # A test record never goes on the Jobs calendar (public-api.md).
+    if appointment is None or appointment.status not in ON_THE_CALENDAR or appointment.is_test:
         return {}
     key = appointment.calendar_key.hex
     found = {job_event_id(key): ("job", job_event(appointment))}
@@ -199,7 +200,7 @@ def everything(first_day):
     buffer_minutes = SchedulingSettings.get().leave_buffer_minutes
     found = {}
     appointments = appointments_with_details().filter(
-        scheduled_start__gte=local_midnight(first_day), status__in=ON_THE_CALENDAR
+        scheduled_start__gte=local_midnight(first_day), status__in=ON_THE_CALENDAR, is_test=False
     ).order_by("scheduled_start")
     for appointment in appointments:
         link = job_link(appointment)

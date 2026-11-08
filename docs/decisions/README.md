@@ -4,7 +4,7 @@ summary: The index of every settled decision about the Dixie Detail system, with
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [decisions, index]
 related: [docs/CONVENTIONS.md, docs/templates/decision-template.md]
 ---
@@ -122,3 +122,5 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0096](0096-booking-off-hours-inline-and-calendar-views.md) | 2026-11-07 | control-app | Booking off hours inline, calendar-style schedule views and the customer list | accepted |
 | [0097](0097-rules-alert-before-services-and-schedule-view-bar.md) | 2026-11-07 | control-app | The rules alert before the services are chosen, and the schedule's view bar | accepted |
 | [0098](0098-calendar-sync-queue-and-worker.md) | 2026-11-07 | calendar | The Google Calendar sync: a queue in PostgreSQL, a worker container and a nightly check | accepted |
+| [0099](0099-quote-requests-with-photos.md) | 2026-11-08 | booking | Quote requests, with optional photos, for jobs the site can't price | accepted |
+| [0100](0100-public-api-quotes-and-bookings.md) | 2026-11-08 | booking | The public API: unguessable quotes, a day lock on booking, signed offline requests and test records | accepted |

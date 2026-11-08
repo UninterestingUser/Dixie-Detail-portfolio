@@ -36,6 +36,13 @@ GOOGLE_MAPS_SERVER_KEY = read_optional_secret("GOOGLE_MAPS_SERVER_KEY_FILE")
 # 0098). Empty until the Bitwarden secret exists: the sync then waits, and
 # the control app says the calendars are not connected.
 GOOGLE_SERVICE_ACCOUNT_JSON = read_optional_secret("GOOGLE_SERVICE_ACCOUNT_JSON_FILE")
+# The Cloudflare Turnstile secret key, which checks the token on every
+# booking, quote request and upload session (public-api.md). Empty until the
+# Bitwarden secret exists: those requests are then refused.
+TURNSTILE_SECRET_KEY = read_optional_secret("TURNSTILE_SECRET_KEY_FILE")
+# The key Cloudflare's offline piece signs replayed "request a time" forms
+# with (decision 0100). Empty until it exists: offline requests are refused.
+OFFLINE_REQUESTS_SIGNING_KEY = read_optional_secret("OFFLINE_REQUESTS_SIGNING_KEY_FILE")
 DEBUG = False
 # "localhost" is for the container's own health check.
 ALLOWED_HOSTS = [

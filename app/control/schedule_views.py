@@ -26,7 +26,7 @@ from staff.authorization import user_is_manager
 from staff.models import Assignment
 from vehicles.models import ModelYearClassification, VehicleDataRefresh
 
-from . import calendar_views
+from . import calendar_views, request_views
 
 VIEWS = {"schedule": "Schedule", "day": "Day", "3day": "3 Days", "week": "Week", "month": "Month"}
 # Each view's icon in the bar along the top: the Material Symbols the Google
@@ -314,6 +314,7 @@ def schedule(request):
         "last_refresh": VehicleDataRefresh.objects.first(),
         # The calendar flags and the stale Time Off warning (decision 0098).
         "calendar_flags": calendar_views.open_flags(),
+        "website_requests": request_views.open_counts(),
         "time_off_warning": calendar_sync.time_off_warning(),
         "is_manager": user_is_manager(request.user),
     }

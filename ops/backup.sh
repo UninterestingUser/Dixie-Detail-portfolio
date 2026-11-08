@@ -5,16 +5,23 @@
 #    $BACKUP_DIR/daily/dixie-detail-YYYY-MM-DD.dump, and links the month's
 #    first dump into $BACKUP_DIR/monthly/.
 # 2. Keeps the newest 14 daily and 12 monthly dumps.
-# 3. Sends tonight's dump to the restic repository on Google Drive and
-#    applies the same 14 daily / 12 monthly policy there.
+# 3. Mirrors the quote request photo folder ($QUOTE_PHOTO_HOST_DIR) to
+#    $BACKUP_DIR/quote-photos/ (decision 0099).
+# 4. Sends tonight's dump to the restic repository on Google Drive and
+#    applies the same 14 daily / 12 monthly policy there, to the dumps
+#    (tag nightly) and the photo snapshots (tag photos) each on their own.
+# 5. Sends the photo folder to the same repository, tagged photos. restic
+#    uploads only photos it has not stored before.
 #
-# Google Drive is sometimes slow or rate-limiting, so each restic step (the
-# upload, then forget/prune) gets up to three attempts of at most 8 minutes
-# each, 5 and then 15 minutes apart (decision 0089). The database dump is
-# never retried. A wrong password or a missing repository is not retried
-# either: waiting cannot fix them. Worst case with every retry: about 1 h 43
-# min, inside the unit's TimeoutStartSec and the Healthchecks grace time
-# (both 2 hours).
+# Google Drive is sometimes slow or rate-limiting, so each restic step for
+# the dump (the upload, then forget/prune) gets up to three attempts of at
+# most 8 minutes each, 5 and then 15 minutes apart (decision 0089). The
+# photo upload gets one attempt of at most 8 minutes: a night's new photos
+# take seconds, a failure is reported like any other, and the next night
+# sends whatever was missed. The database dump is never retried. A wrong
+# password or a missing repository is not retried either: waiting cannot
+# fix them. Worst case with every retry: about 1 h 52 min, inside the
+# unit's TimeoutStartSec and the Healthchecks grace time (both 2 hours).
 #
 # RESTIC_PASSWORD and RCLONE_CONFIG_PASS come from Bitwarden at the start of
 # the run and live only in this script's memory and in the environment of
@@ -40,6 +47,8 @@ cd "$(dirname "$0")/.."
 : "${BACKUP_DIR:?set BACKUP_DIR in .env}"
 : "${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in .env}"
 : "${POSTGRES_DB:?set POSTGRES_DB in .env}" "${POSTGRES_USER:?set POSTGRES_USER in .env}"
+# The quote request photos (decision 0099), mounted into the app container.
+QUOTE_PHOTO_HOST_DIR=${QUOTE_PHOTO_HOST_DIR:-/srv/dixie-quote-photos}
 
 KEEP_DAILY=14
 KEEP_MONTHLY=12
@@ -70,15 +79,20 @@ keep_newest() {
 	rm -f -- "${dumps[@]:0:excess}"
 }
 
-# restic_step NAME [--input FILE] RESTIC_ARGS...
+# restic_step NAME [--tries N] [--input FILE] RESTIC_ARGS...
 # Runs a restic command through run_restic, retrying it as described at the
-# top. FILE, if given, is restic's stdin, opened afresh for every attempt.
-# Logs each attempt; each failed one is also added, with restic's last error
-# lines, to $attempts_log for the failure ping.
+# top. N, if given, is the most attempts (default: one more than the number
+# of waits). FILE, if given, is restic's stdin, opened afresh for every
+# attempt. Logs each attempt; each failed one is also added, with restic's
+# last error lines, to $attempts_log for the failure ping.
 restic_step() {
 	local name=$1 input=/dev/null attempt=1 rc wait
 	local tries=$((${#RETRY_WAITS[@]} + 1)) restic_time_limit=$ATTEMPT_LIMIT
 	shift
+	if [[ $1 == --tries ]]; then
+		tries=$2
+		shift 2
+	fi
 	if [[ $1 == --input ]]; then
 		input=$2
 		shift 2
@@ -149,11 +163,21 @@ backup() {
 	keep_newest "$BACKUP_DIR/daily" "$KEEP_DAILY"
 	keep_newest "$BACKUP_DIR/monthly" "$KEEP_MONTHLY"
 
+	# ops/deploy.sh creates the photo folder, owned by the app's user.
+	[[ -d $QUOTE_PHOTO_HOST_DIR ]] || { echo "backup: $QUOTE_PHOTO_HOST_DIR is missing; run ops/deploy.sh" >&2; return 1; }
+	echo "Copying $(find "$QUOTE_PHOTO_HOST_DIR" -type f -name '*.jpg' | wc -l) quote request photo(s) to $BACKUP_DIR/quote-photos"
+	# Exit status 24 means a file vanished while rsync ran: a customer
+	# removed a photo they had just picked. The copy is still good.
+	rsync -a --delete -- "$QUOTE_PHOTO_HOST_DIR/" "$BACKUP_DIR/quote-photos/" || (($? == 24))
+
 	echo "Sending to $RESTIC_REPOSITORY"
 	restic_step upload --input "$daily" \
 		backup --host "$RESTIC_HOST" --tag nightly --stdin --stdin-filename "$SNAPSHOT_FILE"
-	restic_step forget/prune forget --host "$RESTIC_HOST" --tag nightly --group-by host,tags \
+	# Two --tag options select either tag; --group-by keeps each its own group.
+	restic_step forget/prune forget --host "$RESTIC_HOST" --tag nightly --tag photos --group-by host,tags \
 		--keep-daily "$KEEP_DAILY" --keep-monthly "$KEEP_MONTHLY" --prune
+	restic_step "photo upload" --tries 1 \
+		backup --host "$RESTIC_HOST" --tag photos "$QUOTE_PHOTO_HOST_DIR"
 }
 
 log="$RUNTIME_DIRECTORY/backup.log"

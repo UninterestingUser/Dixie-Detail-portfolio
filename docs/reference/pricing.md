@@ -39,7 +39,7 @@ The matrix's size column holds 1, 2 or 3. What it measures depends on the vehicl
 | Medium, Large | Seat rows from the third-row data: 3 when it says always, otherwise 2 | Only for an optional third row |
 | Full-size | Always 3 | Never |
 | Light Pickups, Full-size Trucks | Cab style: regular cab = 1, extended or crew cab = 2 | As a cab question, unless the model has only one cab style |
-| Full-size Vans | Nothing: quoted by hand, no prices | Never; the customer sends a photo for a quote |
+| Full-size Vans | Nothing: quoted by hand, no prices | Never; the customer sends a quote request, with photos if they like ([decision 0099](../decisions/0099-quote-requests-with-photos.md)) |
 | Motorcycles | Nothing: one price, no size variant | Never |
 
 Doors no longer set a price ([decision 0082](../decisions/0082-size-based-vehicle-classes.md)). Exterior Only, both paint corrections and Headlight Restoration ignore the size variant. How the system sets the size variant from the vehicle is in [vehicle-classification.md](vehicle-classification.md).

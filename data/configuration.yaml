@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-07
+  updated: 2026-11-08
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -72,6 +72,46 @@ settings:
     purpose: The Dixie Detail Time Off calendar's ID, from its Google Calendar settings under Integrate calendar. Not secret
     used_by: app and calendar-worker containers (compose.yaml); app/dixie/settings_base.py
     note: Empty until the calendars are connected
+    phase: 3
+  - name: PUBLIC_API_CORS_ORIGINS
+    example: https://dixiedetail.com,https://www.dixiedetail.com
+    purpose: The website's addresses, the only browser origins allowed to call the public API (CORS); empty refuses every browser
+    format: Origins with https:// and no trailing slash, separated by commas
+    used_by: app container (compose.yaml); app/dixie/settings_base.py
+    phase: 3
+  - name: QUOTE_LIFETIME_MINUTES
+    default: 120
+    purpose: How long a website quote can be booked; an expired quote returns a fresh one to confirm (decision 0100)
+    used_by: app container
+    phase: 3
+  - name: QUOTE_REQUEST_MAX_PHOTOS
+    default: 6
+    purpose: Photos per quote request (decision 0099)
+    used_by: app container
+    phase: 3
+  - name: QUOTE_REQUEST_PHOTO_MAX_MB
+    default: 15
+    purpose: The largest quote request photo, as sent
+    used_by: app container
+    phase: 3
+  - name: QUOTE_REQUEST_PHOTO_DAYS
+    default: 90
+    purpose: Days a quote request's photos are kept after it is declined, or its job is done or canceled
+    used_by: app container (clean_public_api, run by dixie-api-cleanup.timer)
+    phase: 3
+  - name: TEST_PHONE_NUMBERS
+    example: "4235550199"
+    purpose: Mobile numbers whose website bookings and requests are marked test records; api_smoke_test books from the first
+    format: 10-digit numbers separated by commas
+    used_by: app container
+    phase: 3
+  - name: API_SMOKE_TEST_PLACE_ID
+    purpose: The Google place ID of a public place in the service area where api_smoke_test books its test job; never a customer's address
+    used_by: python manage.py api_smoke_test
+    phase: 3
+  - name: API_SMOKE_TEST_URL
+    default: https://api.dixiedetail.com
+    lives_in: not .env; the default in app/dixie/settings_base.py, or api_smoke_test --url
     phase: 3
   - name: GOOGLE_MAPS_BROWSER_KEY
     purpose: Public by design; used by the website's address field, restricted to dixiedetail.com and the Maps services it needs
@@ -146,6 +186,16 @@ secrets:
     purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked), Text Search (finding a typed address the Census geocoder cannot) and Routes (drive times), restricted to the Places API (New) and the Routes API
     used_by: ops/stack-start.sh (app container, as the file named by GOOGLE_MAPS_SERVER_KEY_FILE)
     note: Optional; until it exists the stack writes an empty file and the app runs without Google (drive times estimated, website place lookups refused). Decision 0091
+    phase: 3
+  - name: TURNSTILE_SECRET_KEY
+    purpose: The Cloudflare Turnstile widget's secret key; the server checks every booking, quote request and upload session's token with it (docs/reference/public-api.md)
+    used_by: ops/stack-start.sh (app container, as the file named by TURNSTILE_SECRET_KEY_FILE, in memory)
+    note: Optional for the stack to start; until it exists every booking and quote request is refused. The widget's site key is public and lives in the website's build settings
+    phase: 3
+  - name: OFFLINE_REQUESTS_SIGNING_KEY
+    purpose: A long random value shared with Cloudflare's offline piece, which signs each replayed "request a time" form with it (decision 0100)
+    used_by: ops/stack-start.sh (app container, as the file named by OFFLINE_REQUESTS_SIGNING_KEY_FILE, in memory); Cloudflare's offline piece (Phase 3, Step 6)
+    note: Optional; until it exists offline requests are refused
     phase: 3
   - name: CLOUDFLARE_PAGES_DEPLOY_HOOK
     purpose: Triggers a website rebuild when the pricebook is published
@@ -224,6 +274,10 @@ development:
       where: app/dixie/settings_dev.py leaves it empty, so development never calls Google; tests use a made-up key with the HTTP call replaced by the answers in app/geo/test_files
     - name: GOOGLE_SERVICE_ACCOUNT_JSON
       where: app/dixie/settings_dev.py leaves it empty, so development never calls Google Calendar; tests use the fake calendar in app/calendars/testing.py
+    - name: TURNSTILE_SECRET_KEY and OFFLINE_REQUESTS_SIGNING_KEY
+      where: made-up values in app/dixie/settings_dev.py; the tests replace Cloudflare's siteverify call, and sign offline requests with the made-up key
+    - name: TEST_PHONE_NUMBERS and PUBLIC_API_CORS_ORIGINS
+      where: a made-up 555 number and the website's local development address in app/dixie/settings_dev.py
 
 stored_on_server:
   - name: bws-token
@@ -246,3 +300,10 @@ paths:
     holds_personal_data: false
     used_by: python manage.py import_vehicle_data (docs/operations/importing-vehicle-data.md) and the monthly refresh, ops/vehicle-refresh.sh
     phase: 2
+  - name: Quote request photos
+    host: /srv/dixie-quote-photos
+    container: /srv/quote-photos (setting QUOTE_PHOTO_DIR)
+    purpose: The cleaned JPEGs customers send with quote requests, under random names (decision 0099); mounted read-write into the app container, owned by uid 10001, mode 0700; created by ops/deploy.sh; mirrored to BACKUP_DIR/quote-photos and sent to restic (tag photos) by the nightly backup
+    holds_personal_data: true
+    used_by: the public API and the control app's Website requests screen; clean_public_api deletes photos past their time
+    phase: 3

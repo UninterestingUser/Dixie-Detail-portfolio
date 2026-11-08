@@ -4,7 +4,7 @@ summary: Every outside service the system uses or will use, what it does for the
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [integrations, services]
 related: [data/integrations.yaml, data/configuration.yaml, docs/overview/running-costs.md]
 ---
@@ -15,7 +15,7 @@ Every outside service connects to the core app, never straight to the database. 
 
 ## In use since Phase 0
 
-- **Cloudflare.** Runs DNS for `dixiedetail.com` on the free plan and hosts the Tunnel that carries public requests to the server. In Phase 3 it also hosts the website on Cloudflare Pages.
+- **Cloudflare.** Runs DNS for `dixiedetail.com` on the free plan and hosts the Tunnel that carries public requests to the server. In Phase 3 it also hosts the website on Cloudflare Pages. Cloudflare Turnstile, free, checks that bookings and quote requests come from a person; the server checks each token with the secret key `TURNSTILE_SECRET_KEY` ([../reference/public-api.md](../reference/public-api.md)).
 - **Tailscale.** The owner's private network. Every staff device and the server are nodes; pfSense also advertises the home network. The control app is published to the tailnet only.
 - **Bitwarden Secrets Manager.** Holds every secret. See [secrets.md](secrets.md).
 - **GitHub.** Hosts the private repository. The server pulls with a read-only deploy key.

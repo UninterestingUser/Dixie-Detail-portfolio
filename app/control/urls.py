@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import (
-    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, schedule_views, scheduling_views, staff_views, views,
+    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, schedule_views, scheduling_views, staff_views, views,
 )
 
 urlpatterns = [
@@ -42,6 +42,13 @@ urlpatterns = [
     path("appointments/<int:pk>/status/", appointment_views.appointment_status, name="appointment-status"),
     path("appointments/<int:pk>/cancel/", appointment_views.appointment_cancel, name="appointment-cancel"),
     path("calendar-flags/<int:pk>/", calendar_views.calendar_flag, name="calendar-flag"),
+    # Website requests: quote requests with photos, and offline requests.
+    path("requests/", request_views.requests, name="requests"),
+    path("requests/quotes/<int:pk>/", request_views.quote_request, name="quote-request"),
+    path("requests/quotes/<int:pk>/status/", request_views.quote_request_status, name="quote-request-status"),
+    path("requests/photos/<int:pk>/", request_views.quote_photo, name="quote-photo"),
+    path("requests/offline/<int:pk>/", request_views.time_request, name="time-request"),
+    path("requests/offline/<int:pk>/status/", request_views.time_request_status, name="time-request-status"),
     path("appointments/<int:pk>/final-price/", appointment_views.appointment_final_price, name="appointment-final-price"),
     path("appointments/<int:pk>/staff/", appointment_views.appointment_staff, name="appointment-staff"),
     # Staff and the services they are authorized for.

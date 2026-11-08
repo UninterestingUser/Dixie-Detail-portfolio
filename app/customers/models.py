@@ -23,6 +23,10 @@ class Customer(models.Model):
     notes = models.TextField(blank=True)
     # The Baserow row this customer was imported from (decision 0051).
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)
+    # A test record (public-api.md): made by api_smoke_test or from a number
+    # in TEST_PHONE_NUMBERS, kept out of reports and the Jobs calendar, and
+    # removed by delete_test_records.
+    is_test = models.BooleanField("test record", default=False, db_default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     history = HistoricalRecords()
@@ -185,6 +189,9 @@ class Consent(models.Model):
     phone = PhoneField()
     source = models.CharField(max_length=20, choices=Source.choices)
     wording_version = models.CharField(max_length=40, blank=True)
+    # The exact words the customer was shown, for an answer from the website
+    # (data/consent-wording.yaml, by wording_version).
+    wording = models.TextField(blank=True)
     recorded_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

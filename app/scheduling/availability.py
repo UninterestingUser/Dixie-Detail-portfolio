@@ -155,6 +155,9 @@ class Rules:
     timed_off: list  # (start, end, summary), UTC
     booked: dict  # date -> [Booked]
     drives: dict = field(default_factory=dict)
+    # False for the public open-times list: drives not in the cache are
+    # estimated, never asked of Google (geo.drive.drive_time).
+    ask_google: bool = True
 
     def jobs_on(self, day, exclude=None):
         return [job for job in self.booked.get(day, []) if job.pk != exclude]
@@ -166,7 +169,7 @@ class Rules:
             return None
         key = (origin, destination, timezone.localtime(departure).hour)
         if key not in self.drives:
-            self.drives[key] = drive.drive_time(origin, destination, departure)
+            self.drives[key] = drive.drive_time(origin, destination, departure, ask_google=self.ask_google)
         return self.drives[key].minutes
 
 

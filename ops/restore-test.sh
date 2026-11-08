@@ -14,7 +14,9 @@
 #
 # Checks: the newest snapshot is under 36 hours old, pg_restore finishes
 # without an error, every table in the dump exists after the restore, and
-# Django's migration table is there. Prints each table's row count. Any
+# Django's migration table is there. Prints each table's row count, then
+# how many quote request photos the newest photo snapshot holds (decision
+# 0099), from its file list; the photos themselves are not downloaded. Any
 # failure prints what failed (ops/lib/errors.sh); a locked repository also
 # names the unlock command.
 set -euo pipefail
@@ -93,5 +95,19 @@ psql_ -F $'\t' -c "
 	FROM pg_tables
 	WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
 	ORDER BY 1" | sed 's/^/  /'
+
+# The newest photo snapshot's file list, read whole into a variable first:
+# restic's output never goes into a pipe.
+photo_snapshots=$(run_restic snapshots --host "$RESTIC_HOST" --tag photos --json)
+photo_snapshot=$(jq -c 'max_by(.time) // empty' <<<"$photo_snapshots")
+if [[ -z $photo_snapshot ]]; then
+	echo "Photos: no photo snapshot yet (the first nightly backup after the photo folder exists makes one)"
+else
+	photo_id=$(jq -r .short_id <<<"$photo_snapshot")
+	photo_time=$(jq -r .time <<<"$photo_snapshot")
+	listing=$(run_restic ls --json "$photo_id")
+	photos=$(jq -r 'select(.struct_type == "node" and .type == "file") | .name' <<<"$listing" | grep -c '\.jpg$' || true)
+	echo "Photos: $photos quote request photo(s) in snapshot $photo_id from $(TZ=America/New_York date -d "$photo_time" '+%F %H:%M %Z')"
+fi
 
 echo "restore-test: PASS"

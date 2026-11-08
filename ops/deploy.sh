@@ -62,7 +62,8 @@ done
 ((changed == 0)) || systemctl daemon-reload
 systemctl enable --quiet dixie-stack.service
 # Every timer kept in ops/: the backup, the public health check, the
-# vehicle data refresh, the sales tax rate check and the calendar check.
+# vehicle data refresh, the sales tax rate check, the calendar check and the
+# public API cleanup.
 timers=(ops/*.timer)
 timers=("${timers[@]#ops/}")
 systemctl enable --quiet --now "${timers[@]}"
@@ -71,6 +72,9 @@ systemctl enable --quiet --now "${timers[@]}"
 # container's user (uid 10001, app/Dockerfile), so a rebuilt server needs no
 # manual step. An existing folder is left as it is.
 [[ -d /srv/dixie-vehicle-data ]] || install -d -m 0700 -o 10001 -g 10001 /srv/dixie-vehicle-data
+# The quote request photos (decision 0099), the same way. compose.yaml mounts
+# it into the app container; the nightly backup copies it.
+[[ -d /srv/dixie-quote-photos ]] || install -d -m 0700 -o 10001 -g 10001 /srv/dixie-quote-photos
 
 docker compose build --pull
 systemctl restart dixie-stack.service

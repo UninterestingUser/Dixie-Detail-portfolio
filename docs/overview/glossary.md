@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -79,7 +79,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Nameplate.** A vehicle customers know by its own name, such as the Santa Fe Sport, that the EPA files under another base model, such as the Santa Fe. The catalog splits these out with [data/vehicle-names.yaml](../../data/vehicle-names.yaml), which also lists the other spellings of one vehicle, such as "GLE-Class" for the GLE.
 
-**Photo card.** One card per vehicle class, with the class name, a caption, a few example models and a picture (a placeholder until the owner adds one), that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are eight; the Full-size Vans card asks for a photo for a quote.
+**Photo card.** One card per vehicle class, with the class name, a caption, a few example models and a picture (a placeholder until the owner adds one), that a customer picks from when their vehicle is not in the catalog, such as a pre-1984 classic. There are eight; the Full-size Vans card, "Ask for a quote", leads to a quote request.
 
 **Approval list.** The control app's **Approvals** screen, where the owner approves the class of each year range of every model in the job history, the spot-check list in [data/approval-spot-checks.yaml](../../data/approval-spot-checks.yaml) and every model near a size line. It started over when the size-based classes were applied. A later change that alters an approved range clears its approval (decisions 0079 and 0083).
 
@@ -120,6 +120,10 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 **Rule override.** A manager booking or moving a job outside the scheduling rules in the control app, after a warning naming each rule broken, with a reason that is logged with the job. The website can never override (decision 0094).
 
 **Date exception.** A date closed all day, or open with different hours, set on the control app's scheduling settings screen.
+
+**Quote request.** What a customer sends for a job the website can't price, a vehicle in a class booked by quote such as Full-size Vans: the vehicle, the service or "Not sure", a description, the address and optional photos. It is not an appointment and holds no time; the owner replies with a price. See [../decisions/0099-quote-requests-with-photos.md](../decisions/0099-quote-requests-with-photos.md).
+
+**Offline request.** A "request a time" form the website held while the server was offline, replayed by Cloudflare when it came back, priced on arrival and flagged if the price differs from what the customer saw. It is not an appointment.
 
 **Time Off calendar.** The Google calendar "Dixie Detail Time Off", written by the owner. An all-day event closes that day for booking; a timed event blocks only its own time.
 
@@ -201,11 +205,15 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Private door.** The control app's entrance: Caddy on 127.0.0.1:8000, published to the tailnet with `tailscale serve`.
 
-**Public API.** The three things the internet can ask the core app: list services and prices, show open slots, take a booking.
+**Public API.** The part of the core app the internet can reach, under `/api/public/v1/`: the pricebook, the vehicle lists and lookup, addresses, quotes, open times, bookings, quote requests and offline requests. See [../reference/public-api.md](../reference/public-api.md).
 
 **Public door.** Caddy's port 8080 inside the Docker network, reached only by the Cloudflare Tunnel, answering only `/health` and `/api/public/`.
 
 **Restic snapshot.** One encrypted backup stored in Google Drive by restic.
+
+**Test record.** A customer or appointment marked test, made by the smoke test or from a number on the test-number list. It stays off the Jobs calendar and is deleted by `delete_test_records`.
+
+**Turnstile.** Cloudflare's check that a website form was sent by a person, run on every booking and quote request.
 
 **Tailnet.** The owner's private Tailscale network, which every staff device joins.
 
