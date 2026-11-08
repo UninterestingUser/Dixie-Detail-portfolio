@@ -62,6 +62,9 @@ class SchedulingSettings(models.Model):
     stale_copy_warning_minutes = models.PositiveSmallIntegerField(
         help_text="The control app warns when the last Time Off copy is older than this."
     )
+    leave_buffer_minutes = models.PositiveSmallIntegerField(
+        default=10, help_text="Added to the drive time to set the leave time: the Drive to job block and the time-to-leave alert."
+    )
 
     history = HistoricalRecords()
 
@@ -145,12 +148,18 @@ class DateException(models.Model):
 
 
 class TimeOffEvent(models.Model):
-    """The local copy of one event on the Dixie Detail Time Off calendar.
-    The calendar sync (Phase 3, Step 3) fills it; until then it is empty.
-    An all-day event closes every date from first_date to last_date; a timed
-    event blocks only its own time, plus the buffer setting."""
+    """The local copy of one event that blocks time: an event on the Dixie
+    Detail Time Off calendar, or one added to the Jobs calendar by hand
+    (decision 0057). The calendar sync fills it (calendars.sync). An all-day
+    event closes every date from first_date to last_date; a timed event
+    blocks only its own time, plus the buffer setting."""
 
-    event_id = models.CharField(max_length=200, unique=True)
+    class Calendar(models.TextChoices):
+        TIME_OFF = "time_off", "Time Off"
+        JOBS = "jobs", "Jobs, added by hand"
+
+    calendar = models.CharField(max_length=10, choices=Calendar.choices, default=Calendar.TIME_OFF)
+    event_id = models.CharField(max_length=200)
     summary = models.CharField(max_length=300, blank=True)
     all_day = models.BooleanField(default=False)
     first_date = models.DateField(null=True, blank=True)
@@ -161,6 +170,7 @@ class TimeOffEvent(models.Model):
 
     class Meta:
         ordering = ["first_date", "starts_at"]
+        constraints = [models.UniqueConstraint(fields=["calendar", "event_id"], name="one_copy_per_calendar_event")]
 
     def __str__(self):
         return self.summary or self.event_id
@@ -255,6 +265,7 @@ def seed_from_launch_values():
         "time_off_buffer_minutes": time_off["timed_event_buffer_minutes"],
         "time_off_check_minutes": time_off["check_every_minutes"],
         "stale_copy_warning_minutes": time_off["stale_copy_warning_minutes"],
+        "leave_buffer_minutes": rules["time_to_leave_alert"]["buffer_minutes"],
     })
     open_days = set(rules["open_weekdays"])
     for number, name in enumerate(WEEKDAYS):

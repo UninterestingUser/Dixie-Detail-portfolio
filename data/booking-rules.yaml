@@ -66,7 +66,7 @@ staff_assignment:
 
 time_to_leave_alert:
   lead: drive time + buffer
-  buffer_minutes: 10
+  buffer_minutes: 10             # seeds the time-to-leave buffer setting (decision 0098); also sets the Drive to job block's start
   counts_back_from: the arrival time (the start of setup)
   drive_time_from: home base, or the earlier job's address for a later job that day
   traffic: predicted for that time of day
@@ -86,7 +86,10 @@ calendars:
     written_by: the system only
     service_account_access: edit
     sync_within_minutes: 1
-    full_check: nightly
+    full_check: nightly            # 3:35 AM Eastern, dixie-calendar-check.timer (decision 0098)
+    events: one per booked or completed appointment over the time on site, a Drive to job block from the leave time, and an all-day Closed event for each date closed in the control app
+    edited_in_google: put back at the next check and noted
+    added_by_hand: counted as busy time and flagged, never deleted
   time_off:
     name: Dixie Detail Time Off
     written_by: the owner

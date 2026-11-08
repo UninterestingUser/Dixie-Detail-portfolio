@@ -62,7 +62,7 @@ done
 ((changed == 0)) || systemctl daemon-reload
 systemctl enable --quiet dixie-stack.service
 # Every timer kept in ops/: the backup, the public health check, the
-# vehicle data refresh and the sales tax rate check.
+# vehicle data refresh, the sales tax rate check and the calendar check.
 timers=(ops/*.timer)
 timers=("${timers[@]#ops/}")
 systemctl enable --quiet --now "${timers[@]}"

@@ -42,6 +42,13 @@ document.addEventListener("click", (event) => {
   }
 });
 
+// The home screen's Cancel link for a job Time Off covers opens the job's Cancel popup.
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.location.hash !== "#cancel") return;
+  const dialog = document.getElementById("cancel-dialog");
+  if (dialog && dialog.showModal) dialog.showModal();
+});
+
 // Swiping left or right on the schedule moves to the next or previous days.
 (() => {
   let startX = null, startY = null;

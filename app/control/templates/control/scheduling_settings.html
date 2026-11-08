@@ -56,10 +56,15 @@
   </fieldset>
   <fieldset{% if not can_edit %} disabled{% endif %}>
     <legend>Time Off calendar</legend>
-    <p class="help">The calendar is copied from Google in Phase 3, Step 3; until then the copy is empty.</p>
+    <p class="help">The app copies the Time Off calendar from Google this often, and again when a booking is sent. An all-day event closes its days; a timed event blocks its own time plus the buffer.</p>
     {% include "control/_field.html" with field=form.time_off_buffer_minutes %}
     {% include "control/_field.html" with field=form.time_off_check_minutes %}
     {% include "control/_field.html" with field=form.stale_copy_warning_minutes %}
+  </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Jobs calendar</legend>
+    <p class="help">Each job's "Drive to job" block starts this many minutes before the drive, so it begins at the leave time.</p>
+    {% include "control/_field.html" with field=form.leave_buffer_minutes %}
   </fieldset>
   {% if can_edit %}
   <div class="actions">

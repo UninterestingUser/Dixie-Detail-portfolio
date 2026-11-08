@@ -12,6 +12,9 @@ DEBUG = True
 # No Google key: development and tests never call Google. Tests replace the
 # HTTP call with recorded answers (geo/test_files).
 GOOGLE_MAPS_SERVER_KEY = ""
+# No calendar key or calendars either: the tests use a fake Google Calendar
+# (calendars.testing).
+GOOGLE_SERVICE_ACCOUNT_JSON = ""
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 # The throwaway database that tools/run-tests.sh starts, which shares its

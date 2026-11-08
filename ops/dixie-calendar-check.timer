@@ -1,0 +1,17 @@
+# Runs dixie-calendar-check.service every night at 3:35 AM Eastern: after the
+# 2:45 AM backup has finished even at its slowest, before the day's first
+# job, and between the public health check's 10-minute runs, so the two
+# never call Bitwarden in the same minute (a 429 would be retried anyway,
+# ops/lib/bws.sh).
+#
+# Persistent=true: a check missed while the server was off runs at boot. It
+# only writes the Jobs calendar to match the database, which is always safe.
+[Unit]
+Description=Dixie Detail calendar check, every night
+
+[Timer]
+OnCalendar=*-*-* 03:35:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -318,3 +318,11 @@ dialog.popup:not([open]) { display: none; }
   .view-week .timegrid-day .sub { display: none; }
   .view-week .timegrid-job { font-size: 0.68rem; padding: 2px 3px; }
 }
+
+/* The calendar flags on the home screen (decision 0098). */
+.warn-notice { border-color: var(--warn); color: var(--warn); font-weight: 600; }
+.calendar-flags h2 { margin-top: 8px; }
+.calendar-flags .card { display: grid; gap: 4px; }
+.calendar-flags form { margin: 0; }
+.flag-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+.flag-actions button, .flag-actions .button { width: 100%; }

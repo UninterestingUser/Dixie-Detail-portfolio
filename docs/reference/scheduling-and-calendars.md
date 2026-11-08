@@ -6,12 +6,12 @@ visibility: internal
 status: current
 updated: 2026-11-07
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0098-calendar-sync-queue-and-worker.md, docs/operations/connecting-the-google-calendars.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
 
-These rules are settled policy. The core app owns scheduling; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml). The settings, the availability check, the manager override, canceling and the open-times view are built (Phase 3, Step 2); the calendar sync is built in Step 3.
+These rules are settled policy. The core app owns scheduling; Google Calendar is a mirror and a source of days off, never the source of truth. The launch values are in [data/booking-rules.yaml](../../data/booking-rules.yaml). The settings, the availability check, the manager override, canceling and the open-times view are built (Phase 3, Step 2), and so is the Google Calendar sync (Phase 3, Step 3, [decision 0098](../decisions/0098-calendar-sync-queue-and-worker.md)).
 
 ## Every scheduling rule is a setting
 
@@ -34,6 +34,7 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 | Buffer around a timed Time Off event | 0 minutes |
 | Time Off check | Every 5 minutes, and again when a booking is submitted |
 | Warning when the last Time Off copy is old | Older than 60 minutes |
+| Time-to-leave buffer | 10 minutes before the drive: the Drive to job block and the time-to-leave alert start at the drive time plus this before arrival |
 
 ## How a scheduling settings change behaves
 
@@ -91,7 +92,7 @@ For each date, the availability check returns the open start times and, for each
 - **A placed start.** A day that already has a job also offers the placed start after it: that job's end plus the gap, rounded up. A placed start at or after closing time is not offered. The owner may book a later job at any time after the placed start that falls on the rounding step ([decision 0094](../decisions/0094-how-the-availability-check-places-and-shares.md)).
 - **Drive between jobs** comes from the drive times below, leaving at the earlier job's end. Without a location for both addresses, the gap is the minimum gap alone, and the reason says so.
 - **A shared day** holds up to the jobs-per-day setting or, if higher, the largest per-day maximum among its services: two at launch.
-- **Time Off.** The check reads the local copy of the Time Off calendar. The calendar sync that fills the copy is built in Phase 3, Step 3; until then the copy is empty and blocks nothing.
+- **Time Off.** The check reads the local copy of the Time Off calendar, and of any event added to the Jobs calendar by hand, which the calendar sync keeps up to date (see [Calendar sync and conflict rules](#calendar-sync-and-conflict-rules)). Until the calendars are connected the copy is empty and blocks nothing.
 - **Canceled jobs** don't count. Requested, booked and completed jobs do.
 
 ### Eastern time in every rule
@@ -134,7 +135,16 @@ Both calendars exist under the owner's Workspace account, set to Eastern time (c
 
 ## Calendar sync and conflict rules
 
-The database is the only record of appointments ([decision 0057](../decisions/0057-calendar-sync-and-conflict-rules.md)). The app writes the Jobs calendar and reads the Time Off calendar; neither calendar ever changes an appointment. The sync is built in Phase 3.
+The database is the only record of appointments ([decision 0057](../decisions/0057-calendar-sync-and-conflict-rules.md)). The app writes the Jobs calendar and reads the Time Off calendar; neither calendar ever changes an appointment. The sync is built (Phase 3, Step 3); how it works is in [decision 0098](../decisions/0098-calendar-sync-queue-and-worker.md), and how to connect it in [../operations/connecting-the-google-calendars.md](../operations/connecting-the-google-calendars.md).
+
+### How the sync runs
+
+- **A queue in the database.** Booking, moving, changing, canceling or removing a job, and closing or reopening a date, add a task in the same database transaction, so a booking never waits for Google and no change is lost.
+- **The calendar worker,** a container of its own in the stack, pushes each task within seconds. While Google is down it tries again after 30 seconds, then waits twice as long each time, up to 15 minutes. It survives restarts, because the queue is in the database.
+- **Every Time Off check** (5 minutes at launch) the worker copies the Time Off calendar, flags clashes and checks the Jobs calendar for edits made in Google.
+- **Every night at 3:35 AM** `dixie-calendar-check.timer` runs the full check, `python manage.py sync_calendars`, which compares every appointment and closed date from today on with the Jobs calendar and repairs any difference. It reports to Healthchecks ([../operations/monitoring.md](../operations/monitoring.md)).
+- **The first run.** `python manage.py sync_calendars --dry-run` prints every event the Jobs calendar should hold, changing nothing; `python manage.py sync_calendars` then creates them.
+- **Past jobs are left alone.** The check covers today on; a job's event stays on the calendar after the day.
 
 ### Access to the calendars
 
@@ -144,12 +154,15 @@ The database is the only record of appointments ([decision 0057](../decisions/00
 
 ### Jobs calendar: the app writes, the owner reads
 
-1. Each appointment has one event and one "Drive to job" block, linked to it by an ID stored on the appointment and in the event's private extended properties.
+1. Each booked or completed appointment has one event and one "Drive to job" block, linked to it by an ID stored on the appointment (its calendar key) and in the events' private extended properties. The event IDs are made from the key.
+   - **The job event** covers the whole time on site. Its title is the service and the vehicle, such as "Full Detail · 2019 Toyota RAV4, blue"; its location is the job address; its notes hold the customer's name and phone, the services, the total and the payment method. A job imported without its times shows as an hour.
+   - **The Drive to job block** runs from the leave time to the arrival time, with a notification at the leave time. The leave time is the drive time from the home base plus the time-to-leave buffer (10 minutes at launch) before arrival. A job with no drive time recorded, such as one with no address location, has no block.
+   - A canceled or removed job's events are deleted, so the Jobs calendar never shows canceled jobs.
 2. Booking, moving or canceling an appointment updates its events within a minute. If Google is down, the change waits in a queue and retries; a booking never waits for Google.
-3. Appointments change in the control app, not in Google. A Jobs event edited in Google is restored to the app's version at the next sync, and the control app notes the reset. A Jobs event deleted in Google is recreated.
-4. An event added to Jobs by hand counts as busy time and is flagged in the control app, so the owner can move it to Time Off or delete it. The app never deletes it.
+3. Appointments change in the control app, not in Google. A Jobs event edited in Google is restored to the app's version at the next check, within 5 minutes, and the control app notes the reset on its home screen and on the job. A Jobs event deleted in Google is recreated and noted the same way.
+4. An event added to Jobs by hand counts as busy time and is flagged on the control app's home screen, so the owner can move it to Time Off or delete it. The app never deletes it; the flag goes away when the event does.
 5. Days closed in the control app show on Jobs as all-day "Closed" events.
-6. A full check every night compares future appointments with the Jobs events and repairs any difference.
+6. A full check every night compares future appointments with the Jobs events and repairs any difference: missing events are created, edited ones put back, and app events for jobs no longer booked deleted.
 
 ### Time Off calendar: the owner writes, the app reads
 
@@ -158,12 +171,12 @@ The database is the only record of appointments ([decision 0057](../decisions/00
 3. Every event counts, repeating events included. The Free/Busy setting is ignored, because Google marks all-day events "Free" by default.
 4. Deleting an event reopens its time at the next check.
 5. The app checks Time Off every 5 minutes and again when a booking is submitted.
-6. Time off added over a booked appointment never cancels or moves it. The control app flags the clash and sends the owner a push alert to keep, reschedule or cancel the job.
+6. Time off added over a booked appointment never cancels or moves it. The control app flags the clash on its home screen, with **Keep**, **Reschedule** and **Cancel**; only a manager keeps or cancels. A kept clash stays kept. A clash that goes away, because the job or the time off moved, clears itself. The push alert to the owner comes with push notifications in Phase 4.
 
 ### When Google is unreachable
 
 - Booking keeps working, because the database is the source of truth. Jobs changes queue and catch up later; availability uses the last copy of Time Off.
-- If that copy is more than 60 minutes old, the control app shows a warning.
+- If that copy is more than 60 minutes old, the control app shows a warning on the home screen and the booking form, with Google's last error. Until the calendars are connected, the same place says so.
 
 ## Time-to-leave alerts
 
@@ -174,7 +187,7 @@ Each job sends a push alert when it is time to leave: the drive time plus 10 min
 - **Delivery.** A normal push notification from the control app installed on the Pixel, sent to every staff member assigned to the job.
 - **Contents.** The customer's name, the address as a one-tap navigation link, and an "On my way" button that texts the customer.
 - **Backup.** A "Drive to job" block on the Jobs calendar from the leave time to the arrival time, with a calendar notification.
-- **Settings.** The 10-minute buffer, the home base and each staff member's starting point are settings.
+- **Settings.** The 10-minute buffer (the time-to-leave buffer on the scheduling settings screen), the home base and each staff member's starting point are settings.
 
 ## Drive times
 

@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST, require_safe
 from appointments import booking
 from appointments.models import Appointment
 from billing.tax import tax_line, tax_line_for_appointment
+from calendars import sync as calendar_sync
 from core.scheduling import time_on_site
 from customers.models import Customer
 from geo import service_area
@@ -66,6 +67,9 @@ def appointment_new(request, customer_pk):
     alert = None
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
+        # Time Off is copied again as the booking is sent; with Google down,
+        # the check uses the last copy (decision 0057).
+        calendar_sync.refresh_time_off_for_booking()
         try:
             broken = rules_broken(form)
             alert = rules_alert(request, form, broken, submitted=True)
@@ -90,7 +94,8 @@ def appointment_new(request, customer_pk):
             for appointment in appointments:
                 after_booking(request, appointment)
             return redirect("appointment", pk=appointments[0].pk)
-    context = {"form": form, "customer": customer, "appointment": None, "alert": alert}
+    context = {"form": form, "customer": customer, "appointment": None, "alert": alert,
+               "time_off_warning": calendar_sync.time_off_warning()}
     return render(request, "control/appointment_form.html", context)
 
 
@@ -217,6 +222,7 @@ def appointment_edit(request, pk):
         data = form.cleaned_data
         new_inputs = form.inputs()
         broken = []
+        calendar_sync.refresh_time_off_for_booking()
         try:
             changed_services = new_inputs is not None and not same_inputs(old_inputs, new_inputs)
             moved = is_moved(form, appointment)
@@ -248,7 +254,8 @@ def appointment_edit(request, pk):
                 scheduling_changes.job_moved(appointment, request.user)
             warn_overlaps(request, appointment)
             return redirect("appointment", pk=appointment.pk)
-    context = {"form": form, "customer": appointment.customer, "appointment": appointment, "alert": alert}
+    context = {"form": form, "customer": appointment.customer, "appointment": appointment, "alert": alert,
+               "time_off_warning": calendar_sync.time_off_warning()}
     return render(request, "control/appointment_form.html", context)
 
 
@@ -324,6 +331,7 @@ def appointment_context(appointment, user=None, **extra):
         "series_count": appointment.series.appointments.count() if appointment.series_id else 0,
         "later_visits": later_visits(appointment),
         "overrides": list(appointment.rule_overrides.select_related("made_by").order_by("made_at")),
+        "calendar_flags": list(appointment.calendar_flags.order_by("-created_at")[:10]),
         "is_manager": user_is_manager(user) if user is not None else False,
     }
     context.update(extra)

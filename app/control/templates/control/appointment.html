@@ -25,6 +25,24 @@
 <p><a class="button" href="{% url 'appointment-edit' appointment.pk %}">Change job</a></p>
 {% endif %}
 
+{% if calendar_flags %}
+<section aria-labelledby="calendar-heading">
+  <h2 id="calendar-heading">Calendar</h2>
+  <ul class="list">
+    {% for flag in calendar_flags %}
+      <li class="card">
+        {% if flag.kind == 'clash' %}<strong>Time Off: {{ flag.summary }}</strong>
+          <span class="sub">{% if flag.outcome == 'kept' %}Kept by {{ flag.closed_by|default:"someone no longer here" }}, {{ flag.closed_at|date:"M j, Y" }}.{% elif flag.outcome == 'cleared' %}No longer covers the job.{% else %}Covers this booked job. Keep it, reschedule it or cancel it.{% endif %}</span>
+        {% else %}<strong>Jobs calendar</strong>
+          <span class="sub">{{ flag.detail }}</span>
+        {% endif %}
+        <span class="sub">{{ flag.created_at|date:"M j, Y, g:i A" }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 {% if overrides %}
 <section aria-labelledby="overrides-heading">
   <h2 id="overrides-heading">Booked off hours</h2>

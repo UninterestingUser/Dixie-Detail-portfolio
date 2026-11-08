@@ -24,6 +24,7 @@
   {% if queue_count %}<a href="{% url 'review-queue' %}">{{ queue_count }} model year{{ queue_count|pluralize }} wait{{ queue_count|pluralize:"s," }} in the vehicle review queue</a>.{% endif %}
   {% if last_refresh %}<span class="sub{% if last_refresh.result == 'failed' %} warn{% endif %}">Last vehicle data refresh: {{ last_refresh.started_at|date:"D, M j, g:i A" }}, {{ last_refresh.get_result_display|lower }}{% if last_refresh.result == 'failed' %} ({{ last_refresh.message|truncatechars:160 }}){% endif %}: {{ last_refresh.counts_text }}.</span>{% endif %}
 </p>{% endif %}
+{% include "control/_calendar_flags.html" %}
 <h1 class="schedule-title">{{ title }}</h1>
 
 <div class="schedule-view view-{{ view }}" data-swipe-area>
