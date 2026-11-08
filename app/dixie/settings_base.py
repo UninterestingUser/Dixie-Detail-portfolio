@@ -24,6 +24,58 @@ GOOGLE_CALENDAR_TIME_OFF_ID = os.environ.get("GOOGLE_CALENDAR_TIME_OFF_ID", "")
 # file; empty means the calendar sync is not connected.
 GOOGLE_SERVICE_ACCOUNT_JSON = ""
 
+
+def env_list(name):
+    """A comma-separated setting from .env as a list, blanks dropped."""
+    return [item.strip() for item in os.environ.get(name, "").split(",") if item.strip()]
+
+
+def env_int(name, default):
+    value = os.environ.get(name, "").strip()
+    return int(value) if value else default
+
+
+# The public API (docs/reference/public-api.md), settings from .env.
+# The website's addresses, such as https://dixiedetail.com: the only origins
+# a browser may call the public API from (CORS).
+PUBLIC_API_CORS_ORIGINS = env_list("PUBLIC_API_CORS_ORIGINS")
+# How long a website quote can be booked, in minutes.
+QUOTE_LIFETIME_MINUTES = env_int("QUOTE_LIFETIME_MINUTES", 120)
+# Quote request photos (decision 0099): how many per request, how large each
+# may be as sent, and how many days after the request is closed they are kept.
+QUOTE_REQUEST_MAX_PHOTOS = env_int("QUOTE_REQUEST_MAX_PHOTOS", 6)
+QUOTE_REQUEST_PHOTO_MAX_MB = env_int("QUOTE_REQUEST_PHOTO_MAX_MB", 15)
+QUOTE_REQUEST_PHOTO_DAYS = env_int("QUOTE_REQUEST_PHOTO_DAYS", 90)
+# Where the photos are kept in the app container: the host folder
+# /srv/dixie-quote-photos is mounted here (compose.yaml).
+QUOTE_PHOTO_DIR = Path(os.environ.get("QUOTE_PHOTO_DIR", "/srv/quote-photos"))
+# Mobile numbers whose website bookings and requests are marked test
+# records, 10 digits each.
+TEST_PHONE_NUMBERS = env_list("TEST_PHONE_NUMBERS")
+# The public address api_smoke_test books through, and the Google place ID of
+# a public place in the service area that it books at.
+API_SMOKE_TEST_URL = os.environ.get("API_SMOKE_TEST_URL", "https://api.dixiedetail.com")
+API_SMOKE_TEST_PLACE_ID = os.environ.get("API_SMOKE_TEST_PLACE_ID", "")
+# Requests a visitor address may make per window, by kind (public-api.md).
+# Fixed here rather than in .env: changing them is a code review.
+PUBLIC_API_RATE_LIMITS = {
+    # kind: (requests, window in minutes)
+    "read": (600, 10),
+    "quote": (120, 10),
+    "address": (30, 10),
+    "booking": (10, 60),
+    "quote_request": (6, 60),
+    "upload_session": (10, 60),
+    "photo": (60, 60),
+    # Replayed offline requests all come from Cloudflare, and are signed.
+    "offline": (600, 10),
+}
+# Secrets: dixie.settings reads them from their files. Empty means the
+# Turnstile check fails, so nothing is booked, and offline requests are
+# refused.
+TURNSTILE_SECRET_KEY = ""
+OFFLINE_REQUESTS_SIGNING_KEY = ""
+
 INSTALLED_APPS = [
     # The Django admin, for superusers only (decision 0046).
     "dixie.apps.SuperuserAdminConfig",
@@ -49,6 +101,7 @@ INSTALLED_APPS = [
     "geo",
     "scheduling",
     "calendars.apps.CalendarsConfig",
+    "publicapi",
 ]
 
 MIDDLEWARE = [
@@ -100,6 +153,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
+
+# Uploads larger than this go to a temporary file in /tmp (memory in the
+# container) instead of process memory. Photos are capped by
+# QUOTE_REQUEST_PHOTO_MAX_MB before Django reads them (publicapi.photos).
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2_621_440
 
 # HTTPS behind tailscale serve and Caddy (decision 0068). tailscale serve ends
 # HTTPS and hands the request to Caddy's control-app port, which sets

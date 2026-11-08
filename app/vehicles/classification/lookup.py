@@ -9,7 +9,7 @@ waiting in the review queue with no class yet, and one the owner sent to
 the photo cards all fall back to the photo cards, one per offered vehicle
 class (decision 0083): each with the class name, its caption, a few example
 models and its photo, or a placeholder until the owner adds one. A class
-booked by quote, Full-size Vans, has a card asking for a photo for a quote.
+booked by quote, Full-size Vans, has a card that leads to a quote request (decision 0099).
 """
 
 from dataclasses import dataclass, field

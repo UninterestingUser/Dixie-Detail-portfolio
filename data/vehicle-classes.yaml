@@ -1,7 +1,7 @@
 meta:
   title: Vehicle classes
   summary: The eight size-based vehicle classes that set prices, each class's settings (what the size variant measures, online booking, photo card and its example models), the retired body-type classes kept for history, the rule settings, and the possible future classes.
-  updated: 2026-10-28
+  updated: 2026-11-08
   status: current
   explained_in: docs/reference/vehicle-classification.md
   note: >-
@@ -45,7 +45,7 @@ classes:
     size_variant_measures: none
     size_variants: {}
     booking: ask for a quote
-    photo_card: Send us a photo for a quote
+    photo_card: Ask for a quote
     photo_card_examples: []
     customer_asked: Never; quoted by hand
   - name: Light Pickups
@@ -130,7 +130,7 @@ classification:            # decisions 0060, 0073, 0082 and 0083
   booking_input: year, make and model (VINs are not used for pricing)
   third_row_seating: data/third-row-seating.yaml first, then NHTSA where it has data; optional or unknown is asked
 
-fallback: Vehicles not in the catalog (for example pre-1984 classics) choose from eight photo cards, one per class; Full-size Vans' card asks for a photo for a quote
+fallback: Vehicles not in the catalog (for example pre-1984 classics) choose from eight photo cards, one per class; the Full-size Vans card leads to a quote request, with photos optional (decision 0099)
 possible_future_classes:
   - name: Oversized Vans & Trucks
     covers: trucks above the 350 series

@@ -1,0 +1,16 @@
+# Runs dixie-api-cleanup.service every night at 2:20 AM Eastern: before the
+# 2:45 AM backup starts, so the cleanup never deletes a photo while the
+# backup is copying or sending the photo folder, and between the public
+# health check's 10-minute runs.
+#
+# Persistent=true: a run missed while the server was off runs at boot. It
+# only deletes what is past its time, which is always safe to do late.
+[Unit]
+Description=Dixie Detail public API cleanup, every night
+
+[Timer]
+OnCalendar=*-*-* 02:20:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

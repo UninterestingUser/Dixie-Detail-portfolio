@@ -39,6 +39,9 @@ services:
       # The price matrix and launch values the pricebook and scheduling read
       # (settings DATA_DIR), from the checkout, read-only.
       - ./data:/srv/data:ro
+      # Quote request photos (decision 0099), created by ops/deploy.sh,
+      # owned by the app's user and copied by the nightly backup.
+      - /srv/dixie-quote-photos:/srv/quote-photos
     environment:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?set DJANGO_ALLOWED_HOSTS in .env}
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
@@ -52,6 +55,17 @@ services:
       GOOGLE_CALENDAR_JOBS_ID: ${GOOGLE_CALENDAR_JOBS_ID:-}
       GOOGLE_CALENDAR_TIME_OFF_ID: ${GOOGLE_CALENDAR_TIME_OFF_ID:-}
       GOOGLE_SERVICE_ACCOUNT_JSON_FILE: /run/secrets/google_service_account_json
+      # The public API (docs/reference/public-api.md): settings from .env,
+      # each empty for the app's default, and two secret files.
+      PUBLIC_API_CORS_ORIGINS: ${PUBLIC_API_CORS_ORIGINS:-}
+      QUOTE_LIFETIME_MINUTES: ${QUOTE_LIFETIME_MINUTES:-}
+      QUOTE_REQUEST_MAX_PHOTOS: ${QUOTE_REQUEST_MAX_PHOTOS:-}
+      QUOTE_REQUEST_PHOTO_MAX_MB: ${QUOTE_REQUEST_PHOTO_MAX_MB:-}
+      QUOTE_REQUEST_PHOTO_DAYS: ${QUOTE_REQUEST_PHOTO_DAYS:-}
+      TEST_PHONE_NUMBERS: ${TEST_PHONE_NUMBERS:-}
+      API_SMOKE_TEST_PLACE_ID: ${API_SMOKE_TEST_PLACE_ID:-}
+      TURNSTILE_SECRET_KEY_FILE: /run/secrets/turnstile_secret_key
+      OFFLINE_REQUESTS_SIGNING_KEY_FILE: /run/secrets/offline_requests_signing_key
     secrets:
       - source: app_django_secret_key
         target: django_secret_key
@@ -61,6 +75,10 @@ services:
         target: google_maps_server_key
       - source: app_google_service_account_json
         target: google_service_account_json
+      - source: app_turnstile_secret_key
+        target: turnstile_secret_key
+      - source: app_offline_requests_signing_key
+        target: offline_requests_signing_key
     depends_on:
       db:
         condition: service_healthy
@@ -145,6 +163,10 @@ secrets:
     file: /run/dixie-stack/secrets/app/google_maps_server_key
   app_google_service_account_json:
     file: /run/dixie-stack/secrets/app/google_service_account_json
+  app_turnstile_secret_key:
+    file: /run/dixie-stack/secrets/app/turnstile_secret_key
+  app_offline_requests_signing_key:
+    file: /run/dixie-stack/secrets/app/offline_requests_signing_key
   tunnel_cloudflared_token:
     file: /run/dixie-stack/secrets/tunnel/cloudflared_token
 

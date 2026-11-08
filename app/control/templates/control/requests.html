@@ -1,0 +1,34 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Website requests{% endblock %}
+{% block content %}
+<h1>Website requests</h1>
+<p class="help">Quote requests are jobs the website can't price, such as full-size vans. Offline requests were sent while the server was down and are priced as they arrive. Neither is a booked job.</p>
+<p class="button-row">{% if show_all %}<a class="button" href="{% url 'requests' %}">Open requests only</a>{% else %}<a class="button" href="{% url 'requests' %}?show=all">Show all, closed too</a>{% endif %}</p>
+
+<h2>Quote requests</h2>
+<ul class="list">
+  {% for item in quote_requests %}
+    <li><a class="row{% if item.status != 'new' and item.status != 'replied' %} faded{% endif %}" href="{% url 'quote-request' item.pk %}">
+      <strong>{{ item.customer }}: {{ item.vehicle_text|default:"vehicle not given" }}</strong>
+      <span class="badge">{{ item.get_status_display }}</span>{% if item.is_test %} <span class="badge">Test</span>{% endif %}
+      <span class="sub">{{ item.created_at|date:"D, M j, g:i A" }} · {{ item.service|default:"Not sure" }} · {{ item.photos.all|length }} photo{{ item.photos.all|length|pluralize }} · {{ item.service_address.city }}</span>
+    </a></li>
+  {% empty %}
+    <li class="muted">No quote requests.</li>
+  {% endfor %}
+</ul>
+
+<h2>Offline requests</h2>
+<ul class="list">
+  {% for item in time_requests %}
+    <li><a class="row{% if item.status != 'new' %} faded{% endif %}" href="{% url 'time-request' item.pk %}">
+      <strong>{{ item.customer }}{% if item.inputs.vehicle_text %}: {{ item.inputs.vehicle_text }}{% endif %}</strong>
+      <span class="badge">{{ item.get_status_display }}</span>{% if item.price_differs %} <span class="badge">Price differs</span>{% endif %}{% if item.problem %} <span class="badge">Check</span>{% endif %}{% if item.is_test %} <span class="badge">Test</span>{% endif %}
+      <span class="sub">Sent {{ item.submitted_at|date:"D, M j, g:i A" }}{% if item.preferred_start %} · wants {{ item.preferred_start|date:"D, M j" }}, {{ item.preferred_start|local_time }}{% endif %} · {{ item.inputs.service }}</span>
+    </a></li>
+  {% empty %}
+    <li class="muted">No offline requests.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

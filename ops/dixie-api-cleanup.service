@@ -1,0 +1,16 @@
+# Nightly public API cleanup; started by dixie-api-cleanup.timer. Installed
+# to /etc/systemd/system by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-api-cleanup.service
+[Unit]
+Description=Dixie Detail public API cleanup
+After=docker.service dixie-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+# Non-secret settings only, for docker compose.
+EnvironmentFile=/srv/dixie-detail/.env
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/api-cleanup.sh
+Nice=10
+TimeoutStartSec=15min

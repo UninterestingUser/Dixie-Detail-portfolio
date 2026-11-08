@@ -388,7 +388,7 @@ class LookupTests(ClassificationTestCase):
                 self.assertEqual(cards["Small"].examples, ["Civic", "Corolla", "Camry", "Accord", "Crosstrek"])
                 self.assertIsNone(cards["Small"].photo)  # a placeholder until the owner adds one
                 self.assertTrue(cards["Full-size Vans"].quote)
-                self.assertEqual(cards["Full-size Vans"].caption, "Send us a photo for a quote")
+                self.assertEqual(cards["Full-size Vans"].caption, "Ask for a quote")
 
     def test_a_motorcycle_and_a_car_of_the_same_name(self):
         gold_wing = add_model("Honda", "Gold Wing", MOTORCYCLE, VehicleModel.Source.NHTSA)

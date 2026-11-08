@@ -4,7 +4,7 @@ summary: The parts of the Dixie Detail business system, how they connect, how da
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [architecture, overview]
 related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-access.md, docs/architecture/integrations.md, docs/overview/project-goals.md]
 ---
@@ -55,7 +55,7 @@ flowchart TB
 ## How data moves (once built)
 
 - **Prices and service descriptions** are published into the website when it is built. Publishing a pricebook change in the control app triggers a site rebuild, live within a few minutes.
-- **The booking flow** reads live prices and open slots from the public API through the tunnel. The final price is always calculated on the server; the website only displays it.
+- **The booking flow** reads live prices, quotes and open slots from the public API through the tunnel ([../reference/public-api.md](../reference/public-api.md)). The final price is always calculated on the server; the website only displays it.
 - **If the server is unreachable,** the website and its prices still load, and the booking form switches to a "request a time" form that Cloudflare holds and delivers when the server returns.
 - **Outside services** report back by webhook through the tunnel: Stripe for payments, Quo for replies.
 - **Calendars** receive one event per appointment from the core app, through a queue and a calendar worker; the Time Off calendar is read back every few minutes to block time (decision 0098).
@@ -65,7 +65,7 @@ flowchart TB
 
 1. **PostgreSQL is the single source of truth.** The website, calendars and outside services are mirrors or consumers, never sources.
 2. **Prices come only from the pricebook.** No price is ever hard-coded.
-3. **The control app is private.** The public API does three things only: list services and prices, show open slots, take a booking.
+3. **The control app is private.** The public API serves the booking form and nothing else: services and prices, the vehicle lookup, addresses, quotes, open slots and bookings, plus quote requests with photos and replayed offline requests ([../reference/public-api.md](../reference/public-api.md)).
 4. **Secrets live only in Bitwarden.** See [secrets.md](secrets.md).
 5. **Card details never touch the server.** Stripe handles them.
 6. **Texts go only to customers with the right recorded consent.** See [../reference/text-messages.md](../reference/text-messages.md).

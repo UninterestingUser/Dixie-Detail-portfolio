@@ -1,0 +1,42 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Offline request{% endblock %}
+{% block content %}
+<p><a href="{% url 'requests' %}">Website requests</a></p>
+<h1>Offline request</h1>
+{% if item.is_test %}<p class="notice">A test record.</p>{% endif %}
+{% if item.price_differs %}<p class="notice warn-notice" role="status">The price today, {{ item.quote.total_before_tax }} before tax, differs from the {{ item.shown_total }} the customer saw (pricebook version {{ item.shown_pricebook_version }}).</p>{% endif %}
+{% if item.problem %}<p class="notice warn-notice" role="status">{{ item.problem }}</p>{% endif %}
+<p class="help">Sent while the server was offline, so nothing is booked. Book the job from the customer's page, then mark this booked.</p>
+<dl class="facts">
+  <dt>Status</dt><dd>{{ item.get_status_display }}</dd>
+  <dt>Sent</dt><dd>{{ item.submitted_at|date:"D, M j, Y, g:i A" }} (arrived {{ item.received_at|date:"D, M j, g:i A" }})</dd>
+  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>, {{ item.customer.mobile_display }}</dd>
+  <dt>Wants</dt><dd>{% if item.preferred_start %}{{ item.preferred_start|date:"D, M j, Y" }}, {{ item.preferred_start|local_time }}{% else %}No time given{% endif %}{% if item.preferred_note %}. {{ item.preferred_note }}{% endif %}</dd>
+  <dt>Vehicle</dt><dd>{{ item.inputs.vehicle_text|default:"Not priced" }}{% if item.inputs.color %}, {{ item.inputs.color }}{% endif %}</dd>
+  <dt>Service</dt><dd>{{ item.inputs.service }}{% for add_on in item.inputs.add_ons %}, {{ add_on }}{% endfor %}</dd>
+  <dt>Address</dt><dd>{{ item.service_address|default:"Not looked up" }}</dd>
+  <dt>Payment</dt><dd>{{ item.inputs.payment_method }}</dd>
+</dl>
+{% if lines %}
+<h2>Priced on arrival</h2>
+<ul class="list">
+  {% for line in lines %}<li class="row"><span>{{ line.description }}</span> <strong>{{ line.amount }}</strong></li>{% endfor %}
+  <li class="row"><span>Total before tax</span> <strong>{{ item.quote.total_before_tax }}</strong></li>
+  <li class="row"><span>Customer saw</span> <strong>{{ item.shown_total }}</strong></li>
+</ul>
+{% endif %}
+{% if is_manager %}
+<h2>Update</h2>
+<form method="post" action="{% url 'time-request-status' item.pk %}" class="stack">
+  {% csrf_token %}
+  <label>Status
+    <select name="status">{% for value, label in statuses %}<option value="{{ value }}"{% if value == item.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  </label>
+  <label>Job booked from it
+    <select name="appointment"><option value="">None</option>{% for job in jobs %}<option value="{{ job.pk }}"{% if job.pk == item.appointment_id %} selected{% endif %}>{{ job.scheduled_start|date:"D, M j, Y" }}</option>{% endfor %}</select>
+  </label>
+  <button type="submit">Save</button>
+</form>
+{% endif %}
+{% endblock %}

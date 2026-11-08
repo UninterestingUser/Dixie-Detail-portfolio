@@ -17,6 +17,7 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Pricing rules](docs/reference/pricing.md)
 - [Scheduling, calendars and alerts](docs/reference/scheduling-and-calendars.md)
 - [Customer booking flow](docs/reference/booking-flow.md)
+- [Public API](docs/reference/public-api.md)
 - [Sales tax](docs/reference/sales-tax.md)
 - [Payments](docs/reference/payments.md)
 - [Text messages and consent](docs/reference/text-messages.md)

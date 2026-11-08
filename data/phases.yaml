@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-11-07
+  updated: 2026-11-08
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -69,6 +69,7 @@ phases:
       - "Step 2 follow-up: booking off hours inline with the reason shown on the job, the Schedule, Day, 3 Days, Week and Month views, canceling or removing a job from a popup, canceled jobs in the Baserow import, and the customer list sorted by completed jobs (decisions 0095 and 0096)"
       - "Step 2 follow-up 2: the rules alert before the services are chosen, and the schedule's view bar (decision 0097)"
       - "Step 3: the Google Calendar sync - Jobs events and Drive to job blocks through a queue and the calendar worker, edits in Google put back, hand-added events flagged, Closed days, the Time Off copy every 5 minutes and at booking, clash flags on the home screen, the stale-copy warning, and the nightly full check with its Healthchecks ping (decision 0098)"
+      - "Step 4: the public API under /api/public/v1/ (docs/reference/public-api.md) - the pricebook, vehicle lists, lookup and photo cards, verified addresses with approved out-of-area places, numbered quotes that expire, open times, bookings checked in one transaction under a per-day lock with consent wording recorded, quote requests with cleaned photos for classes booked by quote, signed offline requests, Turnstile, rate limits and CORS, test records, delete_test_records and api_smoke_test; the photo folder in the nightly backup and the restore test (decisions 0099 and 0100)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
       - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)

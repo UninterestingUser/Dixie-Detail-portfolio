@@ -168,11 +168,14 @@ printf '%s|tps=%s\n' "$*" "${RCLONE_TPSLIMIT:-}" >>"$FAKE_DIR/restic-calls"
 [[ $RESTIC_PASSWORD == made-up-password && $RCLONE_CONFIG_PASS == made-up-rclone ]] ||
 	{ echo "Fatal: wrong password or no key found" >&2; exit 12; }
 [[ $1 == -o ]] && shift 2
-echo "$1" >>"$FAKE_DIR/commands"
-n=$(grep -cx "$1" "$FAKE_DIR/commands")
-case $1 in
+command=$1
+[[ $1 == backup && " $* " == *" --tag photos "* ]] && command=photos
+echo "$command" >>"$FAKE_DIR/commands"
+n=$(grep -cx "$command" "$FAKE_DIR/commands")
+case $command in
 	backup) echo "$(wc -c)" >>"$FAKE_DIR/stdin-bytes"; fails=${FAKE_FAIL_BACKUP:-0} ;;
 	forget) fails=${FAKE_FAIL_FORGET:-0} ;;
+	photos) printf '%s\n' "$*" >>"$FAKE_DIR/photo-calls"; fails=${FAKE_FAIL_PHOTOS:-0} ;;
 esac
 if ((n <= fails)); then
 	echo "Fatal: unable to open repository at rclone:gdrive:made-up: error talking HTTP to rclone: made-up error $1 $n" >&2
@@ -199,6 +202,7 @@ echo "$url" >>"$FAKE_DIR/pings"
 for arg; do [[ $arg != @* ]] || cp -- "${arg#@}" "$FAKE_DIR/ping-body"; done
 FAKE
 printf '#!/bin/sh\necho "$1" >>"$FAKE_DIR/sleeps"\n' >"$work/fake/sleep"
+printf '#!/bin/sh\necho "$*" >>"$FAKE_DIR/rsync-calls"\n' >"$work/fake/rsync"
 printf '#!/bin/sh\nexit 0\n' >"$work/fake/mountpoint"
 chmod +x "$work/fake"/*
 printf 'made-up-token' >"$work/bws-token"
@@ -207,13 +211,13 @@ printf 'made-up-token' >"$work/bws-token"
 # state; its output goes to $work/b/out. Prints its exit status.
 run_backup() {
 	rm -rf "$work/b"
-	mkdir -p "$work/b/run" "$work/b/creds"
+	mkdir -p "$work/b/run" "$work/b/creds" "$work/b/photos"
 	cp "$work/bws-token" "$work/b/creds/bws-token"
 	local rc=0
 	env "$@" PATH="$work/fake:$PATH" FAKE_DIR="$work/b" RUNTIME_DIRECTORY="$work/b/run" \
 		CREDENTIALS_DIRECTORY="$work/b/creds" BWS_SERVER_URL=https://vault.example.invalid \
 		BWS_PROJECT_ID=made-up-project BACKUP_DIR="$work/b/backups" \
-		RESTIC_REPOSITORY=rclone:gdrive:made-up POSTGRES_DB=dixie POSTGRES_USER=dixie \
+		RESTIC_REPOSITORY=rclone:gdrive:made-up POSTGRES_DB=dixie POSTGRES_USER=dixie QUOTE_PHOTO_HOST_DIR="$work/b/photos" \
 		"$repo/ops/backup.sh" >"$work/b/out" 2>&1 || rc=$?
 	echo "$rc"
 }
@@ -253,6 +257,20 @@ echo "test-restic: backup.sh retries forget/prune as its own step"
 rc=$(run_backup FAKE_FAIL_FORGET=2)
 [[ $rc == 0 && $(count backup) == 1 && $(count forget) == 3 && $(sleeps) == "300 900" ]] &&
 	pass "one upload, three forget attempts, then success" || fail "status $rc, $(count backup) uploads, $(count forget) forgets, waits $(sleeps)"
+
+echo "test-restic: backup.sh copies the photo folder to the RAID and sends it once, tagged photos"
+rc=$(run_backup)
+[[ $rc == 0 && $(count photos) == 1 ]] && pass "one photo upload" || fail "status $rc, $(count photos) photo uploads"
+grep -q -- "--tag photos $work/b/photos" "$work/b/photo-calls" && pass "the photo folder is sent tagged photos" || fail "photo calls: $(cat "$work/b/photo-calls" 2>/dev/null)"
+grep -q -- "--tag nightly --tag photos --group-by host,tags" "$work/b/restic-calls" && pass "forget keeps each tag's own 14 daily / 12 monthly" || fail "calls: $(cat "$work/b/restic-calls")"
+grep -q -- "-a --delete -- $work/b/photos/ $work/b/backups/quote-photos/" "$work/b/rsync-calls" && pass "the folder is mirrored to the RAID" || fail "rsync: $(cat "$work/b/rsync-calls" 2>/dev/null)"
+[[ $(tail -1 "$work/b/commands") == photos ]] && pass "the photos go last, after forget/prune" || fail "order: $(tr '\n' ' ' <"$work/b/commands")"
+
+echo "test-restic: a failed photo upload is not retried and fails the run"
+rc=$(run_backup FAKE_FAIL_PHOTOS=9)
+[[ $rc != 0 && $(count photos) == 1 && $(count backup) == 1 && $(count forget) == 1 && -z $(sleeps) ]] && failed_ping &&
+	grep -q "photo upload failed 1 times; giving up" "$work/b/ping-body" &&
+	pass "one attempt, no wait, failure ping" || fail "status $rc, $(count photos) photo uploads, waits $(sleeps)"
 
 echo "test-restic: backup.sh does not retry what waiting cannot fix"
 for code in 12 10; do

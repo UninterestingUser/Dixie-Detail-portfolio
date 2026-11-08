@@ -1,0 +1,47 @@
+{% extends "control/base.html" %}
+{% block title %}Quote request {{ item.reference }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'requests' %}">Website requests</a></p>
+<h1>Quote request {{ item.reference }}</h1>
+{% if item.is_test %}<p class="notice">A test record. <code>delete_test_records</code> removes it.</p>{% endif %}
+<dl class="facts">
+  <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.closed_at %}, {{ item.closed_at|date:"M j, Y" }}{% endif %}</dd>
+  <dt>Sent</dt><dd>{{ item.created_at|date:"D, M j, Y, g:i A" }}</dd>
+  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>, {{ item.customer.mobile_display }}</dd>
+  <dt>Vehicle</dt><dd>{{ item.vehicle_text|default:"Not given" }}{% if item.vehicle_class %} ({{ item.vehicle_class }}){% endif %}</dd>
+  <dt>Service</dt><dd>{{ item.service|default:"Not sure" }}</dd>
+  <dt>Address</dt><dd>{{ item.service_address }}</dd>
+  {% if item.preferred_days %}<dt>Preferred days</dt><dd>{{ item.preferred_days }}</dd>{% endif %}
+  <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment }}</a>{% else %}None yet{% endif %}</dd>
+</dl>
+<h2>What's needed</h2>
+<p class="prewrap">{{ item.description }}</p>
+
+<h2>Photos</h2>
+{% with photos=item.photos.all %}
+{% if photos %}
+  <div class="photo-grid">
+    {% for photo in photos %}<a href="{% url 'quote-photo' photo.pk %}" target="_blank" rel="noopener"><img src="{% url 'quote-photo' photo.pk %}" alt="Photo {{ forloop.counter }} of the vehicle" loading="lazy" width="{{ photo.width }}" height="{{ photo.height }}"></a>{% endfor %}
+  </div>
+{% elif item.photos_deleted_at %}
+  <p class="muted">{{ item.photos_deleted_count }} photo{{ item.photos_deleted_count|pluralize }} deleted {{ item.photos_deleted_at|date:"M j, Y" }}, after the request closed.</p>
+{% else %}
+  <p class="muted">No photos sent.</p>
+{% endif %}
+{% endwith %}
+
+{% if is_manager %}
+<h2>Update</h2>
+<form method="post" action="{% url 'quote-request-status' item.pk %}" class="stack">
+  {% csrf_token %}
+  <label>Status
+    <select name="status">{% for value, label in statuses %}<option value="{{ value }}"{% if value == item.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+  </label>
+  <label>Job booked from it
+    <select name="appointment"><option value="none">None</option>{% for job in jobs %}<option value="{{ job.pk }}"{% if job.pk == item.appointment_id %} selected{% endif %}>{{ job.scheduled_start|date:"D, M j, Y" }}</option>{% endfor %}</select>
+  </label>
+  <p class="help">Photos are deleted a set number of days after the request is declined, or its job is done or canceled. The description stays.</p>
+  <button type="submit">Save</button>
+</form>
+{% endif %}
+{% endblock %}

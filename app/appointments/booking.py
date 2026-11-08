@@ -165,18 +165,72 @@ def log_override(appointment, reasons, reason, user, action=RuleOverride.Action.
     )
 
 
+def lock_day(day):
+    """Hold the day until the transaction ends, so two bookings for one day
+    are checked one after the other: the second sees the first's job and
+    the availability check refuses a time the first took (public-api.md).
+    A PostgreSQL advisory lock, keyed on the date, released at commit or
+    rollback."""
+    from django.db import connection
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", [DAY_LOCK, day.toordinal()])
+
+
+# The first key of the per-day booking lock; the second is the date.
+DAY_LOCK = 4_101
+
+
+def job_from_quote(quote, address=None):
+    """A website quote as the availability check sees it: the time on site
+    the customer was shown."""
+    point = address.point if address is not None else None
+    return availability.Job(quote.time_on_site_minutes, quote.service_id, quote.service.name, point)
+
+
+def check_online(inputs, start, address=None, quote=None):
+    """Raise RulesBroken unless start is open for the job, after taking the
+    day's lock. Run inside the booking's transaction. With quote, the job
+    takes the quote's time on site."""
+    lock_day(local_date(start))
+    if quote is not None:
+        reasons = availability.check(job_from_quote(quote, address), start)
+        broken = [(start, reasons)] if reasons else []
+    else:
+        broken = rules_broken(inputs, [start], address)
+    if broken:
+        raise RulesBroken(broken)
+
+
 @transaction.atomic
-def book_online(customer, vehicle, start, inputs, *, address=None, notes=""):
+def book_online(customer, vehicle, start, inputs, *, address=None, notes="", quote=None, **fields):
     """A booking from the website: only an open time, never an override.
     Time Off is copied again first, unless the copy is under a minute old;
-    with Google down the last copy is used (decision 0057)."""
+    with Google down the last copy is used (decision 0057). The day is
+    locked while the time is checked and the job written, so two visitors
+    can never book the same time. With quote, the website's quote is booked
+    as it was issued, its lines copied exactly (decision 0059); fields are
+    the appointment's own details, such as the payment method."""
     from calendars.sync import refresh_time_off_for_booking
 
     refresh_time_off_for_booking()
-    broken = rules_broken(inputs, [start], address)
-    if broken:
-        raise RulesBroken(broken)
-    return book(customer, vehicle, start, inputs, address=address, notes=notes, source=Appointment.Source.WEBSITE)
+    check_online(inputs, start, address, quote)
+    if quote is None:
+        return book(customer, vehicle, start, inputs, address=address, notes=notes, source=Appointment.Source.WEBSITE)
+    drive = drive_from_home(address, start)
+    return Appointment.book_from_quote(
+        quote,
+        customer=customer,
+        vehicle=vehicle,
+        service_address=address,
+        scheduled_start=start,
+        source=Appointment.Source.WEBSITE,
+        notes=notes,
+        status=Appointment.Status.BOOKED,
+        drive_minutes=drive.minutes if drive else None,
+        drive_estimated=drive.estimated if drive else False,
+        **fields,
+    )
 
 
 @transaction.atomic

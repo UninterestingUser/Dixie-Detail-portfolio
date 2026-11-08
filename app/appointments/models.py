@@ -99,6 +99,12 @@ class Appointment(models.Model):
     jobs_calendar_event_id = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)
+    # The reference a website booking gives the customer, such as
+    # "B7K4M9P2"; empty for jobs booked any other way.
+    reference = models.CharField(max_length=12, unique=True, null=True, blank=True)
+    # A test record (public-api.md): kept out of reports and the Jobs
+    # calendar, and removed by delete_test_records.
+    is_test = models.BooleanField("test record", default=False, db_default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     # Who canceled a canceled job, who pressed the button and when (decision

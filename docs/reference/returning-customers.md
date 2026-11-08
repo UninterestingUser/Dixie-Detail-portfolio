@@ -4,14 +4,14 @@ summary: How a new booking is linked to an existing customer by mobile number wi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-08
 tags: [customers, booking, matching, privacy]
 related: [docs/decisions/0034-quiet-customer-matching.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/reference/booking-flow.md, docs/architecture/data-model.md]
 ---
 
 # Returning customers and quiet matching
 
-Returning customers are matched quietly by phone number when a booking is submitted. The booking flow looks the same to everyone, and nothing from a customer's record is ever shown on the website. This is the owner's decision of 2026-10-11. Phase 1 built the record that holds each flagged difference; the matching, the flags and the screen to resolve them come with website booking in Phase 3, and the steps below describe how they will work.
+Returning customers are matched quietly by phone number when a booking is submitted. The booking flow looks the same to everyone, and nothing from a customer's record is ever shown on the website. This is the owner's decision of 2026-10-11. Phase 1 built the record that holds each flagged difference. Website booking is built (Phase 3, Step 4, [public-api.md](public-api.md)); until the matching, the flags and the screen to resolve them come in Phase 3, Step 5, each website booking and request creates a new customer, and the steps below describe how matching will work. The public API's answers are built only from the quote, the address and the booking itself, so matching will change nothing a customer sees.
 
 ## How quiet matching works
 

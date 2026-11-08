@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-11-07
+  updated: 2026-11-08
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -10,6 +10,11 @@ services:
     purpose: DNS for dixiedetail.com, the Tunnel, and (Phase 3) website hosting on Pages
     phase: 0
     status: In use; tunnel dixie-detail with route api.dixiedetail.com
+    plan: Free
+  - name: Cloudflare Turnstile
+    purpose: Checks that bookings, quote requests and photo upload sessions come from a person (docs/reference/public-api.md)
+    phase: 3
+    status: Built on the server (Phase 3, Step 4); needs the widget created in Cloudflare and its secret key in Bitwarden as TURNSTILE_SECRET_KEY
     plan: Free
   - name: Tailscale
     purpose: Private access to the control app

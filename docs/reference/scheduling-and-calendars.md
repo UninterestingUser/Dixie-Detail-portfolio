@@ -4,7 +4,7 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-08
 tags: [scheduling, availability, calendar, alerts, settings]
 related: [docs/decisions/0098-calendar-sync-queue-and-worker.md, docs/operations/connecting-the-google-calendars.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
@@ -108,6 +108,10 @@ Every scheduling rule is in Eastern time ([decision 0048](../decisions/0048-time
 
 The control app's **Open times** screen, under Account and on the booking form, shows the next 90 days for a job: each open start time, each placed start with the job it follows, and the reasons each closed time is closed. The owner picks a service, vehicle class, size, condition level and crew, and can paste the job's location from Google Maps to count the drive from other jobs that day. The owner uses it to test the settings.
 
+## Open times on the website
+
+The website asks the same availability check through the public API, for a quote's time on site and the customer's address ([public-api.md](public-api.md#open-times-get-open-times)). It shows only the open start times, never why a time is closed, and estimates any drive not already cached instead of asking Google, so browsing never uses the day's Routes calls. A booking checks its time again, with real drive times, under a lock on the day, so two customers can never book the same time ([decision 0100](../decisions/0100-public-api-quotes-and-bookings.md)).
+
 ## Daily capacity at launch
 
 At launch each day takes one job, whatever its length. The only jobs that can share a day are Monthly Maintenance and Motorcycle Detail jobs: two Monthly Maintenance, two Motorcycle Detail, or one of each (decision 0072). Example of the gap: an 8:00 Monthly Maintenance job of 3 hours on site followed by a 42-minute drive puts the second job at 11:45.
@@ -158,6 +162,7 @@ The database is the only record of appointments ([decision 0057](../decisions/00
    - **The job event** covers the whole time on site. Its title is the service and the vehicle, such as "Full Detail · 2019 Toyota RAV4, blue"; its location is the job address; its notes hold the customer's name and phone, the services, the total and the payment method. A job imported without its times shows as an hour.
    - **The Drive to job block** runs from the leave time to the arrival time, with a notification at the leave time. The leave time is the drive time from the home base plus the time-to-leave buffer (10 minutes at launch) before arrival. A job with no drive time recorded, such as one with no address location, has no block.
    - A canceled or removed job's events are deleted, so the Jobs calendar never shows canceled jobs.
+   - A test record, such as the smoke test's booking, never goes on the Jobs calendar ([public-api.md](public-api.md#test-records)).
 2. Booking, moving or canceling an appointment updates its events within a minute. If Google is down, the change waits in a queue and retries; a booking never waits for Google.
 3. Appointments change in the control app, not in Google. A Jobs event edited in Google is restored to the app's version at the next check, within 5 minutes, and the control app notes the reset on its home screen and on the job. A Jobs event deleted in Google is recreated and noted the same way.
 4. An event added to Jobs by hand counts as busy time and is flagged on the control app's home screen, so the owner can move it to Time Off or delete it. The app never deletes it; the flag goes away when the event does.
