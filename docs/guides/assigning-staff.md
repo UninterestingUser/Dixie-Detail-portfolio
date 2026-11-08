@@ -4,7 +4,7 @@ summary: How to set which services each staff member is authorized for, from the
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-08
 tags: [guides, staff, authorization, assignment, control-app]
 related: [docs/reference/control-app.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/guides/booking-a-job.md, data/booking-rules.yaml]
 ---
@@ -36,4 +36,4 @@ Staff members are added in the Django admin, under **Staff members**, until a st
 
 ## Automatic assignment
 
-When a one-person job is booked and exactly one active staff member is qualified (today, always the owner), that person is assigned at once and the job says so. A two-person job, such as Monthly Maintenance, always waits for you to pick the crew. The setting is `staff_assignment.automatic_when_one_qualified` in [data/booking-rules.yaml](../../data/booking-rules.yaml), on at launch; it moves to the settings screen in Phase 3.
+When a one-person job is booked, in the control app, on the website or from a website request, and exactly one active staff member is qualified (today, always the owner), that person is assigned at once and the job says so. A two-person job, such as Monthly Maintenance, always waits for you to pick the crew. A website job left with no one assigned appears on the home screen's "needs you" list as **Assign staff** until you assign someone ([handling-website-bookings.md](handling-website-bookings.md)). The setting is `staff_assignment.automatic_when_one_qualified` in [data/booking-rules.yaml](../../data/booking-rules.yaml), on at launch; it moves to the settings screen in Phase 3.

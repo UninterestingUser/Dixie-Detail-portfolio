@@ -124,3 +124,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0098](0098-calendar-sync-queue-and-worker.md) | 2026-11-07 | calendar | The Google Calendar sync: a queue in PostgreSQL, a worker container and a nightly check | accepted |
 | [0099](0099-quote-requests-with-photos.md) | 2026-11-08 | booking | Quote requests, with optional photos, for jobs the site can't price | accepted |
 | [0100](0100-public-api-quotes-and-bookings.md) | 2026-11-08 | booking | The public API: unguessable quotes, a day lock on booking, signed offline requests and test records | accepted |
+| [0101](0101-website-bookings-in-the-control-app.md) | 2026-11-08 | booking | Website bookings in the control app: how matching, the four actions, requests and the needs-you list work | accepted |

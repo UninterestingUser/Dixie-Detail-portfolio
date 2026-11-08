@@ -1,0 +1,5 @@
+<form method="post" action="{{ action }}" class="stack" novalidate>
+  {% csrf_token %}
+  {% include "control/_field.html" with field=form.reason %}
+  <button type="submit">Decline</button>
+</form>

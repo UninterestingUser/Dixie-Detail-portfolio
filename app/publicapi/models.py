@@ -10,11 +10,14 @@
   photos (decision 0099).
 - TimeRequest: a "request a time" form sent while the server was offline
   and replayed later (decision 0100).
+- SecondVehicleRequest: a booking from a returning customer who already
+  has a job that day, taken as a request the owner approves (booking-flow.md).
 - UploadSession, RateCount and SmokeTestPass: the abuse controls.
 """
 
 import secrets
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -149,6 +152,9 @@ class QuoteRequest(models.Model):
     reference = models.CharField(max_length=12, unique=True)
     customer = models.ForeignKey("customers.Customer", on_delete=models.PROTECT, related_name="quote_requests")
     service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, related_name="+")
+    # The vehicle record quiet matching gave the request: the customer's own,
+    # or a new one held off the record until the request is booked.
+    vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     vehicle_year = models.PositiveSmallIntegerField(null=True, blank=True)
     vehicle_make = models.CharField(max_length=60, blank=True)
     vehicle_model_name = models.CharField(max_length=100, blank=True)
@@ -160,9 +166,21 @@ class QuoteRequest(models.Model):
     preferred_days = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
     closed_at = models.DateTimeField(null=True, blank=True)
+    # The owner's price, entered by hand: a quote record, the price of
+    # record (decision 0059).
+    quote = models.OneToOneField("pricebook.Quote", on_delete=models.PROTECT, null=True, blank=True, related_name="quote_request")
+    priced_at = models.DateTimeField(null=True, blank=True)
+    priced_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    decline_reason = models.CharField(max_length=300, blank=True)
+    # How quiet matching placed it (customers.matching), for the review
+    # flags raised when it is booked.
+    intake = models.JSONField(null=True, blank=True)
     # The job booked from it, once there is one; its completion or
-    # cancellation closes the request.
-    appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    # cancellation closes the request. The job page shows the description
+    # and photos.
+    appointment = models.ForeignKey(
+        "appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="quote_requests"
+    )
     photos_deleted_at = models.DateTimeField(null=True, blank=True)
     photos_deleted_count = models.PositiveSmallIntegerField(default=0)
     is_test = models.BooleanField("test record", default=False)
@@ -241,6 +259,7 @@ class TimeRequest(models.Model):
     request_id = models.UUIDField(unique=True, help_text="Made by the website, so a second replay changes nothing.")
     customer = models.ForeignKey("customers.Customer", on_delete=models.PROTECT, related_name="time_requests")
     service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     submitted_at = models.DateTimeField(help_text="When the customer sent the form.")
     received_at = models.DateTimeField(auto_now_add=True)
     preferred_start = models.DateTimeField(null=True, blank=True)
@@ -255,6 +274,10 @@ class TimeRequest(models.Model):
     price_differs = models.BooleanField(default=False)
     problem = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
+    decline_reason = models.CharField(max_length=300, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    intake = models.JSONField(null=True, blank=True)
     appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     is_test = models.BooleanField("test record", default=False)
 
@@ -263,6 +286,44 @@ class TimeRequest(models.Model):
 
     def __str__(self):
         return f"Time request from {self.submitted_at:%Y-%m-%d %H:%M}"
+
+
+class SecondVehicleRequest(models.Model):
+    """A website booking from a returning customer who already has a job on
+    that day, usually a second vehicle (booking-flow.md). It is not an
+    appointment and holds no time: the owner approves it, which books the
+    quote through the availability check, or declines it with a reason."""
+
+    class Status(models.TextChoices):
+        NEW = "new", "New"
+        BOOKED = "booked", "Booked"
+        DECLINED = "declined", "Declined"
+
+    reference = models.CharField(max_length=12, unique=True)
+    web_quote = models.OneToOneField(WebQuote, on_delete=models.PROTECT, related_name="second_vehicle_request")
+    customer = models.ForeignKey("customers.Customer", on_delete=models.PROTECT, related_name="second_vehicle_requests")
+    service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, related_name="+")
+    vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.PROTECT, related_name="+")
+    start = models.DateTimeField(help_text="The time the customer picked.")
+    payment_method = models.CharField(max_length=20, blank=True)
+    # The customer's job that day when the request came in.
+    same_day_appointment = models.ForeignKey(
+        "appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
+    decline_reason = models.CharField(max_length=300, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    intake = models.JSONField(null=True, blank=True)
+    appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    is_test = models.BooleanField("test record", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Second vehicle request {self.reference}"
 
 
 class RateCount(models.Model):

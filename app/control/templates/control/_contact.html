@@ -1,0 +1,7 @@
+{# The customer's number with call and text links. Texts only with consent on record (text-messages.md). #}
+{% if contact %}
+<p class="button-row">
+  <a class="button" href="{{ contact.call }}">Call {{ contact.number }}</a>
+  {% if contact.text %}<a class="button" href="{{ contact.text }}">Text {{ contact.number }}</a>{% else %}<span class="sub">No consent to texts on record: call instead.</span>{% endif %}
+</p>
+{% endif %}

@@ -1,47 +1,65 @@
 {% extends "control/base.html" %}
+{% load control %}
 {% block title %}Quote request {{ item.reference }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'requests' %}">Website requests</a></p>
 <h1>Quote request {{ item.reference }}</h1>
 {% if item.is_test %}<p class="notice">A test record. <code>delete_test_records</code> removes it.</p>{% endif %}
 <dl class="facts">
-  <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.closed_at %}, {{ item.closed_at|date:"M j, Y" }}{% endif %}</dd>
+  <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.closed_at %}, {{ item.closed_at|date:"M j, Y" }}{% endif %}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
   <dt>Sent</dt><dd>{{ item.created_at|date:"D, M j, Y, g:i A" }}</dd>
-  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>, {{ item.customer.mobile_display }}</dd>
+  <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>{% if item.intake.matched %} <span class="badge">Returning customer</span>{% endif %}</dd>
   <dt>Vehicle</dt><dd>{{ item.vehicle_text|default:"Not given" }}{% if item.vehicle_class %} ({{ item.vehicle_class }}){% endif %}</dd>
-  <dt>Service</dt><dd>{{ item.service|default:"Not sure" }}</dd>
+  <dt>Service wanted</dt><dd>{{ item.service|default:"Not sure" }}</dd>
   <dt>Address</dt><dd>{{ item.service_address }}</dd>
-  {% if item.preferred_days %}<dt>Preferred days</dt><dd>{{ item.preferred_days }}</dd>{% endif %}
-  <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment }}</a>{% else %}None yet{% endif %}</dd>
+  <dt>Drive</dt><dd>{% if drive %}{{ drive.minutes|duration }} from the home base{% if drive.estimated %} <span class="badge">Estimated</span>{% endif %}{% else %}<span class="muted">Unknown</span>{% endif %}</dd>
+  <dt>Sales tax</dt><dd>{% if tax %}{{ tax.jurisdiction.name|default:"No jurisdiction" }}, {{ tax.rate|percent }}%{% if tax.needs_check %} <span class="badge">Check</span>{% endif %}{% else %}<span class="muted">No address</span>{% endif %}</dd>
+  {% if item.preferred_days %}<dt>Preferred days</dt><dd class="prewrap">{{ item.preferred_days }}</dd>{% endif %}
+  <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment.scheduled_start|date:"D, M j, Y" }}, {{ item.appointment.scheduled_start|local_time }}</a>{% else %}None yet{% endif %}</dd>
 </dl>
+{% include "control/_contact.html" %}
+
 <h2>What's needed</h2>
 <p class="prewrap">{{ item.description }}</p>
 
 <h2>Photos</h2>
-{% with photos=item.photos.all %}
-{% if photos %}
-  <div class="photo-grid">
-    {% for photo in photos %}<a href="{% url 'quote-photo' photo.pk %}" target="_blank" rel="noopener"><img src="{% url 'quote-photo' photo.pk %}" alt="Photo {{ forloop.counter }} of the vehicle" loading="lazy" width="{{ photo.width }}" height="{{ photo.height }}"></a>{% endfor %}
-  </div>
-{% elif item.photos_deleted_at %}
-  <p class="muted">{{ item.photos_deleted_count }} photo{{ item.photos_deleted_count|pluralize }} deleted {{ item.photos_deleted_at|date:"M j, Y" }}, after the request closed.</p>
-{% else %}
-  <p class="muted">No photos sent.</p>
-{% endif %}
-{% endwith %}
+{% include "control/_quote_photos.html" %}
 
+<h2 id="price">Price</h2>
+{% if quote %}
+<div class="card">
+  <table class="lines">
+    {% for line in quote_lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
+    <tr><td>Sales tax, {{ quote.tax_rate|percent }}%</td><td class="amount">{{ quote.sales_tax|money }}</td></tr>
+    <tr class="total"><td>Total</td><td class="amount">{{ quote.total|money }}</td></tr>
+  </table>
+  <span class="sub">{{ quote.time_on_site_minutes|duration }} on site, crew of {{ quote.crew_size }}. Priced {{ item.priced_at|date:"M j, g:i A" }}{% if item.priced_by %} by {{ item.priced_by }}{% endif %}. This quote is the price of record.</span>
+  <span class="sub">Send the price to the customer yourself, by text or call, until Phase 4's texts.</span>
+</div>
+{% endif %}
+{% if is_open and is_manager %}
+<details{% if not quote or price_form.errors %} open{% endif %}>
+  <summary>{% if quote %}Price it again{% else %}Price it by hand{% endif %}</summary>
+  <form method="post" action="{% url 'quote-request-price' item.pk %}" class="stack" novalidate>
+    {% csrf_token %}
+    {% for error in price_form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+    {% for field in price_form %}{% include "control/_field.html" %}{% endfor %}
+    <p class="help">The price and time become a quote record that never changes; pricing again makes a new one. Sales tax is added at this address's rate.</p>
+    <button type="submit" class="primary">Save the price</button>
+  </form>
+</details>
+{% endif %}
+
+{% if is_open %}
+{% if quote or book_form.errors %}
+<h2 id="book">Book it</h2>
+{% url 'quote-request-book' item.pk as action %}
+{% include "control/_book_time.html" with form=book_form action=action %}
+{% endif %}
 {% if is_manager %}
-<h2>Update</h2>
-<form method="post" action="{% url 'quote-request-status' item.pk %}" class="stack">
-  {% csrf_token %}
-  <label>Status
-    <select name="status">{% for value, label in statuses %}<option value="{{ value }}"{% if value == item.status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-  </label>
-  <label>Job booked from it
-    <select name="appointment"><option value="none">None</option>{% for job in jobs %}<option value="{{ job.pk }}"{% if job.pk == item.appointment_id %} selected{% endif %}>{{ job.scheduled_start|date:"D, M j, Y" }}</option>{% endfor %}</select>
-  </label>
-  <p class="help">Photos are deleted a set number of days after the request is declined, or its job is done or canceled. The description stays.</p>
-  <button type="submit">Save</button>
-</form>
+<h2>Decline it</h2>
+{% url 'quote-request-decline' item.pk as action %}
+{% include "control/_decline.html" with form=decline_form action=action %}
+{% endif %}
 {% endif %}
 {% endblock %}

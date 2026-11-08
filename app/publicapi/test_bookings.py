@@ -64,9 +64,9 @@ class BookingTests(ApiTestCase):
         self.assertEqual(address.customer, customer)
         self.assertEqual(address.verification, Address.Verification.GOOGLE_PLACE)
         self.assertEqual(address.tax_jurisdiction.name, "Cleveland")
-        # Until Step 5's quiet matching, every booking creates a new customer.
+        # A second booking from the same number matches the customer quietly.
         self.book(start=eastern(open_day(4), 8))
-        self.assertEqual(Customer.objects.filter(mobile="4235550142").count(), 2)
+        self.assertEqual(Customer.objects.filter(mobile="4235550142").count(), 1)
 
     def test_consent_records_the_exact_wording_the_time_and_the_source(self):
         _, answer = self.book()

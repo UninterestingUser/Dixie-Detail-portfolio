@@ -234,6 +234,44 @@ def book_online(customer, vehicle, start, inputs, *, address=None, notes="", quo
 
 
 @transaction.atomic
+def book_request(quote, customer, vehicle, start, *, address=None, user=None, may_override=False, override_reason="",
+                 notes="", **fields):
+    """Book a website request from the control app (returning-customers.md,
+    control-app.md): a quote request's hand price, an offline request priced
+    for its day, or an approved second vehicle. The quote is booked as
+    issued, through the same availability check as the website, with the
+    day locked. A manager can book outside a rule with a reason, which is
+    logged, as on the booking form."""
+    from calendars.sync import refresh_time_off_for_booking
+
+    if Appointment.objects.filter(quote=quote).exists():
+        raise BookingError("That quote has already been booked.")
+    refresh_time_off_for_booking()
+    lock_day(local_date(start))
+    reasons = availability.check(job_from_quote(quote, address), start)
+    if reasons and not (may_override and override_reason.strip()):
+        raise RulesBroken([(start, reasons)])
+    drive = drive_from_home(address, start)
+    appointment = Appointment.book_from_quote(
+        quote,
+        customer=customer,
+        vehicle=vehicle,
+        service_address=address,
+        scheduled_start=start,
+        source=Appointment.Source.WEBSITE,
+        notes=notes,
+        status=Appointment.Status.BOOKED,
+        drive_minutes=drive.minutes if drive else None,
+        drive_estimated=drive.estimated if drive else False,
+        is_test=customer.is_test,
+        **fields,
+    )
+    if reasons:
+        log_override(appointment, reasons, override_reason, user)
+    return appointment
+
+
+@transaction.atomic
 def book(customer, vehicle, start, inputs, *, address=None, notes="", series=None, source=Appointment.Source.OWNER):
     """Book one job: issue a quote priced from the pricebook in effect on its
     date, with the sales tax for its address, copy the quote's lines onto the

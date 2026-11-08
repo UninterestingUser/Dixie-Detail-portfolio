@@ -4,7 +4,8 @@
 <h1>Account</h1>
 <p>Signed in as <strong>{{ user.get_full_name|default:user.get_username }}</strong>.</p>
 <ul class="list">
-  <li><a class="row" href="{% url 'requests' %}"><strong>Website requests</strong><span class="sub">Quote requests with their photos, and requests sent while the server was offline</span></a></li>
+  <li><a class="row" href="{% url 'requests' %}"><strong>Website requests</strong><span class="sub">Quote requests with their photos, requests sent while the server was offline, and a second vehicle the same day</span></a></li>
+  <li><a class="row" href="{% url 'match-reviews' %}"><strong>Review queue</strong><span class="sub">Website bookings whose name, address or vehicle differs from the customer's record</span></a></li>
   <li><a class="row" href="{% url 'sales-tax' %}"><strong>Sales tax</strong><span class="sub">Rates, changes waiting for approval and addresses to check</span></a></li>
   <li><a class="row" href="{% url 'scheduling-settings' %}"><strong>Scheduling settings</strong><span class="sub">Open days and hours, date exceptions, start times, notice, setup and breakdown, jobs per day, the gap between jobs and the Time Off buffer</span></a></li>
   <li><a class="row" href="{% url 'open-times' %}"><strong>Open times</strong><span class="sub">The next 90 days of start times for a job, and why closed times are closed</span></a></li>

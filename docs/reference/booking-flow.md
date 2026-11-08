@@ -49,7 +49,7 @@ The mobile number field formats itself as (###) ###-#### while the customer type
 
 ## The Color box
 
-The vehicle step's Color box is optional free text, such as "silver" or "dark blue", and the step can be finished without it. It will be used only when quiet matching finds a returning customer with more than one vehicle of the same make, model and year: the color picks the right one. A blank color, or one that matches none of them, never stops the booking; the appointment books and the control app asks the owner which vehicle it was. The color is not a price input, so it never appears on the estimate card or changes the quote. The full rule is in [returning-customers.md](returning-customers.md).
+The vehicle step's Color box is optional free text, such as "silver" or "dark blue", and the step can be finished without it. It is used only when quiet matching finds a returning customer with more than one vehicle of the same make, model and year: the color picks the right one. A blank color, or one that matches none of them, never stops the booking; the appointment books and the control app asks the owner which vehicle it was. The color is not a price input, so it never appears on the estimate card or changes the quote. The full rule is in [returning-customers.md](returning-customers.md).
 
 ## Quote requests for jobs the site can't price
 
@@ -66,5 +66,5 @@ Sending it books nothing and holds no time: the customer is told Dixie Detail wi
 
 ## Other cases
 
-- **A second vehicle the same day** is taken as a request the owner approves.
+- **A second vehicle the same day** is taken as a request the owner approves. When quiet matching finds the customer already has a job that day, the booking becomes a request instead of an appointment, and the form tells the customer Dixie Detail will confirm it by text or call ([public-api.md](public-api.md#booking-post-bookings), [returning-customers.md](returning-customers.md#a-second-vehicle-the-same-day)). The time must still be open, so at launch this is a second motorcycle; a day takes one job otherwise.
 - **If the server is offline,** the site and prices still load, and the form becomes a "request a time" form that Cloudflare holds until the server returns. The form shows prices from the last published pricebook. When the server returns, Cloudflare replays each request, signed ([decision 0100](../decisions/0100-public-api-quotes-and-bookings.md)); the server prices it, keeps it as a request rather than an appointment, and flags it for the owner if the price differs from what the customer saw. The server's side is built; Cloudflare's piece comes in Phase 3, Step 6.

@@ -1,0 +1,18 @@
+{# Book a website request into a time: the same availability check as the website, with the manager override (decision 0096). #}
+{% load control %}
+<form method="post" action="{{ action }}" class="stack" novalidate>
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% include "control/_field.html" with field=form.date %}
+  {% include "control/_field.html" with field=form.time %}
+  {% if form.honor_shown %}{% include "control/_field.html" with field=form.honor_shown %}{% endif %}
+  {% if alert %}
+  <section class="notice rules-alert" role="alert" aria-label="Outside the scheduling rules">
+    <ul class="reasons">{% for start, reasons in alert.broken %}{% for reason in reasons %}<li>{{ reason }}</li>{% endfor %}{% endfor %}</ul>
+    {% if alert.is_manager %}<p>Booking off hours is allowed. Give the reason and it will be logged with the job.</p>{% include "control/_field.html" with field=form.override_reason %}
+    {% else %}<p>Only a manager can book off hours. Pick another time.</p>{% endif %}
+  </section>
+  {% elif form.override_reason.value %}<input type="hidden" name="{{ form.override_reason.html_name }}" value="{{ form.override_reason.value }}">{% endif %}
+  <p class="help">The time must be open, as on the website. <a href="{% url 'open-times' %}">See open times</a>.</p>
+  <button type="submit" class="primary">{{ label|default:"Book" }}</button>
+</form>

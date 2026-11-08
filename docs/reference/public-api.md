@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-08
 tags: [api, booking, website, quotes, photos, phase-3]
-related: [docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
+related: [docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
 
 # Public API
@@ -113,11 +113,15 @@ The body is `quote`, `start`, `first_name`, optional `last_name`, `mobile`, `pay
 2. refuses a quote already booked (`quote_used`);
 3. returns a fresh quote to confirm when the quote has expired (`quote_expired`), or when the day of service would price it differently, under another pricebook version or tax rate (`quote_changed`); never a silent new price;
 4. takes a lock on the day, then runs the availability check with the quote's time on site, so two people can't book the same time: the second waits for the first and then sees its job (`time_taken`);
-5. creates the customer, the address from the place, the vehicle with its color, the two consent records, and the appointment with the quote's lines as its line snapshot (decisions [0033](../decisions/0033-pricebook-versions-and-line-snapshots.md) and 0059).
+5. matches the mobile number quietly ([returning-customers.md](returning-customers.md)): a returning customer's booking goes on their record, with any difference in name, address or vehicle flagged for the owner, and a new number makes a new customer;
+6. creates the address from the place and the vehicle with its color where the record doesn't already have them, the two consent records, and the appointment with the quote's lines as its line snapshot (decisions [0033](../decisions/0033-pricebook-versions-and-line-snapshots.md) and 0059);
+7. assigns the only qualified staff member to a one-person job; any other job waits for a manager on the control app's home screen (decisions [0061](../decisions/0061-staff-authorized-per-service.md) and [0069](../decisions/0069-booking-staffing-and-publishing-in-the-control-app.md)).
 
-The answer carries the booking `reference` (eight letters and digits), a `summary` (service, add-ons, vehicle, color, arrival, time on site, address, totals, payment method and the "confirmed when we see the vehicle" notes) and a `calendar_file` (an iCalendar event, with its file name and content type).
+The answer, `201`, carries the booking `reference` (eight letters and digits), a `summary` (service, add-ons, vehicle, color, arrival, time on site, address, totals, payment method and the "confirmed when we see the vehicle" notes) and a `calendar_file` (an iCalendar event, with its file name and content type).
 
-Until Phase 3, Step 5 each booking creates a new customer; Step 5 adds quiet matching ([returning-customers.md](returning-customers.md)). The summary is built only from the quote, the place and this booking, never from a customer's record, so quiet matching changes nothing the customer sees. The color never changes the price ([decision 0067](../decisions/0067-color-tells-identical-vehicles-apart.md)).
+**A second vehicle the same day.** When the matched customer already has a job on that day, the booking becomes a request the owner approves, not an appointment ([decision 0101](../decisions/0101-website-bookings-in-the-control-app.md)). The time must still be open. The answer is `202` with `request` (its reference), `status: "requested"`, a `message` that Dixie Detail will confirm by text or call, and the same `summary`, but no calendar file. The form shows the message instead of the booking confirmation.
+
+The summary is built only from the quote, the place and this booking, never from a customer's record, so quiet matching changes nothing the customer sees. The color never changes the price ([decision 0067](../decisions/0067-color-tells-identical-vehicles-apart.md)).
 
 ## Consent is recorded with its exact wording
 
@@ -131,7 +135,7 @@ A quote request is the path for any job the site can't price: any vehicle in a c
 2. **Photos, one at a time.** Each photo uploads on its own as the customer picks it, as multipart form data in the field `photo`, so one slow photo never loses the form. Photos are optional: up to `QUOTE_REQUEST_MAX_PHOTOS` (6) per request, each up to `QUOTE_REQUEST_PHOTO_MAX_MB` (15 MB) as sent. JPEG, PNG, WebP and HEIC (the iPhone format) are accepted. A picked photo can be removed with `DELETE`.
 3. **The request.** `POST quote-requests` with the vehicle (year, make and model, or the photo card with any year, make and model the customer knows), `service` (a service id, or `"not_sure"`), a required `description` of what's needed (up to 2,000 characters), the `place`, the name, mobile number, the two consent answers, an optional `preferred_days` note, the `session` and the `photos` it keeps, and a Turnstile token. Photos picked but left out are deleted at once.
 
-The answer is the request's `reference` and a message that Dixie Detail will reply with a price. A quote request is not an appointment and holds no time. The owner sees it on the control app's **Website requests** screen, from the notice on the schedule or **Account → Website requests**, and marks it price sent, booked, declined, done or canceled.
+The answer is the request's `reference` and a message that Dixie Detail will reply with a price. A quote request is not an appointment and holds no time. It is matched quietly like a booking, and an address or vehicle it brings waits off the customer's record until it is booked. The owner sees it in the "needs you" list on the control app's home screen and on **Account → Website requests**, prices it by hand into a quote, then books it from that quote into an open time or declines it ([control-app.md](control-app.md#website-bookings-and-requests)).
 
 ## Every photo is checked and cleaned
 
@@ -150,7 +154,7 @@ While the server is offline, the website's form becomes a "request a time" form 
 
 - **Signed, not Turnstile.** A Turnstile token would have expired by the replay, so Cloudflare checks it when the customer sends the form, and signs each replay: `X-Dixie-Timestamp` (seconds since 1970, within 5 minutes) and `X-Dixie-Signature`, the hex HMAC-SHA256 of the timestamp, a period and the raw body, with the Bitwarden secret `OFFLINE_REQUESTS_SIGNING_KEY`. Anything else is refused with `401`.
 - **The body** is the website's `request_id` (a UUID), `submitted_at`, the vehicle, size, condition, service and add-ons, the `place_id`, an optional `preferred_start` and note, the name, mobile, payment method, color, consents, and `shown`: the total before tax and pricebook version the customer saw.
-- **Priced on arrival.** The server looks the address up, prices the job from the pricebook in effect, and keeps a request, not an appointment. When its total before tax differs from what the customer saw, the request is flagged "Price differs" and the schedule's notice says so. An address outside the area, or a job that can't be priced, is kept with the problem noted. A second replay of the same `request_id` changes nothing.
+- **Priced on arrival.** The server looks the address up, prices the job from the pricebook in effect, matches the mobile number quietly, and keeps a request, not an appointment. When its total before tax differs from what the customer saw, the request is flagged "Price differs", in the "needs you" list too. An address outside the area, or a job that can't be priced, is kept with the problem noted. A second replay of the same `request_id` changes nothing. The owner books it, priced for the day picked, or declines it ([control-app.md](control-app.md#website-bookings-and-requests)).
 
 ## Abuse and privacy controls
 
@@ -162,7 +166,7 @@ While the server is offline, the website's form becomes a "request a time" form 
 
 ## Test records
 
-Customers and appointments have a **test record** flag. A test record never goes on the Jobs calendar, is left out of the schedule's count of new website requests, shows a "Test" badge on the schedule, and is for every report to leave out as reports are built (the sales tax report and the GnuCash export, Phase 6). It is deleted by `python manage.py delete_test_records` (with `--dry-run` to count first), which deletes every test customer with their appointments, quote requests and photos, offline requests, vehicles, addresses and consents. A booking or request from a mobile number in `TEST_PHONE_NUMBERS` is marked test automatically.
+Customers and appointments have a **test record** flag. A test record never goes on the Jobs calendar, shows a "Test" badge in the control app, the "needs you" list included, and is for every report to leave out as reports are built (the sales tax report and the GnuCash export, Phase 6). It is deleted by `python manage.py delete_test_records` (with `--dry-run` to count first), which deletes every test customer with their appointments, review flags, quote requests and photos, offline requests, second vehicle requests, vehicles, addresses and consents. A booking or request from a mobile number in `TEST_PHONE_NUMBERS` is marked test automatically, and quiet matching puts it only on a test customer, never a real one.
 
 `python manage.py api_smoke_test` checks the whole public path from the server:
 
@@ -170,8 +174,16 @@ Customers and appointments have a **test record** flag. A test record never goes
 2. It reads the pricebook, looks up a 2019 Toyota RAV4, checks the address `API_SMOKE_TEST_PLACE_ID` (a public place in the area, never a customer's), quotes an Exterior Only, books the first open time from the first test number, and sends a Full-size Vans quote request with one photo.
 3. It checks both arrived as test records with the photo on disk, then deletes both, and prints `api-smoke-test: PASS`.
 
-It can't solve a Turnstile widget, so it makes a one-time pass in the database, good for 10 minutes and three uses, and sends that instead. Only something with the database can make one. Run it on the server with:
+It can't solve a Turnstile widget, so it makes a one-time pass in the database, good for 10 minutes and ten uses, and sends that instead. Only something with the database can make one. Run it on the server with:
 
 ```
 cd /srv/dixie-detail && docker compose run --rm --no-deps -T app python manage.py api_smoke_test
 ```
+
+Two more scenarios try the control app's screens ([../guides/handling-website-bookings.md](../guides/handling-website-bookings.md#try-it-with-test-records)):
+
+- `--scenario returning` makes a test customer with two identical 2019 Toyota RAV4s, white and dark blue, and an address elsewhere, then books three times through the public address at the smoke test's place, on three different days: a color that picks the dark blue one, a blank color and a color that matches neither. It checks the first gets an address flag only, and the other two an identical-vehicles flag each.
+- `--scenario quote` sends a test quote request for a Full-size Vans vehicle, a 2021 Ford Transit from the photo card, with two photos.
+- `--keep` leaves what a scenario made, for the owner to try the review queue and the request screens; `delete_test_records` removes it afterwards. Without it, the scenario deletes what it made, as the basic run does.
+
+The two scenarios refuse to start while test records from an earlier run are still there, since a booking would match them instead; run `delete_test_records` first.

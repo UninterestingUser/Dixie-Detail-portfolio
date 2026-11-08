@@ -117,17 +117,21 @@ def receive(request, data):
         return 200, {"received": True, "duplicate": True}
     with transaction.atomic():
         place, web, problem = price_on_arrival(form)
-        customer = bookings.new_customer(form["first_name"], form["last_name"], form["mobile"])
-        address = None
-        if place is not None:
-            address = place.as_address(customer)
-            address.save()
-        consent.record(customer, form["mobile"], form["consents"], when=form["submitted_at"])
+        # Matched quietly like a booking; an address or vehicle it brings is
+        # kept off the record until the request is booked.
+        typed = bookings.given(
+            form["first_name"], form["last_name"], form["mobile"], place,
+            bookings.quote_vehicle(web, form["color"]) if web else None,
+        )
+        intake = bookings.take_in(typed, form["consents"], form["mobile"], hold=True, when=form["submitted_at"])
+        customer = intake.customer
         quote = web.quote if web else None
         TimeRequest.objects.create(
             request_id=form["request_id"],
             customer=customer,
-            service_address=address,
+            service_address=intake.address,
+            vehicle=intake.vehicle,
+            intake=intake.as_json(),
             submitted_at=form["submitted_at"],
             preferred_start=form["preferred_start"],
             preferred_note=form["preferred_note"],

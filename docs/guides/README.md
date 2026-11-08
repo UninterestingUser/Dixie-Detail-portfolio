@@ -4,7 +4,7 @@ summary: "The index of task-based guides for using the Dixie Detail system day t
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-08
 tags: [guides, how-to, index]
 related: [docs/overview/roadmap.md, docs/reference/control-app.md, docs/operations/deploying-changes.md]
 ---
@@ -24,12 +24,12 @@ Running the server itself (deploying, backups, monitoring) is covered in [../ope
 | [Booking a job](booking-a-job.md) | Owner and staff |
 | [Assigning staff and the services they may do](assigning-staff.md) | Owner |
 | [Editing and publishing the pricebook](editing-the-pricebook.md) | Owner |
+| [Handling website bookings](handling-website-bookings.md) | Owner and staff |
 
 ## Planned guides for the owner
 
 | Guide | Written in |
 | --- | --- |
-| Resolving a quiet-matching flag | Phase 3 |
 | Closing a day or taking a holiday | Phase 3 |
 | Approving an out-of-area address | Phase 3 |
 | Reviewing new vehicle models in the queue | Phase 2 |

@@ -1,0 +1,41 @@
+{% extends "control/base.html" %}
+{% load control %}
+{% block title %}Check the booking: {{ appointment.customer }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'match-reviews' %}">Review queue</a> · <a href="{% url 'appointment' appointment.pk %}">The job</a></p>
+<h1>Check the booking: {{ appointment.customer }}</h1>
+{% if appointment.is_test %}<p class="notice">A test record. <code>delete_test_records</code> removes it.</p>{% endif %}
+<p class="help">Booked {{ appointment.created_at|date:"D, M j, g:i A" }}{% if appointment.reference %} as {{ appointment.reference }}{% endif %}, matched by the mobile number {{ intake.mobile|phone }}{% if intake.contact_id %}, a second contact's{% endif %}. The job uses the address and vehicle as booked whatever you choose, so its price, tax and drive time stay right.</p>
+
+{% for row in rows %}
+{% with flag=row.flag %}
+<section class="card review-flag" aria-labelledby="flag-{{ flag.pk }}">
+  <h2 id="flag-{{ flag.pk }}">{% if flag.identical_vehicles %}Which vehicle?{% else %}{{ flag.get_field_display }} differs{% endif %}</h2>
+  <div class="side-by-side">
+    <div><h3>Booked</h3><p class="prewrap">{{ flag.booked_value }}{% if flag.field == 'vehicle' and intake.color %}{% if flag.identical_vehicles %} (color given: {{ intake.color }}){% endif %}{% elif flag.field == 'vehicle' and flag.identical_vehicles %} (no color given){% endif %}</p></div>
+    <div><h3>On the record</h3>{% for line in row.record %}<p>{{ line }}</p>{% empty %}<p class="muted">Nothing</p>{% endfor %}</div>
+  </div>
+  {% if flag.identical_vehicles %}<p class="help">The customer has more than one vehicle with this make, model and year, and the color didn't pick one (decision 0067).</p>{% endif %}
+  {% if flag.is_open %}
+    <form method="post" action="{% url 'match-resolve' flag.pk %}" class="stack">
+      {% csrf_token %}
+      {% if row.choices|length > 1 or flag.identical_vehicles %}
+      <fieldset><legend>{% if flag.identical_vehicles %}It was{% else %}It replaces (for "It replaces this vehicle"){% endif %}</legend>
+        {% for vehicle in row.choices %}<label class="choice"><input type="radio" name="choice" value="{{ vehicle.pk }}"> {{ vehicle }}</label>{% endfor %}
+      </fieldset>
+      {% endif %}
+      <div class="button-row">
+        {% for value, label, needs_pick in row.actions %}<button type="submit" name="resolution" value="{{ value }}"{% if value == 'move_to_new_customer' %} class="danger"{% endif %}>{{ label }}</button>{% endfor %}
+      </div>
+      <p class="help">Move the booking to a new customer when someone else shares this number: the job, and the address, vehicle and consent answers it brought, go to a new customer named {{ intake.first_name }} {{ intake.last_name }}.</p>
+    </form>
+  {% else %}
+    <p><strong>{{ flag.get_resolution_display }}</strong>: {{ flag.resolution_note }}</p>
+    <p class="sub">{{ flag.resolved_by|default:"Someone no longer here" }}, {{ flag.resolved_at|date:"M j, Y, g:i A" }}</p>
+  {% endif %}
+</section>
+{% endwith %}
+{% empty %}
+<p class="muted">This booking matched the record exactly.</p>
+{% endfor %}
+{% endblock %}

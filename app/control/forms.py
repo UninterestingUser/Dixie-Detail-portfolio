@@ -43,12 +43,16 @@ class CustomerForm(forms.ModelForm):
 class VehicleForm(forms.ModelForm):
     class Meta:
         model = Vehicle
-        fields = ["year", "make", "model", "color", "vehicle_class", "size_variant", "notes"]
+        fields = ["year", "make", "model", "color", "vehicle_class", "size_variant", "notes", "active"]
         widgets = {
             "year": forms.NumberInput(attrs={"inputmode": "numeric"}),
             "notes": forms.Textarea(attrs={"rows": 3}),
         }
-        help_texts = {"color": "Tells a customer's identical vehicles apart, such as silver or dark blue."}
+        help_texts = {
+            "color": "Tells a customer's identical vehicles apart, such as silver or dark blue.",
+            "active": "Untick for a vehicle the customer no longer has. Its jobs are kept; it is left out of matching and the booking form.",
+        }
+        labels = {"active": "Still the customer's"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -110,7 +114,12 @@ class AppointmentForm(forms.Form):
     def __init__(self, *args, customer, editing=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.customer, self.editing = customer, editing
-        self.fields["vehicle"].queryset = customer.vehicles.select_related("vehicle_class", "size_variant").order_by("make", "model", "year", "color")
+        # Vehicles no longer on the record are left out, except the job's own.
+        current = self.initial.get("vehicle")
+        current = getattr(current, "pk", current)
+        self.fields["vehicle"].queryset = (
+            customer.vehicles.filter(Q(active=True) | Q(pk=current)).select_related("vehicle_class", "size_variant").order_by("make", "model", "year", "color")
+        )
         self.fields["address"].queryset = customer.addresses.filter(active=True)
         self.fields["service"].queryset = Service.objects.filter(
             on_price_list=True, kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN]
