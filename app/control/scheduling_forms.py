@@ -64,6 +64,7 @@ class SchedulingSettingsForm(forms.ModelForm):
             "setup_minutes_one_person", "breakdown_minutes_one_person", "time_on_site_rounding_minutes",
             "jobs_per_day", "minimum_gap_minutes", "round_start_up_to_minutes",
             "time_off_buffer_minutes", "time_off_check_minutes", "stale_copy_warning_minutes",
+            "leave_buffer_minutes",
         ]
         labels = {
             "setup_minutes_one_person": "Setup minutes, one person",
@@ -74,6 +75,7 @@ class SchedulingSettingsForm(forms.ModelForm):
             "time_off_buffer_minutes": "Time Off buffer, minutes",
             "time_off_check_minutes": "Check Time Off every, minutes",
             "stale_copy_warning_minutes": "Warn when the Time Off copy is older than, minutes",
+            "leave_buffer_minutes": "Time-to-leave buffer, minutes",
         }
 
     def clean(self):

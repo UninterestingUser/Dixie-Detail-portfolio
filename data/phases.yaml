@@ -67,6 +67,8 @@ phases:
     built:
       - "Step 2: the scheduling settings in the database with change history and their screen, date exceptions, the booked jobs a change leaves outside the rules, the availability check, the manager override and the open-times view (decisions 0093 and 0094)"
       - "Step 2 follow-up: booking off hours inline with the reason shown on the job, the Schedule, Day, 3 Days, Week and Month views, canceling or removing a job from a popup, canceled jobs in the Baserow import, and the customer list sorted by completed jobs (decisions 0095 and 0096)"
+      - "Step 2 follow-up 2: the rules alert before the services are chosen, and the schedule's view bar (decision 0097)"
+      - "Step 3: the Google Calendar sync - Jobs events and Drive to job blocks through a queue and the calendar worker, edits in Google put back, hand-added events flagged, Closed days, the Time Off copy every 5 minutes and at booking, clash flags on the home screen, the stale-copy warning, and the nightly full check with its Healthchecks ping (decision 0098)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
       - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)

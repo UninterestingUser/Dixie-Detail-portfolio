@@ -167,7 +167,12 @@ def log_override(appointment, reasons, reason, user, action=RuleOverride.Action.
 
 @transaction.atomic
 def book_online(customer, vehicle, start, inputs, *, address=None, notes=""):
-    """A booking from the website: only an open time, never an override."""
+    """A booking from the website: only an open time, never an override.
+    Time Off is copied again first, unless the copy is under a minute old;
+    with Google down the last copy is used (decision 0057)."""
+    from calendars.sync import refresh_time_off_for_booking
+
+    refresh_time_off_for_booking()
     broken = rules_broken(inputs, [start], address)
     if broken:
         raise RulesBroken(broken)

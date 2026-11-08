@@ -16,6 +16,14 @@ DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 # into the one-off container (docs/operations/importing-vehicle-data.md).
 VEHICLE_DATA_CACHE_DIR = Path(os.environ.get("VEHICLE_DATA_CACHE_DIR", "/srv/vehicle-data"))
 
+# The two Google calendars (decisions 0006 and 0098), by calendar ID, from
+# .env. Not secret. Empty in development and tests, which never call Google.
+GOOGLE_CALENDAR_JOBS_ID = os.environ.get("GOOGLE_CALENDAR_JOBS_ID", "")
+GOOGLE_CALENDAR_TIME_OFF_ID = os.environ.get("GOOGLE_CALENDAR_TIME_OFF_ID", "")
+# The service account's JSON key, a secret: dixie.settings reads it from its
+# file; empty means the calendar sync is not connected.
+GOOGLE_SERVICE_ACCOUNT_JSON = ""
+
 INSTALLED_APPS = [
     # The Django admin, for superusers only (decision 0046).
     "dixie.apps.SuperuserAdminConfig",
@@ -40,6 +48,7 @@ INSTALLED_APPS = [
     "importer",
     "geo",
     "scheduling",
+    "calendars.apps.CalendarsConfig",
 ]
 
 MIDDLEWARE = [

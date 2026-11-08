@@ -1,0 +1,23 @@
+# Nightly full check of the Google calendars; started by dixie-calendar-check.timer.
+# Installed to /etc/systemd/system by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-calendar-check.service
+[Unit]
+Description=Dixie Detail calendar check
+Wants=network-online.target
+After=network-online.target docker.service dixie-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+# Non-secret settings only.
+EnvironmentFile=/srv/dixie-detail/.env
+# The Bitwarden machine-account token, decrypted into this run's private,
+# in-memory credentials directory, for the Healthchecks ping URL.
+LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+# /run/dixie-calendar-check, on tmpfs, for the run's log. Deleted when the run ends.
+RuntimeDirectory=dixie-calendar-check
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/calendar-check.sh
+Nice=10
+TimeoutStartSec=30min

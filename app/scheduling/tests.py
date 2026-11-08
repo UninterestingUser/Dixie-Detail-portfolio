@@ -413,7 +413,7 @@ class SettingsScreenTests(SchedulingTestCase):
         data = {name: getattr(settings, name) for name in (
             "minimum_notice_days", "furthest_bookable_days", "setup_minutes_one_person", "breakdown_minutes_one_person",
             "time_on_site_rounding_minutes", "jobs_per_day", "minimum_gap_minutes", "round_start_up_to_minutes",
-            "time_off_buffer_minutes", "time_off_check_minutes", "stale_copy_warning_minutes")}
+            "time_off_buffer_minutes", "time_off_check_minutes", "stale_copy_warning_minutes", "leave_buffer_minutes")}
         for row in OpenWeekday.objects.all():
             if row.is_open:
                 data[f"day{row.weekday}-is_open"] = "on"

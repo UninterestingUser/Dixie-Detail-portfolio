@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-06
+  updated: 2026-11-07
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -64,8 +64,14 @@ settings:
     used_by: python manage.py import_vehicle_data
     phase: 2
   - name: GOOGLE_CALENDAR_JOBS_ID
+    purpose: The Dixie Detail Jobs calendar's ID, from its Google Calendar settings under Integrate calendar. Not secret
+    used_by: app and calendar-worker containers (compose.yaml); app/dixie/settings_base.py
+    note: Empty until the calendars are connected; the sync then waits (docs/operations/connecting-the-google-calendars.md)
     phase: 3
   - name: GOOGLE_CALENDAR_TIME_OFF_ID
+    purpose: The Dixie Detail Time Off calendar's ID, from its Google Calendar settings under Integrate calendar. Not secret
+    used_by: app and calendar-worker containers (compose.yaml); app/dixie/settings_base.py
+    note: Empty until the calendars are connected
     phase: 3
   - name: GOOGLE_MAPS_BROWSER_KEY
     purpose: Public by design; used by the website's address field, restricted to dixiedetail.com and the Maps services it needs
@@ -127,7 +133,14 @@ secrets:
     note: Optional; without it the check runs with no pings. The check pings failure while a rate change waits for approval
     phase: 3
   - name: GOOGLE_SERVICE_ACCOUNT_JSON
-    purpose: Service account key for the two calendars, read into memory
+    purpose: The calendar service account's JSON key, the whole file as the value; the app signs its Calendar API token requests with it (calendar.events scope only)
+    used_by: ops/stack-start.sh (app and calendar-worker containers, as the file named by GOOGLE_SERVICE_ACCOUNT_JSON_FILE, in memory)
+    note: Optional; until it exists the stack writes an empty file and the calendar sync waits. Decision 0098
+    phase: 3
+  - name: HEALTHCHECKS_CALENDAR_CHECK_URL
+    purpose: Ping address for the nightly calendar check (docs/operations/monitoring.md)
+    used_by: ops/calendar-check.sh
+    note: Optional; without it the check runs with no pings
     phase: 3
   - name: GOOGLE_MAPS_SERVER_KEY
     purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked), Text Search (finding a typed address the Census geocoder cannot) and Routes (drive times), restricted to the Places API (New) and the Routes API
@@ -209,6 +222,8 @@ development:
       where: app/dixie/settings_dev.py and tools/run-tests.sh, which starts the throwaway database with it
     - name: GOOGLE_MAPS_SERVER_KEY
       where: app/dixie/settings_dev.py leaves it empty, so development never calls Google; tests use a made-up key with the HTTP call replaced by the answers in app/geo/test_files
+    - name: GOOGLE_SERVICE_ACCOUNT_JSON
+      where: app/dixie/settings_dev.py leaves it empty, so development never calls Google Calendar; tests use the fake calendar in app/calendars/testing.py
 
 stored_on_server:
   - name: bws-token

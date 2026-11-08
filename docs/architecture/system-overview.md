@@ -4,7 +4,7 @@ summary: The parts of the Dixie Detail business system, how they connect, how da
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-07
 tags: [architecture, overview]
 related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-access.md, docs/architecture/integrations.md, docs/overview/project-goals.md]
 ---
@@ -31,7 +31,7 @@ flowchart TB
 
     core -. planned .-> stripe["Stripe"]
     core -. planned .-> quo["Quo"]
-    core -. planned .-> google["Google Workspace calendars<br/>and Maps Platform"]
+    core --> google["Google Workspace calendars<br/>and Maps Platform"]
     core -. planned .-> govdata["EPA, NHTSA, Census,<br/>Tennessee Revenue"]
     db --> backups["Nightly backups<br/>RAID and Google Drive"]
 ```
@@ -58,7 +58,7 @@ flowchart TB
 - **The booking flow** reads live prices and open slots from the public API through the tunnel. The final price is always calculated on the server; the website only displays it.
 - **If the server is unreachable,** the website and its prices still load, and the booking form switches to a "request a time" form that Cloudflare holds and delivers when the server returns.
 - **Outside services** report back by webhook through the tunnel: Stripe for payments, Quo for replies.
-- **Calendars** receive one event per appointment from the core app; the Time Off calendar is read back to close days.
+- **Calendars** receive one event per appointment from the core app, through a queue and a calendar worker; the Time Off calendar is read back every few minutes to block time (decision 0098).
 - **GnuCash** receives a CSV export that the owner imports. Nothing writes to GnuCash directly.
 
 ## Principles every part follows

@@ -47,6 +47,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       GOOGLE_MAPS_SERVER_KEY_FILE: /run/secrets/google_maps_server_key
+      # The two Google calendars (not secret) and the service account key
+      # (a secret file), decision 0098.
+      GOOGLE_CALENDAR_JOBS_ID: ${GOOGLE_CALENDAR_JOBS_ID:-}
+      GOOGLE_CALENDAR_TIME_OFF_ID: ${GOOGLE_CALENDAR_TIME_OFF_ID:-}
+      GOOGLE_SERVICE_ACCOUNT_JSON_FILE: /run/secrets/google_service_account_json
     secrets:
       - source: app_django_secret_key
         target: django_secret_key
@@ -54,6 +59,8 @@ services:
         target: postgres_password
       - source: app_google_maps_server_key
         target: google_maps_server_key
+      - source: app_google_service_account_json
+        target: google_service_account_json
     depends_on:
       db:
         condition: service_healthy
@@ -63,6 +70,44 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # The calendar worker (decision 0098): pushes queued changes to the Jobs
+  # calendar within seconds and copies the Time Off calendar every few
+  # minutes. Same image, settings and secrets as the app; it serves nothing.
+  # It starts once the app is healthy, so the migrations have run.
+  calendar-worker:
+    image: dixie-app:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    command: ["python", "manage.py", "calendar_worker"]
+    stop_signal: SIGTERM
+    volumes:
+      - ./data:/srv/data:ro
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?set DJANGO_ALLOWED_HOSTS in .env}
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      GOOGLE_MAPS_SERVER_KEY_FILE: /run/secrets/google_maps_server_key
+      GOOGLE_CALENDAR_JOBS_ID: ${GOOGLE_CALENDAR_JOBS_ID:-}
+      GOOGLE_CALENDAR_TIME_OFF_ID: ${GOOGLE_CALENDAR_TIME_OFF_ID:-}
+      GOOGLE_SERVICE_ACCOUNT_JSON_FILE: /run/secrets/google_service_account_json
+    secrets:
+      - source: app_django_secret_key
+        target: django_secret_key
+      - source: app_postgres_password
+        target: postgres_password
+      - source: app_google_maps_server_key
+        target: google_maps_server_key
+      - source: app_google_service_account_json
+        target: google_service_account_json
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [backend]
 
   caddy:
     image: caddy:2.11.4-alpine
@@ -98,6 +143,8 @@ secrets:
     file: /run/dixie-stack/secrets/app/django_secret_key
   app_google_maps_server_key:
     file: /run/dixie-stack/secrets/app/google_maps_server_key
+  app_google_service_account_json:
+    file: /run/dixie-stack/secrets/app/google_service_account_json
   tunnel_cloudflared_token:
     file: /run/dixie-stack/secrets/tunnel/cloudflared_token
 

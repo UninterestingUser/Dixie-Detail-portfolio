@@ -32,6 +32,10 @@ SECRET_KEY = read_secret("DJANGO_SECRET_KEY_FILE")
 # the Bitwarden secret exists the file is empty, and the app works without
 # Google: place lookups fail and drive times are estimated (geo.google).
 GOOGLE_MAPS_SERVER_KEY = read_optional_secret("GOOGLE_MAPS_SERVER_KEY_FILE")
+# The Google service account's JSON key for the two calendars (decision
+# 0098). Empty until the Bitwarden secret exists: the sync then waits, and
+# the control app says the calendars are not connected.
+GOOGLE_SERVICE_ACCOUNT_JSON = read_optional_secret("GOOGLE_SERVICE_ACCOUNT_JSON_FILE")
 DEBUG = False
 # "localhost" is for the container's own health check.
 ALLOWED_HOSTS = [

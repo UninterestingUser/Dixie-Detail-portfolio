@@ -121,3 +121,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0095](0095-canceling-and-removing-jobs.md) | 2026-11-07 | scheduling | Canceling a job, and removing one created by mistake | accepted |
 | [0096](0096-booking-off-hours-inline-and-calendar-views.md) | 2026-11-07 | control-app | Booking off hours inline, calendar-style schedule views and the customer list | accepted |
 | [0097](0097-rules-alert-before-services-and-schedule-view-bar.md) | 2026-11-07 | control-app | The rules alert before the services are chosen, and the schedule's view bar | accepted |
+| [0098](0098-calendar-sync-queue-and-worker.md) | 2026-11-07 | calendar | The Google Calendar sync: a queue in PostgreSQL, a worker container and a nightly check | accepted |

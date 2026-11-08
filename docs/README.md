@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-06
+updated: 2026-11-07
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -75,12 +75,13 @@ Every page starts with a header block. `status` matters most: **current** descri
 | --- | --- | --- |
 | [Setting up addresses, sales tax and drive times](operations/addresses-and-sales-tax.md) | How to load Tennessee's tax rates and boundaries, set the home base, verify the existing customer addresses, add the Google server key and the tax check's Healthchecks alert, and handle a rate change. | current |
 | [Running and checking backups, and restoring](operations/backups-and-restore.md) | How to confirm the nightly backup ran, run one by hand, test a restore, and recover the database from the RAID or from Google Drive. | current |
+| [Connecting the Google calendars](operations/connecting-the-google-calendars.md) | The one-time steps to connect the Jobs and Time Off calendars to the app through a Google service account, run the first sync, and check that it works. | current |
 | [Deploying changes to the server](operations/deploying-changes.md) | The routine for getting a merged pull request onto the server, and what to restart, copy or add afterwards depending on what changed. | current |
 | [Importing the Baserow and Setmore records](operations/importing-baserow.md) | How to copy the Baserow and Setmore exports and the corrections file to the server, dry-run the import, apply it, re-run it with fresh exports, and remove the files afterwards. | current |
 | [Classifying the vehicle catalog](operations/classifying-vehicles.md) | How to run classify_vehicles to apply the rules and overrides, read its preview and review queue, change a rule or override, and switch to the size-based classes with apply_size_classes. | current |
 | [Linking customers' vehicles to the catalog](operations/linking-vehicles.md) | How to run link_vehicles on the server to link each customer's vehicle to its catalog model, read its report, add spellings, and settle what it finds on the differences screen and the approval list. | current |
 | [Importing the vehicle data](operations/importing-vehicle-data.md) | How to run import_vehicle_data on the server to load the vehicle catalog from the EPA, NHTSA vPIC and the Canadian specifications, read its report, rerun it, add a make, and how the monthly refresh runs it. | current |
-| [Monitoring and alerts](operations/monitoring.md) | What the four Healthchecks.io checks watch, the sales tax rate check, the monthly vehicle data refresh and its timer, what to do when an alert email arrives, and how to test the alerts. | current |
+| [Monitoring and alerts](operations/monitoring.md) | What the five Healthchecks.io checks watch, the sales tax rate check, the nightly calendar check, the monthly vehicle data refresh and its timer, what to do when an alert email arrives, and how to test the alerts. | current |
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
 | [Phase 1 core data and control app runbook](operations/phase-1-core-data-runbook.md) | The runbook that built Phase 1 (data model, pricebook and pricing engine, Baserow import, control app) as executed from 2026-10-14 to 2026-10-18, kept as a historical record. | historical |
 | [Phase 2 vehicle catalog runbook](operations/phase-2-vehicle-catalog-runbook.md) | The runbook that built Phase 2 (vehicle data, classification, catalog screens, linked vehicles, monthly refresh, size-based classes) as run from 2026-10-21 to 2026-10-29, kept as a historical record. | historical |

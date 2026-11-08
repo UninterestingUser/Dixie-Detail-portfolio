@@ -19,10 +19,14 @@ from django.utils import timezone
 from django.views.decorators.http import require_safe
 
 from appointments.models import Appointment
+from calendars import sync as calendar_sync
 from scheduling.availability import day_reasons, load_rules, local_midnight
 from scheduling.models import OpenWeekday
+from staff.authorization import user_is_manager
 from staff.models import Assignment
 from vehicles.models import ModelYearClassification, VehicleDataRefresh
+
+from . import calendar_views
 
 VIEWS = {"schedule": "Schedule", "day": "Day", "3day": "3 Days", "week": "Week", "month": "Month"}
 # Each view's icon in the bar along the top: the Material Symbols the Google
@@ -308,6 +312,10 @@ def schedule(request):
         "queue_count": ModelYearClassification.objects.filter(in_review=True).count(),
         # And, beside it, how the last monthly vehicle data refresh went (decision 0081).
         "last_refresh": VehicleDataRefresh.objects.first(),
+        # The calendar flags and the stale Time Off warning (decision 0098).
+        "calendar_flags": calendar_views.open_flags(),
+        "time_off_warning": calendar_sync.time_off_warning(),
+        "is_manager": user_is_manager(request.user),
     }
     if view == "schedule":
         days, after = later_chunk(day)

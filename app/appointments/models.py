@@ -2,6 +2,7 @@
 scheduling settings (scheduling.models.DateException)."""
 
 import datetime
+import uuid
 from decimal import Decimal
 
 from django.conf import settings
@@ -91,6 +92,10 @@ class Appointment(models.Model):
     series = models.ForeignKey(
         RecurringSeries, on_delete=models.PROTECT, null=True, blank=True, related_name="appointments"
     )
+    # The link to its events on the Jobs calendar (decision 0098): the
+    # events' IDs are made from it, and it is in their private extended
+    # properties. jobs_calendar_event_id is the job event's ID once written.
+    calendar_key = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     jobs_calendar_event_id = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
     baserow_id = models.PositiveIntegerField(null=True, blank=True, unique=True)

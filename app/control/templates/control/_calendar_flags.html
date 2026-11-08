@@ -1,0 +1,36 @@
+{# The calendar flags on the home screen (decision 0098). #}
+{% load control %}
+{% if time_off_warning %}<p class="notice warn-notice" role="status">{{ time_off_warning }}</p>{% endif %}
+{% if calendar_flags %}
+<section class="calendar-flags" aria-labelledby="calendar-flags-heading">
+  <h2 id="calendar-flags-heading">Calendar</h2>
+  <ul class="list">
+    {% for flag in calendar_flags %}
+      <li class="card">
+        {% if flag.kind == 'clash' %}
+          <strong>Time Off over a booked job: {{ flag.summary }}</strong>
+          {% with appointment=flag.appointment %}
+          <span class="sub"><a href="{% url 'appointment' appointment.pk %}">{{ appointment.scheduled_start|date:"D, M j" }}, {{ appointment.scheduled_start|local_time }}: {{ appointment.customer }}, {{ appointment.vehicle|default:"no vehicle" }}</a></span>
+          <span class="sub">The job is still booked. Keep it, reschedule it or cancel it.</span>
+          {% if is_manager %}
+          <div class="flag-actions">
+            <form method="post" action="{% url 'calendar-flag' flag.pk %}">{% csrf_token %}<button type="submit" name="action" value="keep">Keep</button></form>
+            <a class="button" href="{% url 'appointment-edit' appointment.pk %}">Reschedule</a>
+            <a class="button" href="{% url 'appointment' appointment.pk %}#cancel">Cancel</a>
+          </div>
+          {% endif %}
+          {% endwith %}
+        {% elif flag.kind == 'by_hand' %}
+          <strong>Added to the Jobs calendar by hand: {{ flag.summary }}</strong>
+          {% if flag.starts_at %}<span class="sub">{{ flag.starts_at|date:"D, M j" }}{% if flag.starts_at|local_time != "12:00 AM" %}, {{ flag.starts_at|local_time }}{% endif %}</span>{% endif %}
+          <span class="sub">It counts as busy time. Move it to the Time Off calendar, or delete it; this note goes away when it is gone from Jobs.</span>
+        {% else %}
+          <strong>Put back on the Jobs calendar: {{ flag.summary }}</strong>
+          <span class="sub">{{ flag.detail }}{% if flag.appointment %} <a href="{% url 'appointment' flag.appointment.pk %}">Open the job</a>.{% endif %} Change jobs here, not in Google.</span>
+          <form method="post" action="{% url 'calendar-flag' flag.pk %}">{% csrf_token %}<button type="submit" name="action" value="seen">OK</button></form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
