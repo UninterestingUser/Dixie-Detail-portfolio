@@ -11,7 +11,10 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Pinned to the server's release. ubuntu-latest became 26.04 in
+    # November 2026, whose uutils coreutils `timeout` ignores --signal=INT
+    # and kills restic outright (docs/operations/troubleshooting.md).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
