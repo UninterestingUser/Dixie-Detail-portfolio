@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-28
+updated: 2026-11-14
 ---
 
 # Data files
@@ -14,8 +14,8 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | File | Holds | Role |
 | --- | --- | --- |
 | [price-matrix.csv](price-matrix.csv) | The 91 prices and one-person service hours (setup and breakdown not included) for the size-based vehicle classes | Loaded by `load_pricebook`, after the price book check, as version 1 or a new draft; the only price source |
-| [services.yaml](services.yaml) | The service catalog | Seed and reference |
-| [pricing-rules.yaml](pricing-rules.yaml) | Condition levels, maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Seed for pricebook settings |
+| [services.yaml](services.yaml) | The service catalog, with which services take a condition level (`condition_applies`) | Seed and reference; `condition_applies` is loaded with each pricebook version |
+| [pricing-rules.yaml](pricing-rules.yaml) | Condition levels (which services take one, Level 3 booked by quote), maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Loaded by `load_pricebook` with each version; a difference makes a new draft |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The eight size-based vehicle classes, their size variants, settings and photo cards, the retired body-type classes, the rule settings, and the possible future classes | Read by `load_pricebook` (classes) and `classify_vehicles` (rule settings) |
 | [vehicle-names.yaml](vehicle-names.yaml) | The names customers know: EPA base models split into nameplates, the other spellings of one vehicle, make spellings, customers' names for vehicles filed under another name or make (some for certain years), and the trim words left off a customer's model name | Read by `import_vehicle_data`, `classify_vehicles`, `link_vehicles` and the booking lookup |
 | [approval-spot-checks.yaml](approval-spot-checks.yaml) | The models the owner spot-checks on the approval list, some for certain model years | Read by the control app's approval list |

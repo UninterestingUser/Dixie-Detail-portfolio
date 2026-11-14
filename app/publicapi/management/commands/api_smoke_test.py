@@ -168,7 +168,10 @@ class Command(BaseCommand):
         return place
 
     def get_quote(self, api, service, size, place):
-        body = {"vehicle": VEHICLE, "service": service["id"], "condition": 1, "place": place["place"]}
+        body = {"vehicle": VEHICLE, "service": service["id"], "place": place["place"]}
+        if service["condition_applies"]:
+            # Only Full Detail and Interior Only take a condition level (decision 0103).
+            body["condition"] = 1
         if size is not None:
             body["size"] = size
         return api.ok("POST", "quotes", body=body)

@@ -18,7 +18,7 @@ from django.utils import timezone
 from PIL import Image
 
 from geo.fixtures import FakeServices, import_fixture_rates, with_google_key
-from pricebook.models import Service
+from pricebook.models import PricebookVersion, Service
 from scheduling.models import SchedulingSettings
 from vehicles.models import ModelYearClassification, SizeVariant, VehicleClass, VehicleModel
 
@@ -172,7 +172,7 @@ class ApiTestCase(TestCase):
 
     def quote(self, vehicle=None, service=None, expect=201, **body):
         payload = {"vehicle": vehicle or {"year": 2019, "make": "Toyota", "model": "RAV4"}, "service": (service or self.full_detail).pk}
-        if (service or self.full_detail).condition_applies:
+        if PricebookVersion.current().takes_condition_level(service or self.full_detail):
             payload["condition"] = 1
         payload.update(body)
         response = self.client.post_json("quotes", payload)

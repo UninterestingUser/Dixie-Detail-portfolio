@@ -135,8 +135,9 @@ class WebQuote(models.Model):
 
 class QuoteRequest(models.Model):
     """A job the site can't price: a vehicle in a class booked by quote
-    (decision 0099). Not an appointment, and it holds no time: the owner
-    replies with a price."""
+    (decision 0099), or Full Detail or Interior Only at a condition level
+    booked by quote (decision 0103). Not an appointment, and it holds no
+    time: the owner replies with a price."""
 
     class Status(models.TextChoices):
         NEW = "new", "New"
@@ -160,8 +161,13 @@ class QuoteRequest(models.Model):
     vehicle_model_name = models.CharField(max_length=100, blank=True)
     vehicle_class = models.ForeignKey("vehicles.VehicleClass", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     photo_card = models.BooleanField(default=False)
+    size_variant = models.ForeignKey("vehicles.SizeVariant", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     # Empty when the customer chose "Not sure".
     service = models.ForeignKey("pricebook.Service", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    # The condition level, for a service that takes one, and the add-ons the
+    # customer wants (decision 0103).
+    condition_level = models.PositiveSmallIntegerField(null=True, blank=True)
+    add_ons = models.ManyToManyField("pricebook.Service", blank=True, related_name="+")
     description = models.TextField()
     preferred_days = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)

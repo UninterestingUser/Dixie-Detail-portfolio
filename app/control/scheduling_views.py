@@ -173,8 +173,8 @@ def open_times(request):
         first = data.get("first") or timezone.localdate()
         last = first + datetime.timedelta(days=OPEN_TIMES_DAYS - 1)
         service = data["service"]
-        inputs = booking.JobInputs(service, data["vehicle_class"], data.get("size_variant"),
-                                   data.get("condition_level") if service.condition_applies else None,
+        # The engine drops a level the service doesn't take (decision 0103).
+        inputs = booking.JobInputs(service, data["vehicle_class"], data.get("size_variant"), data.get("condition_level"),
                                    crew_size=data.get("crew_size") or service.default_crew_size)
         try:
             job = booking.job_to_place(inputs, first)

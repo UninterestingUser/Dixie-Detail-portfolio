@@ -172,7 +172,7 @@ class PricingEngineTests(PricebookTestCase):
         carpet = self.service("Carpet Extraction")
         seats = self.service("Seat Extraction")
         add_on_prices = None
-        for level, percent in ((1, 0), (2, 10), (3, 20)):
+        for level, percent in ((1, 0), (2, 10)):
             job = self.rav4(condition_level=level, add_ons=[carpet, seats])
             add_ons = [line.amount for line in job.lines if line.kind == PricedLine.Kind.ADD_ON]
             add_on_prices = add_on_prices or add_ons
@@ -182,13 +182,9 @@ class PricingEngineTests(PricebookTestCase):
             self.assertEqual(condition, [Decimal(250 * percent // 100)] if percent else [])
 
     def test_condition_adjustment_rounds_to_the_whole_dollar(self):
-        job = price_job(
-            self.service("Exterior Only"),
-            self.vehicle_class("Medium"),
-            condition_level=3,
-        )
-        # 20% of $120.
-        self.assertEqual(job.lines[1].amount, Decimal("24.00"))
+        job = price_job(self.service("Full Detail"), self.vehicle_class("Medium"), size_variant=self.size("Medium", 2), condition_level=2)
+        # 10% of $250.
+        self.assertEqual(job.lines[1].amount, Decimal("25.00"))
         job = price_job(self.service("Interior Only"), self.vehicle_class("Full-size Trucks"), size_variant=self.size("Full-size Trucks", 1), condition_level=2)
         # 10% of $125 is $12.50, rounded to $13.
         self.assertEqual(job.lines[1].amount, Decimal("13.00"))
@@ -271,19 +267,19 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
             **inputs,
         )
 
-    def test_one_row_small_full_detail_at_level_3(self):
-        job = self.full_detail("Small", 1, 3)
-        # 3 hours plus 20% is 3.6, rounded once to 3.5.
-        self.assertEqual(job.one_person_service_hours, Decimal("3.6"))
-        self.assertEqual(hours(job.service_minutes), Decimal("3.5"))
-        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4.5"))
+    def test_one_row_small_full_detail_at_level_2(self):
+        job = self.full_detail("Small", 1, 2)
+        # 3 hours plus 10% is 3.3, rounded once to 3.25.
+        self.assertEqual(job.one_person_service_hours, Decimal("3.3"))
+        self.assertEqual(hours(job.service_minutes), Decimal("3.25"))
+        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4.25"))
 
-    def test_two_person_large_full_detail_at_level_3(self):
-        job = self.full_detail("Large", 2, 3, crew_size=2)
-        # 5 hours plus 20% is 6; 60% of that is 3.6, rounded once to 3.5.
-        self.assertEqual(job.one_person_service_hours, Decimal("6"))
-        self.assertEqual(hours(job.service_minutes), Decimal("3.5"))
-        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("4"))
+    def test_two_person_large_full_detail_at_level_2(self):
+        job = self.full_detail("Large", 2, 2, crew_size=2)
+        # 5 hours plus 10% is 5.5; 60% of that is 3.3, rounded once to 3.25.
+        self.assertEqual(job.one_person_service_hours, Decimal("5.5"))
+        self.assertEqual(hours(job.service_minutes), Decimal("3.25"))
+        self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("3.75"))
         self.assertEqual((job.time_on_site.setup_minutes, job.time_on_site.breakdown_minutes), (15, 15))
 
     def test_level_1_changes_nothing(self):
@@ -315,17 +311,18 @@ class ConditionLengthensServiceTimeTests(PricebookTestCase):
         self.assertEqual(quote.lines.get(kind=PricedLine.Kind.CONDITION).one_person_service_hours, Decimal("0.6"))
         self.assertEqual(quote.one_person_service_hours, Decimal("6.6"))
 
-    def test_interior_and_exterior_only_are_lengthened_too(self):
+    def test_interior_only_is_lengthened_too_and_exterior_only_never(self):
         interior = price_job(
-            self.service("Interior Only"), self.vehicle_class("Small"), size_variant=self.size("Small", 2), condition_level=3
+            self.service("Interior Only"), self.vehicle_class("Small"), size_variant=self.size("Small", 2), condition_level=2
         )
         exterior = price_job(self.service("Exterior Only"), self.vehicle_class("Large"), condition_level=2)
-        # 2 hours + 20%, and 2 hours + 10%.
-        self.assertEqual(interior.one_person_service_hours, Decimal("2.4"))
-        self.assertEqual(exterior.one_person_service_hours, Decimal("2.2"))
+        # 2 hours + 10%; Exterior Only takes no level (decision 0103).
+        self.assertEqual(interior.one_person_service_hours, Decimal("2.2"))
+        self.assertEqual(exterior.one_person_service_hours, Decimal("2"))
+        self.assertEqual(len(exterior.lines), 1)
 
     def test_add_ons_never_change_with_condition(self):
-        for level in (1, 2, 3):
+        for level in (1, 2):
             job = self.full_detail(
                 "Medium", 3, level, add_ons=[self.service("Carpet Extraction"), self.service("Seat Extraction")]
             )

@@ -2,6 +2,17 @@
 <h2 class="price-title">Price</h2>
 {% if errors %}
   {% for error in errors %}<p class="warn">{{ error }}</p>{% endfor %}
+{% elif hand %}
+  <table class="lines">
+    <tr><td>{{ hand.description }}</td><td class="amount">{{ hand.amount|money }}</td></tr>
+    <tr class="total"><td>Total before tax</td><td class="amount">{{ hand.amount|money }}</td></tr>
+    {% if tax %}{% include "control/_tax_rows.html" %}{% endif %}
+  </table>
+  <dl class="details">
+    <dt>Time on site</dt><dd>{{ hand.minutes|duration }} for {{ hand.crew_size }} {% if hand.crew_size == 1 %}person{% else %}people{% endif %}</dd>
+  </dl>
+  <p class="help">Priced by hand: saved as the job's quote, the price of record.{% if not tax %} Pick the service address to add the sales tax.{% endif %}</p>
+  {% if changes_price %}<p class="warn">Saving re-prices this job. Give a reason below.</p>{% endif %}
 {% elif job %}
   <table class="lines">
     {% for line in job.lines %}<tr><td>{{ line.description }}</td><td class="amount">{{ line.amount|money }}</td></tr>{% endfor %}
@@ -18,4 +29,5 @@
 {% else %}
   <p class="muted">Pick the service to see the price.</p>
 {% endif %}
+{% if reference %}<p class="help reference">For reference, at condition level {{ reference.job.condition_level }}: {{ reference.job.total_before_tax|money }} before tax, {{ reference.stay.total_minutes|duration }} on site.</p>{% endif %}
 {% if alert_known %}{% include "control/_rules_alert.html" with oob=True %}{% endif %}

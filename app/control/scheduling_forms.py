@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from geo.verification import VerificationError, parse_location
-from pricebook.models import Service
+from pricebook.models import PricebookVersion, Service
 from scheduling.models import DateException, SchedulingSettings
 from vehicles.models import SizeVariant, VehicleClass
 
@@ -183,7 +183,8 @@ class OpenTimesForm(forms.Form):
         service, vehicle_class, size = cleaned.get("service"), cleaned.get("vehicle_class"), cleaned.get("size_variant")
         if size and vehicle_class and size.vehicle_class_id != vehicle_class.pk:
             self.add_error("size_variant", "Pick a size of the vehicle class above, or leave it blank.")
-        if service and service.condition_applies and cleaned.get("condition_level") is None:
+        version = PricebookVersion.current()
+        if service and version and version.takes_condition_level(service) and cleaned.get("condition_level") is None:
             self.add_error("condition_level", f"{service} needs a condition level.")
         return cleaned
 

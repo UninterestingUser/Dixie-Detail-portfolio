@@ -16,17 +16,14 @@ the request brought on the record, raises its review flags
 (decisions 0061 and 0069).
 """
 
-from decimal import Decimal
-
 from django.db import transaction
 from django.utils import timezone
 
 from appointments import booking
 from appointments.models import AppointmentLine
-from billing.tax import tax_line
-from core.scheduling import current_values
 from customers import matching
-from pricebook.models import PricebookVersion, PricedLine, PricingRules, Quote, QuoteLine
+from pricebook.models import PricedLine
+from pricebook.pricing import PricingError, hand_description, issue_hand_quote
 from staff.authorization import auto_assign
 
 from .models import QuoteRequest, SecondVehicleRequest, TimeRequest
@@ -64,80 +61,31 @@ def decline(item, reason, user):
 # Quote requests -----------------------------------------------------------------
 
 
-def split_minutes(minutes, crew_size):
-    """Setup, service time and breakdown for a time on site typed by hand:
-    the setup and breakdown settings for the crew, the rest service time."""
-    values = current_values()
-    setup = round(values.setup_minutes_one_person / crew_size)
-    breakdown = round(values.breakdown_minutes_one_person / crew_size)
-    service = minutes - setup - breakdown
-    if service < 15:
-        raise DecisionError(f"The time on site must be at least {setup + breakdown + 15} minutes: setup and breakdown take {setup + breakdown}.")
-    return setup, service, breakdown
-
-
 @transaction.atomic
 def price_quote_request(item, service, vehicle_class, amount, minutes, user, crew_size=1, size_variant=None):
     """Record the owner's hand price and time on site as a quote: one line,
     the price before tax, with the sales tax at the request's address today.
-    The quote never changes; pricing again makes a new one."""
+    A request at a condition level booked by quote carries its level and
+    add-ons into the quote (decision 0103). The quote never changes; pricing
+    again makes a new one."""
     if item.status not in (QuoteRequest.Status.NEW, QuoteRequest.Status.REPLIED):
         raise DecisionError("Only an open request can be priced.")
-    if amount is None or amount <= 0:
-        raise DecisionError("Enter the price before tax.")
-    if minutes is None or minutes % 15:
-        raise DecisionError("Enter the time on site in steps of 15 minutes.")
-    if crew_size not in (1, 2):
-        raise DecisionError("A crew is one or two people.")
-    version = PricebookVersion.current()
-    if version is None:
-        raise DecisionError("No pricebook version is published.")
-    setup, service_minutes, breakdown = split_minutes(minutes, crew_size)
-    one_person_hours = Decimal(service_minutes * crew_size) / 60
-    rules = PricingRules.objects.filter(version=version).first()
-    one_person_minutes = setup * crew_size + service_minutes * crew_size + breakdown * crew_size
-    full_day = bool(rules and one_person_minutes >= rules.full_day_time_on_site_hours * 60)
-    tax = tax_line(item.service_address, amount, timezone.localdate())
-    quote = Quote.objects.create(
-        pricebook_version=version,
-        service=service,
-        vehicle_class=vehicle_class,
-        size_variant=size_variant,
-        crew_size=crew_size,
-        total_before_tax=amount,
-        service_address=item.service_address,
-        tax_jurisdiction=tax.jurisdiction,
-        taxable_amount=tax.taxable_amount,
-        state_rate=tax.state_rate,
-        local_rate=tax.local_rate,
-        state_tax=tax.state_tax,
-        local_tax=tax.local_tax,
-        tax_rate=tax.rate,
-        sales_tax=tax.sales_tax,
-        tax_needs_check=tax.needs_check,
-        total=amount + tax.sales_tax,
-        one_person_service_hours=one_person_hours,
-        service_minutes=service_minutes,
-        setup_minutes=setup,
-        breakdown_minutes=breakdown,
-        time_on_site_minutes=minutes,
-        full_day=full_day,
-    )
-    QuoteLine.objects.create(
-        quote=quote,
-        position=0,
-        kind=PricedLine.Kind.SERVICE,
-        description=f"{service.name}, priced by hand (quote request {item.reference})",
-        amount=amount,
-        one_person_service_hours=one_person_hours,
-        vehicle_class_name=vehicle_class.name,
-        size_variant_value=size_variant.value if size_variant else None,
-        size_variant_label=size_variant.label if size_variant else "",
-        service=service,
-        pricebook_version=version,
-        vehicle_class=vehicle_class,
-        size_variant=size_variant,
-    )
+    # The level and add-ons the customer asked for go with the service they
+    # asked for; a service the owner changes is priced on its own.
+    asked = item.service is not None and service == item.service
+    level = item.condition_level if asked else None
+    add_ons = list(item.add_ons.all()) if asked else []
+    if size_variant is None and vehicle_class == item.vehicle_class:
+        size_variant = item.size_variant
+    try:
+        quote = issue_hand_quote(
+            service, vehicle_class, amount, minutes,
+            description=hand_description(service, level, add_ons, reference=item.reference),
+            crew_size=crew_size, size_variant=size_variant, condition_level=level, add_ons=add_ons,
+            address=item.service_address,
+        )
+    except PricingError as error:
+        raise DecisionError(str(error)) from error
     item.quote, item.priced_at, item.priced_by = quote, timezone.now(), user
     item.status = QuoteRequest.Status.REPLIED
     item.save()

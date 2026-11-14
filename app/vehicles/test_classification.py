@@ -409,7 +409,7 @@ class MotorcycleTests(ClassificationTestCase):
         result = classify(2019, "Harley-Davidson", "Fat Boy")
         self.assertEqual((result.vehicle_class.name, result.size_variant, result.question), ("Motorcycles", None, None))
         detail = Service.objects.get(name="Motorcycle Detail")
-        self.assertFalse(detail.condition_applies)
+        self.assertFalse(PricebookVersion.current().takes_condition_level(detail))
         for level in (None, 1, 2, 3):
             with self.subTest(condition_level=level):
                 job = price_job(detail, result.vehicle_class, result.size_variant, condition_level=level)

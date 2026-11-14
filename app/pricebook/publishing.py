@@ -12,6 +12,9 @@ keeping its quoted price and logs no choice, so the owner decides each later
 on the version's booked-job review (undecided_jobs() and decide()). Such a
 job with no vehicle, or whose vehicle has no live class or no size variant,
 is not re-priced: it keeps its quoted price and is listed to check by hand.
+
+A job priced by hand, from a quote request or at a condition level booked
+by quote (decision 0103), is never re-priced and never listed.
 """
 
 import datetime
@@ -77,6 +80,7 @@ def affected_jobs(version, effective_date):
     start = timezone.make_aware(datetime.datetime.combine(effective_date, datetime.time.min))
     appointments = (
         Appointment.objects.filter(status=Appointment.Status.BOOKED, scheduled_start__gte=start)
+        .exclude(quote__priced_by_hand=True)
         .select_related("vehicle__vehicle_class", "vehicle__size_variant")
         .prefetch_related("lines__service", "lines__promotion", "lines__vehicle_class", "lines__size_variant")
         .order_by("scheduled_start")

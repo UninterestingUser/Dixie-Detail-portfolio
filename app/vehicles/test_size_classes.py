@@ -348,7 +348,7 @@ class BodyTypeWorld(SizeClassTestCase):
         cls.crossover = VehicleClass.objects.get(name="Crossovers & Wagons")
         cls.two_rows = cls.crossover.size_variants.get(value=2)
         version = PricebookVersion.objects.create(number=1)
-        command.load_rules(version, read_yaml("pricing-rules.yaml"))
+        command.load_rules(version, read_yaml("pricing-rules.yaml"), read_yaml("services.yaml"))
         Price.objects.create(
             version=version, service=Service.objects.get(name="Full Detail"), vehicle_class=cls.crossover,
             size_variant=cls.two_rows, price=Decimal("250"), one_person_service_hours=Decimal("5"),

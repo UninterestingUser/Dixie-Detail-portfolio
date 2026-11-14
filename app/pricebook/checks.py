@@ -10,7 +10,11 @@ by the tests. It refuses a price book where:
   a class with a service of its own (Motorcycles) that service. Every size
   variant data/vehicle-classes.yaml lists for an online class counts, and so
   does every class and size the classified catalog gives, when one is passed
-  in (classification.sizes.produced). A class booked by quote needs none.
+  in (classification.sizes.produced). A class booked by quote needs none;
+- the services that take a condition level (condition_applies in
+  services.yaml) are not the condition_levels applies_to list in
+  pricing-rules.yaml, or a level booked by quote also adds a percentage
+  (decision 0103).
 
 A cell is a dict like a row of data/price-matrix.csv: service,
 vehicle_class, size_variant (a value or None), hours and price.
@@ -77,6 +81,23 @@ def own_services(data_dir=None):
     return found
 
 
+def condition_problems(data_dir=None):
+    """Where the condition rules in services.yaml and pricing-rules.yaml disagree."""
+    conditions = read_data("pricing-rules.yaml", data_dir)["condition_levels"]
+    taking = {entry["name"] for entry in read_data("services.yaml", data_dir)["services"] if entry.get("condition_applies")}
+    listed = set(conditions.get("applies_to") or [])
+    problems = []
+    if taking != listed:
+        problems.append(
+            f"services.yaml gives a condition level to {', '.join(sorted(taking)) or 'no service'}, but"
+            f" pricing-rules.yaml applies_to lists {', '.join(sorted(listed)) or 'none'}."
+        )
+    for level in conditions["levels"]:
+        if level.get("booked_by_quote") and level.get("adjustment_percent"):
+            problems.append(f"Condition level {level['level']} is booked by quote, so it adds no percentage.")
+    return problems
+
+
 def check(cells, produced=None, data_dir=None):
     """What is wrong with a price book, as a list of sentences; empty when it passes."""
     rules = read_data("pricing-rules.yaml", data_dir)["maintenance_plans"]
@@ -126,4 +147,4 @@ def check(cells, produced=None, data_dir=None):
         rows = f" size {size}" if size is not None else ""
         shown = ", ".join(sources[:SHOWN]) + (f" and {len(sources) - SHOWN:,} more" if len(sources) > SHOWN else "")
         problems.append(f"{class_name}{rows} has no {service} price, but the rules can give it: {shown}.")
-    return problems
+    return problems + condition_problems(data_dir)

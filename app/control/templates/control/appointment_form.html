@@ -4,7 +4,7 @@
 <h1>{% if appointment %}Change job{% else %}Book a job{% endif %}</h1>
 <p class="muted">For <a href="{% url 'customer' customer.pk %}">{{ customer }}</a>. <a href="{% url 'open-times' %}">Open times</a></p>
 {% if time_off_warning %}<p class="notice warn-notice" role="status">{{ time_off_warning }}</p>{% endif %}
-<form method="post" class="stack" novalidate
+<form method="post" class="stack" novalidate data-booking-form
       hx-post="{% if appointment %}{% url 'appointment-price' appointment.pk %}{% else %}{% url 'appointment-price-new' customer.pk %}{% endif %}"
       hx-trigger="change[target.name!='override_reason'], load" hx-target="#price" hx-sync="this:replace">
   {% csrf_token %}
@@ -24,9 +24,13 @@
     {% include "control/_field.html" with field=form.service %}
     {% include "control/_field.html" with field=form.vehicle_class %}
     {% include "control/_field.html" with field=form.size_variant %}
-    {% include "control/_field.html" with field=form.condition_level %}
+    <div data-shows-with="condition">{% include "control/_field.html" with field=form.condition_level %}</div>
     {% include "control/_field.html" with field=form.add_ons %}
     {% include "control/_field.html" with field=form.crew_size %}
+    <div data-shows-with="hand-price" class="two">
+      {% include "control/_field.html" with field=form.hand_price %}
+      {% include "control/_field.html" with field=form.hand_minutes %}
+    </div>
   </fieldset>
   <section id="price" class="card price" aria-live="polite">{% include "control/_live_price.html" %}</section>
   {% if form.repeat %}

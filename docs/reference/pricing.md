@@ -4,9 +4,9 @@ summary: How every price is built from the price matrix, what size variants mean
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-28
+updated: 2026-11-14
 tags: [pricing, pricebook, crew, quote]
-related: [docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
+related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
@@ -22,7 +22,7 @@ A price is looked up by three things together: service, vehicle class and size v
 ## How a price is built
 
 1. **Base price,** looked up by service, vehicle class and size variant.
-2. **Condition adjustment** of 0%, 10% or 20% of the base price, for Full Detail, Interior Only and Exterior Only only. Rounded to the whole dollar. The same percentage lengthens the main service's service time ([decision 0065](../decisions/0065-condition-lengthens-service-time.md)).
+2. **Condition adjustment,** for Full Detail and Interior Only only: nothing at Level 1 and 10% of the base price at Level 2, rounded to the whole dollar. The same percentage lengthens the main service's service time. Level 3 has no price: the job is quoted by hand ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)).
 3. **Add-ons,** then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
 4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md). Until Phase 3 adds the rate lookup, quotes carry a tax rate of zero.
 5. **On-site adjustment,** entered by the owner at the job, always with a reason, shown on the invoice.
@@ -52,16 +52,24 @@ How two promotions on one job combine has not been set by the owner. Until it is
 
 ## Condition adjustment
 
-The customer picks one of three condition levels with plain descriptions. The first adds nothing, the second adds 10% and the third adds 20% of the base price of Full Detail, Interior Only or Exterior Only, rounded to the whole dollar. On a $280 Full Detail that is $28 or $56. The condition adjustment never applies to add-ons, paint correction, headlights, maintenance plans or Motorcycle Detail.
+Condition levels, called service levels on the website, apply only to the services that cover the interior: **Full Detail and Interior Only** ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). Exterior Only, both paint corrections, Headlight Restoration and Motorcycle Detail have no condition level at all, and the condition adjustment never applies to add-ons or maintenance plans either.
+
+The customer picks one of three levels with plain descriptions, after picking the service:
+
+- **Level 1** is preselected and adds nothing.
+- **Level 2** adds 10% of the base price, rounded to the whole dollar. On a $280 Full Detail that is $28.
+- **Level 3** has no price and no time. It is booked by quote, the same way as a vehicle in a class booked by quote: the website sends a quote request carrying the service, the level and any add-ons, and the owner replies with a price. In the control app, booking a Level 3 job asks for the price before tax and the time on site by hand, kept as a quote record ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)), with the Level 2 price shown beside it for reference.
+
+Which services take a level, and which level is booked by quote, are stored with each pricebook version, so a change reaches customers only when a new version is published, with the usual review of booked jobs ([pricebook-changes.md](pricebook-changes.md)). They come from `condition_applies` in [data/services.yaml](../../data/services.yaml) and `booked_by_quote` in [data/pricing-rules.yaml](../../data/pricing-rules.yaml); the price book check refuses the files if `applies_to` in pricing-rules.yaml lists other services.
 
 ## Condition lengthens the service time
 
-A dirtier vehicle takes longer as well as costing more ([decision 0065](../decisions/0065-condition-lengthens-service-time.md)). The condition level's percentage is added to the main service's one-person service time as well as its price, for Full Detail, Interior Only and Exterior Only only.
+A dirtier vehicle takes longer as well as costing more ([decision 0065](../decisions/0065-condition-lengthens-service-time.md), changed by [decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). The condition level's percentage is added to the main service's one-person service time as well as its price, for Full Detail and Interior Only only. A Level 3 job's time on site is the one the owner sets by hand.
 
-- **The condition line carries the extra time:** the base service hours times the percentage, unrounded. A 5-hour Full Detail at the second level adds 0.5 hours; a 6-hour one at the third level adds 1.2 hours.
+- **The condition line carries the extra time:** the base service hours times the percentage, unrounded. A 5-hour Full Detail at Level 2 adds 0.5 hours.
 - **Nothing else is lengthened.** Add-ons, maintenance plans, and setup and breakdown never change with condition.
 - **Rounded once.** The add-on hours are added, the two-person factor is applied, and the service time is rounded to the nearest 15 minutes once, at the end. Time on site follows from that service time.
-- Examples: a one-row Small Full Detail at the third level is 3 + 0.6 = 3.6 hours, rounded to 3.5 hours of service and 4.5 hours on site. A two-person two-row Large Full Detail at the third level is (5 + 1) × 0.60 = 3.6 hours, rounded to 3.5 hours of service and 4 hours on site. The three levels follow the Armstrong booking template to start, described in the owner's own words.
+- Examples: a one-row Small Full Detail at Level 2 is 3 + 0.3 = 3.3 hours, rounded to 3.25 hours of service and 4.25 hours on site. A two-person two-row Large Full Detail at Level 2 is (5 + 0.5) × 0.60 = 3.3 hours, rounded to 3.25 hours of service and 3.75 hours on site. The three levels follow the Armstrong booking template to start, described in the owner's own words.
 
 ## Motorcycles have one service at one price
 
@@ -76,7 +84,10 @@ Quarterly Maintenance is 80% and Monthly Maintenance 50% of the Full Detail pric
 `load_pricebook` runs the price book check on [data/price-matrix.csv](../../data/price-matrix.csv) before it loads anything, `apply_size_classes` runs it on the draft it publishes, and the tests run it on the file ([decision 0083](../decisions/0083-applying-the-size-based-classes.md)). It refuses a price book, and nothing changes, when:
 
 - **a maintenance plan does not follow Full Detail:** Monthly Maintenance is not 50% and Quarterly Maintenance not 80% of Full Detail for the same class and size, a plan's hours are not Full Detail's, or Full Detail has a price with no maintenance plan price beside it; or
-- **a class and row count the rules can give has no base price:** Full Detail, or for Motorcycles, Motorcycle Detail. Every size variant a class lists in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) counts, and `apply_size_classes` adds every class and size the classified catalog gives, such as a one-row vehicle in Small, with the model years that give it. A class booked by quote, Full-size Vans, needs no price.
+- **a class and row count the rules can give has no base price:** Full Detail, or for Motorcycles, Motorcycle Detail. Every size variant a class lists in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) counts, and `apply_size_classes` adds every class and size the classified catalog gives, such as a one-row vehicle in Small, with the model years that give it. A class booked by quote, Full-size Vans, needs no price; or
+- **the condition rules disagree:** the services with `condition_applies` in [data/services.yaml](../../data/services.yaml) are not the `applies_to` list in [data/pricing-rules.yaml](../../data/pricing-rules.yaml), or a level booked by quote also adds a percentage.
+
+`load_pricebook` also compares the condition rules with the latest published version: which services take a level, each level's percentage and which level is booked by quote. A difference, like a changed price, loads the data files as a new draft for the owner to publish ([pricebook-changes.md](pricebook-changes.md)).
 
 ## Service time and time on site
 
@@ -92,13 +103,14 @@ The price matrix holds **service time** only: the hours spent working on the veh
 - Two people take 60% of the one-person service time, the owner's measured figure. Crews are one or two people only.
 - Service time for the crew is rounded to the nearest 15 minutes, and so is time on site. A Full Detail of 5.5 service hours at the first condition level, with two people, is 3.3 hours, rounded to 3.25 hours of service, and 3.75 hours on site.
 - Monthly Maintenance defaults to a two-person crew, which puts it at 2.25 to 4.5 hours on site. Every other service defaults to one person.
-- A job of 8 or more hours of one-person **time on site** (7 or more one-person service hours, condition time included) is flagged in the control app for a second person, and the customer's estimate card shows "full day" instead of hours. A higher condition level can therefore make a job a full day. Long jobs are allowed; nothing blocks them.
+- A job of 8 or more hours of one-person **time on site** (7 or more one-person service hours, condition time included) is flagged in the control app for a second person, and the customer's estimate card shows "full day" instead of hours. Level 2 can therefore make a job a full day; a Level 3 job is a full day when the owner's hand time on site is. Long jobs are allowed; nothing blocks them.
 
 ## The quoted price is the price of record
 
 The website and the control app show the same price from one source, and the owner is told about any change between booking and the appointment ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
 
 - **One source.** Only the server's pricing engine computes prices. The website's estimate card and the control app display its results and do no arithmetic of their own.
+- **A price set by hand is a quote record too.** A quote request, or a job at a condition level booked by quote, gets its price and time on site from the owner, stored as a quote record marked priced by hand, with one line for the whole job. A pricebook change never re-prices it ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)).
 - **The price shown is the price booked.** The server issues a quote record holding the inputs, lines, totals, pricebook version, tax rate, service time and time on site. A quote never changes once issued. A booking refers to the quote, never to a price sent from the browser, and the quote's lines become the appointment's line snapshot exactly ([decision 0033](../decisions/0033-pricebook-versions-and-line-snapshots.md)). A quote books one appointment. The control app never re-prices a booked job. The quote record exists since Phase 1 Step 3; the website will use it in Phase 3.
 - **The owner is notified of any change.** If a booked job's price changes for any reason other than a choice the owner made, such as a sales tax rate change, the owner gets a push alert and the control app shows the booked total beside the new one. The owner's own edits need a reason and are logged.
 - **Sales tax** is charged at the rate on the day of service. If the rate changes after booking, the new rate applies and the owner is notified; the price before tax never changes. See [sales-tax.md](sales-tax.md).

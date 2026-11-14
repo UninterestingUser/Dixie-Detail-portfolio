@@ -17,6 +17,27 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".condition-fact").forEach(showConditionInputs);
 });
 
+// The booking form shows the condition level only for a service that takes
+// one (Full Detail and Interior Only), and the hand price and time only for
+// a level priced by hand (decision 0103). The server checks both again.
+function showBookingFields(form) {
+  const service = form.querySelector('select[name="service"]');
+  const level = form.querySelector('select[name="condition_level"]');
+  if (!service || !level) return;
+  const picked = (select) => select.options[select.selectedIndex];
+  const takesLevel = Boolean(picked(service) && picked(service).dataset.takesLevel);
+  const byHand = takesLevel && Boolean(picked(level) && picked(level).dataset.byQuote);
+  form.querySelectorAll('[data-shows-with="condition"]').forEach((part) => { part.hidden = !takesLevel; });
+  form.querySelectorAll('[data-shows-with="hand-price"]').forEach((part) => { part.hidden = !byHand; });
+}
+document.addEventListener("change", (event) => {
+  const form = event.target.closest("[data-booking-form]");
+  if (form) showBookingFields(form);
+});
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("[data-booking-form]").forEach(showBookingFields);
+});
+
 // The review queue's "pick every model year on this page".
 document.addEventListener("change", (event) => {
   if (!event.target.matches(".pick-all")) return;

@@ -4,9 +4,9 @@ summary: How pricebook edits are published as versions with an effective date, w
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-14
 tags: [pricing, pricebook, versioning]
-related: [docs/guides/editing-the-pricebook.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/architecture/data-model.md]
+related: [docs/guides/editing-the-pricebook.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/architecture/data-model.md]
 ---
 
 # When prices or services change
@@ -23,11 +23,11 @@ When a job is booked, each line is copied onto the appointment: the service, pri
 
 ## Publishing a pricebook change
 
-1. The owner edits the pricebook as a draft and publishes it with an effective date, today or later. Each publish is kept as a numbered pricebook version.
+1. The owner edits the pricebook as a draft and publishes it with an effective date, today or later. Each publish is kept as a numbered pricebook version. A version holds the prices and the rules: the maintenance percentages, the condition levels, which services take a condition level and which level is booked by quote, and the crew numbers. `load_pricebook` makes a draft when the data files differ from the latest published version in any of them.
 2. Completed and paid jobs are left alone; they show what was done and charged.
 3. On publish, the control app lists every booked, not-yet-completed job on or after the effective date whose price, hours or service the change touches, and asks how to handle each one.
 4. For each job the owner picks **Keep booked price** (the default), **Use new price**, which re-prices the job from the new version through a new quote, or a custom amount, which becomes the job's total before tax through an on-site adjustment line. "Keep all" and "Use new for all" handle a long list in one tap. A recurring Monthly or Quarterly series can be decided once for every visit left in it.
-5. A removed service needs an explicit keep-as-is or a custom amount; its replacement service is then set from the job page. A service-hours change that would push a job into a full day, or make its day fail the availability check (such as overlapping a second Monthly Maintenance visit), is flagged before the owner confirms.
+5. A removed service needs an explicit keep-as-is or a custom amount; its replacement service is then set from the job page. So does a job the new version can't price for another reason, such as a booked Level 3 job once Level 3 is booked by quote. A condition level the job's service no longer takes, such as Exterior Only after [decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md), is dropped from the new price, so the job is listed with its lower total; keeping the booked price keeps its condition line. A job priced by hand, from a quote request or at a level booked by quote, is never listed: no pricebook change re-prices it. A service-hours change that would push a job into a full day, or make its day fail the availability check (such as overlapping a second Monthly Maintenance visit), is flagged before the owner confirms.
 6. Where a price changes, a checkbox texts that customer the updated estimate, but only if they agreed to appointment texts.
 7. Every choice is logged with the old and new amounts and who made it, and listed on the version's page. The website shows the new prices, and online bookings and jobs booked in the control app use them, from the effective date.
 

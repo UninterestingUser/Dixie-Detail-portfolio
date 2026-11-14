@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-14
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -17,7 +17,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Add-on.** A service that can only be added to another service: Carpet Extraction and Seat Extraction. Add-ons are priced by seat rows alone and are not affected by the condition level.
 
-**Condition level.** The customer's choice of how dirty the vehicle is, in three levels that add 0%, 10% or 20% to the base price and the service time of Full Detail, Interior Only or Exterior Only. The price adjustment is rounded to the whole dollar; the extra time is not rounded until the job's service time is. See [../reference/pricing.md](../reference/pricing.md).
+**Condition level.** The customer's choice of how dirty the vehicle's interior is, called a service level on the website, for Full Detail and Interior Only only. Level 1 is preselected and adds nothing; Level 2 adds 10% to the base price and the service time; Level 3 has no price and is quoted by hand. The price adjustment is rounded to the whole dollar; the extra time is not rounded until the job's service time is. Every other service has no condition level. See [../reference/pricing.md](../reference/pricing.md).
 
 **Derived price rule.** A pricebook rule that prices one service as a percentage of another for the same vehicle class and size variant, with its hours. Quarterly Maintenance at 80% and Monthly Maintenance at 50% of Full Detail are derived price rules.
 

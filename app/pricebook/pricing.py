@@ -6,11 +6,18 @@ before tax and the service time, as docs/reference/pricing.md describes:
 
 1. Base price, looked up by service, vehicle class and size variant. A
    maintenance plan is a percentage of Full Detail (a derived price rule).
-2. Condition adjustment, for services it applies to: the level's percentage
-   of the base price, rounded to the whole dollar, and the same percentage of
-   the base service hours, unrounded (decision 0065).
+2. Condition adjustment, for the services that take a condition level in
+   the version (Full Detail and Interior Only, decision 0103): the level's
+   percentage of the base price, rounded to the whole dollar, and the same
+   percentage of the base service hours, unrounded. A level booked by quote
+   has no price: price_job refuses it with BookedByQuote, and the owner
+   prices the job by hand (issue_hand_quote).
 3. Add-ons, at their own price and hours; the condition level never changes them.
 4. Promotions, each on the lines it applies to, never below zero.
+
+issue_hand_quote() stores a price and time on site the owner typed as a
+quote record too (decision 0059), for a quote request or a job at a
+condition level booked by quote.
 
 Sales tax is not a priced line: issue_quote() adds it for the service
 address at the rate in effect on the day of service (billing.tax), and
@@ -29,7 +36,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from billing.tax import tax_line
-from core.scheduling import round_to_nearest, time_on_site
+from core.scheduling import current_values, round_to_nearest, time_on_site
 from vehicles.models import VehicleClass
 
 from .models import (
@@ -55,6 +62,11 @@ class PricingError(ValueError):
 
 class NotPriced(PricingError):
     """The combination is not in the pricebook, so it does not exist."""
+
+
+class BookedByQuote(PricingError):
+    """The condition level is booked by quote: the job has no price or time
+    until the owner prices it by hand (decision 0103)."""
 
 
 def to_cents(amount):
@@ -252,15 +264,22 @@ def price_job(
         full_day_time_on_site_hours=rules.full_day_time_on_site_hours,
     )
 
-    # 1. Base price.
-    base = base_price(version, service, vehicle_class, size_variant)
+    # 1. Base price. Only a service that takes a condition level in this
+    # version gets one (decision 0103); a level given for any other service
+    # is dropped, so a booked job re-priced by a later version loses a level
+    # its service no longer takes.
     level = None
-    if service.condition_applies:
+    if version.takes_condition_level(service):
         if condition_level is None:
             raise PricingError(f"{service} needs a condition level.")
         level = ConditionLevel.objects.filter(version=version, level=condition_level).first()
         if level is None:
             raise PricingError(f"Condition level {condition_level} is not in pricebook version {version.number}.")
+        if level.booked_by_quote:
+            raise BookedByQuote(f"{service} at condition level {level.level} is priced by hand.")
+    else:
+        job.condition_level = None
+    base = base_price(version, service, vehicle_class, size_variant)
     job.lines.append(
         _service_line(version, service, vehicle_class, base, PricedLine.Kind.SERVICE, level and level.level)
     )
@@ -379,3 +398,120 @@ def issue_quote(service, vehicle_class, address=None, tax_address=None, **inputs
     for position, line in enumerate(job.lines):
         QuoteLine.objects.create(quote=quote, position=position, **vars(line))
     return quote
+
+
+def split_minutes(minutes, crew_size):
+    """Setup, service time and breakdown for a time on site typed by hand:
+    the setup and breakdown settings for the crew, the rest service time."""
+    values = current_values()
+    setup = round(values.setup_minutes_one_person / crew_size)
+    breakdown = round(values.breakdown_minutes_one_person / crew_size)
+    service = minutes - setup - breakdown
+    if service < 15:
+        raise PricingError(
+            f"The time on site must be at least {setup + breakdown + 15} minutes: setup and breakdown take {setup + breakdown}."
+        )
+    return setup, service, breakdown
+
+
+@transaction.atomic
+def issue_hand_quote(service, vehicle_class, amount, minutes, *, description, crew_size=1, size_variant=None,
+                     condition_level=None, add_ons=(), address=None, on=None, version=None):
+    """Store a price before tax and a time on site the owner typed as a quote
+    record, the price of record (decision 0059): one line for the whole job,
+    add-ons included, with the sales tax at the address's rate on the day
+    (`on`, today by default). Used for a quote request and for a job at a
+    condition level booked by quote (decision 0103). The quote is marked
+    priced by hand, so a pricebook change never re-prices it."""
+    on = on or timezone.localdate()
+    version = version or PricebookVersion.current(on) or PricebookVersion.current()
+    if version is None or not version.is_published:
+        raise PricingError("No pricebook version is published.")
+    if amount is None or amount <= 0:
+        raise PricingError("Enter the price before tax.")
+    if minutes is None or minutes % 15:
+        raise PricingError("Enter the time on site in steps of 15 minutes.")
+    if crew_size not in (1, 2):
+        raise PricingError("A crew is one or two people.")
+    add_ons = list(add_ons)
+    setup, service_minutes, breakdown = split_minutes(minutes, crew_size)
+    one_person_hours = Decimal(service_minutes * crew_size) / 60
+    rules = PricingRules.objects.filter(version=version).first()
+    one_person_minutes = (setup + service_minutes + breakdown) * crew_size
+    full_day = bool(rules and one_person_minutes >= rules.full_day_time_on_site_hours * 60)
+    tax = tax_line(address, amount, on) if address is not None else None
+    quote = Quote.objects.create(
+        pricebook_version=version,
+        service=service,
+        vehicle_class=vehicle_class,
+        size_variant=size_variant,
+        condition_level=condition_level,
+        crew_size=crew_size,
+        total_before_tax=amount,
+        service_address=address,
+        tax_jurisdiction=tax.jurisdiction if tax else None,
+        taxable_amount=tax.taxable_amount if tax else ZERO,
+        state_rate=tax.state_rate if tax else Decimal("0"),
+        local_rate=tax.local_rate if tax else Decimal("0"),
+        state_tax=tax.state_tax if tax else ZERO,
+        local_tax=tax.local_tax if tax else ZERO,
+        tax_rate=tax.rate if tax else Decimal("0"),
+        sales_tax=tax.sales_tax if tax else ZERO,
+        tax_needs_check=tax.needs_check if tax else False,
+        total=amount + (tax.sales_tax if tax else ZERO),
+        one_person_service_hours=one_person_hours,
+        service_minutes=service_minutes,
+        setup_minutes=setup,
+        breakdown_minutes=breakdown,
+        time_on_site_minutes=minutes,
+        full_day=full_day,
+        priced_by_hand=True,
+    )
+    quote.add_ons.set(add_ons)
+    QuoteLine.objects.create(
+        quote=quote,
+        position=0,
+        kind=PricedLine.Kind.SERVICE,
+        description=description,
+        amount=amount,
+        one_person_service_hours=one_person_hours,
+        vehicle_class_name=vehicle_class.name,
+        size_variant_value=size_variant.value if size_variant else None,
+        size_variant_label=size_variant.label if size_variant else "",
+        condition_level=condition_level,
+        service=service,
+        pricebook_version=version,
+        vehicle_class=vehicle_class,
+        size_variant=size_variant,
+    )
+    return quote
+
+
+def hand_description(service, condition_level=None, add_ons=(), reference=""):
+    """The one line of a hand-priced quote: "Full Detail, condition level 3,
+    with Seat Extraction, priced by hand"."""
+    parts = [service.name]
+    if condition_level is not None:
+        parts.append(f"condition level {condition_level}")
+    if add_ons:
+        parts.append("with " + " and ".join(add_on.name for add_on in add_ons))
+    text = ", ".join(parts) + ", priced by hand"
+    return f"{text} (quote request {reference})" if reference else text
+
+
+def reference_price(service, vehicle_class, size_variant=None, add_ons=(), crew_size=None, on=None):
+    """The job at the highest condition level that has a price (Level 2 at
+    launch), for reference beside a hand price, or None when it can't be
+    priced, such as a class booked by quote or a size not known yet."""
+    on = on or timezone.localdate()
+    version = PricebookVersion.current(on) or PricebookVersion.current()
+    if version is None or not version.takes_condition_level(service):
+        return None
+    level = ConditionLevel.objects.filter(version=version, booked_by_quote=False).order_by("-level").first()
+    if level is None:
+        return None
+    try:
+        return price_job(service, vehicle_class, size_variant=size_variant, condition_level=level.level,
+                         add_ons=add_ons, crew_size=crew_size, version=version, on=on, check_promotion_dates=False)
+    except PricingError:
+        return None

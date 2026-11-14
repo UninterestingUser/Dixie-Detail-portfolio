@@ -64,9 +64,14 @@
       <li class="card"><strong>{{ rule.service }}</strong>:
         {% if not version.is_published and can_edit %}<input class="short" name="derived-{{ rule.pk }}" value="{{ rule.percent.normalize }}" inputmode="decimal" aria-label="{{ rule.service }} percentage">{% else %}{{ rule.percent.normalize }}{% endif %}% of {{ rule.base_service }}, with its service hours</li>
     {% endfor %}
+    <li class="card"><strong>Condition levels</strong> apply only to {% for service in condition_services %}{% if not forloop.first %}{% if forloop.last %} and {% else %}, {% endif %}{% endif %}{{ service }}{% empty %}no service{% endfor %}. Every other service has none.</li>
     {% for level in conditions %}
+      {% if level.booked_by_quote %}
+      <li class="card"><strong>Condition level {{ level.level }}</strong>{% if level.label %} ({{ level.label }}){% endif %}: booked by quote, with no price or time. The website asks for a quote, and you price the job by hand.</li>
+      {% else %}
       <li class="card"><strong>Condition level {{ level.level }}</strong>{% if level.label %} ({{ level.label }}){% endif %}: adds
         {% if not version.is_published and can_edit %}<input class="short" name="condition-{{ level.pk }}" value="{{ level.adjustment_percent.normalize }}" inputmode="decimal" aria-label="Condition level {{ level.level }} percentage">{% else %}{{ level.adjustment_percent.normalize }}{% endif %}% to the price and service time</li>
+      {% endif %}
     {% endfor %}
     {% if rules %}<li class="card">Two people take {% widthratio rules.two_person_time_factor 1 100 %}% of the one-person service time, rounded to {{ rules.service_time_rounding_minutes }} minutes. A job of {{ rules.full_day_time_on_site_hours.normalize }} hours or more on site for one person is a full day.</li>{% endif %}
   </ul>

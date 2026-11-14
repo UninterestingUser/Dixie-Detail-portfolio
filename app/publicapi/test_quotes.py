@@ -101,13 +101,14 @@ class QuoteTests(ApiTestCase):
 
     def test_a_changed_input_makes_a_new_quote(self):
         first = self.quote(condition=1)
-        second = self.quote(condition=3)
+        second = self.quote(condition=2)
         self.assertNotEqual(first["number"], second["number"])
         self.assertEqual(WebQuote.objects.count(), 2)
         self.assertEqual(Quote.objects.get(web__number=first["number"]).condition_level, 1)
 
     def test_the_full_day_flag(self):
-        quote = self.quote({"year": 2019, "make": "Toyota", "model": "Highlander"}, size=3, condition=3, add_ons=[self.seats.pk])
+        # 6 hours + 10% + 2 hours of Seat Extraction.
+        quote = self.quote({"year": 2019, "make": "Toyota", "model": "Highlander"}, size=3, condition=2, add_ons=[self.seats.pk])
         self.assertTrue(quote["full_day"], quote)
 
     def test_the_size_question_must_be_answered(self):
@@ -122,8 +123,10 @@ class QuoteTests(ApiTestCase):
 
     def test_a_motorcycle_gets_motorcycle_detail_with_no_condition_or_add_ons(self):
         bike = {"year": 2020, "make": "Honda", "model": "Gold Wing", "type": "motorcycle"}
-        quote = self.quote(bike, self.motorcycle_detail, condition=3)
+        quote = self.quote(bike, self.motorcycle_detail)
         self.assertEqual(quote["total_before_tax"], "100.00")
+        # Motorcycle Detail takes no condition level (decision 0103).
+        self.assertEqual(self.quote(bike, self.motorcycle_detail, expect=400, condition=1)["field"], "condition")
         self.assertIsNone(quote["condition_level"])
         self.assertEqual(quote["time_on_site_minutes"], 180)
         self.assertEqual(self.quote(bike, self.full_detail, expect=422)["error"], "not_offered")

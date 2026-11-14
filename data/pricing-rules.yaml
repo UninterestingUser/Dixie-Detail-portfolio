@@ -1,7 +1,7 @@
 meta:
   title: Pricing rules
   summary: The numbers behind pricing and service time - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
-  updated: 2026-10-28
+  updated: 2026-11-14
   status: current
   explained_in: docs/reference/pricing.md
   note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
@@ -9,12 +9,17 @@ meta:
 price_lookup_keys: [service, vehicle_class, size_variant]
 missing_combination: does not exist (no price, not bookable)
 
-condition_levels:
-  applies_to: [Full Detail, Interior Only, Exterior Only]
+condition_levels:                 # the website calls them service levels (decision 0103)
+  # Only the services that cover the interior take a level: Full Detail and
+  # Interior Only. Which ones is condition_applies in services.yaml, stored
+  # with each pricebook version. Every other service has no level at all.
+  applies_to: [Full Detail, Interior Only]
+  default_level: 1                # preselected on the website and in the control app
   rounding: whole dollar
   # The same percentage lengthens the main service's one-person service time,
-  # unrounded; the condition line carries the extra hours (decision 0065).
-  # Add-ons, maintenance plans, setup and breakdown are never adjusted.
+  # unrounded; the condition line carries the extra hours (decision 0065,
+  # changed by 0103). Add-ons, maintenance plans, setup and breakdown are
+  # never adjusted.
   adds_to_service_time: true
   levels:
     - level: 1
@@ -23,7 +28,10 @@ condition_levels:
       adjustment_percent: 10
       mockup_label: Needs attention
     - level: 3
-      adjustment_percent: 20
+      # No price or time: the job is quoted by hand, like a vehicle in a class
+      # booked by quote. The website sends a quote request; the control app
+      # takes the price and time on site by hand, as a quote record.
+      booked_by_quote: true
 
 maintenance_plans:
   base_service: Full Detail

@@ -4,7 +4,7 @@ summary: How to read the schedule's five views, book a job or a maintenance seri
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-14
 tags: [guides, booking, appointments, schedule, maintenance, control-app]
 related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0097-rules-alert-before-services-and-schedule-view-bar.md]
 ---
@@ -27,7 +27,7 @@ Weeks start on Sunday. Every view has **Today** and **‹** and **›** for the 
 
 1. Tap **Book a job** on the schedule, find the customer (see [finding-a-customer.md](finding-a-customer.md)), and tap **Book a job** on their page.
 2. **When and where:** pick the vehicle, the service address, the date and the arrival time. The date starts at the first bookable day. The **Open times** link shows the open start times for the next 90 days. Any date and time can be booked, but one outside the scheduling rules needs a reason (see [Book off hours](#book-off-hours)).
-3. **What:** pick the service. The vehicle class and size come from the vehicle; change them if they are wrong. Pick the condition level for Full Detail, Interior Only and Exterior Only. Tick any add-ons. Leave the crew as the service's default (one person, or two for Monthly Maintenance) unless you know otherwise.
+3. **What:** pick the service. The vehicle class and size come from the vehicle; change them if they are wrong. For Full Detail and Interior Only, the condition level appears, with Level 1 picked; change it if the vehicle needs more. Level 3 is priced by hand: type your price before tax for the whole job, add-ons included, and the time on site in steps of 15 minutes, setup and breakdown included. The Level 2 price shows below for reference, and your price is kept as the job's quote. No other service has a condition level. Tick any add-ons. Leave the crew as the service's default (one person, or two for Monthly Maintenance) unless you know otherwise.
 4. The **Price** box updates as you change anything: each line, the total before tax, the **service time** for the crew and the **time on site** with setup and breakdown. "Full day: consider a second person" appears for 8 or more hours on site for one person. Sales tax is added from Phase 3.
 5. Tap **Book**. The job opens. When only one active staff member is qualified for a one-person job (today, you), they are assigned at once; otherwise assign staff as in [assigning-staff.md](assigning-staff.md). A warning appears if the job overlaps another that day.
 

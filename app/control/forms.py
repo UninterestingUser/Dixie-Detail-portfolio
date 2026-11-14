@@ -1,6 +1,7 @@
 """Forms for the control app's screens."""
 
 import datetime
+from decimal import Decimal
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -11,7 +12,7 @@ from core.fields import format_phone, normalize_phone
 from customers.models import Address, Customer
 from geo.models import LocationSettings
 from geo.verification import VerificationError, parse_location
-from pricebook.models import Service
+from pricebook.models import PricebookVersion, Service
 from vehicles.models import ClassificationRule, SizeVariant, Vehicle, VehicleClass
 
 
@@ -20,6 +21,40 @@ class PhoneInput(forms.TextInput):
 
     def __init__(self):
         super().__init__(attrs={"inputmode": "tel", "autocomplete": "tel-national"})
+
+
+class OptionDataSelect(forms.Select):
+    """A select whose options carry data attributes, from option_data(value)
+    -> {name: value}, so the booking form can show the condition level only
+    for a service that takes one, and the hand price only for a level
+    booked by quote (decision 0103)."""
+
+    def __init__(self, *args, option_data=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.option_data = option_data or (lambda value: {})
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        key = str(getattr(value, "value", value))
+        option["attrs"].update({f"data-{name}": text for name, text in self.option_data(key).items()})
+        return option
+
+
+def condition_choices(version):
+    """The condition levels of a version as booking-form choices."""
+    if version is None:
+        return [(1, "1: adds nothing"), (2, "2"), (3, "3")], set()
+    choices, by_quote = [], set()
+    for level in version.condition_levels.all():
+        if level.booked_by_quote:
+            text = f"{level.level}: priced by hand"
+            by_quote.add(str(level.level))
+        elif level.adjustment_percent:
+            text = f"{level.level}: adds {level.adjustment_percent.normalize():f}%"
+        else:
+            text = f"{level.level}: adds nothing"
+        choices.append((level.level, text))
+    return choices, by_quote
 
 
 class CustomerForm(forms.ModelForm):
@@ -94,8 +129,20 @@ class AppointmentForm(forms.Form):
     vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.none())
     size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
     condition_level = forms.TypedChoiceField(
-        choices=[("", "Not needed"), (1, "1: adds nothing"), (2, "2"), (3, "3")], coerce=int, empty_value=None, required=False,
-        help_text="Needed for Full Detail, Interior Only and Exterior Only.",
+        choices=[], coerce=int, empty_value=None, required=False, initial=1,
+        help_text="Full Detail and Interior Only. Level 1 adds nothing.",
+    )
+    # A condition level booked by quote has no price: the owner types the
+    # price and time on site, kept as a quote record (decisions 0059 and 0103).
+    hand_price = forms.DecimalField(
+        label="Price before tax", min_value=Decimal("0.01"), max_digits=8, decimal_places=2, required=False,
+        widget=forms.NumberInput(attrs={"inputmode": "decimal", "step": "0.01"}),
+        help_text="Your price for the whole job, add-ons included.",
+    )
+    hand_minutes = forms.IntegerField(
+        label="Time on site, in minutes", min_value=45, max_value=24 * 60, required=False,
+        widget=forms.NumberInput(attrs={"step": 15}),
+        help_text="Setup and breakdown included, in steps of 15 minutes. This is what the availability check uses.",
     )
     add_ons = forms.ModelMultipleChoiceField(queryset=Service.objects.none(), required=False, widget=forms.CheckboxSelectMultiple)
     crew_size = forms.TypedChoiceField(
@@ -128,6 +175,18 @@ class AppointmentForm(forms.Form):
         self.fields["size_variant"].queryset = SizeVariant.objects.filter(active=True, vehicle_class__active=True, vehicle_class__pending=False).select_related("vehicle_class")
         self.fields["size_variant"].label_from_instance = lambda size: f"{size.vehicle_class}: {size.label}"
         self.fields["add_ons"].queryset = Service.objects.filter(on_price_list=True, kind=Service.Kind.ADD_ON).order_by("name")
+        # Which services take a level, and which level is priced by hand,
+        # from the version in effect today; clean() checks the job's own day.
+        version = PricebookVersion.current()
+        takes_level = {str(pk) for pk in version.condition_service_ids()} if version else set()
+        choices, by_quote = condition_choices(version)
+        self.fields["condition_level"].choices = choices
+        self.fields["condition_level"].widget = OptionDataSelect(option_data=lambda key: {"by-quote": "1"} if key in by_quote else {})
+        self.fields["condition_level"].widget.choices = choices
+        service_widget = OptionDataSelect(option_data=lambda key: {"takes-level": "1"} if key in takes_level else {})
+        service_widget.choices = self.fields["service"].choices
+        self.fields["service"].widget = service_widget
+        self.takes_level = self.by_quote = False
         if editing:
             del self.fields["repeat"], self.fields["visits"]
             # A job not priced from the pricebook, such as an imported custom
@@ -144,14 +203,41 @@ class AppointmentForm(forms.Form):
             self.add_error("size_variant", "Pick a size of the vehicle class above, or leave it blank.")
         if service and not vehicle_class:
             self.add_error("vehicle_class", "Pick the vehicle class to price the service.")
-        if service and service.condition_applies and cleaned.get("condition_level") is None:
-            self.add_error("condition_level", f"{service} needs a condition level.")
+        self.check_condition(cleaned, service)
         if cleaned.get("repeat"):
             if service and service.kind != Service.Kind.MAINTENANCE_PLAN:
                 self.add_error("repeat", "Only a maintenance plan can repeat.")
             if not cleaned.get("visits"):
                 self.add_error("visits", "Say how many visits the series has.")
         return cleaned
+
+    def check_condition(self, cleaned, service):
+        """The condition level, only for a service that takes one in the
+        version in effect on the job's day; and for a level booked by quote,
+        the hand price and time on site (decision 0103)."""
+        from appointments.booking import version_for
+
+        day = cleaned.get("date")
+        version = version_for(day) if day else PricebookVersion.current()
+        self.takes_level = bool(service and version and version.takes_condition_level(service))
+        self.by_quote = False
+        if not self.takes_level:
+            return
+        number = cleaned.get("condition_level")
+        if number is None:
+            self.add_error("condition_level", f"{service} needs a condition level.")
+            return
+        level = version.condition_levels.filter(level=number).first()
+        self.by_quote = bool(level and level.booked_by_quote)
+        if not self.by_quote:
+            return
+        if cleaned.get("hand_price") is None:
+            self.add_error("hand_price", f"Condition level {number} is priced by hand: enter the price before tax.")
+        minutes = cleaned.get("hand_minutes")
+        if minutes is None:
+            self.add_error("hand_minutes", f"Condition level {number} is priced by hand: enter the time on site.")
+        elif minutes % 15:
+            self.add_error("hand_minutes", "Use steps of 15 minutes.")
 
     def inputs(self):
         from appointments.booking import JobInputs
@@ -164,9 +250,11 @@ class AppointmentForm(forms.Form):
             service=service,
             vehicle_class=data["vehicle_class"],
             size_variant=data.get("size_variant"),
-            condition_level=data.get("condition_level") if service.condition_applies else None,
+            condition_level=data.get("condition_level") if self.takes_level else None,
             add_ons=list(data.get("add_ons") or []),
             crew_size=data.get("crew_size") or service.default_crew_size,
+            hand_amount=data.get("hand_price") if self.by_quote else None,
+            hand_minutes=data.get("hand_minutes") if self.by_quote else None,
         )
 
     def start(self):
@@ -311,7 +399,7 @@ class TestPriceForm(forms.Form):
     size_variant = forms.ModelChoiceField(queryset=SizeVariant.objects.none(), required=False, label="Size")
     condition_level = forms.TypedChoiceField(
         choices=[(1, "1: adds nothing"), (2, "2"), (3, "3")], coerce=int, initial=1, label="Condition level",
-        help_text="Used by Full Detail, Interior Only and Exterior Only.",
+        help_text="Used by Full Detail and Interior Only. A level priced by hand has no test price.",
     )
 
     def __init__(self, *args, **kwargs):

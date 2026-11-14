@@ -25,7 +25,7 @@ from customers.models import Address
 from geo import google, service_area
 from geo.verification import VerificationError, address_from_place, split_line1
 from pricebook.models import PricebookVersion, Service
-from pricebook.pricing import NotPriced, PricingError, issue_quote
+from pricebook.pricing import BookedByQuote, NotPriced, PricingError, issue_quote
 from scheduling import availability
 from scheduling.models import SchedulingSettings
 
@@ -176,16 +176,48 @@ def priced_vehicle(found):
     return found
 
 
+CONDITION_NOT_TAKEN = "Only Full Detail and Interior Only take a condition level."
+LEVEL_BY_QUOTE = (
+    "{service} at condition level {level} is priced by hand. Ask for a quote and we'll reply with a price."
+)
+
+
+def check_condition(service, condition_level, on=None, field="condition"):
+    """The condition level for a service, by the pricebook in effect on the
+    day (today by default): required for a service that takes one, refused
+    for any other (decision 0103). Returns the ConditionLevel, or None."""
+    version = PricebookVersion.current(on) or catalog.published_version()
+    if not version.takes_condition_level(service):
+        if condition_level is not None:
+            raise bad_request(field, CONDITION_NOT_TAKEN)
+        return None
+    if condition_level is None:
+        raise bad_request(field, "Pick the vehicle's condition.")
+    level = version.condition_levels.filter(level=condition_level).first()
+    if level is None:
+        raise bad_request(field)
+    return level
+
+
+def level_by_quote(service, level, add_ons):
+    """The answer for a level booked by quote: no price or time, and what a
+    quote request needs to carry."""
+    return ApiError(
+        422, "ask_for_quote", LEVEL_BY_QUOTE.format(service=service.name, level=level.level),
+        quote_request={"service": service.pk, "condition": level.level, "add_ons": [add_on.pk for add_on in add_ons]},
+    )
+
+
 @transaction.atomic
 def issue(found, service, condition_level, add_ons, place=None, on=None, answered=None):
     """Price the job and keep it as a website quote. answered is the
-    customer's answer to the size question, kept to price it again."""
+    customer's answer to the size question, kept to price it again. A
+    condition level booked by quote is refused with ask_for_quote: it has no
+    price or time, and goes to a quote request (decision 0103)."""
     priced_vehicle(found)
-    if service.condition_applies:
-        if condition_level is None:
-            raise bad_request("condition", "Pick the vehicle's condition.")
-    else:
-        condition_level = None
+    level = check_condition(service, condition_level, on)
+    if level is not None and level.booked_by_quote:
+        raise level_by_quote(service, level, add_ons)
     try:
         quote = issue_quote(
             service,
@@ -198,6 +230,8 @@ def issue(found, service, condition_level, add_ons, place=None, on=None, answere
         )
     except NotPriced as error:
         raise ApiError(422, "not_offered", "That service or add-on isn't offered for this vehicle.") from error
+    except BookedByQuote as error:
+        raise level_by_quote(service, level, add_ons) from error
     except PricingError as error:
         raise ApiError(422, "not_offered", "That combination can't be priced. Please change it and try again.") from error
     return WebQuote.objects.create(

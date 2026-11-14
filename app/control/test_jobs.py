@@ -183,13 +183,13 @@ class ChangingAJobTests(JobsTestCase):
         self.assertEqual(self.job.notes, "Dog in the yard")
 
     def test_changing_the_services_needs_a_reason_and_reprices(self):
-        data = self.booking_data(self.day, condition_level="3", crew_size="1")
+        data = self.booking_data(self.day, condition_level="2", crew_size="1")
         self.assertContains(self.client.post(reverse("appointment-edit", args=[self.job.pk]), data), "Give a reason")
         self.job.refresh_from_db()
         self.assertEqual(self.job.total_before_tax, Decimal("250.00"))
         self.client.post(reverse("appointment-edit", args=[self.job.pk]), {**data, "reason": "Heavier soiling than described"})
         self.job.refresh_from_db()
-        job = price_job(self.full_detail, self.crossover, self.two_rows, condition_level=3)
+        job = price_job(self.full_detail, self.crossover, self.two_rows, condition_level=2)
         self.assertEqual(self.job.total_before_tax, job.total_before_tax)
         self.assertEqual(self.job.service_minutes, job.service_minutes)
         self.assertTrue(self.job.history.filter(history_change_reason="Heavier soiling than described").exists())

@@ -101,6 +101,7 @@ def pricebook_version(request, number):
         "groups": grouped_prices(version),
         "derived": version.derived_price_rules.select_related("service", "base_service"),
         "conditions": version.condition_levels.all(),
+        "condition_services": [row.service for row in version.condition_services.select_related("service").order_by("service__name")],
         "rules": getattr(version, "rules", None),
         "decisions": RepricingDecision.objects.filter(pricebook_version=version).select_related("appointment__customer", "decided_by").order_by("decided_at"),
         "can_edit": user_is_manager(request.user),
@@ -158,7 +159,7 @@ def pricebook_save_draft(request, number):
                 rule.save()
             except ValueError as error:
                 errors.append(str(error))
-        for level in version.condition_levels.all():
+        for level in version.condition_levels.filter(booked_by_quote=False):
             try:
                 level.adjustment_percent = decimal_from(request.POST.get(f"condition-{level.pk}", ""), f"Condition level {level.level}")
                 level.save()

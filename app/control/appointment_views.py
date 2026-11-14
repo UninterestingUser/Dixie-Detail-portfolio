@@ -17,7 +17,7 @@ from core.scheduling import time_on_site
 from customers.models import Customer
 from geo import service_area
 from geo.drive import drive_from_home
-from pricebook.pricing import PricingError, price_job
+from pricebook.pricing import PricingError, hand_description, price_job, reference_price
 from scheduling import changes as scheduling_changes
 from scheduling.models import DateException, OpenWeekday, RuleOverride, SchedulingSettings
 from staff.authorization import CrewError, assign_crew, auto_assign, staff_choices, uncovered_services, job_services, user_is_manager
@@ -199,6 +199,8 @@ def edit_initial(appointment):
             size_variant=inputs.size_variant.pk if inputs.size_variant else None,
             condition_level=inputs.condition_level,
             add_ons=[add_on.pk for add_on in inputs.add_ons],
+            hand_price=inputs.hand_amount,
+            hand_minutes=inputs.hand_minutes,
         )
     return initial, inputs
 
@@ -206,10 +208,10 @@ def edit_initial(appointment):
 def same_inputs(old, new):
     return old is not None and (
         old.service.pk, old.vehicle_class.pk, getattr(old.size_variant, "pk", None), old.condition_level,
-        sorted(a.pk for a in old.add_ons), old.crew_size,
+        sorted(a.pk for a in old.add_ons), old.crew_size, old.hand_amount, old.hand_minutes,
     ) == (
         new.service.pk, new.vehicle_class.pk, getattr(new.size_variant, "pk", None), new.condition_level,
-        sorted(a.pk for a in new.add_ons), new.crew_size,
+        sorted(a.pk for a in new.add_ons), new.crew_size, new.hand_amount, new.hand_minutes,
     )
 
 
@@ -259,6 +261,20 @@ def appointment_edit(request, pk):
     return render(request, "control/appointment_form.html", context)
 
 
+def level_reference(form):
+    """For a level priced by hand, the job at the highest level with a price
+    (Level 2), shown beside the hand price for reference (decision 0103)."""
+    data = form.cleaned_data
+    service, vehicle_class = data.get("service"), data.get("vehicle_class")
+    if service is None or vehicle_class is None:
+        return None
+    job = reference_price(
+        service, vehicle_class, size_variant=data.get("size_variant"), add_ons=list(data.get("add_ons") or []),
+        crew_size=data.get("crew_size") or service.default_crew_size, on=data.get("date"),
+    )
+    return {"job": job, "stay": job.time_on_site} if job else None
+
+
 @require_POST
 def appointment_price(request, customer_pk=None, pk=None):
     """The live price for the booking form, from the pricing engine, as the
@@ -270,6 +286,19 @@ def appointment_price(request, customer_pk=None, pk=None):
     context = {"errors": [], "job": None}
     if form.is_valid() and form.inputs() is None:
         context["errors"] = ["Not priced from the pricebook. Pick a service to price it."]
+    elif form.is_valid() and form.inputs().priced_by_hand:
+        inputs = form.inputs()
+        context["hand"] = {
+            "description": hand_description(inputs.service, inputs.condition_level, inputs.add_ons),
+            "amount": inputs.hand_amount,
+            "minutes": inputs.hand_minutes,
+            "crew_size": inputs.crew_size,
+        }
+        address = form.cleaned_data.get("address")
+        if address is not None:
+            context["tax"] = tax_line(address, inputs.hand_amount, form.cleaned_data["date"])
+            context["total_with_tax"] = inputs.hand_amount + context["tax"].sales_tax
+        context["changes_price"] = appointment is not None and not same_inputs(booking.inputs_from_appointment(appointment), inputs)
     elif form.is_valid():
         inputs = form.inputs()
         try:
@@ -290,6 +319,8 @@ def appointment_price(request, customer_pk=None, pk=None):
             context["changes_price"] = appointment is not None and not same_inputs(booking.inputs_from_appointment(appointment), inputs)
     else:
         context["errors"] = [error for errors in form.errors.values() for error in errors]
+    if form.by_quote:
+        context["reference"] = level_reference(form)
     # The availability check, as the date, time or anything else that
     # affects it changes: the full check once the job can be priced, and
     # before that the rules the date and time break on their own.

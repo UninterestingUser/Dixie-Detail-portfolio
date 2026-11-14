@@ -4,9 +4,9 @@ summary: How to read the prices in the control app, change them in a draft, publ
 audience: [owner]
 visibility: internal
 status: current
-updated: 2026-10-18
+updated: 2026-11-14
 tags: [guides, pricebook, pricing, versioning, control-app]
-related: [docs/reference/pricebook-changes.md, docs/reference/pricing.md, docs/reference/control-app.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, data/price-matrix.csv]
+related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/reference/pricebook-changes.md, docs/reference/pricing.md, docs/reference/control-app.md, docs/decisions/0033-pricebook-versions-and-line-snapshots.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, data/price-matrix.csv]
 ---
 
 # Editing and publishing the pricebook
@@ -15,12 +15,12 @@ Prices live in numbered pricebook versions. A published version never changes; a
 
 ## Read the prices
 
-Tap **Pricebook**. It opens on the version in effect today, laid out like [data/price-matrix.csv](../../data/price-matrix.csv): one table per service, in the file's order, with each vehicle class and size, its one-person service hours and its price. Monthly and Quarterly Maintenance are worked out from Full Detail by their rule and marked "Rule". Below the tables are the rules: the maintenance percentages, the condition levels and the crew numbers. The buttons at the top open other versions.
+Tap **Pricebook**. It opens on the version in effect today, laid out like [data/price-matrix.csv](../../data/price-matrix.csv): one table per service, in the file's order, with each vehicle class and size, its one-person service hours and its price. Monthly and Quarterly Maintenance are worked out from Full Detail by their rule and marked "Rule". Below the tables are the rules: the maintenance percentages, the services that take a condition level (Full Detail and Interior Only), the condition levels, with Level 3 booked by quote, and the crew numbers. The buttons at the top open other versions.
 
 ## Change prices in a draft
 
 1. Tap **Start a draft**. The draft is the next version number, a copy of the latest published prices. There is one draft at a time.
-2. Change any price or hours. To stop offering a combination, tick its **✕** box. The maintenance percentages and condition percentages can be changed in the rules.
+2. Change any price or hours. To stop offering a combination, tick its **✕** box. The maintenance percentages and condition percentages can be changed in the rules. Which services take a condition level, and which level is booked by quote, come from the data files: change them there and run `load_pricebook`, which makes a draft.
 3. Add a note on what changed, and tap **Save draft**. A number that cannot be read stops the save and nothing is changed. Customers and booked jobs see nothing until you publish.
 
 To throw a draft away, tap **Discard this draft**.

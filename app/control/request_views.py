@@ -26,7 +26,8 @@ from core.scheduling import format_minutes
 from customers.models import Consent
 from geo.drive import drive_time, estimate
 from geo.models import LocationSettings
-from pricebook.pricing import PricingError
+from pricebook.models import PricebookVersion
+from pricebook.pricing import PricingError, reference_price
 from publicapi import decisions
 from publicapi.models import QuotePhoto, QuoteRequest, SecondVehicleRequest, TimeRequest
 from publicapi.photos import path_of
@@ -152,11 +153,18 @@ def price_text(item):
     quote = item.quote
     if quote is None:
         return ""
+    add_ons = [add_on.name for add_on in quote.add_ons.order_by("name")]
+    what = quote.service.name + (f" with {' and '.join(add_ons)}" if add_ons else "")
     return (
-        f"Dixie Detail: Thanks for your quote request {item.reference}. {quote.service.name} for your "
+        f"Dixie Detail: Thanks for your quote request {item.reference}. {what} for your "
         f"{item.vehicle_text or 'vehicle'} is ${quote.total:,.2f} with tax, about {format_minutes(quote.time_on_site_minutes)} on site. "
         f"Reply or call {business_phone()} to pick a day."
     )
+
+
+def level_priced_by_hand(item):
+    version = PricebookVersion.current()
+    return bool(item.condition_level and version and version.condition_levels.filter(level=item.condition_level, booked_by_quote=True).exists())
 
 
 def quote_request_page(request, item, price_form=None, book_form=None, alert=None, status=200):
@@ -168,8 +176,17 @@ def quote_request_page(request, item, price_form=None, book_form=None, alert=Non
             initial.update(service=quote.service, vehicle_class=quote.vehicle_class, amount=quote.total_before_tax,
                            time_on_site_minutes=quote.time_on_site_minutes, crew_size=quote.crew_size)
         price_form = HandPriceForm(prefix="price", initial=initial)
+    add_ons = list(item.add_ons.order_by("name"))
+    reference = None
+    if item.condition_level is not None and item.service is not None and item.vehicle_class is not None:
+        # A level priced by hand shows the job at Level 2 beside it (decision 0103).
+        job = reference_price(item.service, item.vehicle_class, item.size_variant, add_ons)
+        reference = {"job": job, "stay": job.time_on_site} if job else None
     context = {
         "item": item,
+        "add_ons": add_ons,
+        "reference": reference,
+        "level_priced_by_hand": level_priced_by_hand(item),
         "drive": drive_info(item.service_address),
         "tax": tax_preview(item.service_address),
         "contact": contact_links(item.customer, price_text(item)),
@@ -187,7 +204,9 @@ def quote_request_page(request, item, price_form=None, book_form=None, alert=Non
 
 def quote_request_object(pk):
     return get_object_or_404(
-        QuoteRequest.objects.select_related("customer", "vehicle_class", "service", "service_address", "appointment", "vehicle", "quote"), pk=pk,
+        QuoteRequest.objects.select_related(
+            "customer", "vehicle_class", "size_variant", "service", "service_address", "appointment", "vehicle", "quote"
+        ), pk=pk,
     )
 
 
