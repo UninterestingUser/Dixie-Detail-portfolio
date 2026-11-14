@@ -51,6 +51,7 @@ h2 { font-size: 1.1rem; margin: 28px 0 8px; color: var(--navy); }
 .ok { color: var(--ok); font-weight: 600; }
 .error { color: var(--warn); font-weight: 600; margin: 4px 0 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+[hidden] { display: none !important; }
 
 /* Lists and cards */
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

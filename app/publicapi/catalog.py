@@ -60,6 +60,7 @@ def pricebook():
         .select_related("size_variant")
         .order_by("price")
     )
+    takes_level = version.condition_service_ids()
     by_service, by_class = {}, {}
     for price in prices:
         by_service.setdefault(price.service_id, []).append(price)
@@ -79,10 +80,13 @@ def pricebook():
             }
             for vehicle_class in classes
         ],
+        # A level booked by quote has no percentage: the job is quoted by hand
+        # (decision 0103).
         "condition_levels": [
             {
                 "level": level.level,
-                "adds_percent": f"{level.adjustment_percent:f}".rstrip("0").rstrip("."),
+                "adds_percent": None if level.booked_by_quote else f"{level.adjustment_percent:f}".rstrip("0").rstrip("."),
+                "booked_by_quote": level.booked_by_quote,
                 "label": level.label,
                 "description": level.description,
             }
@@ -94,7 +98,7 @@ def pricebook():
                 "name": service.name,
                 "kind": "add_on" if service.kind == Service.Kind.ADD_ON else "service",
                 "description": service.description,
-                "condition_applies": service.condition_applies,
+                "condition_applies": service.pk in takes_level,
                 "from_price": money(by_service[service.pk][0].price) if service.pk in by_service else None,
                 "prices": [
                     {"class_id": price.vehicle_class_id, "size": price.size_variant.value if price.size_variant else None, "price": money(price.price)}

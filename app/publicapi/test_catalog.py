@@ -31,7 +31,11 @@ class PricebookTests(ApiTestCase):
         self.assertEqual(full["kind"], "service")
         for price in full["prices"]:
             self.assertEqual(set(price), {"class_id", "size", "price"})
-        self.assertEqual([level["adds_percent"] for level in data["condition_levels"]], ["0", "10", "20"])
+        # Level 3 has no percentage: it is booked by quote (decision 0103).
+        self.assertEqual([level["adds_percent"] for level in data["condition_levels"]], ["0", "10", None])
+        self.assertEqual([level["booked_by_quote"] for level in data["condition_levels"]], [False, False, True])
+        takes = {service["name"] for service in data["services"] if service["condition_applies"]}
+        self.assertEqual(takes, {"Full Detail", "Interior Only"})
 
     def test_classes_with_sizes_and_the_quote_class_has_no_price(self):
         classes = {item["name"]: item for item in self.client.get_api("services").json()["classes"]}

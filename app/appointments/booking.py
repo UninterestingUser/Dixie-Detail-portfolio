@@ -22,7 +22,7 @@ from django.utils import timezone
 from core.scheduling import time_on_site
 from geo.drive import drive_from_home
 from pricebook.models import PricebookVersion, PricedLine, PricingRules, Quote, Service
-from pricebook.pricing import crew_service_minutes, issue_quote, price_job
+from pricebook.pricing import crew_service_minutes, hand_description, issue_hand_quote, issue_quote, price_job
 from scheduling import availability
 from scheduling.models import RuleOverride
 
@@ -48,7 +48,8 @@ class RulesBroken(BookingError):
 
 @dataclass
 class JobInputs:
-    """What a job is priced from."""
+    """What a job is priced from. A job at a condition level booked by quote
+    carries the owner's hand price and time on site instead (decision 0103)."""
 
     service: Service
     vehicle_class: object
@@ -57,8 +58,29 @@ class JobInputs:
     add_ons: list = field(default_factory=list)
     promotions: list = field(default_factory=list)
     crew_size: int = None
+    hand_amount: Decimal = None
+    hand_minutes: int = None
+
+    @property
+    def priced_by_hand(self):
+        return self.hand_amount is not None
 
     def quote(self, on, version=None, address=None):
+        if self.priced_by_hand:
+            return issue_hand_quote(
+                self.service,
+                self.vehicle_class,
+                self.hand_amount,
+                self.hand_minutes,
+                description=hand_description(self.service, self.condition_level, self.add_ons),
+                crew_size=self.crew_size or self.service.default_crew_size,
+                size_variant=self.size_variant,
+                condition_level=self.condition_level,
+                add_ons=self.add_ons,
+                address=address,
+                on=on,
+                version=version or version_for(on),
+            )
         return issue_quote(
             self.service,
             self.vehicle_class,
@@ -86,6 +108,8 @@ def inputs_from_appointment(appointment):
     nothing on it came from the pricebook."""
     quote = appointment.quote
     if quote is not None:
+        # A job at a condition level booked by quote keeps its hand price.
+        by_hand = quote.priced_by_hand and quote.condition_level is not None
         return JobInputs(
             quote.service,
             quote.vehicle_class,
@@ -94,6 +118,8 @@ def inputs_from_appointment(appointment):
             list(quote.add_ons.all()),
             list(quote.promotions.all()),
             appointment.crew_size,
+            hand_amount=quote.total_before_tax if by_hand else None,
+            hand_minutes=quote.time_on_site_minutes if by_hand else None,
         )
     lines = list(appointment.lines.select_related("service", "vehicle_class", "size_variant", "promotion"))
     main = next((line for line in lines if line.kind == PricedLine.Kind.SERVICE and line.service), None)
@@ -122,6 +148,8 @@ def job_to_place(inputs, day, address=None, appointment=None):
     if inputs is None:
         minutes = appointment.time_on_site_minutes if appointment is not None else None
         return availability.Job(minutes or 0, point=point)
+    if inputs.priced_by_hand:
+        return availability.Job(inputs.hand_minutes, inputs.service.pk, inputs.service.name, point)
     job = price_job(
         inputs.service, inputs.vehicle_class, size_variant=inputs.size_variant, condition_level=inputs.condition_level,
         add_ons=inputs.add_ons, crew_size=inputs.crew_size, on=day, version=version_for(day), check_promotion_dates=False,

@@ -4,18 +4,18 @@ title: "Three condition levels add 0%, 10% or 20%"
 summary: "Condition adds 0%, 10% or 20% to Full Detail, Interior Only or Exterior Only, not to add-ons, rounded to the dollar."
 date: 2026-10-07
 area: pricing
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-13
+updated: 2026-11-14
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md]
 related: [docs/reference/pricing.md, data/pricing-rules.yaml]
 ---
 
 # 0013: Three condition levels add 0%, 10% or 20%
 
-**Status:** accepted · **Date:** 2026-10-07 · **Area:** pricing
+**Status:** superseded by [0103](0103-service-levels-for-interior-work-and-level-3-by-quote.md): only Full Detail and Interior Only take a condition level, and Level 3 is booked by quote instead of adding 20% · **Date:** 2026-10-07 · **Area:** pricing
 
 ## Context
 

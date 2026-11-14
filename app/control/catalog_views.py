@@ -292,7 +292,8 @@ def catalog_price(request):
             try:
                 job = price_job(
                     data["service"], data["vehicle_class"], size_variant=size,
-                    condition_level=data["condition_level"] if data["service"].condition_applies else None,
+                    # The engine drops a level the service doesn't take (decision 0103).
+                    condition_level=data["condition_level"],
                 )
             except PricingError as error:
                 context["errors"] = [str(error)]

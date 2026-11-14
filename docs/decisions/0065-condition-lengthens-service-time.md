@@ -4,18 +4,18 @@ title: "The condition level lengthens the main service's service time"
 summary: "The condition percentage (0%, 10% or 20%) is added to the main service's one-person service time as well as its price, for Full Detail, Interior Only and Exterior Only only."
 date: 2026-10-17
 area: pricing
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-17
+updated: 2026-11-14
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md]
 related: [docs/reference/pricing.md, data/pricing-rules.yaml, docs/reference/booking-flow.md, docs/decisions/0013-condition-levels.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md]
 ---
 
 # 0065: The condition level lengthens the main service's service time
 
-**Status:** accepted · **Date:** 2026-10-17 · **Area:** pricing
+**Status:** superseded by [0103](0103-service-levels-for-interior-work-and-level-3-by-quote.md): the condition lengthens only Full Detail and Interior Only, and a Level 3 job's time is set by hand · **Date:** 2026-10-17 · **Area:** pricing
 
 ## Context
 

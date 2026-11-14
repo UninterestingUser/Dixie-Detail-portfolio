@@ -4,9 +4,9 @@ summary: How to work through the home screen's "needs you" list - new bookings, 
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-14
 tags: [guides, booking, website, matching, requests, control-app]
-related: [docs/reference/control-app.md, docs/reference/returning-customers.md, docs/reference/public-api.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/decisions/0099-quote-requests-with-photos.md, docs/guides/assigning-staff.md, docs/guides/booking-a-job.md]
+related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/reference/control-app.md, docs/reference/returning-customers.md, docs/reference/public-api.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/decisions/0099-quote-requests-with-photos.md, docs/guides/assigning-staff.md, docs/guides/booking-a-job.md]
 ---
 
 # Handling website bookings
@@ -36,9 +36,9 @@ Every choice is logged with your name and the time. **Account → Review queue**
 
 ## Quote requests
 
-A quote request is a job the website can't price, such as a full-size van. The screen shows the vehicle, the service wanted, what the customer says is needed, their photos (tap one to see it full size), the address with the drive from home and its tax rate, their preferred days, and their number.
+A quote request is a job the website can't price: a full-size van, or a Full Detail or Interior Only at condition Level 3. The screen shows the vehicle, the service wanted with any condition level and add-ons, what the customer says is needed, their photos (tap one to see it full size), the address with the drive from home and its tax rate, their preferred days, and their number.
 
-1. **Price it by hand** (managers): pick the service and vehicle class, then enter the price before tax, the time on site in minutes, setup and breakdown included, and the crew. **Save the price** makes a quote with the sales tax added. That quote is the price the job is booked at. Pricing again makes a new quote.
+1. **Price it by hand** (managers): pick the service and vehicle class, then enter the price before tax, the time on site in minutes, setup and breakdown included, and the crew. For a Level 3 request the price covers the whole job, add-ons included, and the Level 2 price is shown above the form for reference. **Save the price** makes a quote with the sales tax added; it keeps the request's condition level and add-ons when you price the service the customer asked for. That quote is the price the job is booked at. Pricing again makes a new quote.
 2. **Send the price yourself,** by text or call, until Phase 4's texts. **Text** opens your messages with the price filled in, starting "Dixie Detail:". It appears only when the customer agreed to appointment texts; otherwise call.
 3. **Book it** when the customer picks a day: enter the date and arrival time. The time is checked against the scheduling rules like any booking; see [booking-a-job.md](booking-a-job.md#book-off-hours) for booking off hours. The job shows the description and photos, so whoever does it sees them.
 4. Or **Decline it** with a reason, and tell the customer yourself. Photos are deleted 90 days after the request is declined, or its job is done or canceled.

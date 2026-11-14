@@ -88,6 +88,16 @@ class PricebookVersion(models.Model):
             .first()
         )
 
+    def condition_service_ids(self):
+        """The ids of the services that take a condition level in this version."""
+        return set(ConditionService.objects.filter(version=self).values_list("service_id", flat=True))
+
+    def takes_condition_level(self, service):
+        """Whether a service takes a condition level in this version: Full
+        Detail and Interior Only, the services that cover the interior
+        (decision 0103)."""
+        return ConditionService.objects.filter(version=self, service=service).exists()
+
     @classmethod
     @transaction.atomic
     def new_draft(cls, notes=""):
@@ -97,7 +107,7 @@ class PricebookVersion(models.Model):
         draft = cls.objects.create(number=(last.number + 1) if last else 1, notes=notes)
         source = cls.objects.filter(status=cls.Status.PUBLISHED).order_by("-number").first()
         if source:
-            for model in (Price, DerivedPriceRule, ConditionLevel, PricingRules):
+            for model in (Price, DerivedPriceRule, ConditionLevel, ConditionService, PricingRules):
                 rows = model.objects.filter(version=source)
                 if model is Price:
                     # A retired class or size variant is not priced again.
@@ -147,7 +157,8 @@ class Service(models.Model):
     name = models.CharField(max_length=100, unique=True)
     kind = models.CharField(max_length=20, choices=Kind.choices)
     description = models.TextField(blank=True)
-    condition_applies = models.BooleanField(default=False)
+    # Whether it takes a condition level is pricebook data, per version
+    # (ConditionService, decision 0103).
     customer_bookable = models.BooleanField(
         default=False, help_text="Offered on the website. Maintenance plans and custom lines are not."
     )
@@ -225,10 +236,16 @@ class DerivedPriceRule(VersionContent):
 
 
 class ConditionLevel(VersionContent):
-    """One of the three condition levels and the percentage it adds."""
+    """One of the three condition levels (the website's service levels) and
+    the percentage it adds to the price and service time. A level booked by
+    quote has no price: the job is priced by hand, like a vehicle in a class
+    booked by quote (decision 0103)."""
 
     level = models.PositiveSmallIntegerField(choices=[(1, "1"), (2, "2"), (3, "3")])
     adjustment_percent = PercentField()
+    booked_by_quote = models.BooleanField(
+        default=False, help_text="No price: the job is quoted by hand, and the website asks for a quote."
+    )
     label = models.CharField(max_length=60, blank=True)
     description = models.TextField(blank=True)
 
@@ -238,11 +255,36 @@ class ConditionLevel(VersionContent):
         default_related_name = "condition_levels"
         ordering = ["level"]
         constraints = [
-            models.UniqueConstraint(fields=["version", "level"], name="one_condition_level_per_number")
+            models.UniqueConstraint(fields=["version", "level"], name="one_condition_level_per_number"),
+            models.CheckConstraint(
+                condition=Q(booked_by_quote=False) | Q(adjustment_percent=0),
+                name="condition_level_booked_by_quote_adds_nothing",
+            ),
         ]
 
     def __str__(self):
+        if self.booked_by_quote:
+            return f"Condition level {self.level} (booked by quote)"
         return f"Condition level {self.level} (+{self.adjustment_percent}%)"
+
+
+class ConditionService(VersionContent):
+    """A service that takes a condition level in this version. Only the
+    services that cover the interior do: Full Detail and Interior Only
+    (decision 0103). Every other service has no condition level at all."""
+
+    service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="+")
+
+    history = HistoricalRecords()
+
+    class Meta:
+        default_related_name = "condition_services"
+        constraints = [
+            models.UniqueConstraint(fields=["version", "service"], name="one_condition_service_per_version")
+        ]
+
+    def __str__(self):
+        return f"{self.service} takes a condition level"
 
 
 class PricingRules(VersionContent):
@@ -378,6 +420,10 @@ class Quote(models.Model):
     breakdown_minutes = models.PositiveIntegerField()
     time_on_site_minutes = models.PositiveIntegerField()
     full_day = models.BooleanField(help_text="One-person time on site at or above the full-day threshold.")
+    # Priced by hand by the owner, not by the pricing engine: a quote
+    # request, or a job at a condition level booked by quote (decision 0103).
+    # A pricebook change never re-prices it.
+    priced_by_hand = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-created_at"]

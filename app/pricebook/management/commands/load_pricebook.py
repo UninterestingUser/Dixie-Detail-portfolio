@@ -3,7 +3,9 @@
 Reads data/vehicle-classes.yaml (vehicle classes and size variants),
 data/services.yaml, data/pricing-rules.yaml and data/price-matrix.csv, whose
 hours are one-person service hours without setup and breakdown (decision
-0058). Maintenance plans are stored as derived price rules, not prices. The
+0058). Which services take a condition level (condition_applies in
+services.yaml) and which levels are booked by quote are pricebook data,
+stored with each version (decision 0103). Maintenance plans are stored as derived price rules, not prices. The
 price book check (pricebook.checks, decision 0083) runs first, and nothing
 is loaded if it fails. In an empty database the retired classes the file
 lists are created retired, for the job history.
@@ -11,8 +13,8 @@ lists are created retired, for the job history.
 Once version 1 exists, running it again changes no published price. It adds
 any vehicle class, size variant or service the data files have and the
 database does not, fills in a class's photo card and example models where it
-has none, and compares the matrix with the latest published version. If they
-differ, the whole matrix is loaded as a new draft for the owner to publish
+has none, and compares the matrix and the condition rules with the latest
+published version. If they differ, the whole matrix is loaded as a new draft for the owner to publish
 (pricebook-changes.md). A class the file renames is found under its old name
 until apply_size_classes renames it, and a new class made while the
 body-type classes are still live waits as pending, not offered, until
@@ -29,8 +31,16 @@ from django.db import transaction
 from django.utils import timezone
 
 from pricebook.checks import MAINTENANCE_PERCENT_KEYS, cell_name, check
-from pricebook.models import ConditionLevel, DerivedPriceRule, Price, PricebookVersion, PricingRules, Service
-from pricebook.pricing import NotPriced, base_price
+from pricebook.models import (
+    ConditionLevel,
+    ConditionService,
+    DerivedPriceRule,
+    Price,
+    PricebookVersion,
+    PricingRules,
+    Service,
+)
+from pricebook.pricing import NotPriced, base_price, format_percent
 from vehicles.classification.switch import switched
 from vehicles.models import SizeVariant, VehicleClass
 
@@ -86,7 +96,7 @@ class Command(BaseCommand):
             self.load_classes(data)
             self.load_services(services)
             version = PricebookVersion.objects.create(number=1, notes="Loaded from data/ by load_pricebook.")
-            self.load_rules(version, rules)
+            self.load_rules(version, rules, services)
             count = self.load_prices(version, matrix, rules, data)
             version.publish(timezone.localdate())
         self.stdout.write(
@@ -160,7 +170,6 @@ class Command(BaseCommand):
                 defaults={
                     "kind": SERVICE_KINDS[entry["kind"]],
                     "description": entry.get("description", ""),
-                    "condition_applies": entry["condition_applies"],
                     "customer_bookable": "customer" in entry["booked_by"],
                     "default_crew_size": entry.get("default_crew", 1),
                 },
@@ -177,7 +186,53 @@ class Command(BaseCommand):
             )
         return added
 
-    def load_rules(self, version, rules):
+    @staticmethod
+    def condition_rules(rules, services):
+        """({service names that take a condition level}, {level: (percent,
+        booked by quote)}) as the data files give them."""
+        names = {entry["name"] for entry in services["services"] if entry.get("condition_applies")}
+        levels = {
+            level["level"]: (
+                Decimal(str(level.get("adjustment_percent", 0))),
+                bool(level.get("booked_by_quote", False)),
+            )
+            for level in rules["condition_levels"]["levels"]
+        }
+        return names, levels
+
+    @staticmethod
+    def version_condition_rules(version):
+        names = set(ConditionService.objects.filter(version=version).values_list("service__name", flat=True))
+        levels = {
+            level.level: (level.adjustment_percent, level.booked_by_quote)
+            for level in ConditionLevel.objects.filter(version=version)
+        }
+        return names, levels
+
+    def compare_condition_rules(self, version, rules, services):
+        """How the version's condition rules differ from the data files."""
+        names, levels = self.condition_rules(rules, services)
+        had_names, had_levels = self.version_condition_rules(version)
+        differences = []
+
+        def shown(found):
+            if found is None:
+                return "missing"
+            return "booked by quote" if found[1] else f"+{format_percent(found[0])}%"
+
+        for name in sorted(names - had_names):
+            differences.append(f"{name}: takes a condition level in the file, not in version {version.number}")
+        for name in sorted(had_names - names):
+            differences.append(f"{name}: takes a condition level in version {version.number}, not in the file")
+        for number in sorted(set(levels) | set(had_levels)):
+            if levels.get(number) != had_levels.get(number):
+                differences.append(
+                    f"Condition level {number}: version {version.number} has {shown(had_levels.get(number))},"
+                    f" the file {shown(levels.get(number))}"
+                )
+        return differences
+
+    def load_rules(self, version, rules, services):
         crew = rules["crew"]
         PricingRules.objects.create(
             version=version,
@@ -185,13 +240,18 @@ class Command(BaseCommand):
             service_time_rounding_minutes=crew["service_time_rounding_minutes"],
             full_day_time_on_site_hours=Decimal(str(rules["full_day_flag"]["threshold_one_person_time_on_site_hours"])),
         )
+        names, levels = self.condition_rules(rules, services)
         for level in rules["condition_levels"]["levels"]:
+            percent, by_quote = levels[level["level"]]
             ConditionLevel.objects.create(
                 version=version,
                 level=level["level"],
-                adjustment_percent=Decimal(str(level["adjustment_percent"])),
+                adjustment_percent=percent,
+                booked_by_quote=by_quote,
                 label=level.get("mockup_label", ""),
             )
+        for name in sorted(names):
+            ConditionService.objects.create(version=version, service=Service.objects.get(name=name))
         plans = rules["maintenance_plans"]
         base_service = Service.objects.get(name=plans["base_service"])
         for name, key in MAINTENANCE_PERCENT_KEYS.items():
@@ -238,6 +298,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             added = self.load_classes(data) + self.load_services(services)
             differences, dropped = self.compare(latest, matrix, data)
+            differences += self.compare_condition_rules(latest, rules, services)
             draft = None
             if differences:
                 open_draft = PricebookVersion.objects.filter(status=PricebookVersion.Status.DRAFT).first()
@@ -251,7 +312,7 @@ class Command(BaseCommand):
                 draft = PricebookVersion.objects.create(
                     number=last.number + 1, notes="The price book in data/price-matrix.csv, loaded by load_pricebook."
                 )
-                self.load_rules(draft, rules)
+                self.load_rules(draft, rules, services)
                 self.load_prices(draft, matrix, rules, data)
         for line in added:
             self.stdout.write(f"Added {line}.")
@@ -265,7 +326,7 @@ class Command(BaseCommand):
             return
         self.stdout.write(
             self.style.SUCCESS(
-                f"Draft version {draft.number} holds data/price-matrix.csv, which differs from version {latest.number}"
+                f"Draft version {draft.number} holds data/price-matrix.csv and the condition rules, which differ from version {latest.number}"
                 f" in {len(differences)} place(s):"
             )
         )

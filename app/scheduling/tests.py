@@ -66,7 +66,7 @@ class SchedulingTestCase(JobsTestCase):
             inputs = booking.JobInputs(service, self.motorcycles)
             vehicle = self.bike
         else:
-            inputs = booking.JobInputs(service, self.crossover, self.two_rows, 1 if service.condition_applies else None)
+            inputs = booking.JobInputs(service, self.crossover, self.two_rows, 1)
             vehicle = self.vehicle
         appointment = booking.book(self.customer, vehicle, start, inputs, address=address)
         if minutes is not None:

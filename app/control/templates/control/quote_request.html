@@ -9,8 +9,10 @@
   <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.closed_at %}, {{ item.closed_at|date:"M j, Y" }}{% endif %}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
   <dt>Sent</dt><dd>{{ item.created_at|date:"D, M j, Y, g:i A" }}</dd>
   <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a>{% if item.intake.matched %} <span class="badge">Returning customer</span>{% endif %}</dd>
-  <dt>Vehicle</dt><dd>{{ item.vehicle_text|default:"Not given" }}{% if item.vehicle_class %} ({{ item.vehicle_class }}){% endif %}</dd>
+  <dt>Vehicle</dt><dd>{{ item.vehicle_text|default:"Not given" }}{% if item.vehicle_class %} ({{ item.vehicle_class }}{% if item.size_variant %}, {{ item.size_variant.label }}{% endif %}){% endif %}</dd>
   <dt>Service wanted</dt><dd>{{ item.service|default:"Not sure" }}</dd>
+  {% if item.condition_level %}<dt>Condition level</dt><dd>{{ item.condition_level }}{% if level_priced_by_hand %}, priced by hand{% endif %}</dd>{% endif %}
+  {% if add_ons %}<dt>Add-ons wanted</dt><dd>{{ add_ons|join:", " }}</dd>{% endif %}
   <dt>Address</dt><dd>{{ item.service_address }}</dd>
   <dt>Drive</dt><dd>{% if drive %}{{ drive.minutes|duration }} from the home base{% if drive.estimated %} <span class="badge">Estimated</span>{% endif %}{% else %}<span class="muted">Unknown</span>{% endif %}</dd>
   <dt>Sales tax</dt><dd>{% if tax %}{{ tax.jurisdiction.name|default:"No jurisdiction" }}, {{ tax.rate|percent }}%{% if tax.needs_check %} <span class="badge">Check</span>{% endif %}{% else %}<span class="muted">No address</span>{% endif %}</dd>
@@ -26,6 +28,7 @@
 {% include "control/_quote_photos.html" %}
 
 <h2 id="price">Price</h2>
+{% if reference %}<p class="help reference">For reference, at condition level {{ reference.job.condition_level }}: {{ reference.job.total_before_tax|money }} before tax, {{ reference.stay.total_minutes|duration }} on site{% if add_ons %}, add-ons included{% endif %}.</p>{% endif %}
 {% if quote %}
 <div class="card">
   <table class="lines">

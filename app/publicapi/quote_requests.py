@@ -1,7 +1,9 @@
-"""Quote requests: the path for any job the site can't price, which is any
-vehicle in a class booked by quote, today Full-size Vans (decision 0099).
-A class the owner later sets to "Ask for a quote", such as RVs or boats,
-uses it with no new code.
+"""Quote requests: the path for any job the site can't price: any vehicle
+in a class booked by quote, today Full-size Vans (decision 0099), and Full
+Detail or Interior Only at a condition level booked by quote, today Level 3
+(decision 0103). A class or level the owner later sets to "Ask for a
+quote" uses it with no new code. The request carries the service, the
+condition level and the add-ons the customer wants.
 
 1. The website opens an upload session after a Turnstile check.
 2. Each photo uploads on its own as the customer picks it, so one slow
@@ -20,6 +22,9 @@ import datetime
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+
+from pricebook.models import Price
+from pricebook.pricing import NotPriced, base_price
 
 from . import bookings, catalog, consent, photos, quotes, turnstile, validate
 from .http import ApiError, bad_request, not_found, visitor_key
@@ -104,13 +109,16 @@ def parse(data):
     validate.only(
         data,
         ["vehicle", "service", "description", "place", "first_name", "mobile", "consents", "turnstile"],
-        ["last_name", "preferred_days", "session", "photos"],
+        ["last_name", "preferred_days", "session", "photos", "size", "condition", "add_ons"],
     )
     service = data["service"]
     if service != "not_sure":
         service = quotes.parse_service(service)
     else:
         service = None
+    condition = validate.integer(data.get("condition"), "condition", 1, 3, required=False)
+    if service is None and condition is not None:
+        raise bad_request("condition", quotes.CONDITION_NOT_TAKEN)
     photo_ids = data.get("photos") or []
     if not isinstance(photo_ids, list) or len(photo_ids) > settings.QUOTE_REQUEST_MAX_PHOTOS:
         raise ApiError(422, "too_many_photos", f"A request can have up to {settings.QUOTE_REQUEST_MAX_PHOTOS} photos.")
@@ -121,7 +129,10 @@ def parse(data):
         raise bad_request("session")
     return {
         "vehicle": catalog.parse_vehicle(data["vehicle"], free_text_with_card=True),
+        "size": validate.integer(data.get("size"), "size", 1, 9, required=False),
         "service": service,
+        "condition": condition,
+        "add_ons": quotes.parse_add_ons(data.get("add_ons")),
         "description": validate.text(data["description"], "description", 2000, multiline=True),
         "place": validate.token(data["place"], "place"),
         "first_name": validate.text(data["first_name"], "first_name", 100),
@@ -135,15 +146,38 @@ def parse(data):
     }
 
 
-def by_quote_vehicle(vehicle):
-    """The vehicle's class, which must be booked by quote: any other vehicle
-    is booked online."""
-    found = catalog.resolve(vehicle)
+def offered(version, service, vehicle_class, size_variant):
+    """Whether the pricebook prices a service for the class, and for the size
+    when it is known (a size question may still be unanswered)."""
+    if size_variant is None:
+        return Price.objects.filter(version=version, service=service, vehicle_class=vehicle_class).exists()
+    try:
+        base_price(version, service, vehicle_class, size_variant)
+    except NotPriced:
+        return False
+    return True
+
+
+def by_quote_job(vehicle, size, service, condition, add_ons):
+    """(the vehicle, the condition level) of a job the site can't price: a
+    vehicle in a class booked by quote, or a service at a condition level
+    booked by quote. Any other job is booked online."""
+    found = catalog.resolve(vehicle, size)
     if found.needs_photo_card:
         raise ApiError(422, "photo_card_needed", "Pick the picture closest to your vehicle.", photo_cards=catalog.cards_json())
-    if not found.booked_by_quote:
-        raise ApiError(422, "book_online", f"{found.vehicle_class.name} can be booked online with a price right away.")
-    return found
+    level = quotes.check_condition(service, condition) if service is not None and condition is not None else None
+    if found.booked_by_quote:
+        return found, level
+    if level is not None and level.booked_by_quote:
+        # The class is booked online, so the service and add-ons must be
+        # ones the pricebook offers for it, such as no Full Detail for a motorcycle.
+        version = catalog.published_version()
+        if not all(offered(version, item, found.vehicle_class, found.size_variant) for item in [service, *add_ons]):
+            raise ApiError(422, "not_offered", "That service or add-on isn't offered for this vehicle.")
+        return found, level
+    if level is not None:
+        raise ApiError(422, "book_online", f"{service.name} at condition level {level.level} can be booked online with a price right away.")
+    raise ApiError(422, "book_online", f"{found.vehicle_class.name} can be booked online with a price right away.")
 
 
 def vehicle_fields(found):
@@ -159,7 +193,7 @@ def vehicle_fields(found):
 
 def send(request, data):
     form = parse(data)
-    found = by_quote_vehicle(form["vehicle"])
+    found, level = by_quote_job(form["vehicle"], form["size"], form["service"], form["condition"], form["add_ons"])
     place = quotes.find_place(form["place"])
     with transaction.atomic():
         smoke_test = turnstile.check(request, form["turnstile"])
@@ -186,12 +220,15 @@ def send(request, data):
             vehicle_make=found.make or "",
             vehicle_model_name=found.model or "",
             vehicle_class=found.vehicle_class,
+            size_variant=found.size_variant,
             photo_card=found.photo_card,
             service=form["service"],
+            condition_level=level.level if level is not None else None,
             description=form["description"],
             preferred_days=form["preferred_days"],
             is_test=customer.is_test,
         )
+        quote_request.add_ons.set(form["add_ons"])
         QuotePhoto.objects.filter(pk__in=[photo.pk for photo in kept]).update(request=quote_request)
         if form["session"]:
             # Photos picked but left out of the request go now.

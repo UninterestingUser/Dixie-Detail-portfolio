@@ -12,7 +12,7 @@
     <li><a class="row{% if item.status != 'new' and item.status != 'replied' %} faded{% endif %}" href="{% url 'quote-request' item.pk %}">
       <strong>{{ item.customer }}: {{ item.vehicle_text|default:"vehicle not given" }}</strong>
       <span class="badge">{{ item.get_status_display }}</span>{% if item.is_test %} <span class="badge">Test</span>{% endif %}
-      <span class="sub">{{ item.created_at|date:"D, M j, g:i A" }} · {{ item.service|default:"Not sure" }} · {{ item.photos.all|length }} photo{{ item.photos.all|length|pluralize }} · {{ item.service_address.city }}</span>
+      <span class="sub">{{ item.created_at|date:"D, M j, g:i A" }} · {{ item.service|default:"Not sure" }}{% if item.condition_level %}, condition level {{ item.condition_level }}{% endif %} · {{ item.photos.all|length }} photo{{ item.photos.all|length|pluralize }} · {{ item.service_address.city }}</span>
     </a></li>
   {% empty %}
     <li class="muted">No quote requests.</li>

@@ -4,9 +4,9 @@ summary: Every endpoint the website calls under /api/public/v1/, what each takes
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-14
 tags: [api, booking, website, quotes, photos, phase-3]
-related: [docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
+related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
 
 # Public API
@@ -64,8 +64,8 @@ The published pricebook in effect today, for the website build and the service c
 
 - `pricebook_version`, `effective_date`;
 - `classes`: each offered vehicle class with its `id`, `name`, `booked_by_quote`, photo card caption and examples, active `sizes` (value and label) and `from_price`, the lowest main-service price for the class (none for a class booked by quote);
-- `condition_levels`: level, `adds_percent`, label and description;
-- `services`: each service and add-on customers can book, with `kind` (`service` or `add_on`), description, `condition_applies`, `from_price` and every `prices` cell (class, size, price). Maintenance plans and custom lines are never listed.
+- `condition_levels`: level, `adds_percent`, `booked_by_quote`, label and description. Level 3 is booked by quote, with `adds_percent` null: it has no price ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md));
+- `services`: each service and add-on customers can book, with `kind` (`service` or `add_on`), description, `condition_applies` (true only for Full Detail and Interior Only, from the published version), `from_price` and every `prices` cell (class, size, price). Maintenance plans and custom lines are never listed.
 
 These prices are for display: a booking always uses a quote the server issued.
 
@@ -88,13 +88,15 @@ Coordinates from the browser are never used. Only places in the area are kept, a
 
 ## Quotes: POST quotes
 
-The body is `vehicle` (year, make, model and type, or a photo card), `size` (the answer to the size question), `condition` (1 to 3, for services it applies to), `service`, `add_ons` and, once known, `place`. The answer is a numbered quote record:
+The body is `vehicle` (year, make, model and type, or a photo card), `size` (the answer to the size question), `condition`, `service`, `add_ons` and, once known, `place`. The answer is a numbered quote record:
 
 - `number`: ten letters and digits, unguessable;
 - `expires_at`: `QUOTE_LIFETIME_MINUTES` after it was issued (2 hours to start);
 - the vehicle's description, class and size, the service and add-ons, the condition level;
 - `lines` (kind, description, amount), `total_before_tax`, `sales_tax` (rate, amount and jurisdiction, or none before the address), `total`;
 - `service_minutes`, `time_on_site_minutes` and `full_day`.
+
+**The condition** is 1 to 3, and is taken only with a service that has `condition_applies`: Full Detail and Interior Only ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). It is required with them, and refused with anything else as a `bad_request` on the `condition` field. A level booked by quote, Level 3, has no price or time: the answer is `ask_for_quote` (422), with no quote issued, and a `quote_request` object holding the `service`, `condition` and `add_ons` to send on to a quote request.
 
 A quote never changes. A changed input, such as another condition level or the address, makes a new quote. The quote is the pricing engine's quote record ([pricing.md](pricing.md#the-quoted-price-is-the-price-of-record)), so it holds the pricebook version and tax rates too. A vehicle that needs something else first is refused with what it needs: `size_question` (with the question), `photo_card_needed` (with the cards), `ask_for_quote`, or `not_offered` for a service or add-on the pricebook does not price for the class, such as anything but Motorcycle Detail for a motorcycle.
 
@@ -111,7 +113,7 @@ The body is `quote`, `start`, `first_name`, optional `last_name`, `mobile`, `pay
 
 1. checks the Turnstile token;
 2. refuses a quote already booked (`quote_used`);
-3. returns a fresh quote to confirm when the quote has expired (`quote_expired`), or when the day of service would price it differently, under another pricebook version or tax rate (`quote_changed`); never a silent new price;
+3. returns a fresh quote to confirm when the quote has expired (`quote_expired`), or when the day of service would price it differently, under another pricebook version or tax rate (`quote_changed`); never a silent new price. A job the day's version books by quote, such as Level 3, gets no fresh quote: it is refused with `ask_for_quote`, so a Level 3 job is never booked online ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md));
 4. takes a lock on the day, then runs the availability check with the quote's time on site, so two people can't book the same time: the second waits for the first and then sees its job (`time_taken`);
 5. matches the mobile number quietly ([returning-customers.md](returning-customers.md)): a returning customer's booking goes on their record, with any difference in name, address or vehicle flagged for the owner, and a new number makes a new customer;
 6. creates the address from the place and the vehicle with its color where the record doesn't already have them, the two consent records, and the appointment with the quote's lines as its line snapshot (decisions [0033](../decisions/0033-pricebook-versions-and-line-snapshots.md) and 0059);
@@ -129,13 +131,13 @@ The summary is built only from the quote, the place and this booking, never from
 
 ## Quote requests
 
-A quote request is the path for any job the site can't price: any vehicle in a class booked by quote, today Full-size Vans ([decision 0099](../decisions/0099-quote-requests-with-photos.md)). A class the owner later sets to "Ask for a quote", such as RVs or boats, uses it with no new code. A vehicle in a class booked online is refused with `book_online`.
+A quote request is the path for any job the site can't price: any vehicle in a class booked by quote, today Full-size Vans ([decision 0099](../decisions/0099-quote-requests-with-photos.md)), and Full Detail or Interior Only at a condition level booked by quote, today Level 3 ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). A class or level the owner later sets to "Ask for a quote", such as RVs or boats, uses it with no new code. Any other job is refused with `book_online`, and a service or add-on the pricebook doesn't offer for the vehicle with `not_offered`.
 
 1. **An upload session.** `POST quote-requests/uploads` with a Turnstile token answers a session token, good for 6 hours.
 2. **Photos, one at a time.** Each photo uploads on its own as the customer picks it, as multipart form data in the field `photo`, so one slow photo never loses the form. Photos are optional: up to `QUOTE_REQUEST_MAX_PHOTOS` (6) per request, each up to `QUOTE_REQUEST_PHOTO_MAX_MB` (15 MB) as sent. JPEG, PNG, WebP and HEIC (the iPhone format) are accepted. A picked photo can be removed with `DELETE`.
-3. **The request.** `POST quote-requests` with the vehicle (year, make and model, or the photo card with any year, make and model the customer knows), `service` (a service id, or `"not_sure"`), a required `description` of what's needed (up to 2,000 characters), the `place`, the name, mobile number, the two consent answers, an optional `preferred_days` note, the `session` and the `photos` it keeps, and a Turnstile token. Photos picked but left out are deleted at once.
+3. **The request.** `POST quote-requests` with the vehicle (year, make and model, or the photo card with any year, make and model the customer knows), an optional `size` (the answer to the size question), `service` (a service id, or `"not_sure"`), an optional `condition` (only with Full Detail or Interior Only, as for a quote) and `add_ons`, a required `description` of what's needed (up to 2,000 characters), the `place`, the name, mobile number, the two consent answers, an optional `preferred_days` note, the `session` and the `photos` it keeps, and a Turnstile token. Photos picked but left out are deleted at once.
 
-The answer is the request's `reference` and a message that Dixie Detail will reply with a price. A quote request is not an appointment and holds no time. It is matched quietly like a booking, and an address or vehicle it brings waits off the customer's record until it is booked. The owner sees it in the "needs you" list on the control app's home screen and on **Account → Website requests**, prices it by hand into a quote, then books it from that quote into an open time or declines it ([control-app.md](control-app.md#website-bookings-and-requests)).
+The answer is the request's `reference` and a message that Dixie Detail will reply with a price. A quote request is not an appointment and holds no time. It keeps the service, condition level and add-ons asked for. It is matched quietly like a booking, and an address or vehicle it brings waits off the customer's record until it is booked. The owner sees it in the "needs you" list on the control app's home screen and on **Account → Website requests**, prices it by hand into a quote, then books it from that quote into an open time or declines it ([control-app.md](control-app.md#website-bookings-and-requests)).
 
 ## Every photo is checked and cleaned
 
@@ -171,7 +173,7 @@ Customers and appointments have a **test record** flag. A test record never goes
 `python manage.py api_smoke_test` checks the whole public path from the server:
 
 1. It goes out through `https://api.dixiedetail.com` (`API_SMOKE_TEST_URL`), like a customer's browser.
-2. It reads the pricebook, looks up a 2019 Toyota RAV4, checks the address `API_SMOKE_TEST_PLACE_ID` (a public place in the area, never a customer's), quotes an Exterior Only, books the first open time from the first test number, and sends a Full-size Vans quote request with one photo.
+2. It reads the pricebook, looks up a 2019 Toyota RAV4, checks the address `API_SMOKE_TEST_PLACE_ID` (a public place in the area, never a customer's), quotes an Exterior Only (with a condition level only if the published pricebook gives it one), books the first open time from the first test number, and sends a Full-size Vans quote request with one photo.
 3. It checks both arrived as test records with the photo on disk, then deletes both, and prints `api-smoke-test: PASS`.
 
 It can't solve a Turnstile widget, so it makes a one-time pass in the database, good for 10 minutes and ten uses, and sends that instead. Only something with the database can make one. Run it on the server with:
