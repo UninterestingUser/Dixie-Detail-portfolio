@@ -1,7 +1,7 @@
 meta:
   title: Business facts
   summary: Contact details, location, brand and profile links for Dixie Detail LLC. Public information only.
-  updated: 2026-10-14
+  updated: 2026-11-14
   status: current
   explained_in: docs/overview/business-profile.md
 
@@ -27,7 +27,7 @@ social_profiles:
   facebook: https://facebook.com/DixieDetailLLC
   instagram: https://instagram.com/dixiedetailllc
   x: https://x.com/dixiedetailllc
-  google_business_profile: null   # link not yet collected
+  google_business_profile: https://g.page/r/CZe2__zuD68oEBM/review   # the review link, from the owner 2026-11-14
 brand:
   primary_red: "#CC0000"
   accent_navy: "#002D65"

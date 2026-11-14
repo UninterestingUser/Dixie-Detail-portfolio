@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-11-08
+  updated: 2026-11-14
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -74,7 +74,7 @@ phases:
       - "Step 5 follow-up: removing a job keeps every quote something else refers to, a job removed as created by mistake reopens its request and a canceled one closes it, and delete_test_records deletes booked test quote requests with their quotes (decision 0102)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
-      - The booking form shows the photo cards, which have placeholders until the owner adds photos (owner action)
+      - The booking form shows the photo cards, which have placeholders until each class's picture is set (owner action; the pictures are in website/public/images/vehicle-classes/)
       - "Possible future vehicle classes already in data/vehicle-classes.yaml, not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form); each planned with Phase 3 or later"
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4
@@ -104,11 +104,9 @@ owner_actions_open:        # answers and checks only the owner can give
   # Carried over from the Phase 2 runbook.
   - Before the booked job on 2026-11-28 - attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review
   - At each vehicle's next visit - confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083)
-  - Before Phase 3 - add a photo to each class's photo card; each shows a placeholder until then
+  - Before Phase 3 - set each class's photo card picture in the class settings to /images/vehicle-classes/ and its file from class_images in data/site-content.yaml; each shows a placeholder until then
   # Carried over from the Phase 1 runbook.
   - Before Phase 3 - the accountant's view on Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, docs/reference/sales-tax.md)
-  - Before Phase 3 - short descriptions in the owner's own words for each service and condition level, for the website
-  - Before Phase 3 - collect the Google Business Profile link for the website footer (data/business.yaml)
   # Before Phase 4 (docs/reference/payments.md).
   - Stripe account check and Tap to Pay test
   - Confirm Venmo and Cash App accounts are business profiles

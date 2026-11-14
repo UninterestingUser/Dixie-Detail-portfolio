@@ -4,7 +4,7 @@ summary: The structure, design direction and search-ranking safeguards for the n
 audience: [owner, developer]
 visibility: internal
 status: planned
-updated: 2026-10-18
+updated: 2026-11-14
 tags: [website, seo, design, astro, phase-3]
 related: [docs/reference/booking-flow.md, docs/decisions/0002-astro-on-cloudflare.md, docs/decisions/0031-website-design-direction.md]
 ---
@@ -31,7 +31,7 @@ Also on the homepage: services with "from" prices read from the database, the se
 - Red #CC0000 is the base: buttons, the band under the hero, review cards and the call-to-action card.
 - Navy #002D65 is the accent: small labels, prices, links, finished booking steps, and the booking estimate card and its phone bar.
 - Headings are near-black. The footer is charcoal (#141518) with a red top edge.
-- Footer social links are round logo icons (Facebook, X, Instagram, Google), not text. The Google Business Profile link is still to be collected.
+- Footer social links are round logo icons (Facebook, X, Instagram, Google), not text. The Google icon links to the Google Business Profile review link in [data/business.yaml](../../data/business.yaml).
 
 ## Search ranking safeguards
 
@@ -43,6 +43,20 @@ Also on the homepage: services with "from" prices read from the database, the se
 - **Rollback is a DNS change.** WordPress stays intact through the cutover.
 
 No redesign can guarantee rankings.
+
+## Where the site's files are
+
+The Astro project will live in `website/` in this repository. The owner's inputs for Phase 3, Step 6 are already in place:
+
+| What | Where | How the site uses it |
+| --- | --- | --- |
+| Page and card text in the owner's words, the condition level cards, and which picture goes with each class and page | [data/site-content.yaml](../../data/site-content.yaml) | Read at build time. Service names match the price book; prices and times always come from the price book, never from this file. |
+| The eight vehicle class pictures, 640×480 WebP with transparent backgrounds | `website/public/images/vehicle-classes/` | Served as they are at `/images/vehicle-classes/<file>`, the fixed path a class's photo card picture is set to in the control app, which the public API's photo cards return. |
+| The five category page photos | `website/src/assets/page-photos/` | Resized by Astro's image tools at build time, never shown larger than the original. |
+| The Privacy Policy and Text Message Terms | `website/src/pages/privacy-policy.md` and `website/src/pages/sms-terms.md` | Pages at `/privacy-policy/` and `/sms-terms/`, the addresses in [data/business.yaml](../../data/business.yaml) and the consent wording. The Privacy Policy's effective date is filled in at launch; the Text Message Terms keep the date on the live page. |
+| The Google Business Profile review link | `google_business_profile` in [data/business.yaml](../../data/business.yaml) | The footer icon, the reviews page and, in Phase 4, review-request texts. |
+
+The vehicle class pictures are third-party renders the owner chose knowing the business holds no license for them (noted in data/site-content.yaml). Replacing one means swapping its file under the same name.
 
 ## How content stays current
 

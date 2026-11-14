@@ -4,7 +4,7 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-07
+updated: 2026-11-14
 tags: [roadmap, phases, status]
 related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/operations/phase-2-vehicle-catalog-runbook.md, docs/decisions/README.md]
 ---
@@ -37,7 +37,7 @@ The returning-customer review queue, listed for Phase 1 in the first plan, moved
 
 **Phase 3, scheduling and the website with the booking form, is next.** It carries these over from Phase 2:
 
-- The photo cards for the size-based classes have placeholders; the booking form shows them, so the owner adds a photo to each (owner action below).
+- The photo cards for the size-based classes have placeholders until each class's picture is set. The owner chose the eight pictures on 2026-11-14 (in `website/public/images/vehicle-classes/`); each class's photo card picture is still to be set to its path (owner action below).
 - The possible future vehicle classes already in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) are not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form). Each is planned with Phase 3 or later.
 
 Phase 1 started with two carry-overs from Phase 0, both done: `DEPLOY_REMOTE` and `DEPLOY_BRANCH` are in the server's `.env` and `ops/deploy.sh` works (confirmed by the owner 2026-10-17; the deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY` on 2026-10-13), and the restore test passed on 2026-10-14. Two more were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.
@@ -50,10 +50,8 @@ Answers and checks only the owner can give, including those carried over from Ph
 | --- | --- |
 | The booked job on 2026-11-28 | Attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review |
 | Each vehicle's next visit | Confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083) |
-| Phase 3 | Add a photo to each class's photo card in the control app's class settings; each shows a placeholder until then |
+| Phase 3 | Set each class's photo card picture in the control app's class settings to `/images/vehicle-classes/` and its file from `class_images` in [data/site-content.yaml](../../data/site-content.yaml), such as `/images/vehicle-classes/vehicle-class-small.webp`; each shows a placeholder until then |
 | Phase 3 | Ask the accountant about Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, [sales-tax.md](../reference/sales-tax.md)) |
-| Phase 3 | Write short descriptions, in the owner's own words, of each service and condition level for the website |
-| Phase 3 | Collect the Google Business Profile link for the website footer ([data/business.yaml](../../data/business.yaml)) |
 | Phase 4 | Confirm the Stripe account is in the business's name and run a small Tap to Pay test; confirm the Venmo and Cash App accounts are business profiles ([payments.md](../reference/payments.md)) |
 
 ## Where the plan review of 2026-10-17 lands
