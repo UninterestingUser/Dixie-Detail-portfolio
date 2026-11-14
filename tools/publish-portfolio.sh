@@ -3,8 +3,9 @@
 #
 # Clones main from the private repository into a temporary folder, rewrites
 # every commit with git filter-repo (text replacements and commit emails kept
-# in "$HOME/Dixie Detail/github-portfolio"), checks the result, and pushes it to the
-# public repository. The private repository is never changed.
+# in "$HOME/Dixie Detail/github-portfolio"), leaves out the paths in
+# left_out_paths, checks the result, and pushes it to the public repository.
+# The private repository is never changed.
 #
 # Usage: tools/publish-portfolio.sh [--dry-run] [--force] [--yes]
 #   --dry-run  rewrite and check, show what would be published, push nothing
@@ -36,6 +37,11 @@ done
 
 die() { echo "publish-portfolio: $*" >&2; exit 1; }
 
+# Files the public copy never holds, in any commit. The vehicle class
+# pictures are third-party renders the business shows on its own site but
+# holds no license to redistribute (data/site-content.yaml, class_images).
+left_out_paths=(website/public/images/vehicle-classes/)
+
 git filter-repo --version > /dev/null 2>&1 \
   || die "git filter-repo is not installed (Fedora: sudo dnf install git-filter-repo)"
 [[ -s "$replacements" ]] || die "missing $replacements"
@@ -54,7 +60,10 @@ git clone --quiet --single-branch --branch main --no-tags "$private_url" "$work/
 cd "$work/repo"
 
 echo "Rewriting every commit"
+path_args=()
+for path in "${left_out_paths[@]}"; do path_args+=(--path "$path"); done
 git filter-repo --force \
+  "${path_args[@]}" --invert-paths \
   --replace-text "$replacements" \
   --replace-message "$replacements" \
   --mailmap "$mailmap" > "$work/filter-repo.log" 2>&1 \
@@ -97,7 +106,14 @@ if grep -v -E '(@users\.noreply\.github\.com|^noreply@github\.com)$' "$work/emai
   problems=1
 fi
 
-# 4. For review: email addresses and phone numbers in file content.
+# 4. No commit holds a left-out path.
+if git log --format= --name-only main -- "${left_out_paths[@]}" | grep . > "$work/hits.txt"; then
+  echo "  FAIL: files that are left out of the public copy are still in its history:"
+  sort -u "$work/hits.txt" | head -n 10 | sed 's/^/    /'
+  problems=1
+fi
+
+# 5. For review: email addresses and phone numbers in file content.
 grep -o -h -E '[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$content" \
   | grep -v -i -E '(^noreply@anthropic\.com|^git@github\.com|@users\.noreply\.github\.com|@example\.(com|org|net))$' \
   | sort -u > "$work/review-emails.txt" || true
