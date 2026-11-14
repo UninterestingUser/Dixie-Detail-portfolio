@@ -87,6 +87,7 @@ compose.yaml  The Docker stack: PostgreSQL, the app, Caddy, cloudflared
 data/         Structured facts and the price matrix
 docs/         The documentation; see docs/README.md
 tools/        Repository tools: the docs check, the test runner, the portfolio publisher
+website/      The Astro website, being built in Phase 3: its pictures and policy pages so far
 ```
 
 ## How work is tracked

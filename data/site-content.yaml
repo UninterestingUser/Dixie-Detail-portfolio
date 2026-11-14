@@ -1,0 +1,227 @@
+meta:
+  title: Website content
+  summary: The website's page and card text in the owner's words, the condition level cards, and which picture goes with each vehicle class and category page. Prices and times come from the price book.
+  updated: 2026-11-14
+  status: current
+  explained_in: docs/reference/website-and-seo.md
+  read_by: the Astro site in website/, at build time
+
+# Website text for Phase 3, Step 6, in the owner's words (sent 2026-11-14).
+# Service names match the price book exactly. Prices and times never appear
+# here: the site reads them from the price book.
+# card: the short text on the booking flow's service, add-on and condition cards.
+# page: the category page that carries the full text.
+
+pages:
+  - slug: detailing
+    title: Detailing
+    services: [Full Detail, Interior Only, Exterior Only]
+  - slug: paint-correction
+    title: Paint Correction
+    services: [1-Step Paint Correction, 2-Step Paint Correction]
+  - slug: headlight-restoration
+    title: Headlight Restoration
+    services: [Headlight Restoration]
+  - slug: shampoo-and-extraction
+    title: Shampoo & Extraction
+    services: [Carpet Extraction, Seat Extraction]
+  - slug: motorcycle-detail
+    title: Motorcycle Detail
+    services: [Motorcycle Detail]
+
+services:
+  - name: Full Detail
+    page: detailing
+    takes_condition: true
+    heading: Full Detail
+    card: >-
+      Every corner, inside and out: paint, undercarriage, engine, wheels,
+      seats, trunk and door jambs.
+    full: >-
+      Dixie Detail takes pride in delivering a full-service cleaning that
+      meticulously reaches every corner of your car, inside and out. This
+      isn't just a quick vacuum and wipe down. You're getting the full
+      treatment to get your car looking showroom new again. Paint,
+      undercarriage, engine, wheels, between and under seats, trunk, door
+      jambs, every crevice – we do it all.
+
+  - name: Interior Only
+    page: detailing
+    takes_condition: true
+    heading: Interior Detail
+    card: >-
+      Our premium detail for the inside: every crevice deep cleaned, surfaces
+      renewed, a thorough vacuum and spot cleaning of carpets and cloth.
+    full: >-
+      Our premium detail service focused on just the interior of your
+      vehicle. Every crack and crevice gets deep cleaned, surfaces renewed,
+      and a thorough vacuum in, under, and around everything. Spot cleaning
+      of cloth/carpets is included. Shampoo and heavy extraction available
+      for an extra charge.
+
+  - name: Exterior Only
+    page: detailing
+    heading: Exterior Detail
+    card: >-
+      Our premium detail for the outside: multistage paint wash, ceramic wax,
+      undercarriage, engine bay, wheels and streak-free glass.
+    full: >-
+      Our premium detail service focused on just the exterior of your
+      vehicle. This service delivers a multistage paint wash followed by a
+      ceramic wax. We also wash the undercarriage, engine bay, wheels, wheel
+      wells, and gas cap compartment. Glass gets a streak-free clean and the
+      tires and plastics are dressed.
+
+  - name: 1-Step Paint Correction
+    page: paint-correction
+    heading: Paint Decontamination + 1-Step Correction
+    card: >-
+      The best value for most cars: decontamination, one polishing pass that
+      removes or reduces most defects, and a ceramic wax.
+    full: >-
+      The 1-Step Paint Correction is the right fit for most situations. It's
+      the best bang for your buck, striking a good balance between cost and
+      results. Paint correction starts with a 3-step wash: presoak, hand
+      wash, and clay bar to remove embedded contamination. Then we make one
+      pass around the vehicle using a medium polish and pad. This will
+      eliminate or reduce most defects and leave a nice shine delivering a
+      significant improvement in clarity and gloss. The service is completed
+      with a final wash and a ceramic wax to protect your newly-corrected
+      paint.
+
+  - name: 2-Step Paint Correction
+    page: paint-correction
+    heading: Paint Decontamination + 2-Step Correction
+    card: >-
+      For a high-gloss showroom finish: decontamination, a cutting pass for
+      deeper defects, a fine polish to a mirror shine, and a ceramic wax.
+    full: >-
+      The 2-Step Paint Correction is needed when a high-gloss showroom finish
+      is the goal. It's also the right fit when paint requires the extra
+      cutting step to get more aggressive at removing imperfections. Paint
+      correction starts with a 3-step wash: presoak, hand wash, and clay bar
+      to remove embedded contamination. Then a first pass around the vehicle
+      with a specific compound and pad combination tailored to the
+      correction need, and a second pass with a fine polish to buff out a
+      mirror shine. The service is completed with a final wash and a ceramic
+      wax to protect your newly-corrected paint.
+
+  - name: Headlight Restoration
+    page: headlight-restoration
+    heading: Headlight Restoration
+    card: >-
+      Foggy, yellowed lenses restored to clear, with UV protection so they
+      stay that way. Covers both headlights.
+    full: >-
+      Over time, headlights become foggy and yellowed due to UV damage,
+      environmental exposure, and normal wear and tear when driving. Dull
+      headlights can be restored to showroom clarity with the proper tools
+      and technique. This is more than a temporary polish. We perform a
+      multi-stage process to remove the damaged outer layer, buff the lens,
+      and add UV protection to ensure lasting results. This service covers
+      both headlights.
+
+  - name: Carpet Extraction
+    page: shampoo-and-extraction
+    heading: Carpet Extraction
+    add_on: true
+    card: Forced extraction pulls dirt, stains and odors out of your carpet.
+    full: >-
+      The main source of filth, bacteria, and foul smell in most cars is the
+      carpet. Every nasty thing that has ever been on the bottom of your
+      shoes has been absorbed into your carpet. The occasional beverage
+      spill just adds to the Petri dish. The best method to fully remove
+      dirt and contaminants is with forced extraction. Your car will smell
+      better and the ugly stains will fade or disappear completely. Priced
+      by the number of seat rows in your vehicle.
+
+  - name: Seat Extraction
+    page: shampoo-and-extraction
+    heading: Seat Extraction
+    add_on: true
+    card: Deep cleaning and extraction that pulls years of grime out of cloth seats.
+    full: >-
+      Cloth seats are comfortable, but they're notoriously difficult to
+      clean. They're like a sponge absorbing dirt, spills, sweat, and grime.
+      Over time, stains start to show and the seats just look generally
+      grungy, bringing down the look of the whole interior. Our cleaning
+      process involves purpose-formulated cleaners and powerful extraction
+      to pull years of filth out of your seats. Your seats will look new
+      again, matching your freshly detailed interior. Priced by the number
+      of seat rows in your vehicle.
+
+  - name: Motorcycle Detail
+    page: motorcycle-detail
+    heading: Motorcycle Detail
+    card: >-
+      A meticulous multi-stage wash around every critical component, finished
+      with a ceramic wax for a deep shine.
+    full: >-
+      Our premium detail package to get your bike looking showroom new
+      again. We perform a meticulous multi-stage wash around all of the
+      critical components of your bike and finish with a ceramic wax to
+      bring out that deep shine.
+
+# Condition levels (owner's rules, 2026-11-14): they apply only to services that
+# cover the interior (Full Detail and Interior Only; takes_condition below), and
+# the condition step comes after the service step. Level 1 is preselected and
+# adds nothing; Level 2 adds 10%; Level 3 is booked by quote (no price shown).
+condition_levels:
+  - level: 1
+    name: Service Level 1
+    default: true
+    card: >-
+      Vehicle is maintained, but needs a reset. No major messes or spills.
+      Standard wear and tear from family. Some light pet hair. The car looks
+      used and we want it to look new again.
+  - level: 2
+    name: Service Level 2
+    card: >-
+      Vehicle needs attention from a professional. It's been a while since
+      the last cleaning and things have gotten messy. Kids, dogs, and dirt
+      roads have left their mark.
+  - level: 3
+    name: Service Level 3
+    card: >-
+      Heavy contamination from major spills or significant dirt buildup over
+      the years. Significant dog hair, heavy stains, or possibly mold.
+    booked_by_quote: true
+    quote_note: >-
+      Every Level 3 job is different, so we quote it by hand. Tell us what
+      you're dealing with, add photos if you can, and we'll send you a price.
+
+# The Google Business Profile review link (from the owner, 2026-11-14) is
+# google_business_profile in data/business.yaml. One link serves the footer
+# icon, the reviews page and (in Phase 4) review-request texts.
+
+# Vehicle class card pictures: the owner's choice (2026-11-14), white
+# vehicles in a front three-quarter view, 640x480 WebP with transparent
+# backgrounds. The owner was told these are third-party renders he holds no
+# license for; swap a file here if he replaces one.
+# The files are in website/public/images/vehicle-classes/, served at
+# /images/vehicle-classes/<file>, the path a class's photo card picture uses.
+class_images:
+  Small: vehicle-class-small.webp
+  Medium: vehicle-class-medium.webp
+  Large: vehicle-class-large.webp
+  Full-size: vehicle-class-fullsize.webp
+  Full-size Vans: vehicle-class-vans.webp
+  Light Pickups: vehicle-class-lightpickup.webp
+  Full-size Trucks: vehicle-class-fullsizetruck.webp
+  Motorcycles: vehicle-class-motorcycles.webp
+
+# Category page photos (owner, 2026-11-14), one per page. The site makes
+# smaller sizes itself and never shows a photo larger than its own pixels.
+# The owner keeps these five as they are for launch (2026-11-14).
+# The files are in website/src/assets/page-photos/.
+page_images:
+  detailing: exterior-wash.webp
+  paint-correction: paint-correction.webp
+  headlight-restoration: headlight-restoration.webp
+  shampoo-and-extraction: seat-extraction.webp
+  motorcycle-detail: motorcycle.webp
+
+# The two policy pages: Text Message Terms as published; Privacy Policy from
+# the doc "Privacy Policy update for the new website" (final 2026-11-14).
+# They are website/src/pages/sms-terms.md and website/src/pages/privacy-policy.md,
+# served at /sms-terms/ and /privacy-policy/ (data/business.yaml, policy_pages).
