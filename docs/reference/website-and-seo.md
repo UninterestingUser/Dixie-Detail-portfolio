@@ -80,7 +80,7 @@ Checked on every pull request that touches `site/` or `data/` by Lighthouse CI, 
 | Cumulative layout shift | 0.1 or less |
 | Total blocking time | 200 ms or less |
 
-At the time of building, every page scored 0.97 to 1.0 on performance and 0.96 to 1.0 on accessibility, with the largest paint at 1.5 to 2.5 seconds. The homepage is closest to the line, because its hero photo shares a slow connection with the photos below it. Search-engine checks are left out while staging is deliberately not indexable.
+At the time of building, every page scored 0.97 to 1.0 on performance and 1.0 on accessibility and best practices, with no layout shift and the largest paint at 1.5 to 2.5 seconds. The homepage is closest to the line, because its hero photo shares a slow connection with the font and the photos below it. Text shows at once in Arial sized to Archivo's width, so the swap to Archivo moves no line. Search-engine checks are left out while staging is deliberately not indexable.
 
 ## Staging is not indexed
 
