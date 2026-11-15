@@ -3,6 +3,13 @@
    base, navy #002D65 the accent, near-black headings, a charcoal footer with
    a red top edge. Archivo, condensed and uppercase for headings. */
 
+/* Fallbacks sized to Archivo, so the swap to Archivo moves no line: text
+   shows at once in Arial (Liberation Sans on Linux), scaled to Archivo's
+   width (measured: 97.8% for text, 81.1% for the condensed headings), with
+   Archivo's ascent and descent (878 and 210 per 1000). */
+@font-face { font-family: "Archivo Fallback"; src: local("Arial"), local("Liberation Sans"), local("Helvetica"); size-adjust: 97.8%; ascent-override: 89.8%; descent-override: 21.5%; line-gap-override: 0%; }
+@font-face { font-family: "Archivo Condensed Fallback"; src: local("Arial Bold"), local("Arial-BoldMT"), local("Liberation Sans Bold"), local("Arial"), local("Liberation Sans"); font-weight: 700 900; size-adjust: 81.1%; ascent-override: 108.3%; descent-override: 25.9%; line-gap-override: 0%; }
+
 :root {
   --red: #cc0000;
   --red-tint: #fff3f3;
@@ -22,7 +29,8 @@
   --radius: 14px;
   --radius-small: 10px;
   --page: 1200px;
-  --font: "Archivo Variable", "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: "Archivo Variable", "Archivo Fallback", sans-serif;
+  --font-display: "Archivo Variable", "Archivo Condensed Fallback", sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -45,7 +53,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .eyebrow { margin: 0; font-weight: 700; letter-spacing: 0.12em; font-size: 13px; color: var(--navy); text-transform: uppercase; }
 .display, h1.display, h2.display {
-  margin: 0; font-stretch: 75%; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.01em;
+  margin: 0; font-family: var(--font-display); font-stretch: 75%; font-weight: 800; line-height: 1; text-transform: uppercase; letter-spacing: 0.01em;
   font-size: clamp(34px, 3.6vw, 50px);
 }
 .lead { margin: 0; font-size: 18px; line-height: 1.55; color: var(--text); }
@@ -95,7 +103,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero > * { position: relative; z-index: 1; }
 .hero > picture, .hero > img { z-index: 0; }
 .hero-body { flex-grow: 1; display: flex; align-items: center; padding: 48px 0 96px; }
-.hero h1 { margin: 0; font-stretch: 75%; font-weight: 800; font-size: clamp(42px, 5vw, 70px); line-height: 0.98; text-transform: uppercase; letter-spacing: 0.01em; }
+.hero h1 { margin: 0; font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: clamp(42px, 5vw, 70px); line-height: 0.98; text-transform: uppercase; letter-spacing: 0.01em; }
 .hero .lead { color: #f1f1f1; font-size: 20px; max-width: 560px; }
 .hero-inner { max-width: 680px; display: flex; flex-direction: column; gap: 22px; }
 .picker { background: var(--white); color: var(--ink); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4); }
@@ -175,7 +183,7 @@ details.qa { background: var(--ground); border-radius: 12px; padding: 18px 22px;
 details.qa summary { cursor: pointer; font-weight: 800; font-size: 18px; }
 details.qa p { margin: 12px 0 0; font-size: 17px; line-height: 1.55; color: var(--text); }
 .cta { flex: 1 1 340px; min-width: 0; background: var(--red); color: var(--white); border-radius: 16px; padding: 32px; display: flex; flex-direction: column; gap: 16px; }
-.cta h2 { margin: 0; font-stretch: 75%; font-weight: 800; font-size: 36px; line-height: 1; text-transform: uppercase; }
+.cta h2 { margin: 0; font-family: var(--font-display); font-stretch: 75%; font-weight: 800; font-size: 36px; line-height: 1; text-transform: uppercase; }
 .cta p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--red-text-on); }
 
 /* Page heads for inner pages */
