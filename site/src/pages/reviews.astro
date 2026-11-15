@@ -1,0 +1,11 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHead from "../components/PageHead.astro";
+import Reviews from "../components/Reviews.astro";
+import { pages } from "../lib/data.js";
+const page = pages.pages.reviews;
+---
+<Base title={page.title} description={page.description} path={page.path}>
+  <PageHead heading={pages.reviews.heading} lead={pages.reviews.text} />
+  <Reviews heading="What customers say" limit={100} />
+</Base>

@@ -1,0 +1,89 @@
+---
+import { Image, getImage } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import Header from "../components/Header.astro";
+import HeroPicker from "../components/HeroPicker.astro";
+import ServiceCards from "../components/ServiceCards.astro";
+import HowItWorks from "../components/HowItWorks.astro";
+import ServiceArea from "../components/ServiceArea.astro";
+import Reviews from "../components/Reviews.astro";
+import FaqList from "../components/FaqList.astro";
+import Cta from "../components/Cta.astro";
+import hero from "../assets/photos/hero.webp";
+import shineExterior from "../assets/photos/shine-exterior.webp";
+import shineInterior from "../assets/photos/shine-interior.webp";
+import { business, pages } from "../lib/data.js";
+import { faqSchema, localBusiness } from "../lib/schema.js";
+const page = pages.pages.home;
+const tel = "+1" + business.phone.number.replace(/\D/g, "");
+const jsonLd = [await localBusiness()];
+// The hero photo is the largest thing on a phone's first screen: preloaded,
+// in the sizes the page uses, a little lighter than the other photos.
+const HERO_WIDTHS = [480, 640, 828, 1080, 1600, 2000];
+const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, format: "webp" });
+---
+<Base title={page.title} description={page.description} path="/" heroHeader jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImage.srcSet.attribute} imagesizes="100vw" fetchpriority="high" />
+  <section slot="hero" class="hero" aria-label="Introduction">
+    <img src={heroImage.src} srcset={heroImage.srcSet.attribute} sizes="100vw" alt="Mobile car detailing in a Cleveland, TN driveway" width="2000" height="1500" fetchpriority="high" decoding="async" />
+    <Header />
+    <div class="hero-body">
+      <div class="wrap" style="width:100%">
+        <div class="hero-inner">
+          <h1>{pages.hero.heading}</h1>
+          <p class="lead">{pages.hero.lead}</p>
+          <HeroPicker />
+          <p class="call">Rather talk? Call or text <a href={`tel:${tel}`}>{business.phone.number}</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <div class="band" aria-hidden="true"></div>
+
+  <section class="section" id="how">
+    <div class="wrap shine">
+      <div class="shine-photos">
+        <Image src={shineExterior} alt="Truck paint after a mobile detail in Bradley County, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
+        <Image src={shineInterior} alt="Mobile interior car detailing at a home in Cleveland, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
+      </div>
+      <div class="shine-text">
+        <p class="eyebrow">{pages.shine.eyebrow}</p>
+        <h2 class="display">{pages.shine.heading}</h2>
+        <p class="lead">{pages.shine.text}</p>
+        <HowItWorks />
+        <div class="buttons">
+          <a class="button" href="/book/">See my price</a>
+          <a class="button outline" href="/contact/">Contact us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tint" id="services">
+    <div class="wrap stack" style="gap:36px">
+      <div class="stack" style="gap:10px;max-width:720px">
+        <p class="eyebrow">Services and pricing</p>
+        <h2 class="display">Priced for your vehicle</h2>
+        <p class="lead">Every price depends on the vehicle's size and condition. Pick your vehicle and the exact figure shows before you book.</p>
+      </div>
+      <ServiceCards />
+    </div>
+  </section>
+
+  <section class="section" id="area">
+    <div class="wrap"><ServiceArea /></div>
+  </section>
+
+  <Reviews />
+
+  <section class="section" id="faq">
+    <div class="wrap faq">
+      <div class="faq-list">
+        <h2 class="display" style="margin-bottom:6px">Common questions</h2>
+        <FaqList items={pages.faq.slice(0, 3)} />
+        <a href="/faq/" style="font-weight:700">See all questions</a>
+      </div>
+      <Cta />
+    </div>
+  </section>
+</Base>

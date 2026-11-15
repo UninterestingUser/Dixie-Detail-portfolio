@@ -1,0 +1,14 @@
+---
+import Base from "../../layouts/Base.astro";
+import PageHead from "../../components/PageHead.astro";
+import ServiceCards from "../../components/ServiceCards.astro";
+import Cta from "../../components/Cta.astro";
+import { pages } from "../../lib/data.js";
+import { localBusiness } from "../../lib/schema.js";
+const page = pages.pages.services;
+---
+<Base title={page.title} description={page.description} path={page.path} jsonLd={[await localBusiness()]}>
+  <PageHead eyebrow="Services and pricing" heading="Mobile Detailing Services" lead="Every price depends on the vehicle's size and condition. Pick your vehicle and the exact figure shows before you book." />
+  <section class="section tint"><div class="wrap"><ServiceCards /></div></section>
+  <section class="section"><div class="wrap faq"><div class="faq-list"><h2 class="display">Not sure which one?</h2><p class="lead">Call or text and we'll help you find the right service. Or pick your vehicle on the booking page and every price for it shows there.</p></div><Cta /></div></section>
+</Base>

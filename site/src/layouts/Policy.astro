@@ -1,0 +1,8 @@
+---
+// The two policy pages, written in Markdown in src/pages.
+import Base from "./Base.astro";
+const { frontmatter } = Astro.props;
+---
+<Base title={frontmatter.title} description={frontmatter.description} path={frontmatter.path}>
+  <section class="section"><div class="wrap prose" style="max-width:820px"><slot /></div></section>
+</Base>

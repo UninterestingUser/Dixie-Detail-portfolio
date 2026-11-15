@@ -1,3 +1,10 @@
+---
+layout: ../layouts/Policy.astro
+title: Text Message Terms - Dixie Detail
+description: The terms for text messages from Dixie Detail, including how to stop them and get help.
+path: /sms-terms/
+---
+
 # Text Message Terms
 
 **Effective [keep the date on the live page at dixiedetail.com/sms-terms/]**

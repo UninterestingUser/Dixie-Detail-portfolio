@@ -128,9 +128,13 @@ class WebQuote(models.Model):
 
     @property
     def vehicle_text(self):
+        named = " ".join(str(part) for part in (self.vehicle_year, self.vehicle_make, self.vehicle_model_name) if part)
         if self.photo_card:
-            return f"{self.quote.vehicle_class.name} (picked from the photo cards)"
-        return " ".join(str(part) for part in (self.vehicle_year, self.vehicle_make, self.vehicle_model_name) if part)
+            # The year, make and model the customer typed, if any, from an
+            # offline request (time_requests).
+            card = f"{self.quote.vehicle_class.name} (picked from the photo cards)"
+            return f"{named}, {card}" if named else card
+        return named
 
 
 class QuoteRequest(models.Model):
@@ -151,8 +155,16 @@ class QuoteRequest(models.Model):
     CLOSED = (Status.DECLINED, Status.DONE, Status.CANCELED)
 
     reference = models.CharField(max_length=12, unique=True)
+    # Set for a request the website held while the server was offline and
+    # Cloudflare replayed (decision 0100): made by the website, so a second
+    # replay changes nothing. Such a request has no photos.
+    request_id = models.UUIDField(unique=True, null=True, blank=True)
     customer = models.ForeignKey("customers.Customer", on_delete=models.PROTECT, related_name="quote_requests")
-    service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, related_name="+")
+    # Empty for an offline request whose address could not be checked; the
+    # address as typed is then in address_text, and problem says why.
+    service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    address_text = models.CharField(max_length=200, blank=True)
+    problem = models.CharField(max_length=300, blank=True)
     # The vehicle record quiet matching gave the request: the customer's own,
     # or a new one held off the record until the request is booked.
     vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.PROTECT, null=True, blank=True, related_name="+")

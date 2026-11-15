@@ -111,6 +111,50 @@ def pricebook():
     }
 
 
+def price_table():
+    """Every job the website can book online, priced by the pricing engine:
+    each offered class booked online and its sizes, each bookable service,
+    each condition level with a price for a service that takes one, and no
+    add-on, each add-on alone or both. The website bakes it in at build time
+    for the "request a time" form, which shows these totals while the server
+    is offline; the browser only looks a total up, never works one out
+    (decision 0059). Combinations the pricebook doesn't price are left out."""
+    from itertools import combinations
+
+    from pricebook.pricing import PricingError, price_job
+
+    version = published_version()
+    services = list(bookable_services().order_by("name"))
+    mains = [service for service in services if service.kind == Service.Kind.MAIN]
+    add_ons = [service for service in services if service.kind == Service.Kind.ADD_ON]
+    add_on_sets = [()] + [(item,) for item in add_ons] + list(combinations(add_ons, 2))
+    levels = [level.level for level in ConditionLevel.objects.filter(version=version, booked_by_quote=False).order_by("level")]
+    takes_level = version.condition_service_ids()
+    jobs = []
+    for vehicle_class in VehicleClass.objects.offered().filter(booking=VehicleClass.Booking.ONLINE).prefetch_related("size_variants"):
+        sizes = [size for size in vehicle_class.size_variants.all() if size.active] or [None]
+        for size in sizes:
+            for service in mains:
+                for level in (levels if service.pk in takes_level else [None]):
+                    for chosen in add_on_sets:
+                        try:
+                            job = price_job(service, vehicle_class, size_variant=size, condition_level=level,
+                                            add_ons=chosen, version=version)
+                        except PricingError:
+                            continue
+                        jobs.append({
+                            "class_id": vehicle_class.pk,
+                            "size": size.value if size else None,
+                            "service": service.pk,
+                            "condition": level,
+                            "add_ons": sorted(item.pk for item in chosen),
+                            "total_before_tax": money(job.total_before_tax),
+                            "time_on_site_minutes": job.time_on_site.total_minutes,
+                            "full_day": job.full_day,
+                        })
+    return {"pricebook_version": version.number, "effective_date": version.effective_date.isoformat(), "jobs": jobs}
+
+
 def booking_options():
     """The fixed parts of the booking form: payment methods, the consent
     wording, how long a quote lasts and the photo limits."""

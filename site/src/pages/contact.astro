@@ -1,0 +1,21 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHead from "../components/PageHead.astro";
+import Cta from "../components/Cta.astro";
+import { business, pages } from "../lib/data.js";
+const page = pages.pages.contact;
+const tel = "+1" + business.phone.number.replace(/\D/g, "");
+---
+<Base title={page.title} description={page.description} path={page.path}>
+  <PageHead heading={pages.contact.heading} lead={pages.contact.text} />
+  <section class="section">
+    <div class="wrap faq">
+      <div class="faq-list">
+        <div class="stack" style="gap:6px"><h2 style="margin:0">Phone</h2><p class="lead"><a href={`tel:${tel}`} style="font-weight:800">{business.phone.number}</a>, call or text</p></div>
+        <div class="stack" style="gap:6px"><h2 style="margin:0">Mailing</h2><p class="lead">{business.legal_name}<br />{business.mailing_address}</p></div>
+        <div class="stack" style="gap:6px"><h2 style="margin:0">Service area</h2><p class="lead">Bradley, McMinn, Polk, Meigs and Hamilton Counties, Tennessee.</p></div>
+      </div>
+      <Cta />
+    </div>
+  </section>
+</Base>

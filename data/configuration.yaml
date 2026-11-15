@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-08
+  updated: 2026-11-14
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -74,9 +74,10 @@ settings:
     note: Empty until the calendars are connected
     phase: 3
   - name: PUBLIC_API_CORS_ORIGINS
-    example: https://dixiedetail.com,https://www.dixiedetail.com
+    example: https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev
     purpose: The website's addresses, the only browser origins allowed to call the public API (CORS); empty refuses every browser
     format: Origins with https:// and no trailing slash, separated by commas
+    note: Until the Phase 5 launch it also lists the staging site's address, the Cloudflare Pages project's own pages.dev address (docs/guides/previewing-and-deploying-the-website.md)
     used_by: app container (compose.yaml); app/dixie/settings_base.py
     phase: 3
   - name: QUOTE_LIFETIME_MINUTES
@@ -114,9 +115,29 @@ settings:
     lives_in: not .env; the default in app/dixie/settings_base.py, or api_smoke_test --url
     phase: 3
   - name: GOOGLE_MAPS_BROWSER_KEY
-    purpose: Public by design; used by the website's address field, restricted to dixiedetail.com and the Maps services it needs
-    lives_in: the website's build settings, not .env
+    purpose: Public by design; used by the website's address field, restricted to the website's addresses (dixiedetail.com and the staging address) and to the Places API (New)
+    lives_in: the Cloudflare Pages project's build settings as PUBLIC_GOOGLE_MAPS_BROWSER_KEY, not .env
     phase: 3
+
+# The website's build settings, set on the Cloudflare Pages project
+# (docs/guides/previewing-and-deploying-the-website.md). None is secret:
+# each ends up in the public site, except API_BASE, which only the build reads.
+website_build_settings:
+  - name: API_BASE
+    example: https://api.dixiedetail.com/api/public/v1
+    purpose: The public API the build reads the pricebook, price table, photo cards and years from; the build fails rather than publish without prices
+  - name: PUBLIC_API_BASE
+    example: https://api.dixiedetail.com/api/public/v1
+    purpose: The public API the booking form calls from the browser; defaults to API_BASE
+  - name: PUBLIC_TURNSTILE_SITE_KEY
+    purpose: The Turnstile widget's site key, public; its secret key is the Bitwarden secret TURNSTILE_SECRET_KEY
+  - name: PUBLIC_GOOGLE_MAPS_BROWSER_KEY
+    purpose: The browser key for address suggestions (GOOGLE_MAPS_BROWSER_KEY above)
+  - name: NODE_VERSION
+    example: "22"
+    purpose: The Node.js version Cloudflare builds with; matches site/.nvmrc
+  - name: PUBLIC_OFFLINE_BASE, PUBLIC_TURNSTILE_SCRIPT, PUBLIC_PLACES_ENDPOINT
+    purpose: Left unset on Cloudflare; the test build points them at local fakes (site/tests/build-for-tests.mjs)
   - name: QUO_PHONE_NUMBER
     phase: 4
   - name: BTCPAY_URL
@@ -190,15 +211,17 @@ secrets:
   - name: TURNSTILE_SECRET_KEY
     purpose: The Cloudflare Turnstile widget's secret key; the server checks every booking, quote request and upload session's token with it (docs/reference/public-api.md)
     used_by: ops/stack-start.sh (app container, as the file named by TURNSTILE_SECRET_KEY_FILE, in memory)
-    note: Optional for the stack to start; until it exists every booking and quote request is refused. The widget's site key is public and lives in the website's build settings
+    note: Optional for the stack to start; until it exists every booking and quote request is refused. The widget's site key is public and lives in the website's build settings. The same secret is also a secret of the Cloudflare Pages project, which checks the token on offline forms
     phase: 3
   - name: OFFLINE_REQUESTS_SIGNING_KEY
     purpose: A long random value shared with Cloudflare's offline piece, which signs each replayed "request a time" form with it (decision 0100)
-    used_by: ops/stack-start.sh (app container, as the file named by OFFLINE_REQUESTS_SIGNING_KEY_FILE, in memory); Cloudflare's offline piece (Phase 3, Step 6)
+    used_by: ops/stack-start.sh (app container, as the file named by OFFLINE_REQUESTS_SIGNING_KEY_FILE, in memory); Cloudflare's offline piece, as a secret of the Pages project and of the dixie-offline-replay Worker, put there from Bitwarden without touching disk
     note: Optional; until it exists offline requests are refused
     phase: 3
   - name: CLOUDFLARE_PAGES_DEPLOY_HOOK
-    purpose: Triggers a website rebuild when the pricebook is published
+    purpose: The Cloudflare Pages deploy hook URL; the app asks for a website rebuild when a pricebook version is published, and nightly when one takes effect (rebuild_website --if-due)
+    used_by: ops/stack-start.sh (app container, as the file named by CLOUDFLARE_PAGES_DEPLOY_HOOK_FILE, in memory)
+    note: Optional; until it exists no rebuild is asked for
     phase: 3
   - name: QUO_API_KEY
     phase: 4

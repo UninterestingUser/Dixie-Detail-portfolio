@@ -31,6 +31,7 @@ Every Markdown file under docs/ has a YAML header with title, summary, audience,
 - [Assigning staff](docs/guides/assigning-staff.md)
 - [Editing and publishing the pricebook](docs/guides/editing-the-pricebook.md)
 - [Handling website bookings](docs/guides/handling-website-bookings.md)
+- [Previewing and deploying the website](docs/guides/previewing-and-deploying-the-website.md)
 - [Control app](docs/reference/control-app.md)
 
 ## Decisions

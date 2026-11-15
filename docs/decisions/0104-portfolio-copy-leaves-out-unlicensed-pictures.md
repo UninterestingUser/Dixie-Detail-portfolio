@@ -35,3 +35,5 @@ The website's eight vehicle class pictures (`website/public/images/vehicle-class
 ## Consequences
 
 The public copy's `data/site-content.yaml` names picture files that are not in it. Adding a path to the list after it has been published rewrites older commits, so that publish needs `--force`, as a change to the replacement rules does. Leaving out a path that was never published changes no published commit. This record adds to decision 0063; the rest of it stands.
+
+*Note, 2026-11-14:* in Phase 3, Step 6 the site moved from `website/` to `site/`. The list now holds both paths, because commits from before the move hold the pictures under `website/`.

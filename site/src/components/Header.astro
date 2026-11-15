@@ -1,0 +1,30 @@
+---
+import { Image } from "astro:assets";
+import logo from "../assets/brand/logo-white.webp";
+import Icon from "./Icon.astro";
+// Over the hero photo on the homepage; a solid charcoal bar elsewhere.
+const { solid = false } = Astro.props;
+const links = [
+  ["/services/", "Services"],
+  ["/reviews/", "Reviews"],
+  ["/about/", "About"],
+  ["/contact/", "Contact"],
+];
+---
+<header class:list={["site-header", { solid }]}>
+  <div class="wrap bar">
+    <a class="logo" href="/"><Image src={logo} alt="Dixie Detail" widths={[240, 360, 480, 720]} sizes="(max-width: 640px) 52vw, 360px" loading="eager" /></a>
+    <nav class="nav" aria-label="Main">
+      {links.map(([href, text]) => <a href={href}>{text}</a>)}
+      <a class="button" href="/book/">Book now</a>
+    </nav>
+    <details class="menu">
+      <summary aria-label="Menu"><Icon name="menu" size={24} /></summary>
+      <nav aria-label="Main">
+        {links.map(([href, text]) => <a href={href}>{text}</a>)}
+        <a href="/faq/">Questions</a>
+        <a href="/book/">Book now</a>
+      </nav>
+    </details>
+  </div>
+</header>

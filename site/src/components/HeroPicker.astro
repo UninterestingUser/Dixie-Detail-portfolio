@@ -1,0 +1,67 @@
+---
+// "Get your exact price": year, make and model, handed to the booking flow
+// (/book/?year=...&make=...&model=...). The years are baked in at build
+// time; makes and models load from the public API as they are picked. With
+// no script or no API, the button still opens the booking page.
+import Icon from "./Icon.astro";
+import { api } from "../lib/data.js";
+const { years } = await api("vehicles/years");
+const apiBase = import.meta.env.PUBLIC_API_BASE || process.env.API_BASE || "https://api.dixiedetail.com/api/public/v1";
+---
+<form class="picker" action="/book/" method="get" data-hero-picker data-api={apiBase}>
+  <p class="picker-title">Get your exact price</p>
+  <div class="picker-row">
+    <div class="field">
+      <label for="hero-year">Year</label>
+      <select id="hero-year" name="year">
+        <option value="">Select year</option>
+        {years.map((year) => <option value={year}>{year}</option>)}
+      </select>
+    </div>
+    <div class="field">
+      <label for="hero-make">Make</label>
+      <select id="hero-make" name="make" disabled><option value="">Pick a year first</option></select>
+    </div>
+    <div class="field">
+      <label for="hero-model">Model</label>
+      <select id="hero-model" name="model" disabled><option value="">Pick a make first</option></select>
+    </div>
+    <button class="button" type="submit">See my price<Icon name="arrow" size={18} /></button>
+  </div>
+</form>
+<script>
+  // Fill the make and model lists from the API. Kept tiny: the homepage's
+  // only script (website-and-seo.md: almost no JavaScript).
+  const form = document.querySelector("[data-hero-picker]");
+  if (form) {
+    const base = form.dataset.api;
+    const [year, make, model] = ["hero-year", "hero-make", "hero-model"].map((id) => document.getElementById(id));
+    let types = {};
+    const fill = (select, items, first) => {
+      select.replaceChildren(new Option(first, ""), ...items.map((item) => new Option(item, item)));
+      select.disabled = items.length === 0;
+    };
+    const get = (path) => fetch(base + path, { headers: { Accept: "application/json" } }).then((r) => (r.ok ? r.json() : Promise.reject(r)));
+    year.addEventListener("change", () => {
+      fill(make, [], "Loading…"); fill(model, [], "Pick a make first");
+      if (!year.value) return fill(make, [], "Pick a year first");
+      get(`/vehicles/makes?year=${encodeURIComponent(year.value)}`).then((d) => fill(make, d.makes, "Select make")).catch(() => fill(make, [], "Pick on the next page"));
+    });
+    make.addEventListener("change", () => {
+      if (!make.value) return fill(model, [], "Pick a make first");
+      get(`/vehicles/models?year=${encodeURIComponent(year.value)}&make=${encodeURIComponent(make.value)}`).then((d) => {
+        types = Object.fromEntries(d.models.map((m) => [m.name, m.type]));
+        fill(model, d.models.map((m) => m.name), "Select model");
+      }).catch(() => fill(model, [], "Pick on the next page"));
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const params = new URLSearchParams();
+      if (year.value && make.value && model.value) {
+        params.set("year", year.value); params.set("make", make.value); params.set("model", model.value);
+        if (types[model.value]) params.set("type", types[model.value]);
+      }
+      location.href = "/book/" + (params.toString() ? "?" + params : "");
+    });
+  }
+</script>

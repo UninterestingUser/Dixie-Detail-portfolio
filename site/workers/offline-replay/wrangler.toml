@@ -1,0 +1,23 @@
+# The scheduled Worker that replays held offline requests
+# (docs/guides/previewing-and-deploying-the-website.md). Deploy from site/:
+#   npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml
+# The signing key is a Worker secret. Wrangler asks for it; paste it from the
+# Bitwarden web vault, so it never touches disk:
+#   npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml
+name = "dixie-offline-replay"
+main = "index.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+# Every 5 minutes: at most 288 KV list calls a day, inside the free plan's 1,000.
+crons = ["*/5 * * * *"]
+
+[vars]
+API_BASE = "https://api.dixiedetail.com/api/public/v1"
+
+# The same KV namespace the Pages project binds as OFFLINE_REQUESTS. Its id
+# is printed by `npx wrangler@4.48.0 kv namespace create OFFLINE_REQUESTS`;
+# it names the namespace, it is not a secret.
+[[kv_namespaces]]
+binding = "OFFLINE_REQUESTS"
+id = "SET_TO_THE_OFFLINE_REQUESTS_NAMESPACE_ID"

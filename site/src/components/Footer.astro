@@ -1,0 +1,44 @@
+---
+import { Image } from "astro:assets";
+import logo from "../assets/brand/logo-white.webp";
+import Icon from "./Icon.astro";
+import { business } from "../lib/data.js";
+const social = business.social_profiles;
+const tel = "+1" + business.phone.number.replace(/\D/g, "");
+const year = new Date().getFullYear();
+---
+<footer class="site-footer" id="contact-footer">
+  <div class="wrap">
+    <div class="cols">
+      <div class="col wide">
+        <Image src={logo} alt="Dixie Detail" widths={[240, 480]} sizes="240px" />
+        <p class="muted">Mobile detailing in Bradley, McMinn, Hamilton, Polk and Meigs Counties, Tennessee.</p>
+      </div>
+      <nav class="col" aria-label="Footer">
+        <a href="/services/">Services</a>
+        <a href="/reviews/">Reviews</a>
+        <a href="/about/">About</a>
+        <a href="/faq/">Questions</a>
+        <a href="/contact/">Contact</a>
+      </nav>
+      <nav class="col" aria-label="Legal">
+        <a href="/privacy-policy/">Privacy Policy</a>
+        <a href="/sms-terms/">Text Message Terms</a>
+      </nav>
+      <div class="col">
+        <a class="phone" href={`tel:${tel}`}>{business.phone.number}</a>
+        <span class="muted">{business.mailing_address}</span>
+        <div class="socials">
+          <a href={social.facebook} aria-label="Dixie Detail on Facebook"><Icon name="facebook" /></a>
+          <a href={social.x} aria-label="Dixie Detail on X"><Icon name="x" /></a>
+          <a href={social.instagram} aria-label="Dixie Detail on Instagram"><Icon name="instagram" /></a>
+          {social.google_business_profile && <a href={social.google_business_profile} aria-label="Dixie Detail reviews on Google"><Icon name="google" /></a>}
+        </div>
+      </div>
+    </div>
+    <div class="base">
+      <span>© {year} {business.legal_name}</span>
+      <span>Jesus Christ is King ✝</span>
+    </div>
+  </div>
+</footer>

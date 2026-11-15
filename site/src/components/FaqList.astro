@@ -1,0 +1,11 @@
+---
+import { fillPrices } from "../lib/data.js";
+const { items, openFirst = true } = Astro.props;
+const filled = await Promise.all(items.map(async (item) => ({ question: item.question, answer: await fillPrices(item.answer) })));
+---
+{filled.map((item, index) => (
+  <details class="qa" open={openFirst && index === 0}>
+    <summary>{item.question}</summary>
+    <p>{item.answer}</p>
+  </details>
+))}

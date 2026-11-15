@@ -200,12 +200,18 @@ def publish(version, effective_date, choices, user=None, log_choices=True):
     default. A job the draft can no longer price can only be kept or given a
     custom amount. Every choice is logged with the old and new amounts;
     with log_choices off, as apply_size_classes publishes, none is, and the
-    owner decides each job later on the booked-job review.
+    owner decides each job later on the booked-job review. Once it commits,
+    the website is asked to rebuild (site_rebuild).
     """
+    from .site_rebuild import request_rebuild
+
     affected = affected_jobs(version, effective_date)
     for job in affected:
         check_choice(job, *choices.get(job.appointment.pk, ("keep", None)))
     version.publish(effective_date)
+    # The website shows the published prices from its next build. A version
+    # effective later is picked up by the nightly `rebuild_website --if-due`.
+    transaction.on_commit(lambda: request_rebuild(f"pricebook version {version.number} published"))
     if log_choices:
         for job in affected:
             decide(version, job, *choices.get(job.appointment.pk, ("keep", None)), user=user)

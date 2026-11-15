@@ -1,0 +1,350 @@
+meta:
+  title: Website pages
+  summary: Each website page's address, title and search description, and the page text carried over from the current dixiedetail.com - how it works, the counties, the questions, the about page and the three city pages - with prices read from the price book.
+  updated: 2026-11-14
+  status: current
+  explained_in: docs/reference/website-and-seo.md
+  read_by: the Astro site in site/, at build time
+  source: >-
+    Carried over word for word from the WordPress site at dixiedetail.com on
+    2026-11-14, so moved content keeps ranking (website-and-seo.md). The only
+    changes: every price the old pages wrote out is now a token the build
+    fills from the published price book, such as {from:Full Detail} (that
+    service's lowest price) or {price:Headlight Restoration} (its one price),
+    because the old figures were out of date; and the questions that named
+    prices or vans say what the price book and decision 0103 now say, marked
+    "updated:" below.
+
+# Every address the current site has keeps working with its title and
+# description (website-and-seo.md, search ranking safeguards).
+pages:
+  home:
+    path: /
+    title: Mobile Car Detailing in Cleveland TN - Dixie Detail
+    description: Mobile car detailing in Cleveland, Athens, and Chattanooga Tennessee. We come to you in Bradley, McMinn, Polk, Meigs, and Hamilton Counties.
+  services:
+    path: /services/
+    title: Car Detailing Services & Prices - Dixie Detail
+    description: Professional car detailing, paint correction, headlight restoration & more. Mobile detail pricing for Cleveland, Athens, and Chattanooga.
+  reviews:
+    path: /reviews/
+    title: Customer Reviews - Dixie Detail - Mobile Detailing
+    description: See what real customers across Cleveland, Athens, and Chattanooga say about Dixie Detail's mobile detailing services.
+  about:
+    path: /about/
+    title: About Dixie Detail - Mobile Detailer in Southeast TN
+    description: Meet Kris, owner-operator of Dixie Detail. Mobile car detailing serving Bradley, McMinn, Polk, Hamilton, and Meigs Counties.
+  contact:
+    path: /contact/
+    title: Contact - Dixie Detail - Mobile Detailing
+    description: Book mobile car detailing in Bradley, McMinn, Polk, Hamilton, or Meigs County TN. Call 423-380-9120 or book online.
+  faq:
+    path: /faq/
+    title: Mobile Detailing Questions - Dixie Detail
+    description: Answers about mobile car detailing in Cleveland, Athens, and Chattanooga - prices, what you provide, how long it takes, and the service area.
+    new: true
+  book:
+    path: /book/
+    title: Get Your Price and Book - Dixie Detail
+    description: Pick your vehicle and service, see your exact price, and book mobile car detailing in Southeast Tennessee.
+    new: true
+  privacy-policy:
+    path: /privacy-policy/
+    title: Privacy Policy - Dixie Detail
+    description: How Dixie Detail collects, uses, and protects your information.
+  sms-terms:
+    path: /sms-terms/
+    title: Text Message Terms - Dixie Detail
+    description: The terms for text messages from Dixie Detail, including how to stop them and get help.
+
+# Service pages (pages in site-content.yaml) take their title from there:
+# "<page title> in Cleveland TN - Dixie Detail", at /services/<slug>/.
+service_page_title: "{title} in Cleveland TN - Dixie Detail"
+
+hero:
+  heading: Mobile Car Detailing in Cleveland Tennessee
+  lead: Polishing Cleveland, Athens, and Chattanooga Tennessee. We come to you.
+
+shine:
+  eyebrow: How it works
+  heading: Make your vehicle shine like new again
+  text: >-
+    You don't need a new car payment to glide down the road with that
+    new-car feeling. Dixie Detail brings professional mobile car detailing to
+    your driveway in Cleveland, Athens and Chattanooga.
+  process: >-
+    Our process includes a multi-step paint wash, wheels, wheel wells,
+    undercarriage, engine bay, trunk, door jambs, and every crevice of the
+    interior. This isn't a quick vacuum and wipe down - it's an hours-long
+    meticulous process that delivers professional results.
+
+how_it_works:
+  - heading: Book the vehicle
+    text: >-
+      Select your vehicle type and service through our website or call
+      (423) 380-9120. You'll get a time at your home, work, or wherever is
+      convenient for you.
+  - heading: We come to you
+    text: >-
+      Dixie Detail arrives with all of the necessary equipment and a tent to
+      protect your vehicle during the service. You only supply a water and
+      power connection and we handle the rest.
+  - heading: Premium Detail
+    text: >-
+      A real detail takes the better part of a day. This is more than a
+      quick wash and wipe down. We meticulously go over every surface of the
+      vehicle to deliver a showroom finish.
+
+service_area:
+  heading: Serving Cleveland, Athens, Chattanooga, and nearby counties
+  text: >-
+    Dixie Detail is based in Calhoun, between Cleveland and Athens, and we
+    come to you across Southeast Tennessee. If you can park it, and you're in
+    the counties below, you're in range.
+  counties:
+    - name: Bradley County
+      text: >-
+        Cleveland, Charleston, Georgetown, McDonald, and the rest of Bradley
+        County. This is home turf - I-75 commuters, Lee University area, and
+        neighborhood driveways.
+    - name: McMinn County
+      text: >-
+        Athens, Calhoun, Etowah, Englewood, Niota, and Riceville. If you're in
+        Athens proper or the smaller towns in between, we already run that
+        route.
+    - name: Hamilton County
+      text: >-
+        Chattanooga, Hixson, Soddy-Daisy, Ooltewah, Collegedale, and Red Bank.
+        Mobile detailing at the house or the office, without a trip to a
+        shop.
+    - name: Polk County
+      text: >-
+        Benton, Ocoee, Copperhill, and Ducktown. Good fit for trucks and daily
+        drivers that see gravel, pollen, and lake-road dust.
+    - name: Meigs County
+      text: Decatur, Ten Mile, and surrounding Meigs County. Same full detail, same driveway service.
+
+faq:
+  - question: Do you come to Cleveland, Athens, and Chattanooga?
+    answer: >-
+      Yes. Dixie Detail is mobile. We regularly book driveways across
+      Bradley, McMinn, Hamilton, Polk, and Meigs Counties.
+  - question: How much is a mobile car detail?
+    # updated: the old answer's price ranges were out of date.
+    answer: >-
+      A Full Detail starts at {from:Full Detail}, depending on the vehicle's
+      size. Paint correction starts at {from:1-Step Paint Correction}.
+      Headlight restoration is {price:Headlight Restoration} for both lights.
+      Carpet and seat extraction are add-ons from {from:Carpet Extraction}.
+      Pick your vehicle on the booking page and the exact price shows before
+      you book.
+  - question: What do I need to provide on the day of the appointment?
+    answer: >-
+      All we need is a space to perform the service and water and power
+      connections nearby. We bring all of the necessary equipment including
+      cords, hoses, and a tent to cover the vehicle.
+  - question: How long does the service take?
+    answer: >-
+      Plan on most of a day for a full detail. Larger trucks and SUVs, heavy
+      interiors, and paint correction run longer. We typically handle one
+      vehicle per day. It's a lengthy service, but the results speak for
+      themselves.
+  - question: Do you detail trucks, SUVs, and vans?
+    # updated: full-size vans are quoted by hand (decision 0099).
+    answer: >-
+      Yes. Coupes, sedans, crossovers, light pickups, midsize and full-size
+      SUVs, minivans, full-size trucks, and motorcycles. Pricing is by
+      vehicle class when you book. Full-size vans are quoted by hand: send a
+      quote request from the booking page and we'll reply with a price.
+  - question: What's the difference between a detail and paint correction?
+    answer: >-
+      A detail addresses dirt and contamination inside and outside the
+      vehicle. A paint correction is a specialty service to restore the gloss
+      of the paint after it's been cleaned. All paint correction appointments
+      include an exterior decontamination wash, so there's no need to book
+      that separately. If you want a full detail plus paint correction, then
+      book the paint correction plus an interior detail and that will cover
+      everything.
+  - question: Can you do more than one car per day?
+    answer: >-
+      Due to the attention we give every job, we typically only book one
+      vehicle per day. That said, we sometimes accommodate two vehicles per
+      day by adjusting the timeframe and bringing an extra set of hands to the
+      appointment. We never sacrifice the quality of the service, so
+      multiple-vehicle requests are handled on a case-by-case basis. Feel free
+      to call if you have any questions. (423) 380-9120
+
+about:
+  heading: About Dixie Detail
+  subheading: An eye for perfection and a passion for quality
+  photo_alt: Kris Grassman - Professional Car Detailer - Cleveland TN
+  paragraphs:
+    - >-
+      My name is Kris and I'm the owner-operator of Dixie Detail. We're based
+      in Calhoun TN between Cleveland and Athens, and serve the southeast
+      Tennessee region. Although I've been detailing cars unofficially since
+      2020, it wasn't until May of 2025 that I decided to make it official
+      and offer my experience and skill to the public.
+    - >-
+      It seems odd to have an enthusiasm for cleaning cars. But after years
+      of doing it for friends and family in my spare time, I came to realize
+      that I enjoy the process of restoring the showroom shine to a
+      well-loved family vehicle. I revel in the technique and skill involved
+      and love seeing the finished product and the end of every day.
+    - >-
+      When you trust Dixie Detail with your car, you're getting a
+      first-class total clean with impeccable attention to every detail. This
+      isn't just a quick wash and wipe down. The whole process takes the
+      better part of a day as I go over the entire car with
+      purpose-formulated cleaners and tools to effectively, but safely, renew
+      each surface to make sure your car feels new again.
+    - Give Dixie Detail a shot and fall in love with your car again.
+
+contact:
+  heading: Contact Us
+  text: Have a question or comment? Call or text us, or book online and see your price right away.
+
+reviews:
+  heading: Client Reviews
+  text: See real feedback from customers who trusted Dixie Detail with their vehicle.
+
+cities:
+  - slug: cleveland-tn-mobile-detailing
+    city: Cleveland
+    county: Bradley County
+    photo: cleveland
+    photo_alt: Mobile car detailing in Cleveland, Tennessee.
+    title: Mobile Detailing in Cleveland TN - Dixie Detail
+    description: Mobile car detailing at your Cleveland, TN driveway. Dixie Detail serves Bradley County - Lee University, Paul Huff, Charleston, Georgetown.
+    heading: Mobile Detailing in Cleveland & Bradley County
+    intro: >-
+      Dixie Detail comes to your driveway in Cleveland, Tennessee. No
+      drop-off, no shop wait. We bring the tent, cords, and equipment; you
+      just provide a suitable space (usually a driveway) with water and power
+      connections nearby. We handle the rest.
+    where_heading: Where we work in Bradley County
+    where: >-
+      Downtown Cleveland, north Cleveland and the Paul Huff / Bradley Square
+      area, the Lee University and Ocoee Street neighborhoods, south
+      Cleveland, Charleston, Georgetown, McDonald, Waterlevel, and the rest of
+      Bradley County. If your driveway has a Bradley County address, Dixie
+      Detail has you covered.
+    services:
+      detailing: Full interior and exterior in the driveway. Daily drivers, campus cars, and work trucks.
+      paint-correction: Swirls and light scratches from automatic washes and I-75 miles. Ceramic wax when we finish.
+      headlight-restoration: Both headlights. UV-damaged lenses on older Cleveland daily drivers.
+      shampoo-and-extraction: For carpets and cloth seats that a regular detail won't pull out of. Added on top of the full detail when the interior needs a deeper reset.
+    faq:
+      - question: Do I need to drive to a shop?
+        answer: >-
+          No, Dixie Detail is entirely mobile. There is no Cleveland
+          storefront. We're based just north of town and come to your
+          driveway to perform our premium service.
+      - question: What area do you serve in Cleveland?
+        answer: >-
+          We'll come anywhere in Cleveland that has the room (and permission)
+          for us to set up. Lee campus-area houses, Paul Huff, Keith Street,
+          Stuart Road, Waterlevel Hwy neighborhoods, and the houses in the
+          Mouse Creek area are regular Cleveland stops.
+      - question: What do you need on site?
+        answer: >-
+          A legal place to park for the day, plus water and power nearby. We
+          bring cords, hoses, equipment, and a tent to protect your vehicle
+          from the sun or rain while we work.
+      - question: Do you provide detailing in Bradley County?
+        answer: >-
+          Yes, we serve the entire Bradley County area. We have a van with all
+          of the necessary equipment to show up to your driveway and leave you
+          with a car or truck that's showroom ready.
+  - slug: athens-tn-mobile-detailing
+    city: Athens
+    county: McMinn County
+    photo: athens
+    photo_alt: Mobile car detailing in McMinn County, Tennessee.
+    title: Mobile Car Detailing in Athens TN - Dixie Detail
+    description: Mobile car detailing in Athens TN and McMinn County. Based in Calhoun, Dixie Detail serves Athens, Etowah, Englewood, and Niota.
+    heading: Mobile Detailing in Athens & McMinn County
+    intro: >-
+      Athens is a short run from our base in Calhoun. Dixie Detail provides
+      mobile car detailing for McMinn County driveways. Congress Parkway
+      commuters, Tennessee Wesleyan area, and family vehicles that pick up red
+      clay and oak pollen. We come to you. No need to drive to Cleveland or
+      Chattanooga for a shop appointment.
+    where_heading: Where we work in McMinn County
+    where: >-
+      Athens proper, Calhoun, Etowah, Englewood, Niota, Riceville, and the
+      rest of McMinn County. Farm trucks, daily commuters, and show cars
+      needing a cleanup for the Saturday Cruise-In at Midway Milkshake - Dixie
+      Detail is the call to make.
+    services:
+      detailing: Showroom-level interior and exterior at the house. Built for daily drivers and well-loved family SUVs - including the 20-year-old Pilot crowd.
+      paint-correction: Dull, swirled clear coat from years of McMinn sun and automatic washes. 1-step or 2-step, then ceramic wax.
+      headlight-restoration: Both lights, multi-stage, with UV protection. Common on older Athens daily drivers.
+      shampoo-and-extraction: For cloth seats and carpets that have taken on clay, spills, and years of kids.
+    faq:
+      - question: Do I need to drive to a shop?
+        answer: >-
+          No, Dixie Detail is entirely mobile. There is no Athens storefront.
+          We're based just down the road in Calhoun and come to your driveway
+          to perform our premium service.
+      - question: What area do you serve in Athens?
+        answer: >-
+          We'll come anywhere in Athens that has the room (and permission) for
+          us to set up. Tennessee Wesleyan community, Congress Parkway, Lee
+          Hwy, and the county roads around the city are all covered.
+      - question: What do you need on site?
+        answer: >-
+          A legal place to park for the day, plus water and power nearby. We
+          bring cords, hoses, equipment, and a tent to protect your vehicle
+          from the sun or rain while we work.
+      - question: Do you provide detailing in McMinn County?
+        answer: >-
+          Yes, we serve the entire McMinn County area. We have a van with all
+          of the necessary equipment to show up to your driveway and leave you
+          with a car or truck that's showroom ready.
+  - slug: chattanooga-tn-mobile-detailing
+    city: Chattanooga
+    county: Hamilton County
+    photo: chattanooga
+    photo_alt: Mobile car detailing in Chattanooga, TN.
+    title: Mobile Car Detailing in Chattanooga TN - Dixie Detail
+    description: Mobile car detailing for Chattanooga and Hamilton County. Dixie Detail comes to Ooltewah, Collegedale, Hixson, Soddy-Daisy, and Red Bank. Call 423-380-9120.
+    heading: Mobile Detailing in Chattanooga & Hamilton County
+    intro: >-
+      Dixie Detail is a mobile detailer based north of the city toward
+      Cleveland. We come into Hamilton County - Ooltewah, Collegedale, Hixson,
+      Soddy-Daisy, Red Bank, and Harrison - and work in your driveway. You get
+      a full-day detail without crossing town to a shop or leaving a car
+      overnight.
+    where_heading: Where we work in Hamilton County
+    where: >-
+      Ooltewah, Collegedale, Apison, Harrison, Hixson, Soddy-Daisy, Red Bank,
+      and Chattanooga proper when the schedule and access work. East Hamilton
+      is the natural run from our Calhoun base. If you are on Lookout,
+      Signal, or downtown with tight parking, call first - we need a legal
+      spot, water, and power for the day.
+    services:
+      detailing: Full interior and exterior, mobile. Commuter sedans, family SUVs, and trucks.
+      paint-correction: Swirl removal and gloss restoration, finished with ceramic wax. The right job if Hamilton Place lot washers have hazed the clear coat.
+      headlight-restoration: Both headlights, UV-protected. Not a wipe-on kit.
+      shampoo-and-extraction: Deep pull on carpets and cloth seats. Add it when you book the detail.
+    faq:
+      - question: Do I need to drive to a shop?
+        answer: >-
+          No, Dixie Detail is entirely mobile. There is no Chattanooga or
+          Cleveland storefront. We're based just up I-75 and come to your
+          driveway to perform our premium service.
+      - question: Is this more expensive than Cleveland?
+        # updated: the old answer gave a price range that was out of date.
+        answer: >-
+          No. A Full Detail starts at {from:Full Detail} by vehicle type, same
+          as the rest of the service area.
+      - question: What do you need on site?
+        answer: >-
+          A legal place to park for the day, plus water and power nearby. We
+          bring cords, hoses, equipment, and a tent to protect your vehicle
+          from the sun or rain while we work.
+      - question: Do you only work one car per day?
+        answer: >-
+          Typically yes. Sometimes we'll handle two cars in the same day, but
+          it's on a case-by-case basis. We never sacrifice quality for speed.

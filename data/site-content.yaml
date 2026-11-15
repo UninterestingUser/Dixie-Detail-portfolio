@@ -4,7 +4,7 @@ meta:
   updated: 2026-11-14
   status: current
   explained_in: docs/reference/website-and-seo.md
-  read_by: the Astro site in website/, at build time
+  read_by: the Astro site in site/, at build time
 
 # Website text for Phase 3, Step 6, in the owner's words (sent 2026-11-14).
 # Service names match the price book exactly. Prices and times never appear
@@ -198,7 +198,7 @@ condition_levels:
 # vehicles in a front three-quarter view, 640x480 WebP with transparent
 # backgrounds. The owner was told these are third-party renders he holds no
 # license for; swap a file here if he replaces one.
-# The files are in website/public/images/vehicle-classes/, served at
+# The files are in site/public/images/vehicle-classes/, served at
 # /images/vehicle-classes/<file>, the path a class's photo card picture uses.
 class_images:
   Small: vehicle-class-small.webp
@@ -213,7 +213,7 @@ class_images:
 # Category page photos (owner, 2026-11-14), one per page. The site makes
 # smaller sizes itself and never shows a photo larger than its own pixels.
 # The owner keeps these five as they are for launch (2026-11-14).
-# The files are in website/src/assets/page-photos/.
+# The files are in site/src/assets/page-photos/.
 page_images:
   detailing: exterior-wash.webp
   paint-correction: paint-correction.webp
@@ -223,5 +223,5 @@ page_images:
 
 # The two policy pages: Text Message Terms as published; Privacy Policy from
 # the doc "Privacy Policy update for the new website" (final 2026-11-14).
-# They are website/src/pages/sms-terms.md and website/src/pages/privacy-policy.md,
+# They are site/src/pages/sms-terms.md and site/src/pages/privacy-policy.md,
 # served at /sms-terms/ and /privacy-policy/ (data/business.yaml, policy_pages).
