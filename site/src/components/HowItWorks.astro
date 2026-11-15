@@ -1,0 +1,8 @@
+---
+import { pages } from "../lib/data.js";
+---
+<ol class="steps">
+  {pages.how_it_works.map((step, index) => (
+    <li><span class="num" aria-hidden="true">{index + 1}</span><span><strong>{step.heading}</strong><span class="text">{step.text}</span></span></li>
+  ))}
+</ol>

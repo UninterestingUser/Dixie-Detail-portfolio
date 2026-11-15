@@ -37,7 +37,7 @@ The returning-customer review queue, listed for Phase 1 in the first plan, moved
 
 **Phase 3, scheduling and the website with the booking form, is next.** It carries these over from Phase 2:
 
-- The photo cards for the size-based classes have placeholders until each class's picture is set. The owner chose the eight pictures on 2026-11-14 (in `website/public/images/vehicle-classes/`); each class's photo card picture is still to be set to its path (owner action below).
+- The photo cards for the size-based classes have placeholders until each class's picture is set. The owner chose the eight pictures on 2026-11-14 (in `site/public/images/vehicle-classes/`); each class's photo card picture is still to be set to its path (owner action below).
 - The possible future vehicle classes already in [data/vehicle-classes.yaml](../../data/vehicle-classes.yaml) are not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form). Each is planned with Phase 3 or later.
 
 Phase 1 started with two carry-overs from Phase 0, both done: `DEPLOY_REMOTE` and `DEPLOY_BRANCH` are in the server's `.env` and `ops/deploy.sh` works (confirmed by the owner 2026-10-17; the deploy key secret was renamed from `DEPLOY_KEY` to `DEPLOY_SSH_KEY` on 2026-10-13), and the restore test passed on 2026-10-14. Two more were done in the documentation migration on 2026-10-13: `BWS_SERVER_URL` is in `.env.example` and every script that calls `bws` uses it, and the secret names in `.env.example` and [data/configuration.yaml](../../data/configuration.yaml) match what the scripts fetch.

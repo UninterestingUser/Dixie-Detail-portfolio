@@ -1,0 +1,26 @@
+{
+  "name": "dixie-detail-site",
+  "private": true,
+  "type": "module",
+  "description": "The Dixie Detail website: a static Astro site on Cloudflare Pages, with the booking flow (docs/reference/booking-flow.md).",
+  "engines": { "node": ">=22.12" },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "node tests/serve.mjs",
+    "check:prices": "node tests/no-browser-prices.mjs",
+    "test:unit": "node --test tests/unit/",
+    "test:e2e": "playwright test",
+    "test:lighthouse": "lhci autorun",
+    "test": "npm run check:prices && npm run test:unit && npm run test:e2e"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "5.2.8",
+    "astro": "5.18.2",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@lhci/cli": "0.15.1",
+    "@playwright/test": "1.64.1"
+  }
+}

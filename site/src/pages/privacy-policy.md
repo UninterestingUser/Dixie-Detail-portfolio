@@ -1,3 +1,10 @@
+---
+layout: ../layouts/Policy.astro
+title: Privacy Policy - Dixie Detail
+description: How Dixie Detail collects, uses, and protects your information.
+path: /privacy-policy/
+---
+
 # Privacy Policy
 
 **Effective [the day the new site goes live]**

@@ -1,0 +1,11 @@
+---
+import { business } from "../lib/data.js";
+const tel = "+1" + business.phone.number.replace(/\D/g, "");
+const { heading = "Ready for the showroom shine?" } = Astro.props;
+---
+<div class="cta">
+  <h2>{heading}</h2>
+  <p>See your exact price and pick a day in about two minutes.</p>
+  <a class="button white" href="/book/">See my price</a>
+  <a class="button ghost" href={`tel:${tel}`}>Call or text {business.phone.number}</a>
+</div>

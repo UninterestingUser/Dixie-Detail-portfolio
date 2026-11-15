@@ -1,0 +1,18 @@
+---
+import Base from "../layouts/Base.astro";
+import PageHead from "../components/PageHead.astro";
+import FaqList from "../components/FaqList.astro";
+import Cta from "../components/Cta.astro";
+import { pages } from "../lib/data.js";
+import { faqSchema } from "../lib/schema.js";
+const page = pages.pages.faq;
+---
+<Base title={page.title} description={page.description} path={page.path} jsonLd={[await faqSchema(pages.faq)]}>
+  <PageHead heading="Common questions" />
+  <section class="section">
+    <div class="wrap faq">
+      <div class="faq-list"><FaqList items={pages.faq} /></div>
+      <Cta />
+    </div>
+  </section>
+</Base>

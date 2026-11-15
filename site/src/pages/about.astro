@@ -1,0 +1,22 @@
+---
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import PageHead from "../components/PageHead.astro";
+import Cta from "../components/Cta.astro";
+import photo from "../assets/photos/about.webp";
+import { pages } from "../lib/data.js";
+const page = pages.pages.about;
+const about = pages.about;
+---
+<Base title={page.title} description={page.description} path={page.path}>
+  <PageHead eyebrow={about.heading} heading={about.subheading} />
+  <section class="section">
+    <div class="wrap split">
+      <div class="prose">{about.paragraphs.map((text) => <p>{text}</p>)}</div>
+      <div class="stack">
+        <Image src={photo} alt={about.photo_alt} widths={[480, 960, 1272]} sizes="(max-width: 900px) 100vw, 560px" />
+        <Cta />
+      </div>
+    </div>
+  </section>
+</Base>

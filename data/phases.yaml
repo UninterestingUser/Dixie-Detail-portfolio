@@ -74,7 +74,7 @@ phases:
       - "Step 5 follow-up: removing a job keeps every quote something else refers to, a job removed as created by mistake reopens its request and a canceled one closes it, and delete_test_records deletes booked test quote requests with their quotes (decision 0102)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
-      - The booking form shows the photo cards, which have placeholders until each class's picture is set (owner action; the pictures are in website/public/images/vehicle-classes/)
+      - The booking form shows the photo cards, which have placeholders until each class's picture is set (owner action; the pictures are in site/public/images/vehicle-classes/)
       - "Possible future vehicle classes already in data/vehicle-classes.yaml, not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form); each planned with Phase 3 or later"
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4

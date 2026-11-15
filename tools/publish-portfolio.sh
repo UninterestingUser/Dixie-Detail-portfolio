@@ -40,7 +40,9 @@ die() { echo "publish-portfolio: $*" >&2; exit 1; }
 # Files the public copy never holds, in any commit. The vehicle class
 # pictures are third-party renders the business shows on its own site but
 # holds no license to redistribute (data/site-content.yaml, class_images).
-left_out_paths=(website/public/images/vehicle-classes/)
+# They were in website/ before the site moved to site/ in Phase 3, Step 6,
+# so both paths stay listed: older commits hold the first.
+left_out_paths=(website/public/images/vehicle-classes/ site/public/images/vehicle-classes/)
 
 git filter-repo --version > /dev/null 2>&1 \
   || die "git filter-repo is not installed (Fedora: sudo dnf install git-filter-repo)"

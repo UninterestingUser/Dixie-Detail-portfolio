@@ -1,0 +1,17 @@
+---
+import { pages } from "../lib/data.js";
+const area = pages.service_area;
+---
+<div class="area">
+  <div class="area-text">
+    <p class="eyebrow">Service area</p>
+    <h2 class="display">We come to you</h2>
+    <p class="lead">{area.text} You provide water and power within 50 feet, and we bring everything else, tent included.</p>
+    <div class="pills">
+      {pages.cities.map((city) => <a class="pill" href={`/${city.slug}/`}>{city.city}</a>)}
+    </div>
+  </div>
+  <ul class="counties" aria-label="Counties we serve">
+    {area.counties.map((county) => <li><strong>{county.name}</strong><span>{county.text}</span></li>)}
+  </ul>
+</div>

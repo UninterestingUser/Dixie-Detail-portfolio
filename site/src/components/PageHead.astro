@@ -1,0 +1,10 @@
+---
+const { eyebrow, heading, lead } = Astro.props;
+---
+<div class="page-head">
+  <div class="wrap">
+    {eyebrow && <p class="eyebrow" style="color:#c9d6ea">{eyebrow}</p>}
+    <h1 class="display" style="font-size:clamp(38px,4.6vw,62px)">{heading}</h1>
+    {lead && <p class="lead">{lead}</p>}
+  </div>
+</div>

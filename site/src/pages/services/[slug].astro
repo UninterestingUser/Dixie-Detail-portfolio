@@ -1,0 +1,46 @@
+---
+// One page per category in data/site-content.yaml: each service's full
+// description in the owner's words, its prices from the pricebook, and its
+// photo.
+import { Image } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import PageHead from "../../components/PageHead.astro";
+import PriceTable from "../../components/PriceTable.astro";
+import Cta from "../../components/Cta.astro";
+import { content, dollars, pages, servicesWithPrices } from "../../lib/data.js";
+import { serviceSchema } from "../../lib/schema.js";
+
+export function getStaticPaths() {
+  return content.pages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+const { page } = Astro.props;
+const photos = import.meta.glob("../../assets/page-photos/*.webp", { eager: true });
+const photo = Object.entries(photos).find(([key]) => key.endsWith("/" + content.page_images[page.slug]))?.[1]?.default;
+const services = (await servicesWithPrices()).filter((service) => service.page === page.slug);
+const url = `https://dixiedetail.com/services/${page.slug}/`;
+const jsonLd = await Promise.all(services.map((service) => serviceSchema(service, url)));
+const title = pages.service_page_title.replace("{title}", page.title);
+const description = `${services.map((service) => service.card).join(" ")}`.slice(0, 155).replace(/\s+\S*$/, "") + ".";
+---
+<Base title={title} description={description} path={`/services/${page.slug}/`} jsonLd={jsonLd}>
+  <PageHead eyebrow="Services" heading={page.title} lead="Mobile, in your driveway, across Bradley, McMinn, Hamilton, Polk and Meigs Counties." />
+  <section class="section">
+    <div class="wrap split">
+      <div class="stack" style="gap:48px">
+        {services.map((service) => (
+          <article class="stack" id={service.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>
+            <h2 style="margin:0;font-size:28px">{service.heading}</h2>
+            <p class="lead">{service.full}</p>
+            {service.add_on && <p class="lead" style="font-size:16px">An add-on: pick it with your detail on the booking page.</p>}
+            <PriceTable service={service} />
+            {!service.add_on && <div class="buttons"><a class="button" href="/book/">See my price for {service.name}</a></div>}
+          </article>
+        ))}
+      </div>
+      <div class="stack">
+        {photo && <Image src={photo} alt={`${page.title} by Dixie Detail`} widths={[400, 700]} sizes="(max-width: 900px) 100vw, 480px" />}
+        <Cta />
+      </div>
+    </div>
+  </section>
+</Base>

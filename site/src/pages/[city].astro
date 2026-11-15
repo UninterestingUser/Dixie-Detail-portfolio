@@ -1,0 +1,57 @@
+---
+// The three city pages, at the current site's addresses, with the text
+// carried over from it (data/site-pages.yaml).
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import PageHead from "../components/PageHead.astro";
+import ServiceCards from "../components/ServiceCards.astro";
+import HowItWorks from "../components/HowItWorks.astro";
+import FaqList from "../components/FaqList.astro";
+import Cta from "../components/Cta.astro";
+import { pages } from "../lib/data.js";
+import { faqSchema, localBusiness } from "../lib/schema.js";
+
+export function getStaticPaths() {
+  return pages.cities.map((city) => ({ params: { city: city.slug }, props: { city } }));
+}
+const { city } = Astro.props;
+const photos = import.meta.glob("../assets/photos/*.webp", { eager: true });
+const photo = Object.entries(photos).find(([key]) => key.endsWith(`/${city.photo}.webp`))?.[1]?.default;
+const others = pages.cities.filter((item) => item.slug !== city.slug);
+const jsonLd = [await localBusiness(), await faqSchema(city.faq)];
+---
+<Base title={city.title} description={city.description} path={`/${city.slug}/`} jsonLd={jsonLd}>
+  <PageHead eyebrow={`${city.city}, Tennessee`} heading={city.heading} lead={city.intro} />
+  <section class="section">
+    <div class="wrap split">
+      <div class="stack">
+        <h2 class="display">{city.where_heading}</h2>
+        <p class="lead">{city.where}</p>
+        <div class="buttons"><a class="button" href="/book/">See my price</a></div>
+      </div>
+      {photo && <Image src={photo} alt={city.photo_alt} widths={[400, 800]} sizes="(max-width: 900px) 100vw, 560px" />}
+    </div>
+  </section>
+  <section class="section tint">
+    <div class="wrap stack" style="gap:28px">
+      <h2 class="display">Services offered in {city.city} TN</h2>
+      <p class="lead">Pricing based on the size and type of vehicle. Pick your vehicle on the booking page and your exact price shows.</p>
+      <ServiceCards texts={city.services} />
+    </div>
+  </section>
+  <section class="section">
+    <div class="wrap split">
+      <div class="stack"><h2 class="display">How a Dixie Detail works</h2><HowItWorks /></div>
+      <div class="stack"><h2 class="display">{city.city} detailing FAQs</h2><FaqList items={city.faq} /></div>
+    </div>
+  </section>
+  <section class="section tint">
+    <div class="wrap faq">
+      <div class="faq-list">
+        <h2 class="display">Book your detail</h2>
+        <p class="lead">Ready for your car's spa day? Book online or call. We also serve {others.map((item, index) => <>{index > 0 && " and "}<a href={`/${item.slug}/`}>{item.city}</a></>)}.</p>
+      </div>
+      <Cta />
+    </div>
+  </section>
+</Base>
