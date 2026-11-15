@@ -75,6 +75,7 @@ PUBLIC_API_RATE_LIMITS = {
 # refused.
 TURNSTILE_SECRET_KEY = ""
 OFFLINE_REQUESTS_SIGNING_KEY = ""
+CLOUDFLARE_PAGES_DEPLOY_HOOK = ""
 
 INSTALLED_APPS = [
     # The Django admin, for superusers only (decision 0046).

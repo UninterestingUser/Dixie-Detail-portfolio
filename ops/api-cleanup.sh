@@ -9,7 +9,13 @@
 # unused places and old rate counts (docs/reference/public-api.md, decision
 # 0099). It needs no secret of its own and sends no ping: a failure shows in
 # `systemctl list-timers --failed` and the journal.
+#
+# Then `rebuild_website --if-due` asks Cloudflare Pages to rebuild the
+# website when a pricebook version published earlier takes effect today,
+# using the deploy hook the app container already holds
+# (docs/reference/website-and-seo.md). With no version due it does nothing.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-exec docker compose run --rm --no-deps -T app python manage.py clean_public_api
+docker compose run --rm --no-deps -T app python manage.py clean_public_api
+docker compose run --rm --no-deps -T app python manage.py rebuild_website --if-due

@@ -12,6 +12,12 @@ condition level and the add-ons the customer wants.
 3. The request names the session's photos it keeps. It is not an
    appointment and holds no time; the owner replies with a price.
 
+While the server is offline, or the address suggestions are down, the
+website still takes the request, without photos: Cloudflare's piece holds it
+and replays it, signed, to `quote-requests/offline` (receive_offline), as it
+does a "request a time" form (time_requests, decision 0100). The customer is
+told photos can be sent later by text.
+
 Photos never attached to a sent request are deleted after a day, and a
 closed request's photos QUOTE_REQUEST_PHOTO_DAYS after it closed
 (cleanup.py). The description stays.
@@ -238,3 +244,121 @@ def send(request, data):
         "photos": len(kept),
         "message": THANKS.format(reference=quote_request.reference),
     }
+
+
+# Offline quote requests ---------------------------------------------------------
+
+OFFLINE_THANKS = (
+    "Thanks! We've got your request and will reply with a price, usually within a day. "
+    "If you have photos, text them to (423) 380-9120."
+)
+
+
+def parse_offline(data):
+    """A quote request the website held while the server was offline: the
+    request form's fields, less the photos and Turnstile (checked by
+    Cloudflare when it was sent), plus the website's request id, when it was
+    sent, and the address as a place id or as typed."""
+    import uuid
+
+    from .time_requests import typed_place
+
+    validate.only(
+        data,
+        ["request_id", "submitted_at", "vehicle", "service", "description", "first_name", "mobile", "consents"],
+        ["last_name", "preferred_days", "size", "condition", "add_ons", "place_id", "address", "session_token"],
+    )
+    try:
+        request_id = uuid.UUID(str(data["request_id"]))
+    except ValueError as error:
+        raise bad_request("request_id") from error
+    service = data["service"]
+    service = quotes.parse_service(service) if service != "not_sure" else None
+    condition = validate.integer(data.get("condition"), "condition", 1, 3, required=False)
+    if service is None and condition is not None:
+        raise bad_request("condition", quotes.CONDITION_NOT_TAKEN)
+    place_id, typed_address = typed_place(data)
+    return {
+        "request_id": request_id,
+        "submitted_at": validate.moment(data["submitted_at"], "submitted_at"),
+        "vehicle": catalog.parse_vehicle(data["vehicle"], free_text_with_card=True),
+        "size": validate.integer(data.get("size"), "size", 1, 9, required=False),
+        "service": service,
+        "condition": condition,
+        "add_ons": quotes.parse_add_ons(data.get("add_ons")),
+        "description": validate.text(data["description"], "description", 2000, multiline=True),
+        "place_id": place_id,
+        "address": typed_address,
+        "session_token": validate.text(data.get("session_token"), "session_token", 64, required=False),
+        "first_name": validate.text(data["first_name"], "first_name", 100),
+        "last_name": validate.text(data.get("last_name"), "last_name", 100, required=False),
+        "mobile": validate.phone(data["mobile"]),
+        "consents": consent.parse(data["consents"]),
+        "preferred_days": validate.text(data.get("preferred_days"), "preferred_days", 300, required=False, multiline=True),
+    }
+
+
+def typed_vehicle(vehicle):
+    """The vehicle as the customer typed it, when it can't be resolved."""
+    return {
+        "year": vehicle.get("year"), "make": vehicle.get("make") or "", "model": vehicle.get("model") or "",
+        "vehicle_class": None, "size_variant": None, "vehicle_model": None, "photo_card": "photo_card" in vehicle,
+    }
+
+
+def receive_offline(request, data):
+    """Keep a replayed quote request. Nothing the customer sent is lost: an
+    address that can't be checked, or a job the site would book online, is
+    kept with the problem noted for the owner, as an offline "request a
+    time" form is. A second replay of the same request id changes nothing."""
+    from .time_requests import check_signature, unchecked_address
+
+    check_signature(request)
+    form = parse_offline(data)
+    if QuoteRequest.objects.filter(request_id=form["request_id"]).exists():
+        return 200, {"received": True, "duplicate": True}
+    problems = []
+    try:
+        found, level = by_quote_job(form["vehicle"], form["size"], form["service"], form["condition"], form["add_ons"])
+    except ApiError as error:
+        found, level = None, None
+        problems.append(f"Vehicle or service: {error.message}")
+    place = None
+    if form["place_id"] is None:
+        problems.append(unchecked_address(form["address"]))
+    else:
+        try:
+            place = quotes.verify_place(form["place_id"], form["session_token"])
+        except ApiError as error:
+            problems.append(f"Address: {error.message}")
+    vehicle = typed_vehicle(form["vehicle"]) if found is None else None
+    with transaction.atomic():
+        typed = bookings.given(
+            form["first_name"], form["last_name"], form["mobile"], place,
+            vehicle_fields(found) if found is not None else None,
+        )
+        intake = bookings.take_in(typed, form["consents"], form["mobile"], hold=True, when=form["submitted_at"])
+        customer = intake.customer
+        quote_request = QuoteRequest.objects.create(
+            reference=bookings.unique_reference(),
+            request_id=form["request_id"],
+            customer=customer,
+            service_address=intake.address,
+            address_text=form["address"] if place is None and form["address"] else "",
+            vehicle=intake.vehicle,
+            intake=intake.as_json(),
+            vehicle_year=(found.year if found else vehicle["year"]),
+            vehicle_make=(found.make if found else vehicle["make"]) or "",
+            vehicle_model_name=(found.model if found else vehicle["model"]) or "",
+            vehicle_class=found.vehicle_class if found else None,
+            size_variant=found.size_variant if found else None,
+            photo_card=found.photo_card if found else vehicle["photo_card"],
+            service=form["service"],
+            condition_level=(level.level if level is not None else form["condition"]),
+            description=form["description"],
+            preferred_days=form["preferred_days"],
+            problem="; ".join(problems)[:300],
+            is_test=customer.is_test,
+        )
+        quote_request.add_ons.set(form["add_ons"])
+    return 201, {"received": True, "reference": quote_request.reference}

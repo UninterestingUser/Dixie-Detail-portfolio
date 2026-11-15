@@ -60,6 +60,9 @@ put_optional app/google_service_account_json  GOOGLE_SERVICE_ACCOUNT_JSON "$APP_
 # offline requests are refused (decision 0100).
 put_optional app/turnstile_secret_key          TURNSTILE_SECRET_KEY          "$APP_UID"
 put_optional app/offline_requests_signing_key  OFFLINE_REQUESTS_SIGNING_KEY  "$APP_UID"
+# The website's deploy hook: empty means publishing a pricebook version asks
+# for no rebuild (docs/reference/website-and-seo.md).
+put_optional app/cloudflare_pages_deploy_hook  CLOUDFLARE_PAGES_DEPLOY_HOOK  "$APP_UID"
 bws_forget
 
 # Recreate every container so each mounts the files just written. A container

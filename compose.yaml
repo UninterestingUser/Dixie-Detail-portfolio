@@ -66,6 +66,7 @@ services:
       API_SMOKE_TEST_PLACE_ID: ${API_SMOKE_TEST_PLACE_ID:-}
       TURNSTILE_SECRET_KEY_FILE: /run/secrets/turnstile_secret_key
       OFFLINE_REQUESTS_SIGNING_KEY_FILE: /run/secrets/offline_requests_signing_key
+      CLOUDFLARE_PAGES_DEPLOY_HOOK_FILE: /run/secrets/cloudflare_pages_deploy_hook
     secrets:
       - source: app_django_secret_key
         target: django_secret_key
@@ -79,6 +80,8 @@ services:
         target: turnstile_secret_key
       - source: app_offline_requests_signing_key
         target: offline_requests_signing_key
+      - source: app_cloudflare_pages_deploy_hook
+        target: cloudflare_pages_deploy_hook
     depends_on:
       db:
         condition: service_healthy
@@ -167,6 +170,8 @@ secrets:
     file: /run/dixie-stack/secrets/app/turnstile_secret_key
   app_offline_requests_signing_key:
     file: /run/dixie-stack/secrets/app/offline_requests_signing_key
+  app_cloudflare_pages_deploy_hook:
+    file: /run/dixie-stack/secrets/app/cloudflare_pages_deploy_hook
   tunnel_cloudflared_token:
     file: /run/dixie-stack/secrets/tunnel/cloudflared_token
 

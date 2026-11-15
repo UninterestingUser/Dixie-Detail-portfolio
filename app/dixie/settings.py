@@ -43,6 +43,10 @@ TURNSTILE_SECRET_KEY = read_optional_secret("TURNSTILE_SECRET_KEY_FILE")
 # The key Cloudflare's offline piece signs replayed "request a time" forms
 # with (decision 0100). Empty until it exists: offline requests are refused.
 OFFLINE_REQUESTS_SIGNING_KEY = read_optional_secret("OFFLINE_REQUESTS_SIGNING_KEY_FILE")
+# The website's Cloudflare Pages deploy hook, a URL that starts a rebuild
+# when a pricebook version is published or takes effect (website-and-seo.md).
+# Empty until the Bitwarden secret exists: no rebuild is asked for.
+CLOUDFLARE_PAGES_DEPLOY_HOOK = read_optional_secret("CLOUDFLARE_PAGES_DEPLOY_HOOK_FILE")
 DEBUG = False
 # "localhost" is for the container's own health check.
 ALLOWED_HOSTS = [

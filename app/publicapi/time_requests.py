@@ -13,6 +13,12 @@ each replay with the Bitwarden secret OFFLINE_REQUESTS_SIGNING_KEY:
 A request is not an appointment. It is priced on arrival from the pricebook
 in effect, and flagged for the owner when that price differs from the one
 the customer saw. The website's request id makes a second replay harmless.
+
+The address is a Google place id, looked up on arrival, or, when the
+website's address suggestions were down too (such as once the day's Google
+limit is used up), the address as typed, kept unchecked with a note for the
+owner. The vehicle is the year, make and model, or the photo card the
+customer picked with whatever year, make and model they typed.
 """
 
 import hashlib
@@ -53,8 +59,8 @@ def check_signature(request):
 def parse(data):
     validate.only(
         data,
-        ["request_id", "submitted_at", "vehicle", "service", "place_id", "first_name", "mobile", "payment_method", "consents", "shown"],
-        ["size", "condition", "add_ons", "preferred_start", "preferred_note", "last_name", "color", "session_token"],
+        ["request_id", "submitted_at", "vehicle", "service", "first_name", "mobile", "payment_method", "consents", "shown"],
+        ["size", "condition", "add_ons", "preferred_start", "preferred_note", "last_name", "color", "session_token", "place_id", "address"],
     )
     try:
         request_id = uuid.UUID(str(data["request_id"]))
@@ -69,18 +75,17 @@ def parse(data):
         raise bad_request("shown.total") from error
     if not Decimal("0") <= shown_total < Decimal("100000"):
         raise bad_request("shown.total")
-    place_id = data["place_id"]
-    if not isinstance(place_id, str) or not 10 <= len(place_id) <= 300:
-        raise bad_request("place_id")
+    place_id, typed_address = typed_place(data)
     return {
         "request_id": request_id,
         "submitted_at": validate.moment(data["submitted_at"], "submitted_at"),
-        "vehicle": catalog.parse_vehicle(data["vehicle"]),
+        "vehicle": catalog.parse_vehicle(data["vehicle"], free_text_with_card=True),
         "size": validate.integer(data.get("size"), "size", 1, 9, required=False),
         "condition": validate.integer(data.get("condition"), "condition", 1, 3, required=False),
         "service": quotes.parse_service(data["service"]),
         "add_ons": quotes.parse_add_ons(data.get("add_ons")),
         "place_id": place_id,
+        "address": typed_address,
         "session_token": validate.text(data.get("session_token"), "session_token", 64, required=False),
         "preferred_start": validate.moment(data["preferred_start"], "preferred_start") if data.get("preferred_start") else None,
         "preferred_note": validate.text(data.get("preferred_note"), "preferred_note", 300, required=False, multiline=True),
@@ -95,18 +100,39 @@ def parse(data):
     }
 
 
+def typed_place(data, field="place_id"):
+    """(place id, None) or (None, typed address): exactly one is given."""
+    place_id, address = data.get("place_id"), data.get("address")
+    if (place_id is None) == (address is None):
+        raise bad_request(field, "Send the place id from the address suggestions, or the address as typed.")
+    if place_id is not None:
+        if not isinstance(place_id, str) or not 10 <= len(place_id) <= 300:
+            raise bad_request("place_id")
+        return place_id, ""
+    return None, validate.text(address, "address", 200)
+
+
+def unchecked_address(text):
+    return f"Address typed while address suggestions were down, not checked: {text}"
+
+
 def price_on_arrival(form):
     """(place or None, web quote or None, problem): the request priced now."""
-    try:
-        place = quotes.verify_place(form["place_id"], form["session_token"])
-    except ApiError as error:
-        return None, None, f"Address: {error.message}"
+    place, problem = None, ""
+    if form["place_id"] is None:
+        # Priced without sales tax: there is no checked address to tax.
+        problem = unchecked_address(form["address"])
+    else:
+        try:
+            place = quotes.verify_place(form["place_id"], form["session_token"])
+        except ApiError as error:
+            return None, None, f"Address: {error.message}"
     try:
         found = catalog.resolve(form["vehicle"], form["size"])
         web = quotes.issue(found, form["service"], form["condition"], form["add_ons"], place, answered=form["size"])
     except ApiError as error:
-        return place, None, f"Not priced: {error.message}"
-    return place, web, ""
+        return place, None, "; ".join(filter(None, [problem, f"Not priced: {error.message}"]))
+    return place, web, problem
 
 
 def receive(request, data):
@@ -145,6 +171,7 @@ def receive(request, data):
                 "color": form["color"],
                 "payment_method": form["payment_method"],
                 "place_id": form["place_id"],
+                "address": form["address"],
             },
             shown_total=form["shown_total"],
             shown_pricebook_version=form["shown_version"],

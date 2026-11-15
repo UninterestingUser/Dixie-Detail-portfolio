@@ -16,6 +16,12 @@ def services(request):
 
 
 @api_view(["GET"], "read", cache_seconds=CACHE_SECONDS)
+def price_table(request):
+    query(request, ())
+    return catalog.price_table()
+
+
+@api_view(["GET"], "read", cache_seconds=CACHE_SECONDS)
 def booking_options(request):
     return catalog.booking_options()
 
@@ -118,6 +124,11 @@ def delete_photo(request, session, photo):
 @api_view(["POST"], "quote_request")
 def create_quote_request(request):
     return quote_requests.send(request, read_json(request))
+
+
+@api_view(["POST"], "offline")
+def create_offline_quote_request(request):
+    return quote_requests.receive_offline(request, read_json(request))
 
 
 @api_view(["POST"], "offline")
