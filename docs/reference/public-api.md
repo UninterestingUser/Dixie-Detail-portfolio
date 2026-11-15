@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-14
 tags: [api, booking, website, quotes, photos, phase-3]
-related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
+related: [docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
 
 # Public API
@@ -21,6 +21,7 @@ It does what the booking form needs and nothing more: list services and prices, 
 | --- | --- | --- |
 | `GET services` | The published pricebook: services, classes, size variants, condition levels, "from" prices. Cacheable | read |
 | `GET booking-options` | Payment methods, the consent wording, how long a quote lasts, photo limits. Cacheable | read |
+| `GET price-table` | The server's total and time on site for every job bookable online, for the website's build. Cacheable | read |
 | `GET vehicles/years` | Model years in the catalog, newest first | read |
 | `GET vehicles/makes?year=` | Makes with a model in that year | read |
 | `GET vehicles/models?year=&make=` | Models of that make and year, motorcycles labeled | read |
@@ -35,6 +36,7 @@ It does what the booking form needs and nothing more: list services and prices, 
 | `DELETE quote-requests/uploads/{session}/photos/{photo}` | Removes a photo picked by mistake | photo |
 | `POST quote-requests` | Sends a quote request for a job the site can't price | quote_request |
 | `POST time-requests` | An offline "request a time" form, replayed by Cloudflare and signed | offline |
+| `POST quote-requests/offline` | An offline quote request, without photos, replayed by Cloudflare and signed | offline |
 
 Cacheable answers carry `Cache-Control: public, max-age=300`; everything else carries `no-store`.
 
@@ -150,13 +152,23 @@ The answer is the request's `reference` and a message that Dixie Detail will rep
 
 The nightly cleanup (`clean_public_api`, run by `dixie-api-cleanup.timer` at 2:20 AM) deletes photos never attached to a sent request after a day, and a request's photos `QUOTE_REQUEST_PHOTO_DAYS` (90) after it is declined, or its job is done or canceled. The description stays, with a note of how many photos were deleted and when. The photo folder is in the nightly backup, and the restore test reports how many photos the newest backup holds ([backups-and-restore.md](../operations/backups-and-restore.md)).
 
+## The price table: GET price-table
+
+The website bakes this into the booking page when it is built, for the "request a time" form it shows while the server can't be reached ([booking-flow.md](booking-flow.md#when-the-server-cant-be-reached)). It lists every job bookable online, priced by the pricing engine: each offered class booked online and its sizes, each bookable service, each condition level with a price for a service that takes one (Level 1 and Level 2, never Level 3), and no add-on, each add-on alone, or both. Each entry is `class_id`, `size`, `service`, `condition`, `add_ons`, `total_before_tax`, `time_on_site_minutes` and `full_day`, with the `pricebook_version` and `effective_date` at the top. The browser only looks a total up; it never works one out ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)). Combinations the pricebook doesn't price are left out.
+
 ## Offline requests: POST time-requests
 
-While the server is offline, the website's form becomes a "request a time" form priced from the last published pricebook, and Cloudflare holds what the customer sends ([booking-flow.md](booking-flow.md#other-cases)). When the server is back, Cloudflare's piece (Phase 3, Step 6) replays each one here ([decision 0100](../decisions/0100-public-api-quotes-and-bookings.md)).
+While the server can't be reached, or Google's address suggestions are down, the website's form becomes a "request a time" form priced from the price table, and Cloudflare's offline piece holds what the customer sends ([booking-flow.md](booking-flow.md#when-the-server-cant-be-reached), [decision 0105](../decisions/0105-the-website-on-cloudflare-pages.md)). It first tries the server at once; when the server doesn't answer, it replays each one here every 5 minutes until it does ([decision 0100](../decisions/0100-public-api-quotes-and-bookings.md)).
 
 - **Signed, not Turnstile.** A Turnstile token would have expired by the replay, so Cloudflare checks it when the customer sends the form, and signs each replay: `X-Dixie-Timestamp` (seconds since 1970, within 5 minutes) and `X-Dixie-Signature`, the hex HMAC-SHA256 of the timestamp, a period and the raw body, with the Bitwarden secret `OFFLINE_REQUESTS_SIGNING_KEY`. Anything else is refused with `401`.
-- **The body** is the website's `request_id` (a UUID), `submitted_at`, the vehicle, size, condition, service and add-ons, the `place_id`, an optional `preferred_start` and note, the name, mobile, payment method, color, consents, and `shown`: the total before tax and pricebook version the customer saw.
+- **The body** is the website's `request_id` (a UUID), `submitted_at`, the vehicle, size, condition, service and add-ons, the address, an optional `preferred_start` and note, the name, mobile, payment method, color, consents, and `shown`: the total before tax and pricebook version the customer saw.
+- **The vehicle** is the year, make and model, or the photo card the customer picked with any year, make and model they typed.
+- **The address** is the `place_id` (with its `session_token`) from Google's suggestions, or, when the suggestions were down too, the `address` as typed. Exactly one is sent. A typed address is kept unchecked, the job is priced without sales tax, and the request notes "Address typed while address suggestions were down, not checked" for the owner.
 - **Priced on arrival.** The server looks the address up, prices the job from the pricebook in effect, matches the mobile number quietly, and keeps a request, not an appointment. When its total before tax differs from what the customer saw, the request is flagged "Price differs", in the "needs you" list too. An address outside the area, or a job that can't be priced, is kept with the problem noted. A second replay of the same `request_id` changes nothing. The owner books it, priced for the day picked, or declines it ([control-app.md](control-app.md#website-bookings-and-requests)).
+
+## Offline quote requests: POST quote-requests/offline
+
+A quote request sent while the server can't be reached, or while Google's address suggestions are down, is held and replayed by the same piece, signed the same way. It carries no photos: the form tells the customer they can text photos later. The body is the quote request's fields (vehicle, `size`, `service` or `"not_sure"`, `condition`, `add_ons`, `description`, name, mobile, consents, `preferred_days`) plus the website's `request_id`, `submitted_at`, and the `place_id` with its `session_token` or the `address` as typed. Nothing the customer sent is lost: an address that can't be checked, or a job the site would book online after all, is kept with the problem noted on the request for the owner. A second replay of the same `request_id` changes nothing.
 
 ## Abuse and privacy controls
 

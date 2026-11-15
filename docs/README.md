@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-14
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -53,7 +53,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 
 | Document | Summary | Status |
 | --- | --- | --- |
-| [Customer booking flow](reference/booking-flow.md) | The seven steps a customer follows on the website to book a job, how the running estimate card behaves, and how address and phone entry are validated. | planned |
+| [Customer booking flow](reference/booking-flow.md) | The seven booking steps on the website, the running estimate card, address and phone entry, the quote request form, and the request a time form used while the server or Google can't be reached. | current |
 | [Bookkeeping with GnuCash](reference/bookkeeping-gnucash.md) | How paid jobs, fees, payouts and refunds become balanced GnuCash transactions, which accounts each event posts to, and the CSV layout the owner imports. | current |
 | [Settings and secrets reference](reference/configuration.md) | How the system's configuration is split between non-secret settings in .env and secrets in Bitwarden, with rules for adding or renaming either. | current |
 | [Control app](reference/control-app.md) | The private web app the owner and staff use to run the business, the screens built so far, the areas still to come, and the rules it follows. | current |
@@ -68,7 +68,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the two kinds of consent each one needs, the exact consent wording, automatic STOP and HELP replies, and the carrier registration plan. | current |
 | [Vehicle catalog](reference/vehicle-catalog.md) | The years, makes and models the system knows, the facts it keeps per model year from the EPA, NHTSA vPIC, the Canadian specifications and the third-row list, and how imports never overwrite the owner. | current |
 | [Vehicle classification](reference/vehicle-classification.md) | How a year, make and model becomes one of the eight size-based vehicle classes and a size variant, from box volume, owner-editable rules, overrides and a review queue, and the booking lookup. | current |
-| [Website and SEO](reference/website-and-seo.md) | The structure, design direction and search-ranking safeguards for the new Astro website that replaces WordPress at launch. | planned |
+| [Website and SEO](reference/website-and-seo.md) | The Astro website on Cloudflare Pages - its pages and addresses, where its text, photos and prices come from, how it stays current, the speed and accessibility targets, and the search-ranking safeguards for the launch. | current |
 
 ## Operations: running the server
 
@@ -103,6 +103,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Assigning staff and the services they may do](guides/assigning-staff.md) | How to set which services each staff member is authorized for, from the staff page or the service page, and how to assign one or two people to a job, including someone in training. | current |
 | [Editing and publishing the pricebook](guides/editing-the-pricebook.md) | How to read the prices in the control app, change them in a draft, publish the draft with an effective date, and decide what happens to each booked job the change touches. | current |
 | [Handling website bookings](guides/handling-website-bookings.md) | How to work through the home screen's "needs you" list - new bookings, differences from the record, staff, quote, offline and second vehicle requests - and try it with test records. | current |
+| [Previewing and deploying the website](guides/previewing-and-deploying-the-website.md) | How to preview the website on the workstation against a fake API, run its checks, set up the Cloudflare Pages project, the offline piece and the deploy hook once, and how a change or a pricebook publish reaches the site. | current |
 | [Installing the control app on a phone or computer](guides/installing-the-control-app.md) | How to get a control app account, connect to Tailscale, sign in, and install the control app to the Pixel's home screen or a Fedora workstation, with what to do when it will not open or sign in. | current |
 
 ## Decisions

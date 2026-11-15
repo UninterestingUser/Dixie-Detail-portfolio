@@ -13,7 +13,7 @@ const links = [
 ---
 <header class:list={["site-header", { solid }]}>
   <div class="wrap bar">
-    <a class="logo" href="/"><Image src={logo} alt="Dixie Detail" widths={[240, 360, 720]} sizes="(max-width: 640px) 52vw, 360px" loading="eager" /></a>
+    <a class="logo" href="/"><Image src={logo} alt="Dixie Detail" widths={[240, 360, 480, 720]} sizes="(max-width: 640px) 52vw, 360px" loading="eager" /></a>
     <nav class="nav" aria-label="Main">
       {links.map(([href, text]) => <a href={href}>{text}</a>)}
       <a class="button" href="/book/">Book now</a>

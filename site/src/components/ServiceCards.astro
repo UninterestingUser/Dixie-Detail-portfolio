@@ -19,7 +19,7 @@ const cards = content.pages.map((page) => {
 <div class="cards">
   {cards.map((card) => (
     <article class="card">
-      {card.photo && <Image src={card.photo} alt="" widths={[400, 800]} sizes="(max-width: 640px) 100vw, 300px" />}
+      {card.photo && <Image src={card.photo} alt="" widths={[360, 560, 800]} sizes="(max-width: 640px) 92vw, 300px" quality={60} fetchpriority="low" />}
       <div class="card-body">
         <h3>{card.page.title}</h3>
         <p class="from">{card.single ? <><strong>{dollars(card.lowest)}</strong>{card.page.slug === "headlight-restoration" ? " for both" : ""}</> : <>{card.addOns ? "add-on from " : "from "}<strong>{dollars(card.lowest)}</strong></>}</p>

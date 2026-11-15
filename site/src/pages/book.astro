@@ -1,0 +1,219 @@
+---
+// The booking flow (docs/reference/booking-flow.md): seven steps with a
+// running estimate card, the quote request form for a job the site can't
+// price, and the "request a time" form while the server can't be reached.
+// The page is static; src/scripts/booking/ runs it. Every price it shows
+// comes from the server: a quote, or, offline, the price table the server
+// worked out and this build baked in (decision 0059).
+import Base from "../layouts/Base.astro";
+import Icon from "../components/Icon.astro";
+import { api, business, content, pages, readData } from "../lib/data.js";
+
+const page = pages.pages.book;
+const [pricebook, options, table, cardsAnswer] = await Promise.all([api("services"), api("booking-options"), api("price-table"), api("vehicles/photo-cards")]);
+const rules = readData("booking-rules.yaml");
+const apiBase = import.meta.env.PUBLIC_API_BASE || process.env.API_BASE || "https://api.dixiedetail.com/api/public/v1";
+const config = {
+  api: apiBase.replace(/\/$/, ""),
+  offline: import.meta.env.PUBLIC_OFFLINE_BASE || "/offline",
+  turnstileKey: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "",
+  turnstileScript: import.meta.env.PUBLIC_TURNSTILE_SCRIPT || "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad",
+  mapsKey: import.meta.env.PUBLIC_GOOGLE_MAPS_BROWSER_KEY || "",
+  placesEndpoint: import.meta.env.PUBLIC_PLACES_ENDPOINT || "https://places.googleapis.com/v1/places:autocomplete",
+  phone: business.phone.number,
+};
+// The built-in prices and options, for the forms that work without the
+// server. Text for the cards comes from the owner's data file.
+const builtIn = {
+  pricebook,
+  options,
+  priceTable: table,
+  photoCards: cardsAnswer.photo_cards,
+  startTimes: rules.start_times_online,
+  minimumNoticeDays: rules.minimum_notice_days,
+  furthestDays: rules.furthest_bookable_days,
+  text: {
+    services: Object.fromEntries(content.services.map((service) => [service.name, { card: service.card, heading: service.heading }])),
+    levels: Object.fromEntries(content.condition_levels.map((level) => [level.level, { name: level.name, card: level.card, quoteNote: level.quote_note || "" }])),
+    classImages: content.class_images,
+  },
+};
+const tel = "+1" + business.phone.number.replace(/\D/g, "");
+const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details", "Review"];
+---
+<Base title={page.title} description={page.description} path={page.path}>
+  <Fragment slot="head">
+    <link rel="preconnect" href={new URL(config.api).origin} crossorigin />
+  </Fragment>
+  <div class="book" data-booking>
+    <div class="wrap book-head">
+      <div>
+        <h1 class="display" style="font-size:clamp(34px,4vw,52px)">Get your price and book</h1>
+        <p class="lead">Answer one step at a time. Your estimate updates as you go, and nothing is charged until the job is done.</p>
+      </div>
+      <a class="call-link" href={`tel:${tel}`}><Icon name="phone" size={18} />Questions? {business.phone.number}</a>
+    </div>
+
+    <noscript>
+      <div class="wrap"><p class="notice">The booking form needs JavaScript. Call or text <a href={`tel:${tel}`}>{business.phone.number}</a> and we'll book you.</p></div>
+    </noscript>
+
+    <div class="wrap">
+      <ol class="progress" aria-label="Booking progress" data-progress>
+        {steps.map((name, index) => <li data-pill={index + 1}><span class="dot" aria-hidden="true">{index + 1}</span><span class="name">{name}</span><span class="state visually-hidden"></span></li>)}
+      </ol>
+      <p class="notice" data-banner hidden role="status"></p>
+    </div>
+
+    <div class="wrap book-grid">
+      <div class="book-steps">
+        <div data-flow>
+          <section class="step current" id="step-1" data-step="1" aria-labelledby="h-step-1" style="min-height:600px">
+            <div><p class="step-eyebrow">Step 1 of 7</p><h2 id="h-step-1" tabindex="-1">What are we detailing?</h2><p class="intro">Pick the year, make and model. We work out the vehicle's size and price it for you.</p></div>
+            <p class="loading" data-loading>Loading the booking form…</p>
+          </section>
+          <section class="step" id="step-2" data-step="2" aria-labelledby="h-step-2" hidden></section>
+          <section class="step" id="step-3" data-step="3" aria-labelledby="h-step-3" hidden></section>
+          <section class="step" id="step-4" data-step="4" aria-labelledby="h-step-4" hidden></section>
+          <section class="step" id="step-5" data-step="5" aria-labelledby="h-step-5" hidden></section>
+          <section class="step" id="step-6" data-step="6" aria-labelledby="h-step-6" hidden></section>
+          <section class="step" id="step-7" data-step="7" aria-labelledby="h-step-7" hidden></section>
+        </div>
+        <section class="step current" data-request hidden aria-labelledby="h-request"></section>
+        <section class="step current" data-done hidden aria-labelledby="h-done" tabindex="-1"></section>
+      </div>
+      <div class="book-side">
+        <aside class="estimate" aria-label="Your estimate" data-estimate></aside>
+        <button type="button" class="button outline start-over" data-start-over><Icon name="restart" size={18} />Start over</button>
+      </div>
+    </div>
+
+    <div class="phone-bar" data-phone-bar hidden>
+      <button type="button" class="phone-total" data-open-estimate aria-haspopup="dialog">
+        <span class="label">Estimate <Icon name="up" size={14} /></span>
+        <span class="amount" data-bar-total></span>
+        <span class="note" data-bar-note></span>
+      </button>
+      <a class="button" href="#" data-bar-continue>Continue<Icon name="down" size={18} /></a>
+    </div>
+    <dialog class="estimate-sheet" data-sheet aria-label="Your estimate">
+      <div data-sheet-body></div>
+      <div class="buttons sheet-buttons">
+        <button type="button" class="button ghost" data-close-sheet>Close</button>
+        <a class="button" href="#" data-sheet-continue>Continue</a>
+      </div>
+    </dialog>
+    <div data-turnstile class="turnstile-box"></div>
+  </div>
+  <script type="application/json" id="booking-config" set:html={JSON.stringify(config)} />
+  <script type="application/json" id="booking-built-in" set:html={JSON.stringify(builtIn)} />
+</Base>
+
+<style is:global>
+  .book { background: var(--ground); padding-bottom: 120px; }
+  .book-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; padding-top: 40px; padding-bottom: 24px; }
+  .book-head .lead { margin-top: 10px; max-width: 640px; }
+  .call-link { display: inline-flex; gap: 8px; align-items: center; font-weight: 700; text-decoration: none; }
+  .notice { background: var(--white); border: 2px solid var(--navy); border-radius: var(--radius); padding: 14px 18px; margin: 0 0 16px; font-size: 16px; }
+  .notice.warn { border-color: var(--red); background: var(--red-tint); }
+  .progress { list-style: none; margin: 0 0 20px; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .progress li { display: flex; align-items: center; gap: 8px; background: #e7e8eb; border: 1px solid #e7e8eb; border-radius: 999px; padding: 6px 10px; font-size: 14px; font-weight: 600; color: var(--muted); min-width: 0; }
+  .progress .dot { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #d3d5d9; color: #4b5058; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+  .progress .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .progress li.done { background: var(--white); border-color: var(--line); color: var(--ink); }
+  .progress li.done .dot { background: var(--navy); color: var(--white); }
+  .progress li.current { background: var(--white); border: 2px solid var(--red); color: var(--ink); font-weight: 800; }
+  .progress li.current .dot { background: var(--red); color: var(--white); }
+  .progress li.skipped { opacity: 0.6; }
+  @media (max-width: 760px) { .progress { gap: 4px; } .progress li { padding: 0; height: 6px; border-radius: 3px; border: 0; } .progress li > span { display: none; } .progress li.done { background: var(--navy); } .progress li.current { background: var(--red); border: 0; } }
+  .book-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
+  /* Space held for step 1 while the script starts, so nothing jumps. */
+  .book-steps { display: flex; flex-direction: column; gap: 18px; min-height: 640px; }
+  .book-side { min-height: 360px; }
+  .book-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 960px) { .book-grid { grid-template-columns: minmax(0, 1fr); } .book-side { position: static; } .book-side .estimate { display: none; } }
+  .step { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; display: flex; flex-direction: column; gap: 18px; }
+  .step.current { border: 2px solid var(--red); }
+  .step-eyebrow { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; color: var(--red); text-transform: uppercase; }
+  .step.done-step .step-eyebrow { color: var(--navy); }
+  .step h2 { margin: 4px 0 0; font-size: 26px; font-weight: 800; }
+  .step .intro { margin: 6px 0 0; color: var(--text); font-size: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .choices { display: grid; gap: 10px; }
+  .choice { text-align: left; display: flex; flex-direction: column; gap: 5px; padding: 14px 16px; border-radius: 12px; border: 2px solid #dddfe3; background: var(--white); cursor: pointer; font-size: 16px; width: 100%; }
+  .choice[aria-pressed="true"], .choice.on { border-color: var(--red); background: var(--red-tint); }
+  .choice .top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; width: 100%; }
+  .choice .name { font-size: 17px; font-weight: 800; }
+  .choice .price { font-size: 19px; font-weight: 800; color: var(--navy); white-space: nowrap; }
+  .choice .desc { font-size: 15px; line-height: 1.45; color: var(--text); }
+  .choice.photo img { width: 100%; height: 110px; object-fit: contain; }
+  .tick { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; border: 2px solid #dddfe3; cursor: pointer; }
+  .tick:has(input:checked) { border-color: var(--red); background: var(--red-tint); }
+  .tick input { width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--red); }
+  .tick .body { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+  .consent { font-size: 14px; line-height: 1.5; color: var(--text); }
+  .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--ok-tint); border-radius: 12px; padding: 14px 16px; }
+  .banner.warn { background: var(--red-tint); }
+  .banner strong { display: block; }
+  .next-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .next-row .hint { color: var(--muted); font-size: 15px; margin: 0; }
+  .link-button { background: none; border: 0; padding: 0; color: var(--navy); font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 16px; text-align: left; }
+  .combo { position: relative; }
+  .suggestions { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: var(--white); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15); z-index: 10; overflow: hidden; }
+  .suggestions ul { list-style: none; margin: 0; padding: 4px; }
+  .suggestions li { padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; }
+  .suggestions li[aria-selected="true"], .suggestions li:hover { background: var(--ground); }
+  .suggestions .sub { font-size: 14px; color: var(--muted); }
+  .suggestions .by { margin: 0; padding: 6px 12px 8px; font-size: 12px; color: var(--muted); text-align: right; }
+  .calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .calendar .dow { font-size: 13px; font-weight: 700; text-align: center; color: var(--muted); }
+  .calendar button, .calendar span.day { min-height: 44px; border-radius: 10px; border: 2px solid #dddfe3; background: var(--white); font-weight: 700; cursor: pointer; }
+  .calendar span.day { display: flex; align-items: center; justify-content: center; color: #9aa0a8; text-decoration: line-through; background: var(--ground); border-color: transparent; cursor: default; }
+  .calendar button[aria-pressed="true"] { border-color: var(--red); background: var(--red-tint); }
+  .month-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .times { display: flex; flex-wrap: wrap; gap: 10px; }
+  .times .choice { width: auto; min-width: 120px; text-align: center; align-items: center; font-weight: 800; }
+  .review-list { margin: 0; display: grid; gap: 0; }
+  .review-list div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .review-list dt { color: var(--muted); }
+  .review-list dd { margin: 0; font-weight: 700; text-align: right; }
+  .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  .photo-tile { position: relative; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--ground); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+  .photo-tile img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-tile .remove { position: absolute; top: 6px; right: 6px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, 0.7); color: var(--white); font-size: 18px; cursor: pointer; }
+  .photo-tile progress { position: absolute; left: 8px; right: 8px; bottom: 8px; width: calc(100% - 16px); }
+  .photo-tile .state { position: absolute; left: 6px; bottom: 6px; background: rgba(255, 255, 255, 0.9); border-radius: 6px; padding: 2px 6px; font-size: 12px; font-weight: 700; }
+  .estimate { background: var(--navy); color: var(--white); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+  .estimate .eyebrow-light { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.14em; color: var(--navy-soft); }
+  .estimate .vehicle { margin: 0; font-size: 20px; font-weight: 800; }
+  .estimate .sub { margin: 0; font-size: 15px; color: var(--navy-soft); }
+  .estimate hr { border: 0; height: 1px; background: rgba(255, 255, 255, 0.22); margin: 0; width: 100%; }
+  .estimate .lines { display: flex; flex-direction: column; gap: 9px; font-size: 16px; }
+  .estimate .line { display: flex; justify-content: space-between; gap: 12px; }
+  .estimate .line span:first-child { color: #e6ecf5; }
+  .estimate .line span:last-child { font-weight: 700; white-space: nowrap; }
+  .estimate .total { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .estimate .total .amount { font-size: 38px; font-weight: 800; line-height: 1; }
+  .estimate .time { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; }
+  .estimate .fine { margin: 0; font-size: 14px; line-height: 1.5; color: var(--navy-soft); }
+  .estimate a { color: var(--white); }
+  .phone-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--navy); color: var(--white); padding: 12px 16px 18px; display: none; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 -10px 30px rgba(0, 20, 50, 0.25); }
+  @media (max-width: 960px) { .phone-bar:not([hidden]) { display: flex; } }
+  .phone-total { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: transparent; border: 0; color: var(--white); padding: 0; text-align: left; cursor: pointer; }
+  .phone-total .label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; color: var(--navy-soft); text-transform: uppercase; }
+  .phone-total .amount { font-size: 28px; font-weight: 800; line-height: 1.05; }
+  .phone-total .note { font-size: 13px; color: var(--navy-soft); }
+  .estimate-sheet { border: 0; padding: 0; margin: auto 0 0; width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; background: var(--navy); color: var(--white); }
+  .estimate-sheet::backdrop { background: rgba(0, 0, 0, 0.5); }
+  .estimate-sheet .estimate { border-radius: 0; }
+  .sheet-buttons { padding: 0 24px 24px; }
+  .sheet-buttons .button { flex: 1 1 0; }
+  .start-over { width: 100%; }
+  .loading { color: var(--muted); }
+  .turnstile-box { position: fixed; right: 16px; bottom: 100px; z-index: 30; }
+</style>
+
+<script>
+  import "../scripts/booking/main.js";
+</script>

@@ -1,0 +1,44 @@
+name: Site
+
+# The website in site/ (docs/guides/previewing-and-deploying-the-website.md):
+# built against the fake API, then the check that no price is computed in
+# the browser, the offline piece's unit tests, the booking flow in a browser,
+# and Lighthouse's speed and accessibility targets on a phone.
+on:
+  pull_request:
+    paths: ["site/**", "data/**", ".github/workflows/site.yml"]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    # Pinned to the server's release, like the other workflows.
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:test
+      - run: npm run check:prices
+      - run: npm run test:unit
+      - run: npm run test:e2e
+      - run: npm run test:lighthouse
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: site-reports
+          path: |
+            site/playwright-report/
+            site/test-results/
+            site/.lighthouseci/

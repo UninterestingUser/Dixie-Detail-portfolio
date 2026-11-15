@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "description": "The Dixie Detail website: a static Astro site on Cloudflare Pages, with the booking flow (docs/reference/booking-flow.md).",
-  "engines": { "node": ">=22.12" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -11,8 +13,9 @@
     "check:prices": "node tests/no-browser-prices.mjs",
     "test:unit": "node --test tests/unit/",
     "test:e2e": "playwright test",
-    "test:lighthouse": "lhci autorun",
-    "test": "npm run check:prices && npm run test:unit && npm run test:e2e"
+    "test:lighthouse": "lhci autorun --config=lighthouserc.cjs",
+    "test": "npm run check:prices && npm run test:unit && npm run test:e2e",
+    "build:test": "node tests/build-for-tests.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.2.8",

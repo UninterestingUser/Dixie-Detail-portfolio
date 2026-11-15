@@ -4,7 +4,6 @@
 import { Image } from "astro:assets";
 import backdrop from "../assets/photos/reviews-background.webp";
 import { business, reviews } from "../lib/data.js";
-import Icon from "./Icon.astro";
 const { heading = "What Cleveland and Athens customers say", limit = 3 } = Astro.props;
 const google = business.social_profiles.google_business_profile;
 const shown = reviews.slice(0, limit);
@@ -15,7 +14,6 @@ const shown = reviews.slice(0, limit);
     <div class="stack">
       <p class="eyebrow">Reviews</p>
       <h2 class="display" id="reviews-heading">{heading}</h2>
-      <p style="margin:0;display:flex;gap:4px;align-items:center" aria-label="Five stars on Google"><Icon name="star" /><Icon name="star" /><Icon name="star" /><Icon name="star" /><Icon name="star" /></p>
       {google && <p style="margin:0;font-size:17px">Read every review, or leave one, on <a href={google}>Google</a>.</p>}
     </div>
     {shown.length > 0 && (

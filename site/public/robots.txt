@@ -1,0 +1,4 @@
+# Staging: nothing on this site is to be indexed until the Phase 5 launch,
+# which replaces this file (docs/reference/website-and-seo.md).
+User-agent: *
+Disallow: /

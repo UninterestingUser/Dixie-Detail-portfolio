@@ -1,5 +1,5 @@
 ---
-import { Image } from "astro:assets";
+import { Image, getImage } from "astro:assets";
 import Base from "../layouts/Base.astro";
 import Header from "../components/Header.astro";
 import HeroPicker from "../components/HeroPicker.astro";
@@ -17,10 +17,15 @@ import { faqSchema, localBusiness } from "../lib/schema.js";
 const page = pages.pages.home;
 const tel = "+1" + business.phone.number.replace(/\D/g, "");
 const jsonLd = [await localBusiness()];
+// The hero photo is the largest thing on a phone's first screen: preloaded,
+// in the sizes the page uses, a little lighter than the other photos.
+const HERO_WIDTHS = [480, 640, 828, 1080, 1600, 2000];
+const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, format: "webp" });
 ---
 <Base title={page.title} description={page.description} path="/" heroHeader jsonLd={jsonLd}>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroImage.srcSet.attribute} imagesizes="100vw" fetchpriority="high" />
   <section slot="hero" class="hero" aria-label="Introduction">
-    <Image src={hero} alt="Mobile car detailing in a Cleveland, TN driveway" widths={[640, 1024, 1600, 2000]} sizes="100vw" loading="eager" fetchpriority="high" />
+    <img src={heroImage.src} srcset={heroImage.srcSet.attribute} sizes="100vw" alt="Mobile car detailing in a Cleveland, TN driveway" width="2000" height="1500" fetchpriority="high" decoding="async" />
     <Header />
     <div class="hero-body">
       <div class="wrap" style="width:100%">
@@ -38,8 +43,8 @@ const jsonLd = [await localBusiness()];
   <section class="section" id="how">
     <div class="wrap shine">
       <div class="shine-photos">
-        <Image src={shineExterior} alt="Truck paint after a mobile detail in Bradley County, TN" widths={[300, 600]} sizes="(max-width: 640px) 50vw, 300px" />
-        <Image src={shineInterior} alt="Mobile interior car detailing at a home in Cleveland, TN" widths={[300, 600]} sizes="(max-width: 640px) 50vw, 300px" />
+        <Image src={shineExterior} alt="Truck paint after a mobile detail in Bradley County, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
+        <Image src={shineInterior} alt="Mobile interior car detailing at a home in Cleveland, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
       </div>
       <div class="shine-text">
         <p class="eyebrow">{pages.shine.eyebrow}</p>
