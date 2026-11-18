@@ -3,6 +3,12 @@
    base, navy #002D65 the accent, near-black headings, a charcoal footer with
    a red top edge. Archivo, condensed and uppercase for headings. */
 
+/* Archivo, trimmed to the weights, widths and characters the site uses
+   (src/assets/fonts/archivo.json, made by tools/make_site_font.py): 44 KB
+   instead of 90, so it shares the phone's first screen less with the hero
+   photo. */
+@font-face { font-family: "Archivo Variable"; font-style: normal; font-display: swap; font-weight: 400 800; font-stretch: 75% 100%; src: url("../assets/fonts/archivo.woff2") format("woff2-variations"); }
+
 /* Fallbacks sized to Archivo, so the swap to Archivo moves no line: text
    shows at once in Arial (Liberation Sans on Linux), scaled to Archivo's
    width (measured: 97.8% for text, 81.1% for the condensed headings), with

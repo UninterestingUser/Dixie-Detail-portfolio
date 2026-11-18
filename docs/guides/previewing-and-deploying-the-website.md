@@ -36,7 +36,7 @@ The same checks run in GitHub Actions on every pull request that touches `site/`
 ```bash
 npm run build:test
 npm run check:prices      # no price is computed in the browser
-npm run test:unit         # the offline piece, the required settings, and the fake API against the real API's shapes
+npm run test:unit         # the offline piece, the required settings, the fake API against the real API's shapes, and the font's characters (after a build)
 npm run test:e2e          # the booking flow in a browser, against the fake API
 npm run test:lighthouse   # speed and accessibility on a phone
 ```

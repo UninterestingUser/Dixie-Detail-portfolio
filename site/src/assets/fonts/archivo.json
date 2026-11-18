@@ -1,0 +1,18 @@
+{
+  "about": "The trimmed Archivo the site serves (archivo.woff2), made by tools/make_site_font.py from the @fontsource-variable/archivo package. Only what the site uses: the weights and widths below and these characters. tests/unit/font.test.mjs fails when a built page uses a character outside them; add it here and run the script again.",
+  "source": "node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2",
+  "weight": [400, 800],
+  "width": [75, 100],
+  "unicodes": [
+    "0020-007E",
+    "00A0-00FF",
+    "2013-2014",
+    "2018-2019",
+    "201C-201D",
+    "2022",
+    "2026",
+    "2190",
+    "2192",
+    "271D"
+  ]
+}
