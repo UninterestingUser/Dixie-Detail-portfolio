@@ -36,12 +36,12 @@ The same checks run in GitHub Actions on every pull request that touches `site/`
 ```bash
 npm run build:test
 npm run check:prices      # no price is computed in the browser
-npm run test:unit         # the offline piece: signing, holding, replaying
+npm run test:unit         # the offline piece, the required settings, and the fake API against the real API's shapes
 npm run test:e2e          # the booking flow in a browser, against the fake API
 npm run test:lighthouse   # speed and accessibility on a phone
 ```
 
-The targets are in [website-and-seo.md](../reference/website-and-seo.md#speed-and-accessibility-targets). A failing browser test leaves a trace in `site/test-results/`; open it with `npx playwright show-trace`.
+The fake API must answer with the real API's shapes, recorded in [data/public-api-shapes.yaml](../../data/public-api-shapes.yaml); `npm run test:unit` checks it, and `tools/run-tests.sh` checks the real API against the same file ([public-api.md](../reference/public-api.md#the-answers-shapes-are-a-tested-contract)). The targets are in [website-and-seo.md](../reference/website-and-seo.md#speed-and-accessibility-targets). A failing browser test leaves a trace in `site/test-results/`; open it with `npx playwright show-trace`.
 
 ## One-time setup on Cloudflare
 

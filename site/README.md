@@ -19,4 +19,4 @@ npm run test:lighthouse                 # speed and accessibility on a phone
 | `functions/offline/` | The Cloudflare Pages Function that takes offline forms |
 | `workers/offline-replay/` | The scheduled Worker that replays held offline requests |
 | `shared/` | Signing, holding and replaying, shared by the two |
-| `tests/` | The fake API and test server, the browser tests, the offline piece's unit tests and the price check |
+| `tests/` | The fake API and test server, the browser tests, the unit tests (the offline piece, the required settings, and the fake API against the real API's shapes in `data/public-api-shapes.yaml`) and the price check |
