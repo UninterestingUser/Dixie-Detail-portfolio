@@ -1,6 +1,10 @@
 // A fake of the public API (docs/reference/public-api.md), for building the
 // site and for the browser tests. Its answers have the real API's shapes,
-// with invented prices and places. Every total it gives is its own, and in
+// as data/public-api-shapes.yaml records them (tests/unit/contract.test.mjs
+// checks; app/publicapi/test_contract.py checks the real API against the
+// same file), with invented prices and places. Anything the fake must keep
+// that the real answer doesn't carry, such as a quote's place, is kept in
+// its state, never added to an answer. Every total it gives is its own, and in
 // "odd" mode deliberately differs from the sum of its lines, so a test can
 // prove the page shows the server's numbers and works none out itself.
 //
@@ -154,7 +158,7 @@ function addDays(date, days) {
 const iso = (date) => date.toISOString().slice(0, 10);
 
 export function createFakeApi() {
-  const state = { mode: { offline: false, odd: false }, quotes: new Map(), places: new Map(), sessions: new Map(), log: [], counter: 0 };
+  const state = { mode: { offline: false, odd: false }, quotes: new Map(), quotePlaces: new Map(), places: new Map(), sessions: new Map(), log: [], counter: 0 };
   const next = (prefix) => `${prefix}${String(++state.counter).padStart(6, "0")}`;
 
   function lookup(params) {
@@ -224,16 +228,18 @@ export function createFakeApi() {
       service_minutes: minutes - 60,
       time_on_site_minutes: minutes,
       full_day: minutes >= 480,
-      place: body.place || null,
     };
     state.quotes.set(number, web);
+    // Which place the quote was for, kept by the fake as the server keeps
+    // it: the real quote answer has no place field.
+    if (place) state.quotePlaces.set(number, body.place);
     return [201, web];
   }
 
   function openTimes(params) {
     const web = state.quotes.get(params.get("quote"));
     if (!web) return [404, { error: "not_found", message: "That quote wasn't found." }];
-    if (!web.place) return [422, { error: "address_needed", message: "Enter the service address first." }];
+    if (!state.quotePlaces.has(web.number)) return [422, { error: "address_needed", message: "Enter the service address first." }];
     const today = new Date();
     const first = params.get("from") ? new Date(params.get("from") + "T12:00:00") : addDays(today, 2);
     const days = [];
@@ -312,7 +318,7 @@ export function createFakeApi() {
       if (!place.in) return send(res, 422, { error: "outside_area", message: "Sorry, that address is outside the area we serve. If you think we can still help, call or text (423) 380-9120." });
       const token = next("P");
       state.places.set(token, place);
-      return send(res, 201, { place: token, address: { ...place, one_line: `${place.line1}, ${place.city}, ${place.state} ${place.zip_code}` }, in_area: true, approved_out_of_area: false, tax: { rate_percent: place.rate, jurisdiction: place.jurisdiction }, reminder: "We bring everything else, but we need water and power at the vehicle." });
+      return send(res, 201, { place: token, address: { line1: place.line1, line2: "", city: place.city, state: place.state, zip_code: place.zip_code, one_line: `${place.line1}, ${place.city}, ${place.state} ${place.zip_code}` }, in_area: true, approved_out_of_area: false, tax: { rate_percent: place.rate, jurisdiction: place.jurisdiction }, reminder: "We bring everything else, but we need water and power at the vehicle." });
     }
     if (path === "quotes") { const [status, answer] = quote(body); return send(res, status, answer); }
     if (path === "open-times") { const [status, answer] = openTimes(p); return send(res, status, answer); }

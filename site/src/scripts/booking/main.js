@@ -52,6 +52,9 @@ const fresh = () => ({
   addOns: [],
   condition: 1,
   quote: null,
+  // The place token the current quote was asked for. The quote's answer
+  // names no place (public-api.md), so the flow remembers what it sent.
+  quotePlace: null,
   quoting: false,
   quoteError: "",
   place: null,
@@ -170,7 +173,7 @@ function stepReady(n) {
     case 1: return sizeSettled() && !vehicleClass().booked_by_quote;
     case 2: return S.service != null && (S.mode === "offline" ? !!builtInJob() || byQuoteLevel() : !!S.quote || byQuoteLevel()) && !S.quoting;
     case 3: return !byQuoteLevel() && (S.mode === "offline" ? !!builtInJob() : !!S.quote);
-    case 4: return S.mode === "offline" ? !!(S.placeId || (S.googleDown && S.addressText.trim().length > 5)) : !!(S.place && S.quote && S.quote.place === S.place.place && !S.quoting);
+    case 4: return S.mode === "offline" ? !!(S.placeId || (S.googleDown && S.addressText.trim().length > 5)) : !!(S.place && S.quote && S.quotePlace === S.place.place && !S.quoting);
     case 5: return S.mode === "offline" ? !!S.preferredDate : !!S.start;
     case 6: return !!S.first.trim() && phoneDigits(S.mobile).length === 10 && !!S.payment;
     default: return true;
@@ -355,6 +358,7 @@ function renderStep1() {
 
 async function requote() {
   S.quote = null;
+  S.quotePlace = null;
   S.quoteError = "";
   // Open times depend on the quote's time on site.
   S.times = null;
@@ -370,6 +374,7 @@ async function requote() {
   render();
   try {
     S.quote = (await post("quotes", body)).body;
+    S.quotePlace = body.place || null;
   } catch (error) {
     S.quoting = false;
     if (error instanceof ApiError && error.code === "ask_for_quote") return startRequest("level");

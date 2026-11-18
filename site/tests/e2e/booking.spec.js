@@ -399,3 +399,24 @@ test("a 530 in the middle of a booking switches to the offline form and keeps th
   await expect(page.locator("[data-banner]")).toContainText("can't reach our booking system");
   await expect(page.locator('[data-service="Full Detail"]')).toBeVisible();
 });
+
+// The location step unlocks from the real API's answers: the quote names no
+// place, so the flow remembers which place it asked about. The fake once
+// added a place to its quotes, and this step never unlocked on staging.
+test("the location step goes on to date and time once the address is checked", async ({ page }) => {
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await expect(cont(page, 4)).toHaveAttribute("aria-disabled", "true");
+  await address(page, "100 Example", "100 Example St NW");
+  await expect(page.getByText("In our service area.")).toBeVisible();
+  await expect(estimate(page)).toContainText("Sales tax (9.75%)");
+  await expect(cont(page, 4)).toHaveAttribute("aria-disabled", "false");
+  await cont(page, 4).click();
+  await expect(page.locator("#step-5")).toBeVisible();
+  await expect(page.locator("[data-day]").first()).toBeVisible();
+  await page.locator("[data-day]").first().click();
+  await page.locator("[data-time]").first().click();
+  await expect(cont(page, 5)).toHaveAttribute("aria-disabled", "false");
+});

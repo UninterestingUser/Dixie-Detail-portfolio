@@ -1,0 +1,237 @@
+meta:
+  title: Public API answer shapes
+  summary: The shape of every public API answer the website reads, the contract the real API and the website's fake API are both tested against so they can't drift apart.
+  updated: 2026-11-18
+  status: current
+  explained_in: docs/reference/public-api.md
+  note: >-
+    Checked from both sides: app/publicapi/test_contract.py works the shapes out from the real
+    API's answers and requires them to equal these, and site/tests/unit/contract.test.mjs
+    requires every answer of the fake API in site/tests/fake/api.mjs to fit them. A shape is
+    "string", "number", "boolean", "null" or a union such as "null|string"; a one-item list
+    for a list of that shape; a mapping for an object with exactly those keys, where a key
+    ending in "?" may be left out and "$or_null: true" lets the object be null; or a mapping
+    of "$items" and "$or_null: true" for a list that may be null. After a deliberate change
+    to an answer, run tools/run-tests.sh -s publicapi/test_contract.py, paste the shapes it
+    prints here, and change the fake to match.
+answers:
+  addresses:
+    address:
+      city: string
+      line1: string
+      line2: string
+      one_line: string
+      state: string
+      zip_code: string
+    approved_out_of_area: boolean
+    in_area: boolean
+    place: string
+    reminder: string
+    tax:
+      jurisdiction: string
+      rate_percent: string
+  booking-options:
+    consent:
+      appointment: string
+      follow_up: string
+      links:
+        privacy_policy: string
+        text_message_terms: string
+      version: string
+    payment_methods:
+    - label: string
+      value: string
+    photos:
+      max_megabytes: number
+      max_per_request: number
+      types:
+      - string
+    quote_lifetime_minutes: number
+  bookings:
+    calendar_file:
+      content: string
+      content_type: string
+      name: string
+    reference: string
+    summary:
+      add_ons:
+      - string
+      address: string
+      arrival: string
+      color: string
+      date: string
+      notes:
+      - string
+      payment_method: string
+      sales_tax: string
+      service: string
+      time_on_site: string
+      total: string
+      total_before_tax: string
+      vehicle: string
+  error:
+    error: string
+    field?: string
+    message: string
+  open-times:
+    days:
+    - date: string
+      times:
+      - label: string
+        start: string
+    expired: boolean
+    from: string
+    quote: string
+    to: string
+  price-table:
+    effective_date: string
+    jobs:
+    - add_ons:
+      - number
+      class_id: number
+      condition: null|number
+      full_day: boolean
+      service: number
+      size: null|number
+      time_on_site_minutes: number
+      total_before_tax: string
+    pricebook_version: number
+  quote-requests:
+    message: string
+    photos: number
+    reference: string
+  quote-requests/uploads:
+    expires_at: string
+    max_megabytes: number
+    max_photos: number
+    session: string
+  quote-requests/uploads/photos:
+    height: number
+    photo: string
+    width: number
+  quotes:
+    add_ons:
+    - id: number
+      name: string
+    address: null|string
+    condition_level: null|number
+    expires_at: string
+    full_day: boolean
+    lines:
+    - amount: string
+      description: string
+      kind: string
+    number: string
+    pricebook_version: number
+    sales_tax:
+      $or_null: true
+      amount: string
+      jurisdiction: string
+      rate_percent: string
+    service:
+      id: number
+      name: string
+    service_minutes: number
+    time_on_site_minutes: number
+    total: string
+    total_before_tax: string
+    vehicle:
+      class:
+        booked_by_quote: boolean
+        id: number
+        name: string
+      description: string
+      size:
+        $or_null: true
+        label: string
+        value: number
+  services:
+    classes:
+    - booked_by_quote: boolean
+      examples:
+      - string
+      from_price: null|string
+      id: number
+      name: string
+      photo_card: string
+      sizes:
+      - label: string
+        value: number
+    condition_levels:
+    - adds_percent: null|string
+      booked_by_quote: boolean
+      description: string
+      label: string
+      level: number
+    effective_date: string
+    pricebook_version: number
+    services:
+    - condition_applies: boolean
+      description: string
+      from_price: string
+      id: number
+      kind: string
+      name: string
+      prices:
+      - class_id: number
+        price: string
+        size: null|number
+  vehicles/lookup:
+    booked_by_quote: boolean
+    class:
+      $or_null: true
+      booked_by_quote: boolean
+      id: number
+      name: string
+    message: string
+    photo_cards:
+      $items:
+        booked_by_quote: boolean
+        caption: string
+        class_id: number
+        examples:
+        - string
+        name: string
+        photo: null|string
+      $or_null: true
+    question:
+      $or_null: true
+      choices:
+      - answer: number
+        label: string
+      key: string
+      text: string
+    size:
+      $or_null: true
+      label: string
+      value: number
+    vehicle:
+      make: string
+      model: string
+      motorcycle: boolean
+      year: number
+  vehicles/makes:
+    makes:
+    - string
+    year: number
+  vehicles/models:
+    make: string
+    models:
+    - motorcycle: boolean
+      name: string
+      type: string
+    year: number
+  vehicles/photo-cards:
+    photo_cards:
+    - booked_by_quote: boolean
+      caption: string
+      class_id: number
+      examples:
+      - string
+      name: string
+      photo: null|string
+  vehicles/years:
+    first_year: number
+    years:
+    - number
+

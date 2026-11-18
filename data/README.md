@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 ---
 
 # Data files
@@ -30,6 +30,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | [integrations.yaml](integrations.yaml) | Outside services and their status | Reference |
 | [gnucash-accounts.yaml](gnucash-accounts.yaml) | GnuCash account mapping | Seed for the export (Phase 6) |
 | [message-templates.yaml](message-templates.yaml) | Text message wording and consent | Seed for templates (Phase 4) |
+| [public-api-shapes.yaml](public-api-shapes.yaml) | The shape of every public API answer the website reads | The contract the real API (`app/publicapi/test_contract.py`) and the website's fake API (`site/tests/unit/contract.test.mjs`) are both tested against |
 | [consent-wording.yaml](consent-wording.yaml) | The two text consent checkboxes' exact wording, by version | Read by the public API, which serves the current version and records the words shown with each answer |
 | [business.yaml](business.yaml) | Contact details, brand, profiles | Reference |
 | [phases.yaml](phases.yaml) | Build phases and status | Reference |

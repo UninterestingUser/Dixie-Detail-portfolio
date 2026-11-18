@@ -98,6 +98,8 @@ The body is `vehicle` (year, make, model and type, or a photo card), `size` (the
 - `lines` (kind, description, amount), `total_before_tax`, `sales_tax` (rate, amount and jurisdiction, or none before the address), `total`;
 - `service_minutes`, `time_on_site_minutes` and `full_day`.
 
+The answer names no place: a caller keeps track of the `place` it sent. The website remembers which place each quote was asked for, and its location step unlocks once the latest quote was asked with the picked address.
+
 **The condition** is 1 to 3, and is taken only with a service that has `condition_applies`: Full Detail and Interior Only ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). It is required with them, and refused with anything else as a `bad_request` on the `condition` field. A level booked by quote, Level 3, has no price or time: the answer is `ask_for_quote` (422), with no quote issued, and a `quote_request` object holding the `service`, `condition` and `add_ons` to send on to a quote request.
 
 A quote never changes. A changed input, such as another condition level or the address, makes a new quote. The quote is the pricing engine's quote record ([pricing.md](pricing.md#the-quoted-price-is-the-price-of-record)), so it holds the pricebook version and tax rates too. A vehicle that needs something else first is refused with what it needs: `size_question` (with the question), `photo_card_needed` (with the cards), `ask_for_quote`, or `not_offered` for a service or add-on the pricebook does not price for the class, such as anything but Motorcycle Detail for a motorcycle.
@@ -177,6 +179,15 @@ A quote request sent while the server can't be reached, or while Google's addres
 - **Size limits and strict validation** on every input: known fields only, the right types, lengths capped, no control characters, phone numbers of 10 digits (decision 0049), JSON bodies up to 16 KB, photos up to their limit.
 - **CORS only for the site's addresses**, held in the setting `PUBLIC_API_CORS_ORIGINS`, each trimmed of spaces and a trailing slash when it is read ([configuration.md](configuration.md#the-public-api)). A browser on any other origin is refused; a request with no origin, such as the smoke test, is allowed. No cookies are set or read.
 - **Generic errors** and **no customer data** in any answer, as above.
+
+## The answers' shapes are a tested contract
+
+[data/public-api-shapes.yaml](../../data/public-api-shapes.yaml) records the shape of every answer the website reads: each field, its type, which may be left out and which may be null. Both sides are tested against it:
+
+- `app/publicapi/test_contract.py` works the shapes out from the real API's answers and requires them to equal the file's;
+- `site/tests/unit/contract.test.mjs` requires each answer of the website's fake API (`site/tests/fake/api.mjs`), which its browser tests run on, to fit the file exactly, with no field missing and none added.
+
+So the fake can't drift from the real API. It once did: its quotes carried a `place` field the real API never sent, the booking flow came to rely on it, and every browser test passed while the real location step never unlocked. A deliberate change to an answer changes the file, the real API and the fake in the same pull request. Run `tools/run-tests.sh -s publicapi/test_contract.py`: when the shapes differ, it prints them as they now are, ready to paste.
 
 ## Test records
 
