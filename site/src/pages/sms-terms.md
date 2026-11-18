@@ -7,15 +7,13 @@ path: /sms-terms/
 
 # Text Message Terms
 
-**Effective [keep the date on the live page at dixiedetail.com/sms-terms/]**
+**Effective [the day the new site goes live]**
 
 These terms cover text messages sent by Dixie Detail LLC ("Dixie Detail", "we", "us") from our business phone number.
 
 ## What we send
 
-If you agree to appointment texts, we send messages about your service: booking confirmations, reminders, preparation details, arrival updates, payment links, receipts and replies to your questions.
-
-If you separately agree to follow-up texts, we also send review requests, reminders that a service may be due, and occasional offers.
+If you agree to texts, we send messages about your service: booking confirmations, reminders, preparation details, arrival updates, payment links, receipts, replies to your questions, and a request for a review after the work is done. We do not send marketing or promotional texts.
 
 ## How you sign up
 

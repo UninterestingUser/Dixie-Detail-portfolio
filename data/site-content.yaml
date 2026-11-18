@@ -1,6 +1,6 @@
 meta:
   title: Website content
-  summary: The website's page and card text in the owner's words, the condition level cards, and which picture goes with each vehicle class and category page. Prices and times come from the price book.
+  summary: The website's text in the owner's words - the four service cards and services page sections, each service's text, the condition level cards and the quote notes - and which picture goes with each vehicle class and section. Prices and times come from the price book.
   updated: 2026-11-18
   status: current
   explained_in: docs/reference/website-and-seo.md
@@ -10,28 +10,59 @@ meta:
 # Service names match the price book exactly. Prices and times never appear
 # here: the site reads them from the price book.
 # card: the short text on the booking flow's service, add-on and condition cards.
-# page: the category page that carries the full text.
+# section: the services page section that carries the full text.
+# The booking flow lists the services in this order.
 
-pages:
-  - slug: detailing
-    title: Detailing
-    services: [Full Detail, Interior Only, Exterior Only]
-  - slug: paint-correction
+# The four service sections (owner, 2026-11-18): the homepage cards, and
+# the anchored sections of the one services page, /services/#<anchor>.
+# title and card are the owner's words from the current dixiedetail.com.
+# The card's "from" price is the lowest of the price_from services' prices,
+# cars and trucks only (no motorcycle is priced for these). button is the
+# card's and section's first button: "See my price" or "Add to detail".
+# old_pages are the category pages these sections replace; each redirects
+# permanently to its section (site/public/_redirects).
+sections:
+  - anchor: detail
+    title: Premium Detailing
+    card: >-
+      Full interior and exterior detail services. Paint, wheels, tires,
+      undercarriage, engine, between and under the seats, trunk, and door
+      jambs. Built for daily drivers that need to look new again.
+    price_from: [Full Detail, Interior Only, Exterior Only]
+    button: See my price
+    services: [Full Detail, Interior Only, Exterior Only, Motorcycle Detail]
+    old_pages: [detailing, motorcycle-detail]
+  - anchor: correction
     title: Paint Correction
+    card: >-
+      Decontamination plus a 1-step or 2-step polish to cut swirls and light
+      scratches, finished with ceramic wax that protects for up to a year.
+    price_from: [1-Step Paint Correction, 2-Step Paint Correction]
+    button: See my price
     services: [1-Step Paint Correction, 2-Step Paint Correction]
-  - slug: headlight-restoration
+    old_pages: [paint-correction]
+  - anchor: headlight
     title: Headlight Restoration
+    card: >-
+      Both headlights. We remove the damaged outer layer, buff the lens, and
+      add UV protection so they don't haze over again in a month.
+    price_from: [Headlight Restoration]
+    button: Add to detail
     services: [Headlight Restoration]
-  - slug: shampoo-and-extraction
+    old_pages: [headlight-restoration]
+  - anchor: extraction
     title: Shampoo & Extraction
+    card: >-
+      For carpets and cloth seats that a regular detail won't pull out of.
+      Added on top of the full detail when the interior needs a deeper reset.
+    price_from: [Carpet Extraction, Seat Extraction]
+    button: Add to detail
     services: [Carpet Extraction, Seat Extraction]
-  - slug: motorcycle-detail
-    title: Motorcycle Detail
-    services: [Motorcycle Detail]
+    old_pages: [shampoo-and-extraction]
 
 services:
   - name: Full Detail
-    page: detailing
+    section: detail
     takes_condition: true
     heading: Full Detail
     card: >-
@@ -46,7 +77,7 @@ services:
       jambs, every crevice – we do it all.
 
   - name: Interior Only
-    page: detailing
+    section: detail
     takes_condition: true
     heading: Interior Detail
     card: >-
@@ -60,7 +91,7 @@ services:
       for an extra charge.
 
   - name: Exterior Only
-    page: detailing
+    section: detail
     heading: Exterior Detail
     card: >-
       Our premium detail for the outside: multistage paint wash, ceramic wax,
@@ -73,7 +104,7 @@ services:
       tires and plastics are dressed.
 
   - name: 1-Step Paint Correction
-    page: paint-correction
+    section: correction
     heading: Paint Decontamination + 1-Step Correction
     card: >-
       The best value for most cars: decontamination, one polishing pass that
@@ -90,7 +121,7 @@ services:
       paint.
 
   - name: 2-Step Paint Correction
-    page: paint-correction
+    section: correction
     heading: Paint Decontamination + 2-Step Correction
     card: >-
       For a high-gloss showroom finish: decontamination, a cutting pass for
@@ -107,7 +138,7 @@ services:
       wax to protect your newly-corrected paint.
 
   - name: Headlight Restoration
-    page: headlight-restoration
+    section: headlight
     heading: Headlight Restoration
     add_on: true       # added to Full Detail, Exterior Only or a paint correction (decision 0106)
     card: >-
@@ -125,7 +156,7 @@ services:
       or 2-Step Paint Correction.
 
   - name: Carpet Extraction
-    page: shampoo-and-extraction
+    section: extraction
     heading: Carpet Extraction
     add_on: true
     card: Forced extraction pulls dirt, stains and odors out of your carpet.
@@ -139,7 +170,7 @@ services:
       by the number of seat rows in your vehicle.
 
   - name: Seat Extraction
-    page: shampoo-and-extraction
+    section: extraction
     heading: Seat Extraction
     add_on: true
     card: Deep cleaning and extraction that pulls years of grime out of cloth seats.
@@ -154,7 +185,7 @@ services:
       of seat rows in your vehicle.
 
   - name: Motorcycle Detail
-    page: motorcycle-detail
+    section: detail
     heading: Motorcycle Detail
     card: >-
       A meticulous multi-stage wash around every critical component, finished
@@ -171,27 +202,42 @@ services:
 # adds nothing; Level 2 adds 10%; Level 3 is booked by quote (no price shown).
 condition_levels:
   - level: 1
-    name: Service Level 1
+    name: Normal wear and tear
     default: true
     card: >-
       Vehicle is maintained, but needs a reset. No major messes or spills.
       Standard wear and tear from family. Some light pet hair. The car looks
       used and we want it to look new again.
   - level: 2
-    name: Service Level 2
+    name: Needs extra attention
+    estimate: Needs Attention     # the estimate card's line: "Needs Attention (+10%)", the percentage from the price book
     card: >-
       Vehicle needs attention from a professional. It's been a while since
       the last cleaning and things have gotten messy. Kids, dogs, and dirt
       roads have left their mark.
   - level: 3
-    name: Service Level 3
+    name: Let's talk
     card: >-
       Heavy contamination from major spills or significant dirt buildup over
       the years. Significant dog hair, heavy stains, or possibly mold.
     booked_by_quote: true
     quote_note: >-
-      Every Level 3 job is different, so we quote it by hand. Tell us what
-      you're dealing with, add photos if you can, and we'll send you a price.
+      Unique situations require manual quoting. Tell us what you're dealing
+      with, add photos if you can, and we'll get you a price.
+    request_intro: >-
+      Unique situations require a manual estimate. Give us some details about
+      the job and we'll reply with a price, usually within a day.
+
+# A vehicle in a class booked by quote (owner, 2026-11-18): the booking
+# flow's step 1 note above its "Request quote" button, and the quote request
+# card's intro, where {class} is the class's name (Full-size Vans).
+quote_class:
+  note_heading: Full-size vans vary in size and condition.
+  note: Request a quote and we'll reply with your estimate, usually within a day.
+  request_intro: >-
+    {class} vary in size and condition and require a manual estimate. Give us
+    some details about the job and we'll reply with a price, usually within a
+    day.
 
 # The Google Business Profile review link (from the owner, 2026-11-14) is
 # google_business_profile in data/business.yaml. One link serves the footer
@@ -213,16 +259,17 @@ class_images:
   Full-size Trucks: vehicle-class-fullsizetruck.webp
   Motorcycles: vehicle-class-motorcycles.webp
 
-# Category page photos (owner, 2026-11-14), one per page. The site makes
+# Section photos (owner, 2026-11-14), one per services page section. The
+# motorcycle text joined Premium Detailing on 2026-11-18, so its photo is
+# no longer shown. The site makes
 # smaller sizes itself and never shows a photo larger than its own pixels.
 # The owner keeps these five as they are for launch (2026-11-14).
 # The files are in site/src/assets/page-photos/.
-page_images:
-  detailing: exterior-wash.webp
-  paint-correction: paint-correction.webp
-  headlight-restoration: headlight-restoration.webp
-  shampoo-and-extraction: seat-extraction.webp
-  motorcycle-detail: motorcycle.webp
+section_images:
+  detail: exterior-wash.webp
+  correction: paint-correction.webp
+  headlight: headlight-restoration.webp
+  extraction: seat-extraction.webp
 
 # The two policy pages: Text Message Terms as published; Privacy Policy from
 # the doc "Privacy Policy update for the new website" (final 2026-11-14).

@@ -1,5 +1,5 @@
 ---
-// "Get your exact price": year, make and model, handed to the booking flow
+// "See your exact price": year, make and model, handed to the booking flow
 // (/book/?year=...&make=...&model=...). The years are baked in at build
 // time; makes and models load from the public API as they are picked. With
 // no script or no API, the button still opens the booking page.
@@ -10,7 +10,7 @@ const { years } = await api("vehicles/years");
 const apiBase = browserApiBase();
 ---
 <form class="picker" action="/book/" method="get" data-hero-picker data-api={apiBase}>
-  <p class="picker-title">Get your exact price</p>
+  <p class="picker-title">See your exact price</p>
   <div class="picker-row">
     <div class="field">
       <label for="hero-year">Year</label>
@@ -27,7 +27,7 @@ const apiBase = browserApiBase();
       <label for="hero-model">Model</label>
       <select id="hero-model" name="model" disabled><option value="">Pick a make first</option></select>
     </div>
-    <button class="button" type="submit">See my price<Icon name="arrow" size={18} /></button>
+    <button class="button" type="submit">See Price<Icon name="arrow" size={18} /></button>
   </div>
 </form>
 <script>

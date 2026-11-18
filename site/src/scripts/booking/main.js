@@ -18,7 +18,7 @@
 //   without photos.
 
 import { ApiError, OfflineError, get, hold, post, setConfig } from "./api.js";
-import { consentText, field, formatPhone, h, phoneDigits, uuid } from "./dom.js";
+import { consentText, field, fill, formatPhone, h, phoneDigits, uuid } from "./dom.js";
 import { dollars, money } from "./money.js";
 import { addressField } from "./places.js";
 import { photoPicker } from "./photos.js";
@@ -117,12 +117,23 @@ function vehicleName() {
   return "";
 }
 
-function classLine() {
+// The size as the customer knows it, such as "extended or crew cab". The
+// vehicle class itself is internal and never shown (owner, 2026-11-18).
+function sizeLine() {
   const c = vehicleClass();
   if (!c) return "";
   const size = c.sizes.find((item) => item.value === sizeValue());
-  return size ? `${c.name}, ${size.label}` : c.name;
+  return size ? size.label : "";
 }
+
+// The vehicle as the summary shows it: "2025 Chevrolet Silverado ·
+// extended or crew cab (red)".
+function vehicleLine() {
+  const line = [vehicleName(), sizeLine()].filter(Boolean).join(" · ");
+  return S.color.trim() ? `${line} (${S.color.trim()})` : line;
+}
+
+const quoteClass = () => !!vehicleClass()?.booked_by_quote;
 
 // The vehicle as the API takes it.
 function vehicleBody(forRequest = false) {
@@ -171,9 +182,10 @@ const stepSkipped = (n) => n === 3 && !conditionNeeded();
 
 function stepReady(n) {
   switch (n) {
-    case 1: return sizeSettled() && !vehicleClass().booked_by_quote;
+    // A vehicle booked by quote goes on to the quote request instead.
+    case 1: return sizeSettled();
     case 2: return S.service != null && (S.mode === "offline" ? !!builtInJob() || byQuoteLevel() : !!S.quote || byQuoteLevel()) && !S.quoting;
-    case 3: return !byQuoteLevel() && (S.mode === "offline" ? !!builtInJob() : !!S.quote);
+    case 3: return byQuoteLevel() || (S.mode === "offline" ? !!builtInJob() : !!S.quote);
     case 4: return S.mode === "offline" ? !!(S.placeId || (S.googleDown && S.addressText.trim().length > 5)) : !!(S.place && S.quote && S.quotePlace === S.place.place && !S.quoting);
     case 5: return S.mode === "offline" ? !!S.preferredDate : !!S.start;
     case 6: return !!S.first.trim() && phoneDigits(S.mobile).length === 10 && !!S.payment;
@@ -195,6 +207,9 @@ function reopen(n) {
 
 function advance(n) {
   if (!stepReady(n)) return;
+  // The one button reads "Request quote" for a job priced by hand.
+  if (n === 1 && quoteClass()) return startRequest("class");
+  if (n === 3 && byQuoteLevel()) return startRequest("level");
   S.reached = Math.max(S.reached, nextStep(n));
   render();
   const target = document.getElementById(`step-${S.reached}`);
@@ -223,11 +238,12 @@ function frame(n, title, intro, body) {
   section.classList.toggle("done-step", done);
   if (section.hidden) return section.replaceChildren();
   const ready = stepReady(n);
-  const label = n === 2 ? (conditionNeeded() ? "Continue to condition" : "Continue to location") : NEXT_LABEL[n];
+  const byQuote = (n === 1 && quoteClass()) || (n === 3 && byQuoteLevel());
+  const label = byQuote ? "Request quote" : n === 2 ? (conditionNeeded() ? "Continue to condition" : "Continue to location") : NEXT_LABEL[n];
   const next = current && n < 7 ? h("div", { class: "next-row" },
     h("button", { type: "button", class: "button", "aria-disabled": ready ? "false" : "true", "data-continue": n, onclick: () => advance(n) }, label),
     ready ? null : h("p", { class: "hint" }, HINTS[n])) : null;
-  section.replaceChildren(
+  fill(section,
     h("div", {}, h("p", { class: "step-eyebrow" }, `Step ${n} of 7${done ? " · done" : ""}`), h("h2", { id: `h-step-${n}`, tabindex: "-1" }, title), intro ? h("p", { class: "intro" }, intro) : null),
     body, next);
   return section;
@@ -309,17 +325,11 @@ function cardDetails() {
       h("div", { class: "grid2" }, c.sizes.map((size) => h("button", { type: "button", class: "choice", "aria-pressed": S.size === size.value ? "true" : "false", onclick: () => { S.size = size.value; vehicleChanged(); } }, h("span", { class: "name" }, size.label[0].toUpperCase() + size.label.slice(1)))))) : null);
 }
 
-function banner() {
-  const c = vehicleClass();
-  if (!c) return null;
-  if (c.booked_by_quote) {
-    return h("div", { class: "banner warn" }, h("div", {},
-      h("strong", {}, `${c.name} are priced by hand.`),
-      h("span", {}, "Ask for a quote and we'll reply with a price, usually within a day."),
-      h("div", { class: "next-row", style: "margin-top:10px" }, h("button", { type: "button", class: "button", "data-ask-quote": "class", onclick: () => startRequest("class") }, "Ask for a quote"))));
-  }
-  const from = c.from_price ? ` Prices start at ${dollars(c.from_price)}.` : "";
-  return h("div", { class: "banner" }, h("div", {}, h("strong", {}, `${c.name} identified`), h("span", {}, `${classLine()}.${from}`)));
+// For a vehicle booked by quote, the owner's note just above the "Request
+// quote" button: text only, the first line bold.
+function quoteNote() {
+  const words = built.text.quoteClass;
+  return h("p", { class: "quote-note", "data-quote-note": "" }, h("strong", {}, words.note_heading), h("br"), words.note);
 }
 
 function renderStep1() {
@@ -341,16 +351,21 @@ function renderStep1() {
       parts.push(h("div", { class: "stack", style: "gap:8px" }, h("p", { class: "label", style: "margin:0" }, S.lookup.question.text),
         h("div", { class: "grid2" }, S.lookup.question.choices.map((choice) => h("button", { type: "button", class: "choice", onclick: () => lookUp(choice.answer) }, h("span", { class: "name" }, choice.label))))));
     }
-    parts.push(h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = true; S.lookup = null; vehicleChanged(); } }, "My vehicle isn't listed"));
   } else {
     if (S.lookup && S.lookup.photo_cards) parts.push(h("p", { class: "hint", style: "margin:0" }, S.lookup.message));
     parts.push(photoCards());
     if (S.vehicle.card) parts.push(cardDetails());
-    if (S.mode === "online") parts.push(h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = false; S.vehicle.card = null; vehicleChanged(); } }, "Pick the year, make and model instead"));
   }
-  if (sizeSettled()) parts.push(banner());
-  parts.push(field("color", "Color (optional)", h("input", { id: "color", class: "input", value: S.color, maxlength: "40", placeholder: "Such as silver or dark blue", oninput: (event) => (S.color = event.target.value) }),
-    "Only used to tell your vehicles apart if you have two the same. It never changes the price."));
+  // The color (two thirds) and the other way to pick the vehicle (a third)
+  // on one row.
+  const other = S.mode !== "online" ? null : S.vehicle.showCards
+    ? h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = false; S.vehicle.card = null; vehicleChanged(); } }, "Pick the year, make and model instead")
+    : h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = true; S.lookup = null; vehicleChanged(); } }, "My vehicle isn't listed");
+  parts.push(h("div", { class: "color-row" },
+    field("color", "Color", h("input", { id: "color", class: "input", value: S.color, maxlength: "40", placeholder: "Such as silver or dark blue", oninput: (event) => (S.color = event.target.value) }),
+      "Only used to tell your vehicles apart if you have two the same. It never changes the price."),
+    other ? h("div", { class: "color-row-link" }, other) : null));
+  if (sizeSettled() && quoteClass()) parts.push(quoteNote());
   const intro = S.mode === "offline" ? "Pick the picture closest to your vehicle. We'll confirm the details with you." : "Pick the year, make and model. We work out the vehicle's size and price it for you.";
   frame(1, "What are we detailing?", intro, h("div", { class: "stack" }, parts));
 }
@@ -391,8 +406,12 @@ async function requote() {
 
 function renderStep2() {
   const c = vehicleClass();
-  if (!c) return frame(2, "Choose your detail", "", h("div"));
-  const mains = book.services.filter((service) => service.kind === "service" && cellPrice(service.id));
+  if (!c) return frame(2, "Choose your service", "", h("div"));
+  // In the owner's order: Full Detail, Interior Only, Exterior Only, then
+  // the two paint corrections; anything not listed there after them.
+  const offered = book.services.filter((service) => service.kind === "service" && cellPrice(service.id));
+  const listed = built.text.serviceOrder.map((name) => offered.find((service) => service.name === name)).filter(Boolean);
+  const mains = [...listed, ...offered.filter((service) => !listed.includes(service))];
   // Only the add-ons that go with the chosen service (decision 0106).
   const addOns = S.service ? book.services.filter((service) => service.kind === "add_on" && fits(S.service, service.id) && cellPrice(service.id)) : [];
   const text = (name) => built.text.services[name] || {};
@@ -402,7 +421,7 @@ function renderStep2() {
       onclick: () => { S.service = service.id; S.condition = 1; S.addOns = S.addOns.filter((id) => fits(service.id, id)); reopen(2); requote(); },
     }, h("span", { class: "top" }, h("span", { class: "name" }, service.name), h("span", { class: "price" }, dollars(cellPrice(service.id)))),
     h("span", { class: "desc" }, text(service.name).card || service.description)))),
-    addOns.length ? h("div", { class: "stack", style: "gap:10px" }, h("h3", { style: "margin:0;font-size:19px" }, "Add-ons"),
+    addOns.length ? h("div", { class: "stack", style: "gap:10px" }, h("h3", { style: "margin:0;font-size:19px" }, "Available add-ons"),
       addOns.map((service) => h("label", { class: "tick" },
         h("input", { type: "checkbox", checked: S.addOns.includes(service.id) || null, "data-add-on": service.name, onchange: (event) => {
           S.addOns = event.target.checked ? [...S.addOns, service.id] : S.addOns.filter((id) => id !== service.id);
@@ -413,7 +432,7 @@ function renderStep2() {
           h("span", { class: "desc", style: "font-size:15px;color:var(--text)" }, text(service.name).card || service.description))))) : null,
     S.quoteError ? h("p", { class: "error", role: "alert" }, S.quoteError) : null);
   const intro = `Prices for your ${vehicleName() || c.name}, before any condition adjustment.`;
-  frame(2, "Choose your detail", intro, body);
+  frame(2, "Choose your service", intro, body);
 }
 
 // Step 3: the condition (service level) -------------------------------------
@@ -430,11 +449,8 @@ function renderStep3() {
       }, h("span", { class: "top" }, h("span", { class: "name" }, words.name || `Service Level ${level.level}`), h("span", { class: "price" }, change)),
       h("span", { class: "desc" }, words.card || level.description));
     })),
-    byQuoteLevel() ? h("div", { class: "banner warn" }, h("div", {},
-      h("strong", {}, "Quoted by hand"),
-      h("span", {}, (built.text.levels[S.condition] || {}).quoteNote || "We'll reply with a price."),
-      h("div", { class: "next-row", style: "margin-top:10px" }, h("button", { type: "button", class: "button", "data-ask-quote": "level", onclick: () => startRequest("level") }, "Ask for a quote")))) : null);
-  frame(3, "What shape is the interior in?", "Pick the one closest to today. We confirm it when we arrive.", body);
+    byQuoteLevel() ? h("p", { class: "quote-note", "data-quote-note": "" }, (built.text.levels[S.condition] || {}).quoteNote) : null);
+  frame(3, "What is the condition of the interior?", "Pick the one closest to today. We confirm it when we arrive.", body);
 }
 
 // Step 4: the location ------------------------------------------------------
@@ -475,13 +491,10 @@ function renderStep4() {
   } else {
     parts.push(addressField({ config, id: "address", label: "Service address", value: S.addressText, onPick: placePicked, onDown: googleDown, onType: (value) => { S.addressText = value; S.place = null; S.placeId = null; reopen(4); refreshContinue(4); } }).element);
   }
-  if (S.place) {
-    const tax = S.place.tax;
-    parts.push(h("div", { class: "banner" }, h("div", {}, h("strong", {}, "In our service area."), h("span", {}, tax && tax.rate_percent ? ` Sales tax is ${tax.rate_percent}%${tax.jurisdiction ? ` (${tax.jurisdiction})` : ""}.` : ""))));
-  } else if (S.placeId) {
-    parts.push(h("div", { class: "banner" }, h("div", {}, h("strong", {}, "Address picked."), h("span", {}, " We check it's in our area when we confirm."))));
-  }
-  if (S.addressError) parts.push(h("div", { class: "banner warn", role: "alert" }, h("div", {}, h("strong", {}, S.addressError))));
+  // In the area: just that, since the estimate card shows the tax. Outside
+  // it: only the server's "Sorry..." message.
+  if (S.place) parts.push(h("div", { class: "banner", "data-in-area": "" }, h("strong", {}, "In our service area")));
+  if (S.addressError) parts.push(h("div", { class: "banner warn", role: "alert" }, h("div", {}, S.addressError)));
   parts.push(h("p", { class: "hint", style: "margin:0" }, h("strong", {}, "What we need from you: "), "room to work, plus water and power within 50 feet. We bring everything else, tent included."));
   frame(4, "Where will the vehicle be?", "Home, work or anywhere convenient in Bradley, McMinn, Hamilton, Polk or Meigs County.", h("div", { class: "stack" }, parts));
 }
@@ -519,7 +532,6 @@ function renderCalendar() {
       h("strong", {}, `${MONTHS[first.getMonth()]} ${first.getFullYear()}`),
       h("button", { type: "button", class: "link-button", onclick: () => loadTimes(isoDate(monthStart(first, 1))) }, "Later →")),
     h("div", { class: "calendar", role: "group", "aria-label": "Open days" }, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => h("span", { class: "dow", "aria-hidden": "true" }, d)), cells),
-    h("p", { class: "hint", style: "margin:0" }, "Crossed-out days are closed, already booked or too soon."),
     S.day ? h("div", { class: "stack", style: "gap:8px" }, h("p", { class: "label", style: "margin:0" }, `Arrival time, ${longDate(S.day)}`),
       h("div", { class: "times" }, (open.get(S.day) || []).map((slot) => h("button", { type: "button", class: "choice", "aria-pressed": S.start === slot.start ? "true" : "false", "data-time": slot.label, onclick: () => { S.start = slot.start; reopen(5); render(); } }, slot.label)))) : null);
 }
@@ -548,7 +560,6 @@ function renderStep5() {
 // Step 6: the details --------------------------------------------------------
 
 function renderStep6() {
-  const consent = options.consent;
   const mobile = h("input", { id: "mobile", type: "tel", class: "input", inputmode: "tel", autocomplete: "tel-national", placeholder: "(###) ###-####", maxlength: "14", value: S.mobile, oninput: (event) => {
     event.target.value = formatPhone(event.target.value);
     S.mobile = event.target.value;
@@ -557,12 +568,11 @@ function renderStep6() {
   const body = h("div", { class: "stack" },
     h("div", { class: "grid2" },
       field("first", "First name", h("input", { id: "first", class: "input", autocomplete: "given-name", value: S.first, maxlength: "100", oninput: (event) => { S.first = event.target.value; refreshContinue(6); } })),
-      field("last", "Last name (optional)", h("input", { id: "last", class: "input", autocomplete: "family-name", value: S.last, maxlength: "100", oninput: (event) => (S.last = event.target.value) }))),
+      field("last", "Last name", h("input", { id: "last", class: "input", autocomplete: "family-name", value: S.last, maxlength: "100", oninput: (event) => (S.last = event.target.value) }))),
     field("mobile", "Mobile number", mobile),
     h("div", { class: "stack", style: "gap:8px" }, h("p", { class: "label", style: "margin:0" }, "How would you like to pay when we're done?"),
       h("div", { class: "times", role: "group", "aria-label": "Payment method" }, options.payment_methods.map((method) => h("button", { type: "button", class: "choice", "aria-pressed": S.payment === method.value ? "true" : "false", onclick: () => { S.payment = method.value; refreshContinue(6); renderStep6(); } }, method.label))),
-      h("p", { class: "hint", style: "margin:0" }, "Nothing is charged now. You pay after the work is finished.")),
-    consentBoxes(consent));
+      h("p", { class: "hint", style: "margin:0" }, "Nothing is charged now. Payment is due when the work is finished.")));
   frame(6, "Your details", "", body);
 }
 
@@ -579,15 +589,14 @@ function reviewRows() {
   const job = S.mode === "online" ? S.quote : null;
   const service = services.get(S.service);
   const rows = [
-    ["Vehicle", [vehicleName(), classLine()].filter(Boolean).join(" · ")],
-    ["Service", [service ? service.name : "", ...S.addOns.map((id) => services.get(id).name)].join(", ")],
+    ["Vehicle", vehicleLine()],
+    ["Service", [service ? service.name : "", ...S.addOns.map((id) => services.get(id).name)].join(" + ")],
   ];
   if (takesLevel(S.service)) rows.push(["Condition", (built.text.levels[S.condition] || {}).name || `Level ${S.condition}`]);
   rows.push(["Address", job && job.address ? job.address : S.addressText]);
   if (S.mode === "online" && S.start && S.day) rows.push(["Arrival", `${longDate(S.day)} at ${(S.times?.days.find((d) => d.date === S.day)?.times.find((t) => t.start === S.start) || {}).label || ""}`]);
   if (S.mode === "offline") rows.push(["Preferred", S.preferredDate ? `${longDate(S.preferredDate)}${S.preferredTime ? ` at ${clock(S.preferredTime)}` : ""}` : ""]);
   rows.push(["Name", `${S.first} ${S.last}`.trim()], ["Mobile", S.mobile], ["Payment", (options.payment_methods.find((m) => m.value === S.payment) || {}).label || ""]);
-  if (S.color) rows.push(["Color", S.color]);
   return rows;
 }
 
@@ -600,6 +609,7 @@ function renderStep7() {
       h("span", {}, offline ? "Estimated total before sales tax" : S.quote?.sales_tax ? "Estimated total with sales tax" : "Estimated total before sales tax"),
       h("strong", { style: "font-size:28px;color:var(--navy)", "data-review-total": "" }, money(total))),
     S.sendError ? h("p", { class: "error", role: "alert" }, S.sendError) : null,
+    consentBoxes(options.consent),
     h("button", { type: "button", class: "button", "aria-disabled": S.sending ? "true" : null, "data-book": "", onclick: () => (offline ? sendTimeRequest() : sendBooking()) },
       S.sending ? "Sending…" : offline ? "Send my request" : "Book my appointment"),
     h("p", { class: "hint", style: "margin:0" }, offline
@@ -734,8 +744,8 @@ function renderRequest() {
   const offline = S.mode === "offline";
   const c = vehicleClass();
   const why = r.reason === "class"
-    ? `${c ? c.name : "This vehicle"} are priced by hand. Tell us about the job and we'll reply with a price, usually within a day.`
-    : (built.text.levels[r.condition] || {}).quoteNote || "We'll reply with a price.";
+    ? built.text.quoteClass.request_intro.replace("{class}", c ? c.name : "These vehicles")
+    : (built.text.levels[r.condition] || {}).requestIntro || "We'll reply with a price, usually within a day.";
   const mains = book.services.filter((service) => service.kind === "service" && (!c || service.prices.some((p) => p.class_id === c.id) || c.booked_by_quote));
   if (!offline && !picker) picker = photoPicker({ config, limits: options.photos, box: turnstileBox });
   const serviceControl = h("select", { id: "qr-service", onchange: (event) => {
@@ -749,24 +759,26 @@ function renderRequest() {
     ? field("qr-address", "Service address", h("input", { id: "qr-address", class: "input", value: S.addressText, oninput: (event) => { S.addressText = event.target.value; } }), "Street, city and ZIP code.")
     : addressField({ config, id: "qr-address", label: "Service address", value: S.place ? S.place.address.one_line : S.addressText, onPick: placePicked, onDown: () => { S.googleDown = true; renderRequest(); }, onType: (value) => { S.addressText = value; S.place = null; S.placeId = null; } }).element;
   const level = r.condition ? levelFor(r.condition) : null;
-  section.replaceChildren(
+  fill(section,
     h("div", {}, h("p", { class: "step-eyebrow" }, "Ask for a quote"), h("h2", { id: "h-request", tabindex: "-1" }, "Tell us about the job"), h("p", { class: "intro" }, why)),
     h("dl", { class: "review-list" },
-      h("div", {}, h("dt", {}, "Vehicle"), h("dd", {}, [vehicleName(), c ? c.name : ""].filter(Boolean).join(" · ") || "Not given")),
+      h("div", {}, h("dt", {}, "Vehicle"), h("dd", {}, vehicleLine() || "Not given")),
       level ? h("div", {}, h("dt", {}, "Condition"), h("dd", {}, (built.text.levels[level.level] || {}).name || `Level ${level.level}`)) : null,
       r.addOns.length ? h("div", {}, h("dt", {}, "Add-ons"), h("dd", {}, r.addOns.map((id) => services.get(id).name).join(", "))) : null),
     field("qr-service", "The service you want", serviceControl),
-    field("qr-description", "What do you need?", h("textarea", { id: "qr-description", required: true, maxlength: "2000", oninput: (event) => (r.description = event.target.value) }, r.description),
-      "Tell us the details that matter for the price, such as length, size, conversions and condition."),
+    // The owner's guidance sits under the heading, above the field.
+    h("div", { class: "field" }, h("label", { for: "qr-description" }, "What do you need?"),
+      h("p", { class: "hint", id: "qr-description-hint" }, "Provide relevant details about the vehicle (size, interior configuration, etc.) and what you need done."),
+      h("textarea", { id: "qr-description", required: true, maxlength: "2000", "aria-describedby": "qr-description-hint", oninput: (event) => (r.description = event.target.value) }, r.description)),
     offline ? h("p", { class: "notice" }, `Photos can't be sent just now. Send the request, then text photos to ${config.phone} if you'd like.`) : picker.element,
     address,
     h("div", { class: "grid2" },
       field("qr-first", "First name", h("input", { id: "qr-first", class: "input", autocomplete: "given-name", value: S.first, oninput: (event) => (S.first = event.target.value) })),
-      field("qr-last", "Last name (optional)", h("input", { id: "qr-last", class: "input", autocomplete: "family-name", value: S.last, oninput: (event) => (S.last = event.target.value) }))),
+      field("qr-last", "Last name", h("input", { id: "qr-last", class: "input", autocomplete: "family-name", value: S.last, oninput: (event) => (S.last = event.target.value) }))),
     field("qr-mobile", "Mobile number", h("input", { id: "qr-mobile", type: "tel", class: "input", inputmode: "tel", autocomplete: "tel-national", placeholder: "(###) ###-####", maxlength: "14", value: S.mobile, oninput: (event) => { event.target.value = formatPhone(event.target.value); S.mobile = event.target.value; } })),
-    consentBoxes(options.consent),
-    field("qr-days", "Preferred days (optional)", h("input", { id: "qr-days", class: "input", maxlength: "300", value: r.days, placeholder: "Such as weekday mornings", oninput: (event) => (r.days = event.target.value) })),
+    field("qr-days", "Preferred days (optional)", h("input", { id: "qr-days", class: "input", maxlength: "300", value: r.days, placeholder: "Such as weekdays, a specific date, etc.", oninput: (event) => (r.days = event.target.value) })),
     S.sendError ? h("p", { class: "error", role: "alert" }, S.sendError) : null,
+    consentBoxes(options.consent),
     h("div", { class: "next-row" },
       h("button", { type: "button", class: "button", "data-send-request": "", onclick: sendRequest }, S.sending ? "Sending…" : "Send my request"),
       h("button", { type: "button", class: "link-button", onclick: () => { S.request = null; S.sendError = ""; render(); } }, "Back to booking")));
@@ -861,17 +873,25 @@ function renderDone() {
   } else {
     body = [h("h2", { id: "h-done", tabindex: "-1" }, "Request sent"), h("p", { class: "lead" }, `Thanks! We've got your request and will confirm your day and price by text or call. Questions? Call or text ${config.phone}.`)];
   }
-  section.replaceChildren(...body);
+  fill(section, body);
   $("[data-flow]").hidden = true;
   section.focus();
 }
 
 // The estimate card ----------------------------------------------------------
 
+// The estimate card's condition line in the owner's words, such as "Needs
+// Attention (+10%)", the percentage from the price book.
+function conditionLine(number) {
+  const level = levelFor(number);
+  const label = (built.text.levels[number] || {}).estimate || `Level ${number}`;
+  return level && level.adds_percent ? `${label} (+${level.adds_percent}%)` : label;
+}
+
 function estimateContent() {
   const parts = [h("p", { class: "eyebrow-light" }, "Your estimate")];
   const name = vehicleName();
-  parts.push(h("div", {}, h("p", { class: "vehicle" }, name || "Your vehicle"), h("p", { class: "sub" }, classLine() || "Pick your vehicle to start.")), h("hr"));
+  parts.push(h("div", {}, h("p", { class: "vehicle" }, name || "Your vehicle"), name || vehicleClass() ? null : h("p", { class: "sub" }, "Pick your vehicle to start.")), h("hr"));
   let total = null;
   let note = "";
   let hours = "";
@@ -882,7 +902,7 @@ function estimateContent() {
     const job = builtInJob();
     if (job) {
       parts.push(h("div", { class: "lines" }, [S.service, ...S.addOns].map((id) => h("div", { class: "line" }, h("span", {}, services.get(id).name))),
-        takesLevel(S.service) && S.condition > 1 ? h("div", { class: "line" }, h("span", {}, (built.text.levels[S.condition] || {}).name || "")) : null), h("hr"));
+        takesLevel(S.service) && S.condition > 1 ? h("div", { class: "line" }, h("span", {}, conditionLine(S.condition))) : null), h("hr"));
       parts.push(h("p", { class: "sub" }, `Sales tax is added for your address. Prices from our price list, version ${built.priceTable.pricebook_version}.`));
       total = job.total_before_tax;
       note = "before sales tax";
@@ -890,7 +910,7 @@ function estimateContent() {
     }
   } else if (S.quote) {
     const q = S.quote;
-    parts.push(h("div", { class: "lines" }, q.lines.map((line) => h("div", { class: "line" }, h("span", {}, line.description), h("span", {}, money(line.amount))))), h("hr"));
+    parts.push(h("div", { class: "lines" }, q.lines.map((line) => h("div", { class: "line" }, h("span", {}, line.kind === "condition" ? conditionLine(q.condition_level) : line.description), h("span", {}, money(line.amount))))), h("hr"));
     parts.push(h("div", { class: "line" }, h("span", {}, "Subtotal"), h("span", {}, money(q.total_before_tax))));
     if (q.sales_tax) parts.push(h("div", { class: "line" }, h("span", {}, `Sales tax (${q.sales_tax.rate_percent}%)`), h("span", {}, money(q.sales_tax.amount))));
     else parts.push(h("p", { class: "sub" }, "Sales tax is added once we have your address."));
@@ -912,9 +932,9 @@ function estimateContent() {
 
 function renderEstimate() {
   const { parts, total, note, hours } = estimateContent();
-  $("[data-estimate]").replaceChildren(...parts);
+  fill($("[data-estimate]"), parts);
   const sheet = $("[data-sheet-body]");
-  sheet.replaceChildren(h("div", { class: "estimate" }, ...estimateContent().parts));
+  fill(sheet, h("div", { class: "estimate" }, ...estimateContent().parts));
   const bar = $("[data-phone-bar]");
   bar.hidden = !!S.done;
   $("[data-bar-total]").textContent = total ? money(total) : "—";

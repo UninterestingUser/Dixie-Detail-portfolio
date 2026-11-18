@@ -1,30 +1,23 @@
 ---
-// One card per category page, with its photo and lowest "from" price from
-// the published pricebook. Optional per-page text, such as a city page's.
-import { Image } from "astro:assets";
-import { content, dollars, servicesWithPrices } from "../lib/data.js";
+// The four service cards (owner, 2026-11-18), 2 x 2 like the current
+// dixiedetail.com: light blue, the title and a white "from" price box, the
+// owner's text, and two buttons in the "How it works" style. A city page
+// passes its own text for each card, by section anchor.
+import { dollars, serviceSections } from "../lib/data.js";
 const { texts = {} } = Astro.props;
-const photos = import.meta.glob("../assets/page-photos/*.webp", { eager: true });
-const photoFor = (file) => Object.entries(photos).find(([key]) => key.endsWith("/" + file))?.[1]?.default;
-const services = await servicesWithPrices();
-const cards = content.pages.map((page) => {
-  const priced = services.filter((service) => service.page === page.slug && service.priced.from_price);
-  // The lowest of the pricebook's own prices: a comparison, never arithmetic.
-  const lowest = priced.map((service) => service.priced.from_price).sort((a, b) => Number(a) - Number(b))[0];
-  const single = priced.length === 1 && priced[0].priced.prices.every((cell) => cell.price === priced[0].priced.from_price);
-  const lead = priced.find((service) => !service.add_on) || priced[0];
-  return { page, lowest, single, text: texts[page.slug] || (lead ? lead.card : ""), photo: photoFor(content.page_images[page.slug]), addOns: priced.every((service) => service.add_on) };
-}).filter((card) => card.lowest);
+const cards = (await serviceSections()).filter((card) => card.from);
 ---
-<div class="cards">
+<div class="service-cards">
   {cards.map((card) => (
-    <article class="card">
-      {card.photo && <Image src={card.photo} alt="" widths={[360, 560, 800]} sizes="(max-width: 640px) 92vw, 300px" quality={60} fetchpriority="low" />}
-      <div class="card-body">
-        <h3>{card.page.title}</h3>
-        <p class="from">{card.single ? <><strong>{dollars(card.lowest)}</strong>{card.page.slug === "headlight-restoration" ? " for both" : ""}</> : <>{card.addOns ? "add-on from " : "from "}<strong>{dollars(card.lowest)}</strong></>}</p>
-        <p class="text">{card.text}</p>
-        <a class="more" href={`/services/${card.page.slug}/`}>{card.page.title}: details and prices<span aria-hidden="true"> →</span></a>
+    <article class="service-card">
+      <div class="service-card-top">
+        <h3>{card.title}</h3>
+        <p class="price-box">from {dollars(card.from)}</p>
+      </div>
+      <p class="text">{texts[card.anchor] || card.card}</p>
+      <div class="card-buttons">
+        <a class="button" href="/book/">{card.button}</a>
+        <a class="button outline" href={`/services/#${card.anchor}`}>More info</a>
       </div>
     </article>
   ))}

@@ -16,6 +16,13 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
+// Replace an element's children, skipping null and false as h() does. The
+// DOM's own replaceChildren() writes a null child as the text "null".
+export function fill(el, ...children) {
+  el.replaceChildren(...children.flat(Infinity).filter((child) => child != null && child !== false));
+  return el;
+}
+
 export function field(id, label, control, hint) {
   if (hint) control.setAttribute("aria-describedby", `${id}-hint`);
   return h("div", { class: "field" }, h("label", { for: id }, label), control, hint ? h("p", { class: "hint", id: `${id}-hint` }, hint) : null);

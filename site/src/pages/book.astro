@@ -35,7 +35,10 @@ const builtIn = {
   furthestDays: rules.furthest_bookable_days,
   text: {
     services: Object.fromEntries(content.services.map((service) => [service.name, { card: service.card, heading: service.heading }])),
-    levels: Object.fromEntries(content.condition_levels.map((level) => [level.level, { name: level.name, card: level.card, quoteNote: level.quote_note || "" }])),
+    levels: Object.fromEntries(content.condition_levels.map((level) => [level.level, { name: level.name, card: level.card, estimate: level.estimate || level.name, quoteNote: level.quote_note || "", requestIntro: level.request_intro || "" }])),
+    // Services in the order the owner lists them (Full Detail first).
+    serviceOrder: content.services.map((service) => service.name),
+    quoteClass: content.quote_class,
     classImages: content.class_images,
   },
 };
@@ -130,6 +133,8 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
   .book-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 28px; align-items: start; }
   /* Space held for step 1 while the script starts, so nothing jumps. */
   .book-steps { display: flex; flex-direction: column; gap: 18px; min-height: 640px; }
+  /* A small gap between the step boxes. */
+  [data-flow] { display: flex; flex-direction: column; gap: 14px; }
   .book-side { min-height: 360px; }
   .book-side { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 12px; }
   @media (max-width: 960px) { .book-grid { grid-template-columns: minmax(0, 1fr); } .book-side { position: static; } .book-side .estimate { display: none; } }
@@ -155,8 +160,12 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
   .tick .body { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
   .consent { font-size: 14px; line-height: 1.5; color: var(--text); }
   .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--ok-tint); border-radius: 12px; padding: 14px 16px; }
-  .banner.warn { background: var(--red-tint); }
+  .banner.warn { background: #ffe1e1; }
   .banner strong { display: block; }
+  /* Step 1: the color (two thirds) and "My vehicle isn't listed" (a third). */
+  .color-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .color-row-link { padding-top: 40px; }
+  .quote-note { margin: 0; font-size: 16px; line-height: 1.5; color: var(--ink); }
   .next-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
   .next-row .hint { color: var(--muted); font-size: 15px; margin: 0; }
   .link-button { background: none; border: 0; padding: 0; color: var(--navy); font-weight: 700; text-decoration: underline; cursor: pointer; font-size: 16px; text-align: left; }
