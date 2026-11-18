@@ -7,15 +7,15 @@ area: booking
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-11-08
+updated: 2026-11-18
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0107-default-staff-and-needs-you-for-decisions.md]
 related: [docs/reference/returning-customers.md, docs/reference/control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0034-quiet-customer-matching.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0099-quote-requests-with-photos.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/reference/public-api.md]
 ---
 
 # 0101: Website bookings in the control app: how matching, the four actions, requests and the needs-you list work
 
-**Status:** accepted · **Date:** 2026-11-08 · **Area:** booking
+**Status:** accepted; its "needs you" list is changed by [0107](0107-default-staff-and-needs-you-for-decisions.md): no new-booking or assign-staff items, one item per appointment · **Date:** 2026-11-08 · **Area:** booking
 
 ## Context
 

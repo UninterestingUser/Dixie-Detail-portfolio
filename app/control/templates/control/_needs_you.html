@@ -1,4 +1,4 @@
-{# The "needs you" list on the home screen, newest first (control-app.md). #}
+{# The "needs you" list on the home screen: only what needs a decision, newest first (control-app.md). #}
 {% load control %}
 {% if needs_you.count %}
 <section class="needs-you" aria-labelledby="needs-you-heading">
@@ -12,11 +12,5 @@
     {% endfor %}
   </ul>
   {% if needs_you.more %}<p class="sub">And {{ needs_you.more }} more. <a href="{% url 'requests' %}">Website requests</a> · <a href="{% url 'match-reviews' %}">Review queue</a></p>{% endif %}
-  {% if needs_you.new_bookings %}
-  <form method="post" action="{% url 'needs-you-seen' %}">{% csrf_token %}
-    <input type="hidden" name="until" value="{{ needs_you.newest_booking|date:'c' }}">
-    <button type="submit">Clear the new bookings</button>
-  </form>
-  {% endif %}
 </section>
 {% endif %}

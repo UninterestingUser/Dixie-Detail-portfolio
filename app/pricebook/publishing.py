@@ -15,6 +15,11 @@ is not re-priced: it keeps its quoted price and is listed to check by hand.
 
 A job priced by hand, from a quote request or at a condition level booked
 by quote (decision 0103), is never re-priced and never listed.
+
+A job with an add-on the draft says doesn't go with its service (decision
+0106) is listed as breaking the add-on rules, unless a manager booked it
+that way with a reason. It is re-priced with the add-on all the same, so
+the owner can keep it, use the new price or give a custom amount.
 """
 
 import datetime
@@ -27,7 +32,7 @@ from django.utils import timezone
 from core.scheduling import round_to_nearest, time_on_site
 
 from .models import PricedLine
-from .pricing import PricingError, price_job
+from .pricing import PricingError, add_on_rule_text, price_job, unfit_add_ons
 
 PRICED_KINDS = [PricedLine.Kind.SERVICE, PricedLine.Kind.ADD_ON, PricedLine.Kind.CONDITION, PricedLine.Kind.PROMOTION]
 
@@ -127,13 +132,18 @@ def _reprice(appointment, version):
             return result
         vehicle_class, size_variant = found
         result.new_class, result.new_size = vehicle_class, size_variant
+    add_ons = [line.service for line in lines if line.kind == PricedLine.Kind.ADD_ON]
+    unfit = unfit_add_ons(version, main.service, [add_on for add_on in add_ons if add_on is not None])
+    if unfit and not has_add_on_override(appointment):
+        result.reasons.append("Breaks the add-on rules: " + "; ".join(add_on_rule_text(add_on, main.service) for add_on in unfit))
     try:
         job = price_job(
             main.service,
             vehicle_class,
             size_variant=size_variant,
             condition_level=main.condition_level,
-            add_ons=[line.service for line in lines if line.kind == PricedLine.Kind.ADD_ON],
+            add_ons=add_ons,
+            allow_any_add_on=True,
             promotions=[line.promotion for line in lines if line.kind == PricedLine.Kind.PROMOTION],
             crew_size=appointment.crew_size,
             version=version,
@@ -151,6 +161,13 @@ def _reprice(appointment, version):
         booked_stay = time_on_site(round_to_nearest(booked_hours * 60, 1), 1)
         result.becomes_full_day = job.full_day and booked_stay.total_minutes < job.full_day_time_on_site_hours * 60
     return result if result.reasons else None
+
+
+def has_add_on_override(appointment):
+    """Whether a manager gave a reason for the job's add-ons (decision 0106)."""
+    from scheduling.models import RuleOverride
+
+    return appointment.rule_overrides.filter(action=RuleOverride.Action.ADD_ONS).exists()
 
 
 class PublishError(ValueError):
@@ -175,6 +192,8 @@ def decide(version, job, choice, amount=None, user=None):
     appointment = job.appointment
     if choice == "use_new":
         inputs = inputs_from_appointment(appointment)
+        # The new price was worked out with the job's add-ons as booked.
+        inputs.add_on_override = True
         if job.new_class is not None:
             inputs.vehicle_class, inputs.size_variant = job.new_class, job.new_size
         reprice(appointment, inputs, f"New price from pricebook version {version.number}", version=version)

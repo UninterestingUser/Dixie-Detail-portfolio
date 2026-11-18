@@ -12,7 +12,10 @@ before tax and the service time, as docs/reference/pricing.md describes:
    percentage of the base service hours, unrounded. A level booked by quote
    has no price: price_job refuses it with BookedByQuote, and the owner
    prices the job by hand (issue_hand_quote).
-3. Add-ons, at their own price and hours; the condition level never changes them.
+3. Add-ons, at their own price and hours; the condition level never changes
+   them. An add-on goes only with the services the version lists for it
+   (AddOnFit, decision 0106): price_job refuses any other with
+   AddOnNotOffered, unless a manager's override allows it.
 4. Promotions, each on the lines it applies to, never below zero.
 
 issue_hand_quote() stores a price and time on site the owner typed as a
@@ -62,6 +65,26 @@ class PricingError(ValueError):
 
 class NotPriced(PricingError):
     """The combination is not in the pricebook, so it does not exist."""
+
+
+class AddOnNotOffered(PricingError):
+    """An add-on that doesn't go with the service in this version (decision
+    0106). unfit holds the add-ons."""
+
+    def __init__(self, message, unfit=()):
+        super().__init__(message)
+        self.unfit = list(unfit)
+
+
+def unfit_add_ons(version, service, add_ons):
+    """The add-ons that don't go with the service in the version."""
+    fits = version.add_on_ids_for(service)
+    return [add_on for add_on in add_ons if add_on.pk not in fits]
+
+
+def add_on_rule_text(add_on, service):
+    """The plain words for an add-on outside the rules."""
+    return f"{add_on} doesn't go with {service}"
 
 
 class BookedByQuote(PricingError):
@@ -219,16 +242,21 @@ def price_job(
     version=None,
     on=None,
     check_promotion_dates=True,
+    allow_any_add_on=False,
 ):
     """Price one job. version defaults to the published version in effect on
-    the date `on` (today by default). Raises PricingError, or NotPriced for a
-    combination missing from the pricebook."""
+    the date `on` (today by default). Raises PricingError, NotPriced for a
+    combination missing from the pricebook, or AddOnNotOffered for an add-on
+    that doesn't go with the service, unless allow_any_add_on (a manager's
+    override in the control app, decision 0106)."""
     on = on or timezone.localdate()
     version = version or PricebookVersion.current(on)
     if version is None:
         raise PricingError("No published pricebook version is in effect.")
     add_ons, promotions = list(add_ons), list(promotions)
 
+    if service.kind == Service.Kind.ADD_ON:
+        raise PricingError(f"{service} is an add-on: it can't be booked on its own.")
     if service.kind not in (Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN) or not service.on_price_list:
         raise PricingError(f"{service} is not a service on the price list.")
     if not vehicle_class.active:
@@ -251,6 +279,9 @@ def price_job(
     rules = PricingRules.objects.filter(version=version).first()
     if rules is None:
         raise PricingError(f"Pricebook version {version.number} has no pricing rules.")
+    unfit = unfit_add_ons(version, service, add_ons)
+    if unfit and not allow_any_add_on:
+        raise AddOnNotOffered("; ".join(add_on_rule_text(add_on, service) for add_on in unfit) + ".", unfit)
 
     job = PricedJob(
         version=version,
@@ -512,6 +543,7 @@ def reference_price(service, vehicle_class, size_variant=None, add_ons=(), crew_
         return None
     try:
         return price_job(service, vehicle_class, size_variant=size_variant, condition_level=level.level,
-                         add_ons=add_ons, crew_size=crew_size, version=version, on=on, check_promotion_dates=False)
+                         add_ons=add_ons, crew_size=crew_size, version=version, on=on, check_promotion_dates=False,
+                         allow_any_add_on=True)
     except PricingError:
         return None

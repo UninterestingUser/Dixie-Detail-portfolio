@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -15,7 +15,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 ## Services and pricing terms
 
-**Add-on.** A service that can only be added to another service: Carpet Extraction and Seat Extraction. Add-ons are priced by seat rows alone and are not affected by the condition level.
+**Add-on.** A service that can only be added to another service, and only to the services listed for it in the pricebook version (decision 0106): Carpet Extraction and Seat Extraction, priced by seat rows alone, with Full Detail or Interior Only; and Headlight Restoration, one price, with Full Detail, Exterior Only or a paint correction. Add-ons are not affected by the condition level. See [../reference/pricing.md](../reference/pricing.md#which-add-ons-go-with-which-service).
 
 **Condition level.** The customer's choice of how dirty the vehicle's interior is, called a service level on the website, for Full Detail and Interior Only only. Level 1 is preselected and adds nothing; Level 2 adds 10% to the base price and the service time; Level 3 has no price and is quoted by hand. The price adjustment is rounded to the whole dollar; the extra time is not rounded until the job's service time is. Every other service has no condition level. See [../reference/pricing.md](../reference/pricing.md).
 
@@ -135,7 +135,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Approved out-of-area address.** An address outside the five counties that the owner has allowed to book. It is charged no Tennessee sales tax.
 
-**Consent.** A customer's recorded permission to receive texts, of two separate kinds: appointment texts and follow-up texts. See [../reference/text-messages.md](../reference/text-messages.md).
+**Consent.** A customer's recorded permission to receive texts about a booked job: appointment texts, which include one review request after the service. Follow-up consent, a second kind collected until 2026-11-18, is kept on past records only (decision 0108). See [../reference/text-messages.md](../reference/text-messages.md).
 
 **Match flag.** A difference in name, address or vehicle between a booking and the customer it was quietly matched to, waiting for the owner to choose one of four actions. See [../reference/returning-customers.md](../reference/returning-customers.md).
 
@@ -145,7 +145,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Second vehicle request.** A returning customer's website booking on a day they already have a job, taken as a request the owner approves or declines instead of an appointment.
 
-**Needs you.** The list at the top of the control app's home screen of everything waiting for the owner, newest first: new website bookings, review flags, website jobs with no staff, requests waiting for a decision, Time Off over a booked job and sales tax rates to approve.
+**Needs you.** The list at the top of the control app's home screen of only what needs the owner's decision, newest first, one item per job at most: review flags, requests waiting for a decision, Time Off over a booked job, a job the calendar sync keeps failing to push, and sales tax rates to approve (decision 0107). New bookings and staffing are not on it.
 
 **Second contact.** A second person with their own name and number on a customer's record, such as a spouse, who can book under that record.
 

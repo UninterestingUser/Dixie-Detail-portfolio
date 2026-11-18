@@ -75,7 +75,6 @@ const fresh = () => ({
   mobile: "",
   payment: null,
   appointment: false,
-  followUp: false,
   request: null,
   sending: false,
   sendError: "",
@@ -141,6 +140,8 @@ function vehicleBody(forRequest = false) {
 }
 
 const takesLevel = (id) => !!(services.get(id) && services.get(id).condition_applies);
+// Whether an add-on goes with a service, from the pricebook (decision 0106).
+const fits = (serviceId, addOnId) => !!(services.get(serviceId) && (services.get(serviceId).add_ons || []).includes(addOnId));
 const levelFor = (number) => book.condition_levels.find((level) => level.level === number);
 
 function cellPrice(serviceId) {
@@ -392,12 +393,13 @@ function renderStep2() {
   const c = vehicleClass();
   if (!c) return frame(2, "Choose your detail", "", h("div"));
   const mains = book.services.filter((service) => service.kind === "service" && cellPrice(service.id));
-  const addOns = book.services.filter((service) => service.kind === "add_on" && cellPrice(service.id));
+  // Only the add-ons that go with the chosen service (decision 0106).
+  const addOns = S.service ? book.services.filter((service) => service.kind === "add_on" && fits(S.service, service.id) && cellPrice(service.id)) : [];
   const text = (name) => built.text.services[name] || {};
   const body = h("div", { class: "stack" },
     h("div", { class: "choices" }, mains.map((service) => h("button", {
       type: "button", class: "choice", "aria-pressed": S.service === service.id ? "true" : "false", "data-service": service.name,
-      onclick: () => { S.service = service.id; S.condition = 1; reopen(2); requote(); },
+      onclick: () => { S.service = service.id; S.condition = 1; S.addOns = S.addOns.filter((id) => fits(service.id, id)); reopen(2); requote(); },
     }, h("span", { class: "top" }, h("span", { class: "name" }, service.name), h("span", { class: "price" }, dollars(cellPrice(service.id)))),
     h("span", { class: "desc" }, text(service.name).card || service.description)))),
     addOns.length ? h("div", { class: "stack", style: "gap:10px" }, h("h3", { style: "margin:0;font-size:19px" }, "Add-ons"),
@@ -564,12 +566,11 @@ function renderStep6() {
   frame(6, "Your details", "", body);
 }
 
+// One unchecked checkbox, not required (decision 0108).
 function consentBoxes(consent) {
   return h("div", { class: "stack", style: "gap:10px" },
     h("label", { class: "tick" }, h("input", { type: "checkbox", id: "consent-appointment", checked: S.appointment || null, onchange: (event) => (S.appointment = event.target.checked) }),
-      h("span", { class: "consent" }, consentText(consent.appointment, consent.links))),
-    h("label", { class: "tick" }, h("input", { type: "checkbox", id: "consent-follow-up", checked: S.followUp || null, onchange: (event) => (S.followUp = event.target.checked) }),
-      h("span", { class: "consent" }, consentText(consent.follow_up, consent.links))));
+      h("span", { class: "consent" }, consentText(consent.appointment, consent.links))));
 }
 
 // Step 7: review and book ----------------------------------------------------
@@ -628,7 +629,7 @@ async function sendBooking() {
     const value = await token(config, turnstileBox);
     answer = await post("bookings", {
       quote: S.quote.number, start: S.start, first_name: S.first.trim(), last_name: S.last.trim() || undefined, mobile: S.mobile,
-      payment_method: S.payment, color: S.color.trim() || undefined, consents: { version: options.consent.version, appointment: S.appointment, follow_up: S.followUp }, turnstile: value,
+      payment_method: S.payment, color: S.color.trim() || undefined, consents: { version: options.consent.version, appointment: S.appointment }, turnstile: value,
     });
   } catch (error) {
     S.sending = false;
@@ -671,7 +672,7 @@ function offlineBody() {
     first_name: S.first.trim(),
     mobile: S.mobile,
     payment_method: S.payment,
-    consents: { version: options.consent.version, appointment: S.appointment, follow_up: S.followUp },
+    consents: { version: options.consent.version, appointment: S.appointment },
     shown: { total: job.total_before_tax, pricebook_version: built.priceTable.pricebook_version },
   };
   const size = sizeValue();
@@ -740,6 +741,8 @@ function renderRequest() {
   const serviceControl = h("select", { id: "qr-service", onchange: (event) => {
     r.service = event.target.value === "not_sure" ? "not_sure" : Number(event.target.value); // not money: a service id
     if (r.service === "not_sure" || !takesLevel(r.service)) r.condition = null;
+    r.addOns = r.addOns.filter((id) => fits(r.service, id));
+    renderRequest();
   } }, h("option", { value: "not_sure", selected: r.service === "not_sure" || null }, "Not sure"),
   mains.map((service) => h("option", { value: service.id, selected: r.service === service.id || null }, service.name)));
   const address = S.googleDown || (offline && !config.mapsKey && !config.placesEndpoint.startsWith("/"))
@@ -790,14 +793,14 @@ async function sendRequest() {
     description: r.description.trim(),
     first_name: S.first.trim(),
     mobile: S.mobile,
-    consents: { version: options.consent.version, appointment: S.appointment, follow_up: S.followUp },
+    consents: { version: options.consent.version, appointment: S.appointment },
   };
   if (S.last.trim()) base.last_name = S.last.trim();
   if (r.days.trim()) base.preferred_days = r.days.trim();
   const size = sizeValue();
   if (size != null && !S.vehicle.card) base.size = size;
   if (r.condition && r.service !== "not_sure" && takesLevel(r.service)) base.condition = r.condition;
-  if (r.addOns.length) base.add_ons = r.addOns;
+  if (r.addOns.length && r.service !== "not_sure") base.add_ons = r.addOns;
   S.sending = true;
   renderRequest();
   const offline = S.mode === "offline" || S.googleDown;

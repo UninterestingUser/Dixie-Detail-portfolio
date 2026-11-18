@@ -4,18 +4,18 @@ title: "Two separate text consents: appointment and follow-up"
 summary: "The booking form carries two unchecked consent checkboxes, one for appointment texts and one for follow-up texts."
 date: 2026-10-07
 area: texting
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-13
+updated: 2026-11-18
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0108-one-text-consent.md]
 related: [docs/reference/text-messages.md]
 ---
 
 # 0030: Two separate text consents: appointment and follow-up
 
-**Status:** accepted · **Date:** 2026-10-07 · **Area:** texting
+**Status:** superseded by [0108](0108-one-text-consent.md): one consent, for texts about a booked job including one review request, from 2026-11-18 · **Date:** 2026-10-07 · **Area:** texting
 
 ## Context
 

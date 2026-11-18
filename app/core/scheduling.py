@@ -37,8 +37,9 @@ def current_values():
 
 @cache
 def automatic_assignment():
-    """Whether the only qualified active staff member is assigned without the
-    prompt (decision 0061), from data/booking-rules.yaml. On at launch."""
+    """Whether, with no default staff (decision 0107), the only qualified
+    active staff member is assigned to a one-person job (decision 0061),
+    from data/booking-rules.yaml. On at launch."""
     rules = yaml.safe_load((settings.DATA_DIR / "booking-rules.yaml").read_text())
     return bool(rules["staff_assignment"]["automatic_when_one_qualified"])
 

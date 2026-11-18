@@ -18,7 +18,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from customers.models import Customer
 from pricebook.models import Price, PricebookVersion, Service
-from pricebook.pricing import NotPriced, price_job
+from pricebook.pricing import AddOnNotOffered, NotPriced, price_job
 from vehicles.classification.engine import apply, classify_catalog, preview
 from vehicles.classification.lookup import How, classify
 from vehicles.classification.rules import condition_errors
@@ -428,8 +428,11 @@ class MotorcycleTests(ClassificationTestCase):
             list(Price.objects.filter(service=detail).values_list("vehicle_class__name", flat=True)), ["Motorcycles"]
         )
         self.assertEqual(list(Price.objects.filter(vehicle_class=motorcycles).values_list("service__name", flat=True)), ["Motorcycle Detail"])
-        with self.assertRaises(NotPriced):
+        # No add-on goes with it (decision 0106), and none is priced for Motorcycles.
+        with self.assertRaises(AddOnNotOffered):
             price_job(detail, motorcycles, add_ons=[Service.objects.get(name="Seat Extraction")])
+        with self.assertRaises(NotPriced):
+            price_job(detail, motorcycles, add_ons=[Service.objects.get(name="Seat Extraction")], allow_any_add_on=True)
         with self.assertRaises(NotPriced):
             price_job(detail, self.vehicle_class("Small"))
 

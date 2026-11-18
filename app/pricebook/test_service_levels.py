@@ -17,7 +17,7 @@ from pricebook.pricing import BookedByQuote, issue_hand_quote, issue_quote, pric
 from pricebook.publishing import affected_jobs, publish
 from vehicles.models import VehicleClass
 
-NO_LEVEL = ["Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction", "Headlight Restoration", "Motorcycle Detail"]
+NO_LEVEL = ["Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction", "Motorcycle Detail"]
 TAKE_A_LEVEL = ["Full Detail", "Interior Only"]
 
 

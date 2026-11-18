@@ -4,7 +4,7 @@ summary: The eight build phases, what each delivers, the test that ends it, and 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [roadmap, phases, status]
 related: [data/phases.yaml, docs/operations/phase-0-foundations-runbook.md, docs/operations/phase-1-core-data-runbook.md, docs/operations/phase-2-vehicle-catalog-runbook.md, docs/decisions/README.md]
 ---
@@ -63,7 +63,7 @@ Before Phase 1 Step 3 the owner reviewed the plan and agreed ten changes, record
 | Phase 1 Step 3 | Service hours without setup and breakdown in the pricebook load, the quote record, time on site, and room in the pricing engine for another price basis (built) |
 | Phase 1 Step 5b | Staff authorization per service, its two screens, and assigning staff from the qualified list (built) |
 | Phase 2 | Vehicle classification rules as data, with overrides, a preview and vehicle class settings (built) |
-| Phase 3 | The scheduling settings screen, the availability check, the calendar sync and conflict rules, and the assign-staff prompt for website bookings |
+| Phase 3 | The scheduling settings screen, the availability check, the calendar sync and conflict rules, and staff assignment for website bookings (the default staff, decision 0107) |
 | Phase 4 | Arrival and departure taps |
 
 ## The phases
@@ -73,7 +73,7 @@ Before Phase 1 Step 3 the owner reviewed the plan and agreed ten changes, record
 | 0. Foundations | Accounts, the server stack (Docker, PostgreSQL, Caddy, tunnel), Tailscale access, backups, monitoring, the repository | A backup has been restored successfully and the server answers through the tunnel | Done (2026-10-14) |
 | 1. Core data and control app | The data model for all nine areas; screens for customers, vehicles, pricebook, appointments and staff; the Baserow import; pricebook versioning | The pricebook in the app matches the price matrix cell for cell, and the imported history is searchable | Done (2026-10-18) |
 | 2. Vehicle catalog | EPA and NHTSA import (with vPIC's Canadian specifications), owner-editable classification rules with a preview, overrides, vehicle class settings, size-variant flags, review queue, monthly refresh | The owner approves the class for every model in the job history and a spot-check list | Done (2026-10-29) |
-| 3. Scheduling and website | Scheduling settings screen, the availability check, Google Calendar sync and conflict rules, the assign-staff prompt for website bookings, sales tax, booking API, quiet customer matching with its review queue (moved from Phase 1), the Astro site with the estimate card on a staging address, carrier registration once the booking form is public | The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved | Next |
+| 3. Scheduling and website | Scheduling settings screen, the availability check, Google Calendar sync and conflict rules, staff assignment for website bookings, sales tax, booking API, quiet customer matching with its review queue (moved from Phase 1), the Astro site with the estimate card on a staging address, carrier registration once the booking form is public | The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved | Next |
 | 4. Texts, alerts and payments | Quo messages, STOP and HELP handling, time-to-leave alerts, arrival and departure taps, Stripe links and Tap to Pay matching, "paid" buttons, invoices and receipts | One test appointment runs from booking through reminder, payment by every method and review request | Planned |
 | 5. Launch | Redirects from WordPress, DNS cutover, Search Console check, number port, Setmore retired | Old links redirect, a real customer books, and Setmore is switched off | Planned |
 | 6. Back office | GnuCash export, sales tax reports, promotions, marketing campaigns, staff records and pay | A month's export imports cleanly into GnuCash and matches the bank deposits | Planned |
@@ -85,7 +85,7 @@ The data model is designed for all nine business areas in Phase 1 (customers, ap
 
 ## Fixed waits outside the project's control
 
-Carrier registration for automated texts takes from a day to several weeks, and it cannot start until the new booking form with its consent checkboxes is public in Phase 3. Porting the business number waits for that approval. See [../reference/text-messages.md](../reference/text-messages.md).
+Carrier registration for automated texts takes from a day to several weeks, and it cannot start until the new booking form with its consent checkbox is public in Phase 3. Porting the business number waits for that approval. See [../reference/text-messages.md](../reference/text-messages.md).
 
 ## Later add-ons, not scheduled
 

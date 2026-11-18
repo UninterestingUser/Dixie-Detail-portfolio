@@ -14,7 +14,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | File | Holds | Role |
 | --- | --- | --- |
 | [price-matrix.csv](price-matrix.csv) | The 91 prices and one-person service hours (setup and breakdown not included) for the size-based vehicle classes | Loaded by `load_pricebook`, after the price book check, as version 1 or a new draft; the only price source |
-| [services.yaml](services.yaml) | The service catalog, with which services take a condition level (`condition_applies`) | Seed and reference; `condition_applies` is loaded with each pricebook version |
+| [services.yaml](services.yaml) | The service catalog, with which services take a condition level (`condition_applies`) and the services each add-on goes with (`goes_with`) | Seed and reference; `condition_applies` and `goes_with` are loaded with each pricebook version |
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels (which services take one, Level 3 booked by quote), maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Loaded by `load_pricebook` with each version; a difference makes a new draft |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The eight size-based vehicle classes, their size variants, settings and photo cards, the retired body-type classes, the rule settings, and the possible future classes | Read by `load_pricebook` (classes) and `classify_vehicles` (rule settings) |
 | [site-content.yaml](site-content.yaml) | The website's page and card text in the owner's words, the condition level cards, and the picture for each vehicle class and category page | Read by the Astro site in `site/` at build time |

@@ -91,6 +91,14 @@ def pricebook(request):
     return redirect("pricebook-version", number=version.number)
 
 
+def add_on_rules(version):
+    """[(add-on, [the services it goes with])] in the version (decision 0106)."""
+    found = {}
+    for fit in version.add_on_fits.select_related("add_on", "service").order_by("add_on__name", "service__name"):
+        found.setdefault(fit.add_on, []).append(fit.service)
+    return list(found.items())
+
+
 @require_safe
 def pricebook_version(request, number):
     version = get_object_or_404(PricebookVersion, number=number)
@@ -102,6 +110,7 @@ def pricebook_version(request, number):
         "derived": version.derived_price_rules.select_related("service", "base_service"),
         "conditions": version.condition_levels.all(),
         "condition_services": [row.service for row in version.condition_services.select_related("service").order_by("service__name")],
+        "add_on_rules": add_on_rules(version),
         "rules": getattr(version, "rules", None),
         "decisions": RepricingDecision.objects.filter(pricebook_version=version).select_related("appointment__customer", "decided_by").order_by("decided_at"),
         "can_edit": user_is_manager(request.user),

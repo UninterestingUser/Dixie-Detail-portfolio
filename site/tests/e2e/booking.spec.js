@@ -64,11 +64,12 @@ test("a car, from vehicle to the booked confirmation with its calendar file", as
   await page.locator("[data-time]").first().click();
   await cont(page, 5).click();
 
-  // Details: the phone formats itself; consents start unchecked.
+  // Details: the phone formats itself; one consent box, unchecked.
   await details(page);
   await expect(page.getByLabel("Mobile number")).toHaveValue("(423) 555-0142");
   await expect(page.locator("#consent-appointment")).not.toBeChecked();
-  await expect(page.locator("#consent-follow-up")).not.toBeChecked();
+  await expect(page.locator('#step-6 input[type="checkbox"]')).toHaveCount(1);
+  await expect(page.locator("#consent-appointment + .consent")).toContainText("a review request after the service");
   await expect(page.locator("#consent-appointment + .consent")).toContainText("Reply STOP to opt out");
   await page.locator("#consent-appointment").check();
   await cont(page, 6).click();
@@ -81,7 +82,32 @@ test("a car, from vehicle to the booked confirmation with its calendar file", as
 
   const booking = (await log(request)).find((entry) => entry.to === "bookings");
   expect(booking.body).toMatchObject({ first_name: "Jordan", mobile: "(423) 555-0142", payment_method: "card", color: "silver", turnstile: "fake-turnstile-token" });
-  expect(booking.body.consents).toMatchObject({ version: "2026-10-13", appointment: true, follow_up: false });
+  expect(booking.body.consents).toEqual({ version: "2026-11-18", appointment: true });
+});
+
+test("each service offers only the add-ons that go with it, and Headlight Restoration is one", async ({ page, request }) => {
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await expect(page.locator('[data-service="Headlight Restoration"]')).toHaveCount(0);
+  // No add-ons until a service is picked.
+  await expect(page.locator("[data-add-on]")).toHaveCount(0);
+  const offered = async () => (await page.locator("[data-add-on]").evaluateAll((boxes) => boxes.map((box) => box.dataset.addOn))).sort();
+  await page.locator('[data-service="Full Detail"]').click();
+  expect(await offered()).toEqual(["Carpet Extraction", "Headlight Restoration", "Seat Extraction"]);
+  await page.locator('[data-add-on="Seat Extraction"]').check();
+  await page.locator('[data-add-on="Headlight Restoration"]').check();
+  await expect(estimate(page)).toContainText("$425.00");
+  // Exterior Only takes Headlight Restoration only: Seat Extraction is dropped.
+  await page.locator('[data-service="Exterior Only"]').click();
+  expect(await offered()).toEqual(["Headlight Restoration"]);
+  await expect(page.locator('[data-add-on="Headlight Restoration"]')).toBeChecked();
+  await expect(estimate(page)).toContainText("$215.00");
+  await page.locator('[data-service="Interior Only"]').click();
+  expect(await offered()).toEqual(["Carpet Extraction", "Seat Extraction"]);
+  await expect(page.locator("[data-add-on]:checked")).toHaveCount(0);
+  const quotes = (await log(request)).filter((entry) => entry.to === "quotes");
+  expect(quotes.at(-1).body.add_ons).toEqual([]);
+  expect(quotes.some((entry) => entry.body.service === 12 && entry.body.add_ons.includes(21))).toBe(false);
 });
 
 test("a motorcycle: one service, no add-ons, no condition step", async ({ page }) => {

@@ -12,8 +12,8 @@
 Booking any of them goes through the same availability check as the
 website (appointments.booking.book_request), puts the address and vehicle
 the request brought on the record, raises its review flags
-(customers.matching) and assigns the only qualified staff member
-(decisions 0061 and 0069).
+(customers.matching) and assigns the crew checked when a quote request was
+priced, or else the default staff (decision 0107).
 """
 
 from django.db import transaction
@@ -24,7 +24,7 @@ from appointments.models import AppointmentLine
 from customers import matching
 from pricebook.models import PricedLine
 from pricebook.pricing import PricingError, hand_description, issue_hand_quote
-from staff.authorization import auto_assign
+from staff.authorization import assign_crew, auto_assign, uncovered_services
 
 from .models import QuoteRequest, SecondVehicleRequest, TimeRequest
 
@@ -35,11 +35,16 @@ class DecisionError(ValueError):
     """The request can't be decided as asked."""
 
 
-def after_booking(appointment, intake):
+def after_booking(appointment, intake, crew=()):
     """Put the request's address and vehicle on the record, raise its review
-    flags and assign the only qualified staff member. Returns the person
-    assigned, or None when the assign-staff prompt is needed."""
+    flags and assign the crew: the people checked when it was priced, or
+    else the default staff (decision 0107). Returns the first person
+    assigned, or None."""
     matching.release(appointment, intake)
+    crew = list(crew)
+    if crew:
+        assign_crew(appointment, crew)
+        return crew[0]
     return auto_assign(appointment)
 
 
@@ -62,14 +67,25 @@ def decline(item, reason, user):
 
 
 @transaction.atomic
-def price_quote_request(item, service, vehicle_class, amount, minutes, user, crew_size=1, size_variant=None):
+def price_quote_request(item, service, vehicle_class, amount, minutes, user, crew_size=None, size_variant=None, crew=()):
     """Record the owner's hand price and time on site as a quote: one line,
     the price before tax, with the sales tax at the request's address today.
     A request at a condition level booked by quote carries its level and
-    add-ons into the quote (decision 0103). The quote never changes; pricing
-    again makes a new one."""
+    add-ons into the quote (decision 0103). crew is the people to assign
+    when it is booked; their number is the crew size. The quote never
+    changes; pricing again makes a new one."""
     if item.status not in (QuoteRequest.Status.NEW, QuoteRequest.Status.REPLIED):
         raise DecisionError("Only an open request can be priced.")
+    crew = list(dict.fromkeys(crew))
+    if crew_size is None:
+        crew_size = len(crew) or 1
+    if crew and len(crew) != crew_size:
+        raise DecisionError("The crew size is the number of people checked.")
+    if crew_size not in (1, 2):
+        raise DecisionError("Check one or two people for the crew.")
+    gaps = uncovered_services(crew, [service]) if crew else []
+    if gaps:
+        raise DecisionError(f"Nobody checked is authorized for {service}. Check someone who is.")
     # The level and add-ons the customer asked for go with the service they
     # asked for; a service the owner changes is priced on its own.
     asked = item.service is not None and service == item.service
@@ -89,6 +105,7 @@ def price_quote_request(item, service, vehicle_class, amount, minutes, user, cre
     item.quote, item.priced_at, item.priced_by = quote, timezone.now(), user
     item.status = QuoteRequest.Status.REPLIED
     item.save()
+    item.crew.set(crew)
     return quote
 
 
@@ -107,7 +124,7 @@ def book_quote_request(item, start, user, may_override=False, override_reason=""
     )
     item.appointment, item.status = appointment, QuoteRequest.Status.BOOKED
     item.save()
-    return appointment, after_booking(appointment, item.intake)
+    return appointment, after_booking(appointment, item.intake, item.crew.filter(active=True))
 
 
 # Offline requests ---------------------------------------------------------------

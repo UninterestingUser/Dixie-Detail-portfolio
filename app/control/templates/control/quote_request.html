@@ -43,16 +43,13 @@
 </div>
 {% endif %}
 {% if is_open and is_manager %}
-<details{% if not quote or price_form.errors %} open{% endif %}>
-  <summary>{% if quote %}Price it again{% else %}Price it by hand{% endif %}</summary>
-  <form method="post" action="{% url 'quote-request-price' item.pk %}" class="stack" novalidate>
-    {% csrf_token %}
-    {% for error in price_form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
-    {% for field in price_form %}{% include "control/_field.html" %}{% endfor %}
-    <p class="help">The price and time become a quote record that never changes; pricing again makes a new one. Sales tax is added at this address's rate.</p>
-    <button type="submit" class="primary">Save the price</button>
-  </form>
-</details>
+<form method="post" action="{% url 'quote-request-price' item.pk %}" class="stack" novalidate>
+  {% csrf_token %}
+  {% for error in price_form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% for field in price_form %}{% include "control/_field.html" %}{% endfor %}
+  <p class="help">The price and time become a quote record that never changes; {% if quote %}saving again makes a new one{% else %}pricing again makes a new one{% endif %}. Sales tax is added at this address's rate.</p>
+  <button type="submit" class="primary">{% if quote %}Save the new price{% else %}Save the price{% endif %}</button>
+</form>
 {% endif %}
 
 {% if is_open %}

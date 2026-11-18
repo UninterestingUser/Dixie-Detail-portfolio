@@ -157,10 +157,21 @@ class AppointmentForm(forms.Form):
     # choice breaks a scheduling rule (decisions 0056 and 0096).
     override_reason = forms.CharField(required=False, max_length=500, label="Reason for booking off hours",
                                       widget=forms.Textarea(attrs={"rows": 2, "required": True}))
+    # A manager adding an add-on that doesn't go with the service gives a
+    # reason, logged with the job (decision 0106).
+    add_on_reason = forms.CharField(
+        required=False, max_length=500, label="Reason for an add-on outside the rules", widget=forms.Textarea(attrs={"rows": 2}),
+        help_text="Only for an add-on that doesn't go with the service, such as Seat Extraction with Exterior Only.",
+    )
 
-    def __init__(self, *args, customer, editing=False, **kwargs):
+    def __init__(self, *args, customer, editing=False, is_manager=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.customer, self.editing = customer, editing
+        self.customer, self.editing, self.is_manager = customer, editing, is_manager
+        # The add-ons outside the rules this booking adds, as the alert words
+        # them, and whether the job is priced with them anyway.
+        self.add_on_breaks, self.add_on_override = [], False
+        if not is_manager:
+            del self.fields["add_on_reason"]
         # Vehicles no longer on the record are left out, except the job's own.
         current = self.initial.get("vehicle")
         current = getattr(current, "pk", current)
@@ -204,12 +215,47 @@ class AppointmentForm(forms.Form):
         if service and not vehicle_class:
             self.add_error("vehicle_class", "Pick the vehicle class to price the service.")
         self.check_condition(cleaned, service)
+        self.check_add_ons(cleaned, service)
         if cleaned.get("repeat"):
             if service and service.kind != Service.Kind.MAINTENANCE_PLAN:
                 self.add_error("repeat", "Only a maintenance plan can repeat.")
             if not cleaned.get("visits"):
                 self.add_error("visits", "Say how many visits the series has.")
         return cleaned
+
+    def check_add_ons(self, cleaned, service):
+        """An add-on must go with the service in the version in effect on the
+        job's day (decision 0106). A manager can add another with a reason;
+        anyone else picks another. A job being changed keeps the add-ons it
+        was booked with, unless its service or add-ons change."""
+        from appointments.booking import version_for
+        from pricebook.pricing import add_on_rule_text, unfit_add_ons
+
+        add_ons = list(cleaned.get("add_ons") or [])
+        day = cleaned.get("date")
+        version = version_for(day) if day else PricebookVersion.current()
+        if service is None or not add_ons or version is None:
+            return
+        unfit = unfit_add_ons(version, service, add_ons)
+        if not unfit:
+            return
+        if self.editing and self.unchanged_services(service, add_ons):
+            self.add_on_override = True
+            return
+        words = "; ".join(add_on_rule_text(add_on, service) for add_on in unfit)
+        if not self.is_manager:
+            self.add_error("add_ons", f"{words}. Pick another, or ask a manager to add it with a reason.")
+            return
+        if not cleaned.get("add_on_reason", "").strip():
+            self.add_error("add_on_reason", f"{words}: give the reason for adding it.")
+            return
+        self.add_on_override = True
+        self.add_on_breaks = [add_on_rule_text(add_on, service) for add_on in unfit]
+
+    def unchanged_services(self, service, add_ons):
+        initial_service = self.initial.get("service")
+        initial_add_ons = {getattr(item, "pk", item) for item in self.initial.get("add_ons") or []}
+        return getattr(initial_service, "pk", initial_service) == service.pk and initial_add_ons == {add_on.pk for add_on in add_ons}
 
     def check_condition(self, cleaned, service):
         """The condition level, only for a service that takes one in the
@@ -255,6 +301,7 @@ class AppointmentForm(forms.Form):
             crew_size=data.get("crew_size") or service.default_crew_size,
             hand_amount=data.get("hand_price") if self.by_quote else None,
             hand_minutes=data.get("hand_minutes") if self.by_quote else None,
+            add_on_override=self.add_on_override,
         )
 
     def start(self):

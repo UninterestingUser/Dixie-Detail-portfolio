@@ -107,7 +107,7 @@ test("every fake answer the website reads has the real API's shape", async () =>
   const times = await call("open-times", { params: { quote: quote.body.number, days: 31 } });
   fits("open-times", times, 200, 200);
   const start = times.body.days.find((day) => day.times.length).times[0].start;
-  const consents = { version: "2026-10-13", appointment: true, follow_up: false };
+  const consents = { version: "2026-11-18", appointment: true };
   fits("bookings", await call("bookings", { body: { quote: quote.body.number, start, first_name: "Jordan", mobile: "(423) 555-0142", payment_method: "cash", consents, turnstile: GOOD_TOKEN } }), 201, 201);
 
   const session = await call("quote-requests/uploads", { body: { turnstile: GOOD_TOKEN } });

@@ -145,7 +145,7 @@ class Command(BaseCommand):
     # Steps shared by the scenarios ----------------------------------------------
 
     def consents(self):
-        return {"version": consent.current()["version"], "appointment": False, "follow_up": False}
+        return {"version": consent.current()["version"], "appointment": False}
 
     def service(self, api):
         pricebook = api.ok("GET", "services")

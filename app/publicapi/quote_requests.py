@@ -172,6 +172,7 @@ def by_quote_job(vehicle, size, service, condition, add_ons):
     if found.needs_photo_card:
         raise ApiError(422, "photo_card_needed", "Pick the picture closest to your vehicle.", photo_cards=catalog.cards_json())
     level = quotes.check_condition(service, condition) if service is not None and condition is not None else None
+    quotes.check_add_ons(service, add_ons)
     if found.booked_by_quote:
         return found, level
     if level is not None and level.booked_by_quote:

@@ -64,7 +64,7 @@ class SchedulingSettingsForm(forms.ModelForm):
             "setup_minutes_one_person", "breakdown_minutes_one_person", "time_on_site_rounding_minutes",
             "jobs_per_day", "minimum_gap_minutes", "round_start_up_to_minutes",
             "time_off_buffer_minutes", "time_off_check_minutes", "stale_copy_warning_minutes",
-            "leave_buffer_minutes",
+            "leave_buffer_minutes", "default_staff",
         ]
         labels = {
             "setup_minutes_one_person": "Setup minutes, one person",
@@ -76,7 +76,15 @@ class SchedulingSettingsForm(forms.ModelForm):
             "time_off_check_minutes": "Check Time Off every, minutes",
             "stale_copy_warning_minutes": "Warn when the Time Off copy is older than, minutes",
             "leave_buffer_minutes": "Time-to-leave buffer, minutes",
+            "default_staff": "Default staff for new bookings",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from staff.models import StaffMember
+
+        self.fields["default_staff"].queryset = StaffMember.objects.filter(active=True).order_by("name")
+        self.fields["default_staff"].empty_label = "Nobody: assign the only qualified person, or leave it to you"
 
     def clean(self):
         cleaned = super().clean()

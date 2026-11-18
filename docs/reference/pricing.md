@@ -1,12 +1,12 @@
 ---
 title: Pricing rules
-summary: How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and why the quoted price is the price of record.
+summary: How every price is built from the price matrix, which add-ons go with which service, what size variants mean, how condition and crew size change price and time, and why the quote is the price of record.
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [pricing, pricebook, crew, quote]
-related: [docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
+related: [docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
@@ -23,11 +23,25 @@ A price is looked up by three things together: service, vehicle class and size v
 
 1. **Base price,** looked up by service, vehicle class and size variant.
 2. **Condition adjustment,** for Full Detail and Interior Only only: nothing at Level 1 and 10% of the base price at Level 2, rounded to the whole dollar. The same percentage lengthens the main service's service time. Level 3 has no price: the job is quoted by hand ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)).
-3. **Add-ons,** then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
+3. **Add-ons,** each only with a service it goes with (below), then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
 4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md). Until Phase 3 adds the rate lookup, quotes carry a tax rate of zero.
 5. **On-site adjustment,** entered by the owner at the job, always with a reason, shown on the invoice.
 
 Worked example: a 2019 Toyota RAV4 (Medium, two rows) booked for a Full Detail at the second condition level, with Seat Extraction. Base $250 and 4 hours, condition +10% = $25 and 0.4 hours, Seat Extraction $80 and 1.5 hours. Total $355 before tax. The service time is 4 + 0.4 + 1.5 = 5.9 one-person hours, rounded to 6 hours, and the time on site, with 30 minutes of setup and 30 of breakdown, is 7 hours, under the 8 hours that flag a full day.
+
+## Which add-ons go with which service
+
+An add-on is never booked on its own. Each add-on goes only with the services listed for it ([decision 0106](../decisions/0106-add-ons-go-with-listed-services.md)):
+
+| Add-on | Goes with |
+| --- | --- |
+| Carpet Extraction | Full Detail, Interior Only |
+| Seat Extraction | Full Detail, Interior Only |
+| Headlight Restoration | Full Detail, Exterior Only, 1-Step Paint Correction, 2-Step Paint Correction |
+
+The lists are `goes_with` in [data/services.yaml](../../data/services.yaml), stored with each pricebook version, so a change comes as a new version ([pricebook-changes.md](pricebook-changes.md)). Headlight Restoration became an add-on on 2026-11-18. Its price and time didn't change, and like every add-on it adds its own service hours and no extra setup or breakdown. No add-on goes with Motorcycle Detail or the maintenance plans.
+
+The website offers only the add-ons that fit the service picked, and the public API refuses any other. In the control app a manager can add another add-on with a reason, logged with the job like a booking outside the scheduling rules ([booking-a-job.md](../guides/booking-a-job.md)).
 
 ## What the size variant means for each vehicle class
 
@@ -52,7 +66,7 @@ How two promotions on one job combine has not been set by the owner. Until it is
 
 ## Condition adjustment
 
-Condition levels, called service levels on the website, apply only to the services that cover the interior: **Full Detail and Interior Only** ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). Exterior Only, both paint corrections, Headlight Restoration and Motorcycle Detail have no condition level at all, and the condition adjustment never applies to add-ons or maintenance plans either.
+Condition levels, called service levels on the website, apply only to the services that cover the interior: **Full Detail and Interior Only** ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)). Exterior Only, both paint corrections and Motorcycle Detail have no condition level at all, and the condition adjustment never applies to add-ons, Headlight Restoration among them, or to maintenance plans either.
 
 The customer picks one of three levels with plain descriptions, after picking the service:
 

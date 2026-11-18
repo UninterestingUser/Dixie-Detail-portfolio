@@ -1,18 +1,27 @@
 meta:
   title: Text consent wording
-  summary: The exact wording of the two text consent checkboxes, by version; the public API serves the current version and records the words shown with each answer.
-  updated: 2026-11-08
+  summary: The exact wording of the text consent checkbox, by version; the public API serves the current version and records the words shown with each answer.
+  updated: 2026-11-18
   status: current
   explained_in: docs/reference/text-messages.md
   note: >-
-    The website shows the current version's words next to the two unchecked checkboxes, and sends
-    back the version with each answer. The server records the answer with the words of that version
-    from this file, never words sent by the browser. A change of wording is a new version added
-    below and made current; old versions stay, because recorded answers refer to them.
+    The website shows the current version's words next to one unchecked checkbox, and sends back
+    the version with the answer. The server records the answer as appointment-text consent with the
+    words of that version from this file, never words sent by the browser. A change of wording is a
+    new version added below and made current; old versions stay, because recorded answers refer to
+    them. Version 2026-10-13 had a second, follow-up checkbox; from 2026-11-18 there is one consent,
+    which also covers the review request after the service (decision 0108).
 
-current: "2026-10-13"
+current: "2026-11-18"
 
 versions:
+  "2026-11-18":
+    appointment: >-
+      I agree to receive text messages from Dixie Detail about my appointment at the number I
+      provided, including confirmations, reminders, arrival updates, payment links, receipts and a
+      review request after the service. Message frequency varies. Message and data rates may apply.
+      Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy
+      Policy and Text Message Terms.
   "2026-10-13":
     appointment: >-
       I agree to receive text messages from Dixie Detail about my appointment at the number I

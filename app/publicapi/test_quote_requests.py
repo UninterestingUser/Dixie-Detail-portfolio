@@ -86,9 +86,16 @@ class QuoteRequestTests(QuoteRequestTestCase):
         self.assertEqual(request.status, QuoteRequest.Status.NEW)
         self.assertEqual(request.service_address.city, "Cleveland")
         self.assertEqual(request.customer.mobile, "4235550160")
-        self.assertEqual(Consent.objects.filter(customer=request.customer).count(), 2)
+        self.assertEqual(Consent.objects.filter(customer=request.customer).count(), 1)
         # Not an appointment, and no time is held.
         self.assertFalse(Appointment.objects.exists())
+
+    def test_an_add_on_must_go_with_the_service(self):
+        """Decision 0106: the same rule as a quote."""
+        refused = self.send(expect=400, service=self.exterior.pk, add_ons=[self.seats.pk])
+        self.assertEqual((refused["field"], refused["message"]), ("add_ons", "Seat Extraction can't be added to Exterior Only."))
+        self.assertEqual(self.send(expect=400, service="not_sure", add_ons=[self.seats.pk])["field"], "add_ons")
+        self.assertFalse(QuoteRequest.objects.exists())
 
     def test_not_sure_and_the_photo_card(self):
         answer = self.send(vehicle={"photo_card": self.vans.pk, "year": 1978, "make": "Dodge", "model": "Tradesman"}, service="not_sure")

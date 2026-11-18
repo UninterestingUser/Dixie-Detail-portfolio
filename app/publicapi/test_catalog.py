@@ -53,8 +53,10 @@ class PricebookTests(ApiTestCase):
         self.assertIn("cash", methods)
         # Owner-only methods and gift cards are never offered (decision 0053).
         self.assertFalse(methods & {"check", "trade", "gift_card"})
-        self.assertEqual(data["consent"]["version"], "2026-10-13")
+        self.assertEqual(data["consent"]["version"], "2026-11-18")
         self.assertTrue(data["consent"]["appointment"].startswith("I agree to receive text messages from Dixie Detail"))
+        # One consent checkbox (decision 0108).
+        self.assertEqual(sorted(data["consent"]), ["appointment", "links", "version"])
         self.assertEqual(data["quote_lifetime_minutes"], 120)
         self.assertEqual(data["photos"]["max_per_request"], 6)
         self.assertEqual(data["photos"]["max_megabytes"], 15)

@@ -116,7 +116,7 @@ class LevelThreeQuoteRequestScreenTests(ControlTestCase):
         item = self.send_level_3()
         response = self.tailnet.post(f"/requests/quotes/{item.pk}/price/", {
             "price-service": self.full_detail.pk, "price-vehicle_class": self.medium.pk, "price-amount": "450.00",
-            "price-time_on_site_minutes": 480, "price-crew_size": 1,
+            "price-time_on_site_minutes": 480, "price-crew": [self.owner.pk],
         })
         self.assertEqual(response.status_code, 302, response.content)
         item.refresh_from_db()

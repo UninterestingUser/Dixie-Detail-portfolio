@@ -12,7 +12,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.templatetags.static import static
 from django.utils.cache import patch_vary_headers
 from django.views.decorators.cache import cache_control
-from django.views.decorators.http import require_POST, require_safe
+from django.views.decorators.http import require_safe
 
 from appointments.models import Appointment
 from billing.models import Payment
@@ -22,7 +22,6 @@ from staff.authorization import user_is_manager
 from vehicles.classification.lookup import classify
 from vehicles.models import Vehicle
 
-from . import needs_you
 from .context_processors import brand_colors
 from .forms import CustomerForm, VehicleForm, VehicleOverrideForm
 from .location_views import address_summary
@@ -32,17 +31,6 @@ from .search import find_customers
 @require_safe
 def home(request):
     """The control app opens on today's schedule."""
-    return redirect("schedule")
-
-
-@require_POST
-def needs_you_seen(request):
-    """Clear the new website bookings from the "needs you" list, up to the
-    newest one the page showed, so a booking that came in meanwhile stays."""
-    from django.utils.dateparse import parse_datetime
-
-    moment = parse_datetime(request.POST.get("until", "") or "")
-    needs_you.mark_seen(request.user, moment)
     return redirect("schedule")
 
 

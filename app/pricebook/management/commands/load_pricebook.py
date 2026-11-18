@@ -5,7 +5,8 @@ data/services.yaml, data/pricing-rules.yaml and data/price-matrix.csv, whose
 hours are one-person service hours without setup and breakdown (decision
 0058). Which services take a condition level (condition_applies in
 services.yaml) and which levels are booked by quote are pricebook data,
-stored with each version (decision 0103). Maintenance plans are stored as derived price rules, not prices. The
+stored with each version (decision 0103), and so are the services each
+add-on goes with (goes_with, decision 0106). Maintenance plans are stored as derived price rules, not prices. The
 price book check (pricebook.checks, decision 0083) runs first, and nothing
 is loaded if it fails. In an empty database the retired classes the file
 lists are created retired, for the job history.
@@ -13,8 +14,9 @@ lists are created retired, for the job history.
 Once version 1 exists, running it again changes no published price. It adds
 any vehicle class, size variant or service the data files have and the
 database does not, fills in a class's photo card and example models where it
-has none, and compares the matrix and the condition rules with the latest
-published version. If they differ, the whole matrix is loaded as a new draft for the owner to publish
+has none, changes a service's kind to the file's (Headlight Restoration
+became an add-on, decision 0106), and compares the matrix, the condition
+rules and the add-on rules with the latest published version. If they differ, the whole matrix is loaded as a new draft for the owner to publish
 (pricebook-changes.md). A class the file renames is found under its old name
 until apply_size_classes renames it, and a new class made while the
 body-type classes are still live waits as pending, not offered, until
@@ -32,6 +34,7 @@ from django.utils import timezone
 
 from pricebook.checks import MAINTENANCE_PERCENT_KEYS, cell_name, check
 from pricebook.models import (
+    AddOnFit,
     ConditionLevel,
     ConditionService,
     DerivedPriceRule,
@@ -78,6 +81,7 @@ class Command(BaseCommand):
     help = "Load data/price-matrix.csv, services.yaml and pricing-rules.yaml as pricebook version 1, effective today."
 
     def handle(self, *args, **options):
+        self.changed = []
         data = read_yaml("vehicle-classes.yaml")
         services = read_yaml("services.yaml")
         rules = read_yaml("pricing-rules.yaml")
@@ -162,8 +166,10 @@ class Command(BaseCommand):
         return found
 
     def load_services(self, services):
-        """Add the services the database lacks. Returns their names."""
+        """Add the services the database lacks, and give an existing one the
+        file's kind. Returns the names added; kind changes go to self.changed."""
         added = []
+        self.changed = getattr(self, "changed", [])
         for entry in services["services"]:
             service, created = Service.objects.get_or_create(
                 name=entry["name"],
@@ -176,6 +182,11 @@ class Command(BaseCommand):
             )
             if created:
                 added.append(f"service {service}")
+            elif service.kind != SERVICE_KINDS[entry["kind"]]:
+                service.kind = SERVICE_KINDS[entry["kind"]]
+                service._change_reason = "Kind changed to match data/services.yaml"
+                service.save()
+                self.changed.append(f"{service} is now {service.get_kind_display().lower()}")
         for entry in services["custom_lines"]:
             Service.objects.get_or_create(
                 name=entry["name"], defaults={"kind": Service.Kind.CUSTOM, "description": entry.get("use", "")}
@@ -208,6 +219,31 @@ class Command(BaseCommand):
             for level in ConditionLevel.objects.filter(version=version)
         }
         return names, levels
+
+    @staticmethod
+    def add_on_rules(services):
+        """{(add-on name, service name)} as services.yaml gives them."""
+        return {
+            (entry["name"], name)
+            for entry in services["services"]
+            if entry["kind"] == "add-on"
+            for name in entry.get("goes_with") or []
+        }
+
+    @staticmethod
+    def version_add_on_rules(version):
+        return set(AddOnFit.objects.filter(version=version).values_list("add_on__name", "service__name"))
+
+    def compare_add_on_rules(self, version, services):
+        """How the version's add-on rules differ from services.yaml."""
+        wanted, had = self.add_on_rules(services), self.version_add_on_rules(version)
+        differences = [
+            f"{add_on} goes with {service} in the file, not in version {version.number}" for add_on, service in sorted(wanted - had)
+        ]
+        differences += [
+            f"{add_on} goes with {service} in version {version.number}, not in the file" for add_on, service in sorted(had - wanted)
+        ]
+        return differences
 
     def compare_condition_rules(self, version, rules, services):
         """How the version's condition rules differ from the data files."""
@@ -252,6 +288,8 @@ class Command(BaseCommand):
             )
         for name in sorted(names):
             ConditionService.objects.create(version=version, service=Service.objects.get(name=name))
+        for add_on, service in sorted(self.add_on_rules(services)):
+            AddOnFit.objects.create(version=version, add_on=Service.objects.get(name=add_on), service=Service.objects.get(name=service))
         plans = rules["maintenance_plans"]
         base_service = Service.objects.get(name=plans["base_service"])
         for name, key in MAINTENANCE_PERCENT_KEYS.items():
@@ -299,6 +337,7 @@ class Command(BaseCommand):
             added = self.load_classes(data) + self.load_services(services)
             differences, dropped = self.compare(latest, matrix, data)
             differences += self.compare_condition_rules(latest, rules, services)
+            differences += self.compare_add_on_rules(latest, services)
             draft = None
             if differences:
                 open_draft = PricebookVersion.objects.filter(status=PricebookVersion.Status.DRAFT).first()
@@ -316,8 +355,10 @@ class Command(BaseCommand):
                 self.load_prices(draft, matrix, rules, data)
         for line in added:
             self.stdout.write(f"Added {line}.")
+        for line in self.changed:
+            self.stdout.write(f"Changed: {line}.")
         if draft is None:
-            if added:
+            if added or self.changed:
                 self.stdout.write(f"Pricebook version {latest.number} matches the data files; no price was changed.")
             else:
                 self.stdout.write(
@@ -326,7 +367,7 @@ class Command(BaseCommand):
             return
         self.stdout.write(
             self.style.SUCCESS(
-                f"Draft version {draft.number} holds data/price-matrix.csv and the condition rules, which differ from version {latest.number}"
+                f"Draft version {draft.number} holds data/price-matrix.csv, the condition rules and the add-on rules, which differ from version {latest.number}"
                 f" in {len(differences)} place(s):"
             )
         )

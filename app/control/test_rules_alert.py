@@ -61,7 +61,7 @@ class LiveAlertTests(JobsTestCase):
 
     def test_the_form_checks_on_every_change_except_the_reason(self):
         page = self.client.get(reverse("appointment-new", args=[self.customer.pk]))
-        self.assertContains(page, "hx-trigger=\"change[target.name!='override_reason'], load\"")
+        self.assertContains(page, "hx-trigger=\"change[target.name!='override_reason'&&target.name!='add_on_reason'], load\"")
         self.assertContains(page, '<div id="rules-alert">')
         self.assertNotContains(page, "outside the rules</button>")
 

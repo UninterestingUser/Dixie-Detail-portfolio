@@ -130,7 +130,9 @@ class QuoteTests(ApiTestCase):
         self.assertIsNone(quote["condition_level"])
         self.assertEqual(quote["time_on_site_minutes"], 180)
         self.assertEqual(self.quote(bike, self.full_detail, expect=422)["error"], "not_offered")
-        self.assertEqual(self.quote(bike, self.motorcycle_detail, expect=422, add_ons=[self.seats.pk])["error"], "not_offered")
+        # No add-on goes with Motorcycle Detail (decision 0106).
+        refused = self.quote(bike, self.motorcycle_detail, expect=400, add_ons=[self.seats.pk])
+        self.assertEqual((refused["field"], refused["message"]), ("add_ons", "Seat Extraction can't be added to Motorcycle Detail."))
 
     def test_a_photo_card(self):
         quote = self.quote({"photo_card": self.small.pk}, condition=1, size=2)
@@ -192,3 +194,48 @@ class OpenTimesTests(ApiTestCase):
     def test_an_unknown_quote(self):
         response = self.client.get_api("open-times", {"quote": "ZZZZZZZZZZ"})
         self.assertEqual(response.status_code, 404)
+
+
+class AddOnRuleTests(ApiTestCase):
+    """The API offers only the add-ons that go with the chosen service and
+    refuses any other (decision 0106)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from pricebook.models import Service
+
+        super().setUpTestData()
+        cls.interior = Service.objects.get(name="Interior Only")
+        cls.carpet = Service.objects.get(name="Carpet Extraction")
+        cls.headlights = Service.objects.get(name="Headlight Restoration")
+
+    def test_the_pricebook_lists_the_add_ons_each_service_takes(self):
+        services = {service["name"]: service for service in self.client.get_api("services").json()["services"]}
+        names = {service["id"]: name for name, service in services.items()}
+        offered = {name: sorted(names[pk] for pk in service["add_ons"]) for name, service in services.items()}
+        self.assertEqual(offered["Full Detail"], ["Carpet Extraction", "Headlight Restoration", "Seat Extraction"])
+        self.assertEqual(offered["Interior Only"], ["Carpet Extraction", "Seat Extraction"])
+        for name in ("Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction"):
+            self.assertEqual(offered[name], ["Headlight Restoration"])
+        self.assertEqual(offered["Motorcycle Detail"], [])
+        self.assertEqual(services["Headlight Restoration"]["kind"], "add_on")
+        self.assertEqual(offered["Headlight Restoration"], [])
+
+    def test_a_quote_refuses_an_add_on_that_doesnt_go_with_the_service(self):
+        for service, add_on in ((self.exterior, self.seats), (self.exterior, self.carpet), (self.interior, self.headlights)):
+            with self.subTest(service=service.name, add_on=add_on.name):
+                answer = self.quote(service=service, expect=400, add_ons=[add_on.pk])
+                self.assertEqual(answer["field"], "add_ons")
+                self.assertEqual(answer["message"], f"{add_on.name} can't be added to {service.name}.")
+        quote = self.quote(service=self.full_detail, add_ons=[self.carpet.pk, self.headlights.pk, self.seats.pk])
+        self.assertEqual(sorted(item["name"] for item in quote["add_ons"]), ["Carpet Extraction", "Headlight Restoration", "Seat Extraction"])
+        self.assertFalse(Quote.objects.filter(service=self.exterior).exists())
+
+    def test_the_price_table_has_only_the_add_ons_that_fit(self):
+        jobs = self.client.get_api("price-table").json()["jobs"]
+        sets = {(job["service"], tuple(job["add_ons"])) for job in jobs if job["class_id"] == self.medium.pk and job["size"] == 2}
+        self.assertIn((self.exterior.pk, (self.headlights.pk,)), sets)
+        self.assertNotIn((self.exterior.pk, (self.seats.pk,)), sets)
+        self.assertIn((self.full_detail.pk, tuple(sorted([self.carpet.pk, self.headlights.pk, self.seats.pk]))), sets)
+        self.assertFalse(any(self.headlights.pk in add_ons for service, add_ons in sets if service == self.interior.pk))
+        self.assertFalse(any(job["service"] == self.headlights.pk for job in jobs))

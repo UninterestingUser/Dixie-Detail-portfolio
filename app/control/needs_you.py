@@ -1,32 +1,36 @@
-"""The "needs you" list on the home screen (control-app.md): everything
-waiting for the owner, newest first, with a count.
+"""The "needs you" list on the home screen (control-app.md): only what needs
+a decision, newest first, with a count (decision 0107):
 
-- new website bookings since the user last cleared them;
-- review flags from quiet matching, one item per job;
-- website jobs with no staff, the assign-staff prompt (decisions 0061 and 0069);
-- requests waiting for a decision: quote requests, offline requests and a
-  second vehicle the same day;
-- Time Off over a booked job (decision 0098), and sales tax rates waiting
-  for approval (sales-tax.md).
+- quote requests to price, offline requests to price and book, and a second
+  vehicle the same day;
+- returning-customer differences: review flags from quiet matching;
+- Time Off over a booked job (decision 0098), and a job the calendar sync
+  keeps failing to push;
+- sales tax rates waiting for approval (sales-tax.md).
 
-Push notifications come in Phase 4. Until then the Jobs calendar event on
-the phone is the alert for a new booking.
+A new booking is not an item, and neither is staffing: every new booking
+gets the default staff (decision 0107). Push notifications come in Phase 4
+and will announce new bookings; until then the Jobs calendar event on the
+phone is the notice. An appointment has at most one item: when several
+things need a decision on one job, the item names them all.
 """
 
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 
 from django.urls import reverse
 from django.utils import timezone
 
 from appointments.models import Appointment, MatchFlag
 from billing.models import TaxRate
-from calendars.models import CalendarFlag
+from calendars.models import CalendarFlag, SyncTask
 from publicapi.models import QuoteRequest, SecondVehicleRequest, TimeRequest
-
-from .models import SeenMarker
 
 # The most items the home screen lists; the count is always the full number.
 SHOWN = 30
+# A calendar push that has failed this many times in a row is listed; the
+# worker keeps trying, but one failure is usually just a slow moment at Google.
+FAILED_PUSHES = 3
 
 
 @dataclass
@@ -37,6 +41,9 @@ class Item:
     detail: str
     url: str
     is_test: bool = False
+    # The appointment the item is about, so a job is listed once.
+    appointment_id: int = None
+    also: list = field(default_factory=list)
 
 
 def when_text(moment):
@@ -44,32 +51,41 @@ def when_text(moment):
     return f"{local:%a %b} {local.day}, {local:%-I:%M %p}"
 
 
-def seen_at(user):
-    marker = SeenMarker.objects.filter(user=user).first() if user.is_authenticated else None
-    return marker.website_bookings_seen_at if marker else None
+def failed_pushes():
+    """[(appointment, task)] for each job whose calendar push keeps failing."""
+    tasks = {}
+    for task in SyncTask.objects.filter(link__startswith="job:", attempts__gte=FAILED_PUSHES):
+        try:
+            tasks[uuid.UUID(task.link.removeprefix("job:")).hex] = task
+        except ValueError:
+            continue
+    if not tasks:
+        return []
+    found = Appointment.objects.filter(calendar_key__in=[uuid.UUID(key) for key in tasks]).select_related("customer")
+    return [(job, tasks[job.calendar_key.hex]) for job in found]
 
 
-def mark_seen(user, moment=None):
-    SeenMarker.objects.update_or_create(user=user, defaults={"website_bookings_seen_at": moment or timezone.now()})
+def one_per_appointment(found):
+    """Fold the items about one appointment into its first one."""
+    kept, by_job = [], {}
+    for item in found:
+        first = by_job.get(item.appointment_id) if item.appointment_id is not None else None
+        if first is None:
+            kept.append(item)
+            if item.appointment_id is not None:
+                by_job[item.appointment_id] = item
+            continue
+        first.also.append(item.title.split(":")[0])
+        first.when = max(first.when, item.when)
+    for item in kept:
+        if item.also:
+            item.detail += " · Also: " + ", ".join(dict.fromkeys(item.also)).lower()
+    return kept
 
 
-def new_bookings(user):
-    """Website bookings made since the user last cleared them."""
-    found = Appointment.objects.filter(source=Appointment.Source.WEBSITE, reference__isnull=False).select_related("customer", "vehicle")
-    since = seen_at(user)
-    if since is not None:
-        found = found.filter(created_at__gt=since)
-    return found.order_by("-created_at")
-
-
-def items(user):
+def items(user=None):
     """[Item], newest first."""
     found = []
-    for job in new_bookings(user)[:100]:
-        found.append(Item(
-            "booking", job.created_at, f"New booking: {job.customer}",
-            f"{when_text(job.scheduled_start)} · {job.vehicle or 'no vehicle'}", reverse("appointment", args=[job.pk]), job.is_test,
-        ))
     flagged = {}
     for flag in MatchFlag.objects.filter(resolution="").select_related("appointment__customer").order_by("created_at"):
         flagged.setdefault(flag.appointment, []).append(flag)
@@ -78,15 +94,7 @@ def items(user):
         found.append(Item(
             "review", flags[-1].created_at, f"Check the booking: {job.customer}",
             f"The {fields} differ{'s' if len(flags) == 1 else ''} from the record", reverse("match-review", args=[job.pk]), job.is_test,
-        ))
-    unstaffed = (
-        Appointment.objects.filter(source=Appointment.Source.WEBSITE, status=Appointment.Status.BOOKED, scheduled_start__gte=timezone.now(), assignments__isnull=True)
-        .select_related("customer").order_by("-created_at")
-    )
-    for job in unstaffed[:100]:
-        found.append(Item(
-            "staff", job.created_at, f"Assign staff: {job.customer}", f"{when_text(job.scheduled_start)}",
-            reverse("appointment", args=[job.pk]) + "#staff-heading", job.is_test,
+            appointment_id=job.pk,
         ))
     for item in QuoteRequest.objects.filter(status=QuoteRequest.Status.NEW).select_related("customer"):
         found.append(Item(
@@ -104,25 +112,27 @@ def items(user):
             f"{when_text(item.start)} · {item.vehicle}", reverse("second-vehicle-request", args=[item.pk]), item.is_test,
         ))
     for flag in CalendarFlag.objects.filter(outcome=CalendarFlag.Outcome.OPEN, kind=CalendarFlag.Kind.CLASH).select_related("appointment__customer"):
+        job = flag.appointment
         found.append(Item(
-            "clash", flag.created_at, f"Time Off over a booked job: {flag.appointment.customer if flag.appointment else flag.summary}",
-            flag.summary, reverse("schedule") + "#calendar-flags-heading",
+            "clash", flag.created_at, f"Time Off over a booked job: {job.customer if job else flag.summary}",
+            flag.summary, reverse("schedule") + "#calendar-flags-heading", job.is_test if job else False,
+            appointment_id=job.pk if job else None,
+        ))
+    for job, task in failed_pushes():
+        found.append(Item(
+            "sync", task.created_at, f"Calendar sync failing: {job.customer}",
+            f"{when_text(job.scheduled_start)} · not on the Jobs calendar after {task.attempts} tries", reverse("appointment", args=[job.pk]),
+            job.is_test, appointment_id=job.pk,
         ))
     for rate in TaxRate.objects.filter(approved_at__isnull=True, rejected_at__isnull=True).select_related("jurisdiction"):
         found.append(Item("tax_rate", rate.found_at, f"New sales tax rate: {rate.jurisdiction}",
                           f"{rate.combined_rate}% from {rate.effective_from:%b %-d, %Y}", reverse("sales-tax")))
+    found = one_per_appointment(found)
     found.sort(key=lambda item: item.when, reverse=True)
     return found
 
 
-def summary(user):
-    """{"items": the newest SHOWN, "count": all of them, "new_bookings": how many}."""
+def summary(user=None):
+    """{"items": the newest SHOWN, "count": all of them, "more": how many aren't shown}."""
     found = items(user)
-    bookings = [item.when for item in found if item.kind == "booking"]
-    return {
-        "newest_booking": max(bookings) if bookings else None,
-        "items": found[:SHOWN],
-        "count": len(found),
-        "more": max(len(found) - SHOWN, 0),
-        "new_bookings": sum(1 for item in found if item.kind == "booking"),
-    }
+    return {"items": found[:SHOWN], "count": len(found), "more": max(len(found) - SHOWN, 0)}
