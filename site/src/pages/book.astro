@@ -8,17 +8,18 @@
 import Base from "../layouts/Base.astro";
 import Icon from "../components/Icon.astro";
 import { api, business, content, pages, readData } from "../lib/data.js";
+import { browserApiBase, setting } from "../lib/settings.js";
 
 const page = pages.pages.book;
 const [pricebook, options, table, cardsAnswer] = await Promise.all([api("services"), api("booking-options"), api("price-table"), api("vehicles/photo-cards")]);
 const rules = readData("booking-rules.yaml");
-const apiBase = import.meta.env.PUBLIC_API_BASE || process.env.API_BASE || "https://api.dixiedetail.com/api/public/v1";
+const apiBase = browserApiBase();
 const config = {
-  api: apiBase.replace(/\/$/, ""),
+  api: apiBase,
   offline: import.meta.env.PUBLIC_OFFLINE_BASE || "/offline",
-  turnstileKey: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || "",
+  turnstileKey: setting("PUBLIC_TURNSTILE_SITE_KEY"),
   turnstileScript: import.meta.env.PUBLIC_TURNSTILE_SCRIPT || "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad",
-  mapsKey: import.meta.env.PUBLIC_GOOGLE_MAPS_BROWSER_KEY || "",
+  mapsKey: setting("PUBLIC_GOOGLE_MAPS_BROWSER_KEY"),
   placesEndpoint: import.meta.env.PUBLIC_PLACES_ENDPOINT || "https://places.googleapis.com/v1/places:autocomplete",
   phone: business.phone.number,
 };

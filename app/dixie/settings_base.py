@@ -5,6 +5,8 @@
 import os
 from pathlib import Path
 
+from dixie.origins import parse_cors_origins
+
 # The repository's data/ folder: the price matrix and the launch values the
 # pricebook and scheduling read. It sits beside app/ in the repository, and
 # compose.yaml and tools/run-tests.sh mount it read-only at /srv/data, beside
@@ -37,8 +39,10 @@ def env_int(name, default):
 
 # The public API (docs/reference/public-api.md), settings from .env.
 # The website's addresses, such as https://dixiedetail.com: the only origins
-# a browser may call the public API from (CORS).
-PUBLIC_API_CORS_ORIGINS = env_list("PUBLIC_API_CORS_ORIGINS")
+# a browser may call the public API from (CORS). Spaces and a trailing slash
+# are trimmed; an entry that still isn't a bare https origin stops the app
+# from starting (dixie/origins.py). dixie.wsgi logs the list at startup.
+PUBLIC_API_CORS_ORIGINS = parse_cors_origins(os.environ.get("PUBLIC_API_CORS_ORIGINS", ""))
 # How long a website quote can be booked, in minutes.
 QUOTE_LIFETIME_MINUTES = env_int("QUOTE_LIFETIME_MINUTES", 120)
 # Quote request photos (decision 0099): how many per request, how large each

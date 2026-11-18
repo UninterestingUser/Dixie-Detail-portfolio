@@ -22,10 +22,20 @@ const fake = createFakeApi();
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".txt": "text/plain", ".xml": "application/xml" };
 
 // Turnstile's script, as the site uses it: render() with execution
-// "execute", then execute() calls back with a token.
+// "execute", then execute() calls back with a token. localStorage
+// "fake-turnstile" makes it misbehave as the real one can: "throw" (render
+// throws, as with an empty site key), "fail" (the error callback), "hang"
+// (no answer ever) or "empty" (a blank token).
 const TURNSTILE = `window.turnstile = {
-  render(el, options) { this.options = options; return "widget-1"; },
-  execute() { const fail = localStorage.getItem("fake-turnstile") === "fail"; setTimeout(() => fail ? this.options["error-callback"]?.() : this.options.callback("${GOOD_TOKEN}"), 10); },
+  render(el, options) {
+    if (localStorage.getItem("fake-turnstile") === "throw") throw new Error('Invalid input for parameter "sitekey", got ""');
+    this.options = options; return "widget-1";
+  },
+  execute() {
+    const mode = localStorage.getItem("fake-turnstile");
+    if (mode === "hang") return;
+    setTimeout(() => mode === "fail" ? this.options["error-callback"]?.() : this.options.callback(mode === "empty" ? "" : "${GOOD_TOKEN}"), 10);
+  },
   reset() {}, remove() {}
 };
 (window.onTurnstileLoad || function () {})();`;

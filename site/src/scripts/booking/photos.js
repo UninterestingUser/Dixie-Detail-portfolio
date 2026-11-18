@@ -45,7 +45,10 @@ function send(session, file, onProgress) {
       if (xhr.status === 201) resolve(body);
       else reject(new Error(body.message || "That photo didn't upload."));
     };
+    // Generous, for a large photo on a slow phone connection, but never endless.
+    xhr.timeout = 180000;
     xhr.onerror = () => reject(new Error("That photo didn't upload. Check the connection and add it again."));
+    xhr.ontimeout = () => reject(new Error("That photo took too long to upload. Check the connection and add it again."));
     xhr.send(form);
   });
 }

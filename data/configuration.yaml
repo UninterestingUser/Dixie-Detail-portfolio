@@ -76,7 +76,7 @@ settings:
   - name: PUBLIC_API_CORS_ORIGINS
     example: https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev
     purpose: The website's addresses, the only browser origins allowed to call the public API (CORS); empty refuses every browser
-    format: Origins with https:// and no trailing slash, separated by commas
+    format: Origins with https:// and a host name only, separated by commas. Spaces and a trailing slash are trimmed when the setting is read; any other path, or http://, stops the app from starting with a message naming the entry (app/dixie/origins.py). The app logs the origins in use at startup
     note: Until the Phase 5 launch it also lists the staging site's address, the Cloudflare Pages project's own pages.dev address (docs/guides/previewing-and-deploying-the-website.md)
     used_by: app container (compose.yaml); app/dixie/settings_base.py
     phase: 3
@@ -126,13 +126,16 @@ website_build_settings:
   - name: API_BASE
     example: https://api.dixiedetail.com/api/public/v1
     purpose: The public API the build reads the pricebook, price table, photo cards and years from; the build fails rather than publish without prices
+    note: Required, type Text on Cloudflare; an empty value stops the build with a message naming it (site/src/lib/settings.js). The server must be running while the site builds
   - name: PUBLIC_API_BASE
     example: https://api.dixiedetail.com/api/public/v1
     purpose: The public API the booking form calls from the browser; defaults to API_BASE
   - name: PUBLIC_TURNSTILE_SITE_KEY
     purpose: The Turnstile widget's site key, public; its secret key is the Bitwarden secret TURNSTILE_SECRET_KEY
+    note: Required, type Text on Cloudflare; an empty value stops the build. Without it no form could be sent
   - name: PUBLIC_GOOGLE_MAPS_BROWSER_KEY
     purpose: The browser key for address suggestions (GOOGLE_MAPS_BROWSER_KEY above)
+    note: Required, type Text on Cloudflare; an empty value stops the build
   - name: NODE_VERSION
     example: "22"
     purpose: The Node.js version Cloudflare builds with; matches site/.nvmrc

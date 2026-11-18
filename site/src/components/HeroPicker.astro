@@ -5,8 +5,9 @@
 // no script or no API, the button still opens the booking page.
 import Icon from "./Icon.astro";
 import { api } from "../lib/data.js";
+import { browserApiBase } from "../lib/settings.js";
 const { years } = await api("vehicles/years");
-const apiBase = import.meta.env.PUBLIC_API_BASE || process.env.API_BASE || "https://api.dixiedetail.com/api/public/v1";
+const apiBase = browserApiBase();
 ---
 <form class="picker" action="/book/" method="get" data-hero-picker data-api={apiBase}>
   <p class="picker-title">Get your exact price</p>

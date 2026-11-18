@@ -4,7 +4,7 @@ summary: Every endpoint the website calls under /api/public/v1/, what each takes
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [api, booking, website, quotes, photos, phase-3]
 related: [docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
@@ -175,7 +175,7 @@ A quote request sent while the server can't be reached, or while Google's addres
 - **Turnstile** on every booking, upload session and quote request. The server sends the token, its secret key (Bitwarden secret `TURNSTILE_SECRET_KEY`) and the visitor's address to Cloudflare's siteverify. With no secret key set, every such request is refused.
 - **Rate limits per visitor address**, counted in PostgreSQL so every app worker sees the same count. The visitor's address is Cloudflare's `CF-Connecting-IP` on the public door, kept only as a keyed hash, and counts older than a day are deleted. The limits, per kind, are in `PUBLIC_API_RATE_LIMITS` in `app/dixie/settings_base.py`.
 - **Size limits and strict validation** on every input: known fields only, the right types, lengths capped, no control characters, phone numbers of 10 digits (decision 0049), JSON bodies up to 16 KB, photos up to their limit.
-- **CORS only for the site's addresses**, held in the setting `PUBLIC_API_CORS_ORIGINS`. A browser on any other origin is refused; a request with no origin, such as the smoke test, is allowed. No cookies are set or read.
+- **CORS only for the site's addresses**, held in the setting `PUBLIC_API_CORS_ORIGINS`, each trimmed of spaces and a trailing slash when it is read ([configuration.md](configuration.md#the-public-api)). A browser on any other origin is refused; a request with no origin, such as the smoke test, is allowed. No cookies are set or read.
 - **Generic errors** and **no customer data** in any answer, as above.
 
 ## Test records
