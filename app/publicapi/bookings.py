@@ -1,7 +1,7 @@
 """A website booking (public-api.md, booking-flow.md step 7).
 
 The booking names a quote, a start time, the customer's name, mobile
-number, preferred payment method, optional color, the two consent answers
+number, preferred payment method, optional color, the consent answer
 and a Turnstile token. In one transaction the server checks the token, the
 quote's age and the time, locks the day (so two visitors can't book the
 same time), and books the quote as issued: its lines become the
@@ -15,9 +15,9 @@ record, and any difference is flagged for the owner. A returning customer
 who already has a job that day gets a request the owner approves instead
 of a booking (SecondVehicleRequest). Nothing in the answer comes from a
 customer's record: the summary is built from the quote, the place and what
-this booking sent. A one-person job with exactly one qualified staff member
-is assigned to them; any other job waits on the home screen for a manager
-(decisions 0061 and 0069).
+this booking sent. The job gets the default staff, or, without one, the
+only qualified staff member of a one-person job (decisions 0061 and 0107);
+the crew can be changed on the job.
 """
 
 import datetime
@@ -240,7 +240,7 @@ def book(request, data):
 def write_booking(web, form, start, typed):
     """Match the booking, then book the quote as issued on the customer it
     matched, with the address and vehicle as booked; raise the review flags
-    and assign the only qualified staff member."""
+    and assign the default staff (decision 0107)."""
     intake = take_in(typed, form["consents"], form["mobile"])
     appointment = booking.book_online(
         intake.customer, intake.vehicle, start, None, address=intake.address, quote=web.quote,
@@ -289,7 +289,7 @@ def booking_answer(web, appointment, form):
     details = summary(web, appointment.scheduled_start, form["color"], form["payment_method"])
     title = f"Dixie Detail: {details['service']}"
     description = "\n".join(
-        [f"Booking reference {appointment.reference}", f"{details['vehicle']}", f"Total {details['total']} (confirmed when we see the vehicle)",
+        [f"Booking reference {appointment.reference}", f"{details['vehicle']}", f"Total ${details['total']} (confirmed when we see the vehicle)",
          "Questions: call or text (423) 380-9120."]
     )
     return {

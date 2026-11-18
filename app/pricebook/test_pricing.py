@@ -16,6 +16,7 @@ from appointments.models import Appointment, AppointmentLine
 from core.scheduling import time_on_site
 from customers.models import Customer
 from pricebook.models import (
+    AddOnFit,
     DerivedPriceRule,
     Price,
     PricebookVersion,
@@ -24,7 +25,7 @@ from pricebook.models import (
     QuoteChangeError,
     Service,
 )
-from pricebook.pricing import NotPriced, PricingError, base_price, issue_quote, price_job
+from pricebook.pricing import AddOnNotOffered, NotPriced, PricingError, base_price, issue_quote, price_job
 from pricebook.publishing import affected_jobs
 from promotions.models import Promotion
 from vehicles.models import VehicleClass
@@ -98,6 +99,30 @@ class LoadPricebookTests(PricebookTestCase):
         self.assertEqual([model.objects.count() for model in (Price, Price.history.model, Service, VehicleClass)], counts)
         self.assertEqual(PricebookVersion.objects.count(), 1)
 
+    def test_the_add_on_rules_come_as_a_new_draft_and_headlights_become_an_add_on(self):
+        """A database loaded before decision 0106: Headlight Restoration a
+        main service and every add-on going with every service, as the
+        migration leaves version 1. load_pricebook makes the change a new
+        draft, for the owner to publish with the booked-job review."""
+        headlights = self.service("Headlight Restoration")
+        Service.objects.filter(pk=headlights.pk).update(kind=Service.Kind.MAIN)
+        AddOnFit.objects.filter(version=self.version).delete()
+        add_ons = Service.objects.filter(kind=Service.Kind.ADD_ON)
+        mains = Service.objects.filter(kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN])
+        AddOnFit.objects.bulk_create([AddOnFit(version=self.version, add_on=a, service=m) for a in add_ons for m in mains])
+        output = io.StringIO()
+        call_command("load_pricebook", stdout=output)
+        text = output.getvalue()
+        self.assertIn("Changed: Headlight Restoration is now add-on.", text)
+        self.assertIn("Seat Extraction goes with Exterior Only in version 1, not in the file", text)
+        self.assertIn("Headlight Restoration goes with Exterior Only in the file, not in version 1", text)
+        draft = PricebookVersion.objects.get(number=2)
+        self.assertFalse(draft.is_published)
+        self.assertEqual(draft.add_on_ids_for(self.service("Exterior Only")), {headlights.pk})
+        self.assertEqual(self.service("Headlight Restoration").kind, Service.Kind.ADD_ON)
+        # Version 1 keeps its rules.
+        self.assertEqual(AddOnFit.objects.filter(version=self.version).count(), add_ons.count() * mains.count())
+
 
 class PricingEngineTests(PricebookTestCase):
     def test_rav4_worked_example(self):
@@ -142,15 +167,50 @@ class PricingEngineTests(PricebookTestCase):
         self.assertEqual(hours(job.service_minutes), Decimal("3"))
         self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("3.5"))
 
-    def test_headlight_restoration_takes_2_5_hours_on_site_for_one_person(self):
+    def test_headlight_restoration_adds_95_dollars_and_1_5_hours_as_an_add_on(self):
         headlights = self.service("Headlight Restoration")
+        exterior = self.service("Exterior Only")
         # Every class offered but Motorcycles, whose only service is Motorcycle
-        # Detail, and Full-size Vans, which are quoted by hand.
+        # Detail, and Full-size Vans, which are quoted by hand. Its price and
+        # time are the same as when it was booked alone, and as an add-on it
+        # adds no setup or breakdown (decision 0106).
         for vehicle_class in VehicleClass.objects.offered().exclude(name="Motorcycles").exclude(booking=VehicleClass.Booking.QUOTE):
-            job = price_job(headlights, vehicle_class)
+            alone = price_job(exterior, vehicle_class)
+            job = price_job(exterior, vehicle_class, add_ons=[headlights])
             with self.subTest(vehicle_class=vehicle_class):
-                self.assertEqual(job.total_before_tax, Decimal("95.00"))
-                self.assertEqual(hours(job.time_on_site.total_minutes), Decimal("2.5"))
+                self.assertEqual(job.total_before_tax - alone.total_before_tax, Decimal("95.00"))
+                self.assertEqual(job.one_person_service_hours - alone.one_person_service_hours, Decimal("1.5"))
+                self.assertEqual(job.time_on_site.total_minutes - alone.time_on_site.total_minutes, 90)
+                self.assertEqual(job.lines[-1].kind, PricedLine.Kind.ADD_ON)
+
+    def test_headlight_restoration_is_never_a_job_on_its_own(self):
+        with self.assertRaisesRegex(PricingError, "is an add-on"):
+            price_job(self.service("Headlight Restoration"), self.vehicle_class("Large"))
+        self.assertEqual(self.service("Headlight Restoration").kind, Service.Kind.ADD_ON)
+
+    def test_each_add_on_goes_only_with_its_services(self):
+        """Carpet and Seat Extraction with Full Detail and Interior Only;
+        Headlight Restoration with Full Detail, Exterior Only and the two
+        paint corrections (decision 0106)."""
+        fits = {
+            "Carpet Extraction": {"Full Detail", "Interior Only"},
+            "Seat Extraction": {"Full Detail", "Interior Only"},
+            "Headlight Restoration": {"Full Detail", "Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction"},
+        }
+        medium, two_rows = self.vehicle_class("Medium"), self.size("Medium", 2)
+        mains = Service.objects.filter(kind__in=[Service.Kind.MAIN, Service.Kind.MAINTENANCE_PLAN], on_price_list=True).exclude(name="Motorcycle Detail")
+        for add_on_name, services in fits.items():
+            add_on = self.service(add_on_name)
+            for service in mains:
+                level = 1 if self.version.takes_condition_level(service) else None
+                with self.subTest(add_on=add_on_name, service=service.name):
+                    if service.name in services:
+                        price_job(service, medium, size_variant=two_rows, condition_level=level, add_ons=[add_on])
+                    else:
+                        with self.assertRaisesRegex(AddOnNotOffered, f"{add_on_name} doesn't go with {service.name}"):
+                            price_job(service, medium, size_variant=two_rows, condition_level=level, add_ons=[add_on])
+                        # A manager's override prices it all the same.
+                        price_job(service, medium, size_variant=two_rows, condition_level=level, add_ons=[add_on], allow_any_add_on=True)
 
     def test_full_day_flag_starts_at_8_hours_on_site_for_one_person(self):
         rows = read_matrix()
@@ -189,9 +249,10 @@ class PricingEngineTests(PricebookTestCase):
         # 10% of $125 is $12.50, rounded to $13.
         self.assertEqual(job.lines[1].amount, Decimal("13.00"))
 
-    def test_condition_does_not_apply_to_maintenance_or_headlights(self):
-        job = price_job(self.service("Headlight Restoration"), self.vehicle_class("Large"), condition_level=3)
-        self.assertEqual(job.total_before_tax, Decimal("95.00"))
+    def test_condition_does_not_apply_to_exterior_only(self):
+        alone = price_job(self.service("Exterior Only"), self.vehicle_class("Large"))
+        job = price_job(self.service("Exterior Only"), self.vehicle_class("Large"), condition_level=3)
+        self.assertEqual(job.total_before_tax, alone.total_before_tax)
         self.assertIsNone(job.lines[0].condition_level)
 
     def test_a_service_with_condition_needs_a_level(self):
@@ -201,12 +262,11 @@ class PricingEngineTests(PricebookTestCase):
     def test_a_missing_combination_cannot_be_priced(self):
         with self.assertRaises(NotPriced):
             price_job(self.service("Full Detail"), self.vehicle_class("Motorcycles"), condition_level=1)
-        # An add-on is priced by size, so it needs one.
-        with self.assertRaises(NotPriced):
+        # An add-on goes only with its services (decision 0106).
+        with self.assertRaises(AddOnNotOffered):
             price_job(
                 self.service("Exterior Only"),
                 self.vehicle_class("Large"),
-                condition_level=1,
                 add_ons=[self.service("Carpet Extraction")],
             )
         # A service off the price list, or an add-on alone, is not a job.
@@ -437,7 +497,7 @@ class QuoteAndBookingTests(PricebookTestCase):
     def test_quotes_come_from_a_published_version(self):
         draft = PricebookVersion.new_draft()
         with self.assertRaises(PricingError):
-            issue_quote(self.service("Headlight Restoration"), self.vehicle_class("Large"), version=draft)
+            issue_quote(self.service("Exterior Only"), self.vehicle_class("Large"), version=draft)
 
 
 class PublishingTests(PricebookTestCase):
@@ -474,7 +534,7 @@ class PublishingTests(PricebookTestCase):
     def test_affected_jobs_lists_booked_jobs_the_change_touches(self):
         touched = self.book("Full Detail", days=20, condition_level=2)
         maintenance = self.book("Monthly Maintenance", days=21)
-        untouched = self.book("Headlight Restoration", days=22)
+        untouched = self.book("Exterior Only", days=22)
         before = self.book("Full Detail", days=5, condition_level=1)
         completed = self.book("Full Detail", days=25, condition_level=1)
         completed.status = Appointment.Status.COMPLETED
@@ -498,13 +558,49 @@ class PublishingTests(PricebookTestCase):
         self.assertEqual(affected[maintenance].new_total, Decimal("150.00"))
 
     def test_affected_jobs_lists_a_job_whose_service_is_removed(self):
-        booked = self.book("Headlight Restoration", days=20)
+        booked = self.book("Exterior Only", days=20)
         draft = PricebookVersion.new_draft()
-        Price.objects.filter(version=draft, service=self.service("Headlight Restoration")).delete()
+        Price.objects.filter(version=draft, service=self.service("Exterior Only")).delete()
         [job] = affected_jobs(draft, timezone.localdate())
         self.assertEqual(job.appointment, booked)
         self.assertIsNone(job.new_total)
         self.assertIn("no longer be priced", job.reasons[0])
+
+
+    def test_affected_jobs_lists_a_job_that_breaks_the_new_add_on_rules(self):
+        """Booked jobs keep their lines; the review lists a job the new
+        version's add-on rules don't allow, re-priced with its add-ons as
+        booked so the owner can decide (decision 0106)."""
+        from scheduling.models import RuleOverride
+
+        seats = self.service("Seat Extraction")
+        exterior = self.service("Exterior Only")
+        draft = PricebookVersion.new_draft()
+        # Version 1 is published, so the old rule is written below its lock.
+        AddOnFit.objects.bulk_create([AddOnFit(version=self.version, add_on=seats, service=exterior)])
+        AddOnFit.objects.filter(version=draft).delete()
+        AddOnFit.objects.create(version=draft, add_on=seats, service=self.service("Full Detail"))
+        broken = self.book("Exterior Only", days=20, add_ons=[seats])
+        kept = self.book("Exterior Only", days=21, add_ons=[seats])
+        RuleOverride.objects.create(appointment=kept, action=RuleOverride.Action.ADD_ONS, rules_broken=["Seat Extraction doesn't go with Exterior Only"], reason="Asked for it")
+        fine = self.book("Full Detail", days=22, condition_level=1, add_ons=[seats])
+        lines = [line.amount for line in broken.lines.all()]
+        affected = {job.appointment: job for job in affected_jobs(draft, timezone.localdate())}
+        self.assertEqual(set(affected), {broken})
+        self.assertNotIn(kept, affected)
+        self.assertNotIn(fine, affected)
+        self.assertEqual(affected[broken].reasons, ["Breaks the add-on rules: Seat Extraction doesn't go with Exterior Only"])
+        self.assertEqual(affected[broken].new_total, affected[broken].booked_total)
+        broken.refresh_from_db()
+        self.assertEqual([line.amount for line in broken.lines.all()], lines)
+
+    def test_a_draft_copies_the_add_on_rules(self):
+        draft = PricebookVersion.new_draft()
+        self.assertEqual(
+            set(AddOnFit.objects.filter(version=draft).values_list("add_on__name", "service__name")),
+            set(AddOnFit.objects.filter(version=self.version).values_list("add_on__name", "service__name")),
+        )
+        self.assertEqual(draft.add_on_ids_for(self.service("Interior Only")), {self.service("Carpet Extraction").pk, self.service("Seat Extraction").pk})
 
 
 class QuoteCommandTests(PricebookTestCase):

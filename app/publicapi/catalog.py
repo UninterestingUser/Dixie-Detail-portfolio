@@ -51,7 +51,8 @@ def size_json(size_variant):
 
 def pricebook():
     """The published pricebook: services, classes, size variants, condition
-    levels and "from" prices."""
+    levels, "from" prices, and the add-ons that go with each service
+    (decision 0106)."""
     version = published_version()
     classes = list(VehicleClass.objects.offered().prefetch_related("size_variants"))
     services = list(bookable_services().order_by("kind", "name"))
@@ -61,6 +62,8 @@ def pricebook():
         .order_by("price")
     )
     takes_level = version.condition_service_ids()
+    fits = version.add_on_fit_map()
+    add_on_ids = [service.pk for service in sorted(services, key=lambda item: item.name) if service.kind == Service.Kind.ADD_ON]
     by_service, by_class = {}, {}
     for price in prices:
         by_service.setdefault(price.service_id, []).append(price)
@@ -99,6 +102,8 @@ def pricebook():
                 "kind": "add_on" if service.kind == Service.Kind.ADD_ON else "service",
                 "description": service.description,
                 "condition_applies": service.pk in takes_level,
+                # The add-ons offered with this service; none for an add-on.
+                "add_ons": [pk for pk in add_on_ids if pk in fits.get(service.pk, set()) and pk in by_service],
                 "from_price": money(by_service[service.pk][0].price) if service.pk in by_service else None,
                 "prices": [
                     {"class_id": price.vehicle_class_id, "size": price.size_variant.value if price.size_variant else None, "price": money(price.price)}
@@ -114,8 +119,8 @@ def pricebook():
 def price_table():
     """Every job the website can book online, priced by the pricing engine:
     each offered class booked online and its sizes, each bookable service,
-    each condition level with a price for a service that takes one, and no
-    add-on, each add-on alone or both. The website bakes it in at build time
+    each condition level with a price for a service that takes one, and
+    every set of the add-ons that go with the service (decision 0106). The website bakes it in at build time
     for the "request a time" form, which shows these totals while the server
     is offline; the browser only looks a total up, never works one out
     (decision 0059). Combinations the pricebook doesn't price are left out."""
@@ -127,7 +132,7 @@ def price_table():
     services = list(bookable_services().order_by("name"))
     mains = [service for service in services if service.kind == Service.Kind.MAIN]
     add_ons = [service for service in services if service.kind == Service.Kind.ADD_ON]
-    add_on_sets = [()] + [(item,) for item in add_ons] + list(combinations(add_ons, 2))
+    fits = version.add_on_fit_map()
     levels = [level.level for level in ConditionLevel.objects.filter(version=version, booked_by_quote=False).order_by("level")]
     takes_level = version.condition_service_ids()
     jobs = []
@@ -135,6 +140,8 @@ def price_table():
         sizes = [size for size in vehicle_class.size_variants.all() if size.active] or [None]
         for size in sizes:
             for service in mains:
+                offered = [item for item in add_ons if item.pk in fits.get(service.pk, set())]
+                add_on_sets = [chosen for count in range(len(offered) + 1) for chosen in combinations(offered, count)]
                 for level in (levels if service.pk in takes_level else [None]):
                     for chosen in add_on_sets:
                         try:

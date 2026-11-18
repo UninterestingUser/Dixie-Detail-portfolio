@@ -66,6 +66,11 @@
     <p class="help">Each job's "Drive to job" block starts this many minutes before the drive, so it begins at the leave time.</p>
     {% include "control/_field.html" with field=form.leave_buffer_minutes %}
   </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Staff</legend>
+    <p class="help">Assigned to every new booking, from the website or the control app, whoever else qualifies. Change the crew on the job when someone else is going.</p>
+    {% include "control/_field.html" with field=form.default_staff %}
+  </fieldset>
   {% if can_edit %}
   <div class="actions">
     <button type="submit" class="primary">Save</button>

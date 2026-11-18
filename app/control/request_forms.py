@@ -34,25 +34,51 @@ class DeclineForm(forms.Form):
     reason = forms.CharField(label="Reason", max_length=300, help_text="Kept with the request. Tell the customer yourself.")
 
 
+def hours_and_minutes(minutes):
+    """150 as "2:30"."""
+    return f"{minutes // 60}:{minutes % 60:02d}"
+
+
+# Time on site for a hand price: 0:30 to 12:00 in 15-minute steps.
+TIME_ON_SITE_CHOICES = [(minutes, hours_and_minutes(minutes)) for minutes in range(30, 12 * 60 + 1, 15)]
+
+
 class HandPriceForm(forms.Form):
-    """The owner's price for a quote request: one price before tax and the
-    time on site, which become a quote record (decision 0059)."""
+    """The owner's price for a quote request: one price before tax, the time
+    on site and the crew, which become a quote record (decision 0059). The
+    people checked under Crew are assigned when it is booked, and their
+    number is the crew size."""
 
     service = forms.ModelChoiceField(queryset=None, help_text="What the price is for.")
     vehicle_class = forms.ModelChoiceField(queryset=VehicleClass.objects.all(), label="Vehicle class")
-    amount = forms.DecimalField(label="Price before tax", min_value=Decimal("0.01"), max_digits=8, decimal_places=2)
-    time_on_site_minutes = forms.IntegerField(
-        label="Time on site, in minutes", min_value=45, max_value=24 * 60, widget=forms.NumberInput(attrs={"step": 15}),
-        help_text="Setup and breakdown included, in steps of 15 minutes. This is what the availability check uses.",
+    amount = forms.DecimalField(label="Price before tax", min_value=Decimal("0.01"), max_digits=8, decimal_places=2,
+                                widget=forms.NumberInput(attrs={"inputmode": "decimal", "step": "0.01"}))
+    time_on_site_minutes = forms.TypedChoiceField(
+        label="Time on site", coerce=int, choices=TIME_ON_SITE_CHOICES,
+        help_text="Hours and minutes, setup and breakdown included. This is what the availability check uses.",
     )
-    crew_size = forms.TypedChoiceField(choices=[(1, "1"), (2, "2")], coerce=int, initial=1, label="Crew")
+    crew = forms.ModelMultipleChoiceField(
+        queryset=None, label="Crew", widget=forms.CheckboxSelectMultiple,
+        help_text="Assigned when it's booked. One person or two: the number checked is the crew size.",
+    )
 
     def __init__(self, *args, **kwargs):
+        from staff.authorization import default_staff
+        from staff.models import StaffMember
+
         super().__init__(*args, **kwargs)
         self.fields["service"].queryset = authorizable_services()
+        self.fields["crew"].queryset = StaffMember.objects.filter(active=True).order_by("name")
+        if not self.is_bound and "crew" not in self.initial:
+            member = default_staff()
+            self.initial["crew"] = [member.pk] if member else []
+        # A time priced earlier outside the list is kept as a choice.
+        minutes = self.initial.get("time_on_site_minutes")
+        if minutes and minutes not in dict(TIME_ON_SITE_CHOICES):
+            self.fields["time_on_site_minutes"].choices = sorted([*TIME_ON_SITE_CHOICES, (minutes, hours_and_minutes(minutes))])
 
-    def clean_time_on_site_minutes(self):
-        minutes = self.cleaned_data["time_on_site_minutes"]
-        if minutes % 15:
-            raise forms.ValidationError("Use steps of 15 minutes.")
-        return minutes
+    def clean_crew(self):
+        crew = list(self.cleaned_data["crew"])
+        if len(crew) > 2:
+            raise forms.ValidationError("A crew is one or two people.")
+        return crew

@@ -1,12 +1,12 @@
 ---
 title: Booking a job
-summary: How to read the schedule's five views, book a job or a maintenance series with the price and rules checked as you go, book off hours with a reason, change, cancel or remove a job, and record the final price.
+summary: How to read the schedule's five views, book a job or a maintenance series as the price and rules are checked, book outside the rules with a reason, change, cancel or remove a job, and record the final price.
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [guides, booking, appointments, schedule, maintenance, control-app]
-related: [docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0097-rules-alert-before-services-and-schedule-view-bar.md]
+related: [docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0107-default-staff-and-needs-you-for-decisions.md, docs/reference/control-app.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/guides/assigning-staff.md, docs/guides/finding-a-customer.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0097-rules-alert-before-services-and-schedule-view-bar.md]
 ---
 
 # Booking a job
@@ -27,9 +27,9 @@ Weeks start on Sunday. Every view has **Today** and **‹** and **›** for the 
 
 1. Tap **Book a job** on the schedule, find the customer (see [finding-a-customer.md](finding-a-customer.md)), and tap **Book a job** on their page.
 2. **When and where:** pick the vehicle, the service address, the date and the arrival time. The date starts at the first bookable day. The **Open times** link shows the open start times for the next 90 days. Any date and time can be booked, but one outside the scheduling rules needs a reason (see [Book off hours](#book-off-hours)).
-3. **What:** pick the service. The vehicle class and size come from the vehicle; change them if they are wrong. For Full Detail and Interior Only, the condition level appears, with Level 1 picked; change it if the vehicle needs more. Level 3 is priced by hand: type your price before tax for the whole job, add-ons included, and the time on site in steps of 15 minutes, setup and breakdown included. The Level 2 price shows below for reference, and your price is kept as the job's quote. No other service has a condition level. Tick any add-ons. Leave the crew as the service's default (one person, or two for Monthly Maintenance) unless you know otherwise.
+3. **What:** pick the service. The vehicle class and size come from the vehicle; change them if they are wrong. For Full Detail and Interior Only, the condition level appears, with Level 1 picked; change it if the vehicle needs more. Level 3 is priced by hand: type your price before tax for the whole job, add-ons included, and the time on site in steps of 15 minutes, setup and breakdown included. The Level 2 price shows below for reference, and your price is kept as the job's quote. No other service has a condition level. Tick any add-ons: each goes only with some services, and Headlight Restoration is an add-on too (see [Add an add-on outside the rules](#add-an-add-on-outside-the-rules)). Leave the crew as the service's default (one person, or two for Monthly Maintenance) unless you know otherwise.
 4. The **Price** box updates as you change anything: each line, the total before tax, the **service time** for the crew and the **time on site** with setup and breakdown. "Full day: consider a second person" appears for 8 or more hours on site for one person. Sales tax is added from Phase 3.
-5. Tap **Book**. The job opens. When only one active staff member is qualified for a one-person job (today, you), they are assigned at once; otherwise assign staff as in [assigning-staff.md](assigning-staff.md). A warning appears if the job overlaps another that day.
+5. Tap **Book**. The job opens with the default staff assigned ("Assigned Kris Grassman, the default staff."), whoever else qualifies. Change the crew on the job if someone else is going, or add the second person to a two-person job, as in [assigning-staff.md](assigning-staff.md). A warning appears if the job overlaps another that day.
 
 ## Book off hours
 
@@ -45,7 +45,13 @@ Pick a time that fits and the alert and the box go away; nothing is logged. Whil
 
 Only a manager can book off hours. Anyone else sees "Only a manager can book off hours. Pick another time." The website never books off hours.
 
-The job page lists each time the job was booked or moved off hours under **Booked off hours**: the rules it broke, the reason, who and when.
+The job page lists each time the job was booked or moved off hours under **Booked outside the rules**: the rules it broke, the reason, who and when.
+
+## Add an add-on outside the rules
+
+Each add-on goes only with some services ([pricing.md](../reference/pricing.md#which-add-ons-go-with-which-service)): Carpet and Seat Extraction with Full Detail or Interior Only, and Headlight Restoration with Full Detail, Exterior Only or a paint correction. Tick one with another service and the Price box says so, such as "Seat Extraction doesn't go with Exterior Only".
+
+A manager can book it anyway: type why in **Reason for an add-on outside the rules**, such as "Customer's dog got into the back seat", and tap **Book**. Without a reason, **Book** brings the form back with "give the reason for adding it." The reason is logged with the job and listed under **Booked outside the rules** on the job page. Anyone else sees "Pick another, or ask a manager to add it with a reason." Changing such a job later keeps its add-ons without asking again, unless you change its service or add-ons.
 
 ## Book a maintenance plan
 

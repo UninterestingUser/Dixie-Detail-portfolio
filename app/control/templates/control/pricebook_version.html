@@ -73,6 +73,9 @@
         {% if not version.is_published and can_edit %}<input class="short" name="condition-{{ level.pk }}" value="{{ level.adjustment_percent.normalize }}" inputmode="decimal" aria-label="Condition level {{ level.level }} percentage">{% else %}{{ level.adjustment_percent.normalize }}{% endif %}% to the price and service time</li>
       {% endif %}
     {% endfor %}
+    {% for add_on, services in add_on_rules %}
+      <li class="card"><strong>{{ add_on }}</strong> is an add-on to {% for service in services %}{% if not forloop.first %}{% if forloop.last %} or {% else %}, {% endif %}{% endif %}{{ service }}{% endfor %}, never booked on its own. A manager can add it to another service with a reason.</li>
+    {% endfor %}
     {% if rules %}<li class="card">Two people take {% widthratio rules.two_person_time_factor 1 100 %}% of the one-person service time, rounded to {{ rules.service_time_rounding_minutes }} minutes. A job of {{ rules.full_day_time_on_site_hours.normalize }} hours or more on site for one person is a full day.</li>{% endif %}
   </ul>
 </section>

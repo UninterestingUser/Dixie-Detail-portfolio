@@ -162,6 +162,22 @@ def parse_add_ons(value, field="add_ons"):
     return add_ons
 
 
+def check_add_ons(service, add_ons, on=None, field="add_ons"):
+    """Refuse an add-on that doesn't go with the service in the pricebook
+    in effect on the day (today by default), or any add-on without a
+    service (decision 0106). The website offers only those that fit."""
+    if not add_ons:
+        return
+    if service is None:
+        raise bad_request(field, "Pick a service to add an add-on to.")
+    version = PricebookVersion.current(on) or catalog.published_version()
+    fits = version.add_on_ids_for(service)
+    unfit = [add_on for add_on in add_ons if add_on.pk not in fits]
+    if unfit:
+        names = " and ".join(add_on.name for add_on in unfit)
+        raise bad_request(field, f"{names} can't be added to {service.name}.")
+
+
 def priced_vehicle(found):
     """Refuse a vehicle the site can't price yet, saying what to do next."""
     if found.needs_photo_card:
@@ -216,6 +232,7 @@ def issue(found, service, condition_level, add_ons, place=None, on=None, answere
     price or time, and goes to a quote request (decision 0103)."""
     priced_vehicle(found)
     level = check_condition(service, condition_level, on)
+    check_add_ons(service, add_ons, on)
     if level is not None and level.booked_by_quote:
         raise level_by_quote(service, level, add_ons)
     try:

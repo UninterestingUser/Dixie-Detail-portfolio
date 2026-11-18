@@ -68,7 +68,7 @@ class MatchingTests(MatchingTestCase):
     def test_the_consent_answers_go_on_the_matched_customer(self):
         customer = self.returning()
         appointment, _ = self.book()
-        self.assertEqual(Consent.objects.filter(customer=customer).count(), 2)
+        self.assertEqual(Consent.objects.filter(customer=customer).count(), 1)
         self.assertEqual(sorted(appointment.intake["consent_ids"]), sorted(Consent.objects.values_list("pk", flat=True)))
 
     def test_an_unverified_record_address_takes_the_places_location(self):

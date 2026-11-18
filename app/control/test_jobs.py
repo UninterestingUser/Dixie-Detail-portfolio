@@ -219,3 +219,90 @@ class ChangingAJobTests(JobsTestCase):
         self.assertFalse(self.job.lines.filter(kind=PricedLine.Kind.ADJUSTMENT).exists())
         page = self.client.get(reverse("appointment", args=[self.job.pk]))
         self.assertContains(page, "Total before tax")
+
+
+class AddOnRuleTests(JobsTestCase):
+    """The booking form applies the pricebook's add-on rules, with a
+    manager's override and a reason, logged like the scheduling rules
+    (decision 0106)."""
+
+    def setUp(self):
+        super().setUp()
+        self.day = open_day(14)
+        from pricebook.models import Service
+
+        self.exterior = Service.objects.get(name="Exterior Only")
+        self.headlights = Service.objects.get(name="Headlight Restoration")
+
+    def post(self, **changes):
+        data = self.booking_data(self.day, **{"service": self.exterior.pk, "condition_level": "", "add_ons": [self.seats.pk], **changes})
+        return self.client.post(reverse("appointment-new", args=[self.customer.pk]), data)
+
+    def test_headlight_restoration_is_an_add_on_on_the_form(self):
+        page = self.client.get(reverse("appointment-new", args=[self.customer.pk]))
+        self.assertContains(page, f'value="{self.headlights.pk}"')
+        self.assertNotContains(page, f'<option value="{self.headlights.pk}">Headlight Restoration</option>', html=False)
+        self.post(add_ons=[self.headlights.pk])
+        appointment = Appointment.objects.get()
+        self.assertEqual([line.kind for line in appointment.lines.all()], [PricedLine.Kind.SERVICE, PricedLine.Kind.ADD_ON])
+        self.assertFalse(RuleOverride.objects.exists())
+
+    def test_a_manager_adds_one_outside_the_rules_with_a_reason_that_is_logged(self):
+        page = self.post()
+        self.assertContains(page, "Seat Extraction doesn&#x27;t go with Exterior Only: give the reason for adding it.")
+        self.assertFalse(Appointment.objects.exists())
+        self.post(add_on_reason="Customer's dog got into the back seat")
+        appointment = Appointment.objects.get()
+        self.assertIn("Seat Extraction", [line.description for line in appointment.lines.all()])
+        override = RuleOverride.objects.get(appointment=appointment)
+        self.assertEqual(override.action, RuleOverride.Action.ADD_ONS)
+        self.assertEqual(override.rules_broken, ["Seat Extraction doesn't go with Exterior Only"])
+        self.assertEqual(override.reason, "Customer's dog got into the back seat")
+        self.assertEqual(override.made_by, self.owner_user)
+        # The job page shows it with the other overrides.
+        self.assertContains(self.client.get(reverse("appointment", args=[appointment.pk])), "Customer&#x27;s dog got into the back seat")
+
+    def test_anyone_else_picks_another(self):
+        self.helper.authorizations.create(service=self.exterior)
+        self.client.force_login(self.helper_user)
+        page = self.post(add_on_reason="Trying anyway")
+        self.assertContains(page, "Pick another, or ask a manager to add it with a reason.")
+        self.assertNotContains(page, 'name="add_on_reason"')
+        self.assertFalse(Appointment.objects.exists())
+
+    def test_the_live_price_names_the_rule(self):
+        page = self.client.post(reverse("appointment-price-new", args=[self.customer.pk]),
+                                self.booking_data(self.day, service=self.exterior.pk, condition_level="", add_ons=[self.seats.pk]))
+        self.assertContains(page, "Seat Extraction doesn&#x27;t go with Exterior Only")
+
+    def test_changing_a_job_booked_with_an_override_keeps_its_add_ons(self):
+        self.post(add_on_reason="Asked for it")
+        appointment = Appointment.objects.get()
+        data = self.booking_data(self.day, service=self.exterior.pk, condition_level="", add_ons=[self.seats.pk], notes="Gate code 1234", reason="")
+        response = self.client.post(reverse("appointment-edit", args=[appointment.pk]), data)
+        self.assertEqual(response.status_code, 302, response.content)
+        appointment.refresh_from_db()
+        self.assertEqual(appointment.notes, "Gate code 1234")
+        self.assertEqual(RuleOverride.objects.filter(appointment=appointment).count(), 1)
+
+
+class DefaultStaffBookingTests(JobsTestCase):
+    def setUp(self):
+        super().setUp()
+        from scheduling.models import SchedulingSettings
+
+        self.day = open_day(14)
+        SchedulingSettings.get()
+        SchedulingSettings.objects.filter(pk=1).update(default_staff=self.owner)
+
+    def test_a_control_app_booking_gets_the_default_staff_whoever_else_qualifies(self):
+        self.helper.authorizations.create(service=self.full_detail)
+        response = self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(self.day), follow=True)
+        self.assertEqual([a.staff_member for a in Assignment.objects.all()], [self.owner])
+        self.assertContains(response, "Assigned Owner Person, the default staff. Change the crew on the job if needed.")
+
+    def test_a_two_person_job_gets_the_default_staff_and_room_for_one_more(self):
+        self.client.post(reverse("appointment-new", args=[self.customer.pk]), self.booking_data(self.day, crew_size="2"))
+        appointment = Appointment.objects.get()
+        self.assertEqual([a.staff_member for a in appointment.assignments.all()], [self.owner])
+        self.assertEqual(appointment.crew_size, 2)

@@ -29,11 +29,16 @@ const SERVICES = [
   { id: 12, name: "Exterior Only", kind: "service", description: "The exterior half", condition_applies: false },
   { id: 13, name: "1-Step Paint Correction", kind: "service", description: "One-step polish", condition_applies: false },
   { id: 14, name: "2-Step Paint Correction", kind: "service", description: "Two-step polish", condition_applies: false },
-  { id: 15, name: "Headlight Restoration", kind: "service", description: "Both headlights", condition_applies: false },
   { id: 17, name: "Motorcycle Detail", kind: "service", description: "A motorcycle detailed", condition_applies: false },
+  { id: 15, name: "Headlight Restoration", kind: "add_on", description: "Both headlights", condition_applies: false },
   { id: 20, name: "Carpet Extraction", kind: "add_on", description: "Carpets", condition_applies: false },
   { id: 21, name: "Seat Extraction", kind: "add_on", description: "Cloth seats", condition_applies: false },
 ];
+
+// The services each add-on goes with, as the real pricebook keeps them
+// (decision 0106).
+const GOES_WITH = { 15: [10, 12, 13, 14], 20: [10, 11], 21: [10, 11] };
+const goesWith = (serviceId, addOnId) => (GOES_WITH[addOnId] || []).includes(serviceId);
 
 // [service id, class id, size or null, price, one-person minutes on site]
 const CELLS = [
@@ -73,9 +78,8 @@ export const PLACES = {
 };
 
 const CONSENT = {
-  version: "2026-10-13",
-  appointment: "I agree to receive text messages from Dixie Detail about my appointment at the number I provided, including confirmations, reminders, arrival updates, payment links and receipts. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy Policy and Text Message Terms.",
-  follow_up: "I also agree to receive occasional follow-up text messages from Dixie Detail, such as review requests, service reminders and offers. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase.",
+  version: "2026-11-18",
+  appointment: "I agree to receive text messages from Dixie Detail about my appointment at the number I provided, including confirmations, reminders, arrival updates, payment links, receipts and a review request after the service. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase. See our Privacy Policy and Text Message Terms.",
   links: { privacy_policy: "https://dixiedetail.com/privacy-policy/", text_message_terms: "https://dixiedetail.com/sms-terms/" },
 };
 
@@ -94,7 +98,8 @@ function pricebook() {
   const services = SERVICES.map((service) => {
     const prices = CELLS.filter((c) => c[0] === service.id).map((c) => ({ class_id: c[1], size: c[2], price: c[3] }));
     const from = prices.map((p) => p.price).sort((a, b) => cents(a) - cents(b))[0];
-    return { ...service, from_price: from, prices };
+    const addOns = service.kind === "service" ? SERVICES.filter((item) => item.kind === "add_on" && goesWith(service.id, item.id)).map((item) => item.id) : [];
+    return { ...service, add_ons: addOns, from_price: from, prices };
   });
   return {
     pricebook_version: 7,
@@ -139,7 +144,9 @@ function priceTable() {
     for (const size of sizes) {
       for (const service of SERVICES.filter((s) => s.kind === "service")) {
         for (const level of service.condition_applies ? [1, 2] : [null]) {
-          for (const addOns of [[], [20], [21], [20, 21]]) {
+          const offered = SERVICES.filter((item) => item.kind === "add_on" && goesWith(service.id, item.id)).map((item) => item.id);
+          const sets = offered.reduce((found, id) => [...found, ...found.map((set) => [...set, id])], [[]]).map((set) => set.sort((a, b) => a - b));
+          for (const addOns of sets) {
             const job = priceJob({ serviceId: service.id, classId: c.id, size, level, addOns });
             if (job) jobs.push({ class_id: c.id, size, service: service.id, condition: level, add_ons: addOns, total_before_tax: text(job.total), time_on_site_minutes: job.minutes, full_day: job.minutes >= 480 });
           }
@@ -205,6 +212,8 @@ export function createFakeApi() {
     if (!service.condition_applies && body.condition != null) return [400, { error: "bad_request", field: "condition", message: "Only Full Detail and Interior Only take a condition level." }];
     if (service.condition_applies && body.condition == null) return [400, { error: "bad_request", field: "condition", message: "Pick the vehicle's condition." }];
     const addOns = body.add_ons || [];
+    const unfit = addOns.filter((id) => !goesWith(service.id, id));
+    if (unfit.length) return [400, { error: "bad_request", field: "add_ons", message: `${unfit.map((id) => serviceById(id).name).join(" and ")} can't be added to ${service.name}.` }];
     if (body.condition === 3) return [422, { error: "ask_for_quote", message: `${service.name} at condition level 3 is priced by hand. Ask for a quote and we'll reply with a price.`, quote_request: { service: service.id, condition: 3, add_ons: addOns } }];
     const job = priceJob({ serviceId: service.id, classId: c.id, size, level: body.condition, addOns, odd: state.mode.odd });
     if (!job) return [422, { error: "not_offered", message: "That service or add-on isn't offered for this vehicle." }];

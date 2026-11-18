@@ -1,7 +1,7 @@
 meta:
   title: Booking and scheduling rules
   summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
-  updated: 2026-11-07
+  updated: 2026-11-18
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
   note: >-
@@ -60,9 +60,10 @@ repeating_series: the owner can book a single visit or a repeating series
 second_vehicle_same_day: accepted as a request the owner approves
 manager_override: a manager can book outside any rule in the control app after a warning, with a reason that is logged; the website never can (decision 0094)
 
-# Staff assignment (decision 0061)
+# Staff assignment (decisions 0061 and 0107)
 staff_assignment:
-  automatic_when_one_qualified: true   # assign the only qualified active staff member to a one-person job and skip the prompt (decision 0069)
+  default_staff: Kris Grassman         # seeds the default staff setting: assigned to every new booking, website or control app, whoever else qualifies (decision 0107)
+  automatic_when_one_qualified: true   # with no default staff set, or one not authorized for the job: assign the only qualified active staff member to a one-person job (decision 0061)
 
 time_to_leave_alert:
   lead: drive time + buffer

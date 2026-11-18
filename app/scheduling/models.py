@@ -65,6 +65,13 @@ class SchedulingSettings(models.Model):
     leave_buffer_minutes = models.PositiveSmallIntegerField(
         default=10, help_text="Added to the drive time to set the leave time: the Drive to job block and the time-to-leave alert."
     )
+    # Assigned to every new booking, from the website or the control app,
+    # whoever else qualifies (decision 0107). Seeded by name from
+    # data/booking-rules.yaml (staff_assignment.default_staff).
+    default_staff = models.ForeignKey(
+        "staff.StaffMember", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+        help_text="Assigned to every new booking. The crew can still be changed on the job.",
+    )
 
     history = HistoricalRecords()
 
@@ -178,13 +185,16 @@ class TimeOffEvent(models.Model):
 
 class RuleOverride(models.Model):
     """A manager booking or moving a job outside the scheduling rules in the
-    control app: the rules broken, as the warning named them, and the
-    reason. The website can never override."""
+    control app, or adding an add-on that doesn't go with its service: the
+    rules broken, as the warning named them, and the reason. The website can
+    never override."""
 
     class Action(models.TextChoices):
         BOOKED = "booked", "Booked"
         MOVED = "moved", "Moved"
         CHANGED = "changed", "Services changed"
+        # An add-on that doesn't go with the job's service (decision 0106).
+        ADD_ONS = "add_ons", "Add-on outside the rules"
 
     appointment = models.ForeignKey("appointments.Appointment", on_delete=models.CASCADE, related_name="rule_overrides")
     action = models.CharField(max_length=10, choices=Action.choices, default=Action.BOOKED)
@@ -243,6 +253,21 @@ class AffectedJob(models.Model):
         return f"{self.appointment}: {self.get_choice_display() or 'waiting'}"
 
 
+def launch_default_staff_name(rules=None):
+    """The name data/booking-rules.yaml gives as the default staff, or ""."""
+    return (((rules or launch_rules()).get("staff_assignment") or {}).get("default_staff") or "").strip()
+
+
+def launch_default_staff(rules=None, staff_model=None):
+    """The active staff member data/booking-rules.yaml names as the default
+    staff, matched by name ignoring case, or None. staff_model is for a
+    migration's historical model."""
+    if staff_model is None:
+        from staff.models import StaffMember as staff_model
+    name = launch_default_staff_name(rules)
+    return staff_model.objects.filter(name__iexact=name, active=True).order_by("pk").first() if name else None
+
+
 @transaction.atomic
 def seed_from_launch_values():
     """Create the settings, the weekly pattern and the services that share a
@@ -266,6 +291,7 @@ def seed_from_launch_values():
         "time_off_check_minutes": time_off["check_every_minutes"],
         "stale_copy_warning_minutes": time_off["stale_copy_warning_minutes"],
         "leave_buffer_minutes": rules["time_to_leave_alert"]["buffer_minutes"],
+        "default_staff": launch_default_staff(rules),
     })
     open_days = set(rules["open_weekdays"])
     for number, name in enumerate(WEEKDAYS):

@@ -122,9 +122,9 @@ def run_booking(request, form, book):
         return None, None
     messages.success(request, "Booked.")
     if member is not None:
-        messages.info(request, f"Assigned {member}, the only qualified staff member.")
+        messages.info(request, f"Assigned {member}. Change the crew on the job if needed.")
     elif appointment.status == appointment.Status.BOOKED:
-        messages.info(request, "Assign staff to the job.")
+        messages.info(request, "No staff assigned: pick the crew on the job.")
     if appointment.match_flags.filter(resolution="").exists():
         messages.warning(request, "The request differs from the customer's record. Check the differences from the job.")
     return appointment, None
@@ -171,10 +171,10 @@ def quote_request_page(request, item, price_form=None, book_form=None, alert=Non
     is_manager = user_is_manager(request.user)
     quote = item.quote
     if price_form is None:
-        initial = {"vehicle_class": item.vehicle_class, "service": item.service, "crew_size": 1}
+        initial = {"vehicle_class": item.vehicle_class, "service": item.service}
         if quote is not None:
             initial.update(service=quote.service, vehicle_class=quote.vehicle_class, amount=quote.total_before_tax,
-                           time_on_site_minutes=quote.time_on_site_minutes, crew_size=quote.crew_size)
+                           time_on_site_minutes=quote.time_on_site_minutes, crew=[member.pk for member in item.crew.all()])
         price_form = HandPriceForm(prefix="price", initial=initial)
     add_ons = list(item.add_ons.order_by("name"))
     reference = None
@@ -225,7 +225,7 @@ def quote_request_price(request, pk):
         try:
             decisions.price_quote_request(
                 item, data["service"], data["vehicle_class"], data["amount"], data["time_on_site_minutes"], request.user,
-                crew_size=data["crew_size"],
+                crew=data["crew"],
             )
         except decisions.DecisionError as error:
             form.add_error(None, str(error))

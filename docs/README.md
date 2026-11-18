@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -60,12 +60,12 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Moving existing records](reference/data-migration.md) | How customers, vehicles, appointments, payments and staff are imported from Baserow, with Setmore filling gaps, how each export format is converted, and how re-runs update. | current |
 | [Payments](reference/payments.md) | How each payment method is taken at the job and marked paid, and the payment rules that apply to every appointment. | current |
 | [When prices or services change](reference/pricebook-changes.md) | How pricebook edits are published as versions with an effective date, why completed jobs never change, and how the owner decides case by case for booked jobs. | current |
-| [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, what size variants mean for each vehicle class, how condition and crew size change price and time, and why the quoted price is the price of record. | current |
+| [Pricing rules](reference/pricing.md) | How every price is built from the price matrix, which add-ons go with which service, what size variants mean, how condition and crew size change price and time, and why the quote is the price of record. | current |
 | [Public API](reference/public-api.md) | Every endpoint the website calls under /api/public/v1/, what each takes and answers, the quote, booking and quote request rules, and the abuse, privacy and test-record controls. | current |
 | [Returning customers and quiet matching](reference/returning-customers.md) | How a website booking or request is matched to a customer by mobile number without showing anything, how a second vehicle the same day becomes a request, and how the owner resolves differences. | current |
 | [Sales tax](reference/sales-tax.md) | How sales tax is added at the rate for the customer's service address, how the rate is found and kept current, how approved out-of-area addresses are treated, and how collected tax is tracked until remitted. | current |
 | [Scheduling, calendars and time-to-leave alerts](reference/scheduling-and-calendars.md) | The scheduling settings and the one availability check that decide which days and start times are open, time on site, the calendar sync and conflict rules, time-to-leave alerts and arrival taps. | current |
-| [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the two kinds of consent each one needs, the exact consent wording, automatic STOP and HELP replies, and the carrier registration plan. | current |
+| [Text messages and consent](reference/text-messages.md) | Which automated texts the system sends, the one consent they need, the exact consent wording, automatic STOP and HELP replies, the carrier registration plan and its answers. | current |
 | [Vehicle catalog](reference/vehicle-catalog.md) | The years, makes and models the system knows, the facts it keeps per model year from the EPA, NHTSA vPIC, the Canadian specifications and the third-row list, and how imports never overwrite the owner. | current |
 | [Vehicle classification](reference/vehicle-classification.md) | How a year, make and model becomes one of the eight size-based vehicle classes and a size variant, from box volume, owner-editable rules, overrides and a review queue, and the booking lookup. | current |
 | [Website and SEO](reference/website-and-seo.md) | The Astro website on Cloudflare Pages - its pages and addresses, where its text, photos and prices come from, how it stays current, the speed and accessibility targets, and the search-ranking safeguards for the launch. | current |
@@ -100,9 +100,9 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Guides for day-to-day use](guides/README.md) | The index of task-based guides for using the Dixie Detail system day to day, by role: the guides written so far and those planned for each phase. | current |
 | [Finding a customer and their history](guides/finding-a-customer.md) | How to find a customer in the control app by name or by phone number in any format, what the customer page shows, and how to add or edit a customer or a vehicle. | current |
 | [Booking a job](guides/booking-a-job.md) | How to book a job or a repeating maintenance series in the control app with the price worked out as you go, change or cancel it, mark it completed, and record the final price with an on-site adjustment. | current |
-| [Assigning staff and the services they may do](guides/assigning-staff.md) | How to set which services each staff member is authorized for, from the staff page or the service page, and how to assign one or two people to a job, including someone in training. | current |
+| [Assigning staff and the services they may do](guides/assigning-staff.md) | How to set which services each staff member is authorized for, the default staff assigned to every new booking, and how to change a job's crew to one or two people, including someone in training. | current |
 | [Editing and publishing the pricebook](guides/editing-the-pricebook.md) | How to read the prices in the control app, change them in a draft, publish the draft with an effective date, and decide what happens to each booked job the change touches. | current |
-| [Handling website bookings](guides/handling-website-bookings.md) | How to work through the home screen's "needs you" list - new bookings, differences from the record, staff, quote, offline and second vehicle requests - and try it with test records. | current |
+| [Handling website bookings](guides/handling-website-bookings.md) | How to work through the home screen's "needs you" list of decisions - differences from the record, quote, offline and second vehicle requests, calendar problems and tax rates - and try it with test records. | current |
 | [Previewing and deploying the website](guides/previewing-and-deploying-the-website.md) | How to preview the website on the workstation against a fake API, run its checks, set up the Cloudflare Pages project, the offline piece and the deploy hook once, and how a change or a pricebook publish reaches the site. | current |
 | [Installing the control app on a phone or computer](guides/installing-the-control-app.md) | How to get a control app account, connect to Tailscale, sign in, and install the control app to the Pixel's home screen or a Fedora workstation, with what to do when it will not open or sign in. | current |
 

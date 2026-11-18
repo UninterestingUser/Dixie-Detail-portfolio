@@ -1,7 +1,7 @@
 meta:
   title: Website content
   summary: The website's page and card text in the owner's words, the condition level cards, and which picture goes with each vehicle class and category page. Prices and times come from the price book.
-  updated: 2026-11-14
+  updated: 2026-11-18
   status: current
   explained_in: docs/reference/website-and-seo.md
   read_by: the Astro site in site/, at build time
@@ -109,9 +109,11 @@ services:
   - name: Headlight Restoration
     page: headlight-restoration
     heading: Headlight Restoration
+    add_on: true       # added to Full Detail, Exterior Only or a paint correction (decision 0106)
     card: >-
       Foggy, yellowed lenses restored to clear, with UV protection so they
-      stay that way. Covers both headlights.
+      stay that way. Covers both headlights. Add it to a Full Detail,
+      Exterior Only or paint correction.
     full: >-
       Over time, headlights become foggy and yellowed due to UV damage,
       environmental exposure, and normal wear and tear when driving. Dull
@@ -119,7 +121,8 @@ services:
       and technique. This is more than a temporary polish. We perform a
       multi-stage process to remove the damaged outer layer, buff the lens,
       and add UV protection to ensure lasting results. This service covers
-      both headlights.
+      both headlights, and is added to a Full Detail, Exterior Only, 1-Step
+      or 2-Step Paint Correction.
 
   - name: Carpet Extraction
     page: shampoo-and-extraction

@@ -35,7 +35,7 @@ PLACES = {
     TOWN_ONLY: "place_town_only.json",
 }
 GOOD_TOKEN = "a-turnstile-token-the-fake-accepts"
-CONSENTS = {"version": "2026-10-13", "appointment": True, "follow_up": False}
+CONSENTS = {"version": "2026-11-18", "appointment": True}
 
 
 def siteverify(token, remote_ip):

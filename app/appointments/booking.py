@@ -60,6 +60,9 @@ class JobInputs:
     crew_size: int = None
     hand_amount: Decimal = None
     hand_minutes: int = None
+    # A manager's override for an add-on that doesn't go with the service
+    # (decision 0106), logged as a RuleOverride with the reason.
+    add_on_override: bool = False
 
     @property
     def priced_by_hand(self):
@@ -93,6 +96,7 @@ class JobInputs:
             on=on,
             version=version or version_for(on),
             check_promotion_dates=False,
+            allow_any_add_on=self.add_on_override,
         )
 
 
@@ -153,6 +157,7 @@ def job_to_place(inputs, day, address=None, appointment=None):
     job = price_job(
         inputs.service, inputs.vehicle_class, size_variant=inputs.size_variant, condition_level=inputs.condition_level,
         add_ons=inputs.add_ons, crew_size=inputs.crew_size, on=day, version=version_for(day), check_promotion_dates=False,
+        allow_any_add_on=inputs.add_on_override,
     )
     return availability.Job(job.time_on_site.total_minutes, inputs.service.pk, inputs.service.name, point)
 

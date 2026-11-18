@@ -26,7 +26,7 @@ class ConditionTests(ApiTestCase):
         cls.paint = Service.objects.get(name="1-Step Paint Correction")
 
     def test_only_full_detail_and_interior_only_take_a_condition(self):
-        for service in (self.exterior, self.headlights, self.paint):
+        for service in (self.exterior, self.paint):
             with self.subTest(service=service.name):
                 answer = self.quote(RAV4, service, expect=400, condition=1)
                 self.assertEqual(answer["field"], "condition")
@@ -35,6 +35,12 @@ class ConditionTests(ApiTestCase):
                 quote = self.quote(RAV4, service)
                 self.assertIsNone(quote["condition_level"])
                 self.assertEqual([line["kind"] for line in quote["lines"]], ["service"])
+
+    def test_headlight_restoration_is_an_add_on_not_a_service(self):
+        answer = self.quote(RAV4, self.headlights, expect=400)
+        self.assertEqual(answer["field"], "service")
+        quote = self.quote(RAV4, self.exterior, add_ons=[self.headlights.pk])
+        self.assertEqual([(line["kind"], line["amount"]) for line in quote["lines"]][1:], [("add_on", "95.00")])
 
     def test_levels_1_and_2_price_as_before(self):
         self.assertEqual(self.quote(RAV4, condition=1)["total_before_tax"], "250.00")

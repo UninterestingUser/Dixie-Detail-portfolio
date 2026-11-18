@@ -20,7 +20,7 @@ from geo.drive import drive_from_home
 from pricebook.pricing import PricingError, hand_description, price_job, reference_price
 from scheduling import changes as scheduling_changes
 from scheduling.models import DateException, OpenWeekday, RuleOverride, SchedulingSettings
-from staff.authorization import CrewError, assign_crew, auto_assign, staff_choices, uncovered_services, job_services, user_is_manager
+from staff.authorization import CrewError, assign_crew, auto_assign, default_staff, staff_choices, uncovered_services, job_services, user_is_manager
 from staff.models import StaffMember
 
 from .forms import AppointmentForm, FinalPriceForm
@@ -63,7 +63,7 @@ def appointment_new(request, customer_pk):
         "address": customer.addresses.filter(active=True).first(),
         **initial_for_vehicle(vehicle),
     }
-    form = AppointmentForm(request.POST or None, customer=customer, initial=initial)
+    form = AppointmentForm(request.POST or None, customer=customer, initial=initial, is_manager=user_is_manager(request.user))
     alert = None
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
@@ -91,6 +91,7 @@ def appointment_new(request, customer_pk):
             form.add_error(None, str(error))
         else:
             log_overrides(request, appointments, broken, data, RuleOverride.Action.BOOKED)
+            log_add_on_overrides(request, appointments, form)
             for appointment in appointments:
                 after_booking(request, appointment)
             return redirect("appointment", pk=appointments[0].pk)
@@ -166,12 +167,26 @@ def log_overrides(request, appointments, broken, data, action):
         messages.warning(request, "Booked off hours. The reason is logged with the job.")
 
 
+def log_add_on_overrides(request, appointments, form):
+    """Log a manager's add-on outside the rules on each job, with the reason
+    (decision 0106)."""
+    if not form.add_on_breaks:
+        return
+    for appointment in appointments:
+        RuleOverride.objects.create(
+            appointment=appointment, action=RuleOverride.Action.ADD_ONS, start=appointment.scheduled_start,
+            rules_broken=form.add_on_breaks, reason=form.cleaned_data["add_on_reason"].strip(), made_by=request.user,
+        )
+    messages.warning(request, "Booked with an add-on outside the rules. The reason is logged with the job.")
+
+
 def after_booking(request, appointment):
-    """Assign the only qualified person automatically (decision 0061), and
-    warn of another job overlapping this one."""
+    """Assign the default staff, or else the only qualified person
+    (decisions 0061 and 0107), and warn of another job overlapping this one."""
     member = auto_assign(appointment)
     if member and appointment.series_id is None:
-        messages.info(request, f"Assigned {member}, the only qualified staff member.")
+        why = "the default staff" if member == default_staff() else "the only qualified staff member"
+        messages.info(request, f"Assigned {member}, {why}. Change the crew on the job if needed.")
     warn_overlaps(request, appointment)
 
 
@@ -218,7 +233,8 @@ def same_inputs(old, new):
 def appointment_edit(request, pk):
     appointment = get_object_or_404(Appointment.objects.select_related("customer"), pk=pk)
     initial, old_inputs = edit_initial(appointment)
-    form = AppointmentForm(request.POST or None, customer=appointment.customer, editing=True, initial=initial)
+    form = AppointmentForm(request.POST or None, customer=appointment.customer, editing=True, initial=initial,
+                           is_manager=user_is_manager(request.user))
     alert = None
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
@@ -252,6 +268,7 @@ def appointment_edit(request, pk):
             messages.success(request, "Saved." + (" The job was re-priced." if changed_services else ""))
             action = RuleOverride.Action.MOVED if moved else RuleOverride.Action.CHANGED
             log_overrides(request, [appointment], broken, data, action)
+            log_add_on_overrides(request, [appointment], form)
             if moved:
                 scheduling_changes.job_moved(appointment, request.user)
             warn_overlaps(request, appointment)
@@ -282,7 +299,8 @@ def appointment_price(request, customer_pk=None, pk=None):
     rules alert below the date and time, swapped in out of band (htmx)."""
     appointment = get_object_or_404(Appointment, pk=pk) if pk else None
     customer = appointment.customer if appointment else get_object_or_404(Customer, pk=customer_pk)
-    form = AppointmentForm(request.POST, customer=customer, editing=bool(appointment))
+    form = AppointmentForm(request.POST, customer=customer, editing=bool(appointment), is_manager=user_is_manager(request.user),
+                           initial=edit_initial(appointment)[0] if appointment else None)
     context = {"errors": [], "job": None}
     if form.is_valid() and form.inputs() is None:
         context["errors"] = ["Not priced from the pricebook. Pick a service to price it."]
@@ -306,6 +324,7 @@ def appointment_price(request, customer_pk=None, pk=None):
                 inputs.service, inputs.vehicle_class, size_variant=inputs.size_variant,
                 condition_level=inputs.condition_level, add_ons=inputs.add_ons, crew_size=inputs.crew_size,
                 on=form.cleaned_data["date"], version=booking.version_for(form.cleaned_data["date"]),
+                allow_any_add_on=inputs.add_on_override,
             )
         except PricingError as error:
             context["errors"] = [str(error)]

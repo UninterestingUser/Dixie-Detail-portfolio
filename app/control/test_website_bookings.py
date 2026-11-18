@@ -18,17 +18,18 @@ from django.utils import timezone
 
 from appointments.models import Appointment, MatchFlag
 from billing.models import TaxRate
-from calendars.models import CalendarFlag
+from calendars.models import CalendarFlag, SyncTask
 from customers.models import Address, Consent, Customer, SecondContact
 from pricebook.models import PricedLine
 from publicapi.models import QuoteRequest, SecondVehicleRequest, TimeRequest
 from publicapi.test_matching import MatchingTestCase, SecondVehicleTests
 from publicapi.test_quote_requests import signed
 from publicapi.testing import BASE, CLEVELAND, CONSENTS, GOOD_TOKEN, PublicClient, eastern, jpeg, open_day
-from scheduling.models import RuleOverride
+from scheduling.models import RuleOverride, SchedulingSettings
 from staff.models import StaffMember
 from vehicles.models import Vehicle
 
+from . import needs_you
 from .fixtures import TailnetClient
 
 
@@ -233,14 +234,47 @@ class ReviewQueueTests(ControlTestCase):
         self.assertEqual(Customer.objects.get(pk=flag.customer_id).first_name, "Jordan")
 
 
-class AssignStaffPromptTests(ControlTestCase):
-    def test_a_website_job_with_no_staff_is_on_the_home_screen(self):
-        StaffMember.objects.create(name="Helper Example", role=StaffMember.Role.OWNER)
+def set_default_staff(member):
+    SchedulingSettings.get()
+    SchedulingSettings.objects.filter(pk=1).update(default_staff=member)
+
+
+class DefaultStaffTests(ControlTestCase):
+    """Every new booking gets the default staff, whoever else qualifies
+    (decision 0107), and staffing is never a "needs you" item."""
+
+    def test_a_website_booking_gets_the_default_staff_when_others_qualify_too(self):
+        other = StaffMember.objects.create(name="Second Manager", role=StaffMember.Role.OWNER)
+        set_default_staff(self.owner)
+        appointment, _ = self.book()
+        self.assertEqual([a.staff_member for a in appointment.assignments.all()], [self.owner])
+        self.assertNotIn(other, [a.staff_member for a in appointment.assignments.all()])
+        page = self.tailnet.get("/schedule/")
+        self.assertNotContains(page, "Assign staff")
+        self.assertNotContains(page, "New booking")
+
+    def test_without_one_the_only_qualified_person_is_assigned_and_nothing_prompts(self):
+        StaffMember.objects.create(name="Second Manager", role=StaffMember.Role.OWNER)
         appointment, _ = self.book()
         self.assertFalse(appointment.assignments.exists())
-        page = self.tailnet.get("/schedule/")
-        self.assertContains(page, f"Assign staff: {appointment.customer}")
-        self.assertContains(page, f"/appointments/{appointment.pk}/#staff-heading")
+        self.assertNotContains(self.tailnet.get("/schedule/"), "Assign staff")
+
+    def test_an_inactive_or_unauthorized_default_falls_back_to_the_only_qualified_person(self):
+        helper = StaffMember.objects.create(name="Helper Example", role=StaffMember.Role.HELPER, pay_type="family_helper")
+        set_default_staff(helper)
+        appointment, _ = self.book()
+        # The helper isn't authorized for Full Detail; the owner is the only one who is.
+        self.assertEqual([a.staff_member for a in appointment.assignments.all()], [self.owner])
+        helper.authorizations.create(service=appointment.lines.first().service)
+        helper.active = False
+        helper.save()
+        later, _ = self.book(mobile="4235550111", start=eastern(open_day(5), 8))
+        self.assertEqual([a.staff_member for a in later.assignments.all()], [self.owner])
+
+    def test_the_setting_is_on_the_scheduling_settings_screen(self):
+        page = self.tailnet.get("/settings/scheduling/")
+        self.assertContains(page, "Default staff for new bookings")
+        self.assertContains(page, f'<option value="{self.owner.pk}">{self.owner}</option>', html=False)
 
 
 class SecondVehicleScreenTests(ControlTestCase, SecondVehicleTests):
@@ -384,10 +418,10 @@ class QuoteRequestScreenTests(ControlTestCase):
         self.assertEqual(response.status_code, 201, response.content)
         return QuoteRequest.objects.get(reference=response.json()["reference"])
 
-    def price(self, item, amount="425.00", minutes=360, crew=1, client=None):
+    def price(self, item, amount="425.00", minutes=360, crew=None, client=None):
         return (client or self.tailnet).post(f"/requests/quotes/{item.pk}/price/", {
             "price-service": self.full_detail.pk, "price-vehicle_class": self.vans.pk, "price-amount": amount,
-            "price-time_on_site_minutes": minutes, "price-crew_size": crew,
+            "price-time_on_site_minutes": minutes, "price-crew": [member.pk for member in crew or [self.owner]],
         })
 
     def book(self, item, start):
@@ -473,14 +507,43 @@ class QuoteRequestScreenTests(ControlTestCase):
         other.refresh_from_db()
         self.assertIsNone(other.appointment)
 
-    def test_a_two_person_job_always_gets_the_prompt(self):
+    def helper(self, name="Helper One"):
+        return StaffMember.objects.create(name=name, role=StaffMember.Role.HELPER, pay_type="family_helper")
+
+    def test_the_people_checked_under_crew_are_assigned_and_set_the_crew_size(self):
         item = self.send(photos=0)
-        self.price(item, crew=2, minutes=240)
+        helper = self.helper()
+        self.assertEqual(self.price(item, crew=[self.owner, helper], minutes=240).status_code, 302)
         item.refresh_from_db()
+        self.assertEqual(item.quote.crew_size, 2)
         self.book(item, eastern(open_day(4), 8))
         item.refresh_from_db()
-        self.assertFalse(item.appointment.assignments.exists())
-        self.assertContains(self.tailnet.get("/schedule/"), "Assign staff: Morgan Fleet")
+        self.assertEqual({a.staff_member for a in item.appointment.assignments.all()}, {self.owner, helper})
+        self.assertEqual(item.appointment.crew_size, 2)
+
+    def test_the_price_section_has_labeled_fields_in_hours_and_minutes(self):
+        item = self.send(photos=0)
+        helper, second = self.helper(), self.helper("Helper Two")
+        set_default_staff(self.owner)
+        page = self.tailnet.get(f"/requests/quotes/{item.pk}/")
+        self.assertNotContains(page, "Price it by hand")
+        self.assertNotContains(page, "<details")
+        self.assertContains(page, '<label for="id_price-time_on_site_minutes">Time on site</label>', html=False)
+        self.assertContains(page, '<option value="30">0:30</option>', html=False)
+        self.assertContains(page, '<option value="390">6:30</option>', html=False)
+        self.assertContains(page, '<option value="720">12:00</option>', html=False)
+        self.assertNotContains(page, '<option value="735">')
+        # Crew: a checkbox for each active staff member, the default staff checked.
+        self.assertRegex(page.content.decode(), rf'<input type="checkbox" name="price-crew" value="{self.owner.pk}" id="id_price-crew_\d" checked>')
+        self.assertNotRegex(page.content.decode(), rf'value="{helper.pk}" id="id_price-crew_\d" checked')
+        self.assertContains(page, "Helper One")
+        self.assertNotContains(page, "price-crew_size")
+        # A time not in 15-minute steps is refused, and so is a crew of three.
+        self.assertEqual(self.price(item, minutes=100).status_code, 422)
+        self.assertEqual(self.price(item, crew=[self.owner, helper, second]).status_code, 422)
+        # A helper alone, not authorized for the service, is refused too.
+        self.assertContains(self.price(item, crew=[helper]), "Nobody checked is authorized for Full Detail", status_code=422)
+        self.assertIsNone(QuoteRequest.objects.get(pk=item.pk).quote)
 
     def test_it_cant_be_booked_before_it_is_priced(self):
         item = self.send(photos=0)
@@ -507,7 +570,9 @@ class QuoteRequestScreenTests(ControlTestCase):
 
 
 class NeedsYouTests(ControlTestCase):
-    def test_everything_waiting_is_listed_newest_first_with_a_count(self):
+    """Only what needs a decision (decision 0107)."""
+
+    def test_only_what_needs_a_decision_is_listed_newest_first_with_a_count(self):
         appointment, _ = self.book()
         customer = self.returning(first="Pat", mobile="4235550100")
         customer.addresses.update(line1="9 Elsewhere Road", zip_code="37312")
@@ -515,28 +580,45 @@ class NeedsYouTests(ControlTestCase):
         CalendarFlag.objects.create(kind=CalendarFlag.Kind.CLASH, appointment=appointment, summary="Dentist")
         TaxRate.objects.create(jurisdiction=appointment.service_address.tax_jurisdiction, state_rate=Decimal("7"), local_rate=Decimal("3"),
                                effective_from=timezone.localdate() + datetime.timedelta(days=60))
+        QuoteRequestScreenTests.send(self, photos=0)
         page = self.tailnet.get("/schedule/")
         self.assertContains(page, "Needs you")
-        self.assertContains(page, f"New booking: {appointment.customer}")
+        self.assertNotContains(page, "New booking")
+        self.assertNotContains(page, "Assign staff")
+        self.assertNotContains(page, "Clear the new bookings")
         self.assertContains(page, "Check the booking: Pat Sample")
         self.assertContains(page, "Time Off over a booked job")
         self.assertContains(page, "New sales tax rate")
+        self.assertContains(page, "Quote request: Morgan Fleet")
         content = page.content.decode()
-        self.assertLess(content.index("New sales tax rate"), content.index(f"New booking: {appointment.customer}"))
-        # Two new bookings, one review, a clash and a rate.
-        self.assertContains(page, '<span class="badge">5</span>')
+        self.assertLess(content.index("Quote request: Morgan Fleet"), content.index("New sales tax rate"))
+        # A review, a clash, a rate and a quote request; the two bookings are not items.
+        self.assertContains(page, '<span class="badge">4</span>')
         self.assertTrue(flagged.match_flags.exists())
 
-    def test_clearing_the_new_bookings_keeps_one_that_came_in_meanwhile(self):
-        first, _ = self.book()
+    def test_one_item_per_appointment(self):
+        """A test booking once showed both "Assign staff" and "New booking"."""
+        customer = self.returning(first="Pat", mobile="4235550100")
+        customer.addresses.update(line1="9 Elsewhere Road", zip_code="37312")
+        flagged, _ = self.book(first_name="Pat", mobile="4235550100")
+        CalendarFlag.objects.create(kind=CalendarFlag.Kind.CLASH, appointment=flagged, summary="Dentist")
+        SyncTask.objects.update_or_create(link=f"job:{flagged.calendar_key.hex}", defaults={"due_at": timezone.now(), "attempts": 5, "last_error": "Google said no"})
+        found = needs_you.items()
+        self.assertEqual([item.appointment_id for item in found], [flagged.pk])
+        [item] = found
+        self.assertIn("Also: time off over a booked job, calendar sync failing", item.detail)
         page = self.tailnet.get("/schedule/")
-        self.assertContains(page, "Clear the new bookings")
-        until = page.context["needs_you"]["newest_booking"]
-        later, _ = self.book(mobile="4235550111", start=eastern(open_day(5), 8))
-        self.tailnet.post("/needs-you/seen/", {"until": until.isoformat()})
-        page = self.tailnet.get("/schedule/")
-        self.assertNotContains(page, f'needs-booking" href="/appointments/{first.pk}/"')
-        self.assertContains(page, f'needs-booking" href="/appointments/{later.pk}/"')
+        self.assertContains(page, '<span class="badge">1</span>')
+
+    def test_a_job_the_calendar_sync_keeps_failing_on_is_listed(self):
+        appointment, _ = self.book()
+        task, _ = SyncTask.objects.update_or_create(link=f"job:{appointment.calendar_key.hex}", defaults={"due_at": timezone.now(), "attempts": 2, "last_error": "Timed out"})
+        self.assertEqual(needs_you.items(), [])
+        task.attempts = needs_you.FAILED_PUSHES
+        task.save()
+        [item] = needs_you.items()
+        self.assertEqual((item.kind, item.title), ("sync", f"Calendar sync failing: {appointment.customer}"))
+        self.assertIn("not on the Jobs calendar after 3 tries", item.detail)
 
     def test_requests_waiting_for_a_decision_are_listed(self):
         QuoteRequestScreenTests.send(self, photos=0)

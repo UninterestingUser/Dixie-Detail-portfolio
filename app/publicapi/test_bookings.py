@@ -71,18 +71,35 @@ class BookingTests(ApiTestCase):
     def test_consent_records_the_exact_wording_the_time_and_the_source(self):
         _, answer = self.book()
         customer = Appointment.objects.get(reference=answer["reference"]).customer
-        rows = {row.kind: row for row in Consent.objects.filter(customer=customer)}
-        words = wording()["versions"]["2026-10-13"]
-        self.assertTrue(rows[Consent.Kind.APPOINTMENT].granted)
-        self.assertFalse(rows[Consent.Kind.FOLLOW_UP].granted)
-        self.assertEqual(rows[Consent.Kind.APPOINTMENT].wording, words["appointment"])
-        self.assertEqual(rows[Consent.Kind.FOLLOW_UP].wording, words["follow_up"])
-        for row in rows.values():
-            self.assertEqual(row.source, Consent.Source.WEB_FORM)
-            self.assertEqual(row.wording_version, "2026-10-13")
-            self.assertEqual(row.phone, "4235550142")
-            self.assertIsNotNone(row.recorded_at)
+        # One consent, appointment texts, which now covers the review request
+        # after the service (decision 0108).
+        [row] = Consent.objects.filter(customer=customer)
+        words = wording()["versions"]["2026-11-18"]
+        self.assertEqual((row.kind, row.granted), (Consent.Kind.APPOINTMENT, True))
+        self.assertEqual(row.wording, words["appointment"])
+        self.assertIn("a review request after the service", row.wording)
+        self.assertEqual(row.source, Consent.Source.WEB_FORM)
+        self.assertEqual(row.wording_version, "2026-11-18")
+        self.assertEqual(row.phone, "4235550142")
+        self.assertIsNotNone(row.recorded_at)
         self.assertTrue(customer.has_consent(Consent.Kind.APPOINTMENT))
+
+    def test_an_answer_with_the_old_follow_up_box_is_taken_and_only_appointment_consent_recorded(self):
+        """An offline request held from the old page, or a page not rebuilt
+        yet, sends version 2026-10-13 with two answers."""
+        _, answer = self.book(consents={"version": "2026-10-13", "appointment": False, "follow_up": True})
+        customer = Appointment.objects.get(reference=answer["reference"]).customer
+        [row] = Consent.objects.filter(customer=customer)
+        self.assertEqual((row.kind, row.granted, row.wording_version), (Consent.Kind.APPOINTMENT, False, "2026-10-13"))
+        self.assertEqual(row.wording, wording()["versions"]["2026-10-13"]["appointment"])
+        self.assertFalse(Consent.objects.filter(kind=Consent.Kind.FOLLOW_UP).exists())
+        self.book(expect=400, consents={"version": "2026-11-18", "appointment": True, "follow_up": "yes"}, start=eastern(open_day(4), 8))
+
+    def test_the_calendar_file_shows_the_total_with_a_dollar_sign(self):
+        _, answer = self.book()
+        content = answer["calendar_file"]["content"]
+        self.assertIn(f"Total ${answer['summary']['total']} (confirmed when we see the vehicle)", content)
+        self.assertNotIn("Total $ ", content)
 
     def test_an_unknown_consent_version_is_refused(self):
         self.book(expect=400, consents={"version": "1999-01-01", "appointment": True, "follow_up": True})

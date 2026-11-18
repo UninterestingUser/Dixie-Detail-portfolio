@@ -33,7 +33,6 @@ answers:
   booking-options:
     consent:
       appointment: string
-      follow_up: string
       links:
         privacy_policy: string
         text_message_terms: string
@@ -166,7 +165,9 @@ answers:
     effective_date: string
     pricebook_version: number
     services:
-    - condition_applies: boolean
+    - add_ons:
+      - number
+      condition_applies: boolean
       description: string
       from_price: string
       id: number

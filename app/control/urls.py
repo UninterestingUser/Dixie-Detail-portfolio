@@ -8,7 +8,6 @@ from . import (
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("needs-you/seen/", views.needs_you_seen, name="needs-you-seen"),
     path("sign-in/", auth_views.LoginView.as_view(template_name="control/sign_in.html", redirect_authenticated_user=True), name="sign-in"),
     path("sign-out/", auth_views.LogoutView.as_view(), name="sign-out"),
     path("account/", views.account, name="account"),

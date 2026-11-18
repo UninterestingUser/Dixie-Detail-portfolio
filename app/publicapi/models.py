@@ -189,6 +189,9 @@ class QuoteRequest(models.Model):
     quote = models.OneToOneField("pricebook.Quote", on_delete=models.PROTECT, null=True, blank=True, related_name="quote_request")
     priced_at = models.DateTimeField(null=True, blank=True)
     priced_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    # The people checked under Crew when it was priced: assigned when it is
+    # booked, and their number is the quote's crew size.
+    crew = models.ManyToManyField("staff.StaffMember", blank=True, related_name="+")
     decline_reason = models.CharField(max_length=300, blank=True)
     # How quiet matching placed it (customers.matching), for the review
     # flags raised when it is booked.

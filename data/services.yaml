@@ -1,7 +1,7 @@
 meta:
   title: Service catalog
-  summary: Every service Dixie Detail sells or has sold, what its price depends on, whether it takes a condition level, and who can book it. Prices themselves are in price-matrix.csv.
-  updated: 2026-11-14
+  summary: Every service Dixie Detail sells or has sold, what its price depends on, whether it takes a condition level, which services each add-on goes with, and who can book it. Prices themselves are in price-matrix.csv.
+  updated: 2026-11-18
   status: current
   explained_in: docs/reference/pricing.md
   prices_in: data/price-matrix.csv
@@ -36,11 +36,6 @@ services:
     price_varies_by: [vehicle_class]
     condition_applies: false
     booked_by: [customer, owner]
-  - name: Headlight Restoration
-    kind: main
-    price_varies_by: []
-    condition_applies: false
-    booked_by: [customer, owner]
   - name: Motorcycle Detail        # decision 0072
     kind: main
     price_varies_by: [vehicle_class]
@@ -49,15 +44,26 @@ services:
     add_ons: none                # no add-on is priced for Motorcycles
     booked_by: [customer, owner]
     description: A motorcycle detailed at one flat price, with no condition level and no add-ons
+  # An add-on goes only with the services in its goes_with list, stored
+  # with each pricebook version (decision 0106). It can't be booked alone.
+  # The control app can add one to another service with a manager's reason.
   - name: Carpet Extraction
     kind: add-on
     price_varies_by: [size_variant]
     condition_applies: false
+    goes_with: [Full Detail, Interior Only]
     booked_by: [customer, owner]
   - name: Seat Extraction
     kind: add-on
     price_varies_by: [size_variant]
     condition_applies: false
+    goes_with: [Full Detail, Interior Only]
+    booked_by: [customer, owner]
+  - name: Headlight Restoration    # an add-on since 2026-11-18 (decision 0106); its price and time are unchanged
+    kind: add-on
+    price_varies_by: []
+    condition_applies: false
+    goes_with: [Full Detail, Exterior Only, 1-Step Paint Correction, 2-Step Paint Correction]
     booked_by: [customer, owner]
   - name: Quarterly Maintenance
     kind: maintenance plan

@@ -6,7 +6,7 @@
 {% if time_off_warning %}<p class="notice warn-notice" role="status">{{ time_off_warning }}</p>{% endif %}
 <form method="post" class="stack" novalidate data-booking-form
       hx-post="{% if appointment %}{% url 'appointment-price' appointment.pk %}{% else %}{% url 'appointment-price-new' customer.pk %}{% endif %}"
-      hx-trigger="change[target.name!='override_reason'], load" hx-target="#price" hx-sync="this:replace">
+      hx-trigger="change[target.name!='override_reason'&&target.name!='add_on_reason'], load" hx-target="#price" hx-sync="this:replace">
   {% csrf_token %}
   {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
   <fieldset>
@@ -26,6 +26,7 @@
     {% include "control/_field.html" with field=form.size_variant %}
     <div data-shows-with="condition">{% include "control/_field.html" with field=form.condition_level %}</div>
     {% include "control/_field.html" with field=form.add_ons %}
+    {% if form.add_on_reason %}{% include "control/_field.html" with field=form.add_on_reason %}{% endif %}
     {% include "control/_field.html" with field=form.crew_size %}
     <div data-shows-with="hand-price" class="two">
       {% include "control/_field.html" with field=form.hand_price %}

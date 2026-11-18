@@ -7,15 +7,15 @@ area: staff
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-17
+updated: 2026-11-18
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0107-default-staff-and-needs-you-for-decisions.md]
 related: [docs/reference/control-app.md, docs/architecture/data-model.md, data/booking-rules.yaml, docs/decisions/0053-check-and-trade-owner-only.md, docs/decisions/0056-scheduling-rules-are-settings.md]
 ---
 
 # 0061: Staff are authorized per service, and a manager assigns staff to each job
 
-**Status:** accepted · **Date:** 2026-10-17 · **Area:** staff
+**Status:** accepted; its automatic assignment is changed by [0107](0107-default-staff-and-needs-you-for-decisions.md): the default staff is assigned to every new booking · **Date:** 2026-10-17 · **Area:** staff
 
 ## Context
 

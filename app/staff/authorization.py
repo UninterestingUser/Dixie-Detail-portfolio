@@ -119,11 +119,29 @@ def assign_crew(appointment, members, training_reason="", by_manager=False):
     return gaps
 
 
+def default_staff():
+    """The person assigned to every new booking (the default staff setting,
+    decision 0107), or None when it is unset or that person is inactive."""
+    from scheduling.models import SchedulingSettings
+
+    member = SchedulingSettings.get().default_staff
+    return member if member is not None and member.active else None
+
+
 def auto_assign(appointment):
-    """Assign the only qualified active staff member to a one-person job, when
-    the setting is on (decision 0061). Returns the person, or None when the
-    prompt is needed: two or more qualified, none, or a two-person job."""
-    if not automatic_assignment() or appointment.crew_size != 1 or appointment.assignments.exists():
+    """Assign a new booking's first person (decisions 0061 and 0107): the
+    default staff, whoever else qualifies and whatever the crew size, when
+    they are authorized for the job's services. Without one, the only
+    qualified active staff member of a one-person job, when that setting is
+    on. Returns the person assigned, or None. A manager can still change
+    the crew on the job."""
+    if appointment.assignments.exists():
+        return None
+    member = default_staff()
+    if member is not None and not uncovered_services([member], job_services(appointment)):
+        assign_crew(appointment, [member])
+        return member
+    if not automatic_assignment() or appointment.crew_size != 1:
         return None
     qualified = [choice.member for choice in staff_choices(appointment) if choice.qualified]
     if len(qualified) != 1:

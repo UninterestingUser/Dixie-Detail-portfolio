@@ -181,7 +181,7 @@ class ContractTests(ApiTestCase):
         request = {
             "vehicle": {"year": 2021, "make": "Ford", "model": "Transit 250"}, "service": "not_sure",
             "description": "Work van.", "place": token, "first_name": "Morgan", "mobile": "423-555-0160",
-            "consents": {"version": "2026-10-13", "appointment": True, "follow_up": False}, "turnstile": GOOD_TOKEN,
+            "consents": {"version": "2026-11-18", "appointment": True}, "turnstile": GOOD_TOKEN,
         }
         keep("quote-requests", client.post_json("quote-requests", {**request, "session": session_id, "photos": [photo.json()["photo"]]}), 201)
         keep("error", client.post_json("quote-requests", {**request, "turnstile": "refused"}), 403)

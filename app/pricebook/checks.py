@@ -14,7 +14,10 @@ by the tests. It refuses a price book where:
 - the services that take a condition level (condition_applies in
   services.yaml) are not the condition_levels applies_to list in
   pricing-rules.yaml, or a level booked by quote also adds a percentage
-  (decision 0103).
+  (decision 0103);
+- an add-on has no goes_with list in services.yaml, or its list names a
+  service that is not a main service there, or a service that isn't an
+  add-on has one (decision 0106).
 
 A cell is a dict like a row of data/price-matrix.csv: service,
 vehicle_class, size_variant (a value or None), hours and price.
@@ -98,6 +101,26 @@ def condition_problems(data_dir=None):
     return problems
 
 
+def add_on_problems(data_dir=None):
+    """Where the goes_with lists in services.yaml are wrong (decision 0106)."""
+    services = read_data("services.yaml", data_dir)["services"]
+    mains = {entry["name"] for entry in services if entry["kind"] == "main"}
+    problems = []
+    for entry in services:
+        listed = entry.get("goes_with")
+        if entry["kind"] != "add-on":
+            if listed:
+                problems.append(f"{entry['name']} is not an add-on, so it has no goes_with list.")
+            continue
+        if not listed:
+            problems.append(f"{entry['name']} is an add-on with no goes_with list: name the services it goes with.")
+            continue
+        for name in listed:
+            if name not in mains:
+                problems.append(f"{entry['name']} goes with {name}, which is not a main service in services.yaml.")
+    return problems
+
+
 def check(cells, produced=None, data_dir=None):
     """What is wrong with a price book, as a list of sentences; empty when it passes."""
     rules = read_data("pricing-rules.yaml", data_dir)["maintenance_plans"]
@@ -147,4 +170,4 @@ def check(cells, produced=None, data_dir=None):
         rows = f" size {size}" if size is not None else ""
         shown = ", ".join(sources[:SHOWN]) + (f" and {len(sources) - SHOWN:,} more" if len(sources) > SHOWN else "")
         problems.append(f"{class_name}{rows} has no {service} price, but the rules can give it: {shown}.")
-    return problems + condition_problems(data_dir)
+    return problems + condition_problems(data_dir) + add_on_problems(data_dir)

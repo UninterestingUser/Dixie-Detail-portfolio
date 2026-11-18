@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-11-14
+  updated: 2026-11-18
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -73,6 +73,7 @@ phases:
       - "Step 5: website bookings in the control app - quiet matching of bookings and every request on the mobile number, the review queue with the four actions logged, the color telling identical vehicles apart, automatic assignment with the assign-staff prompt, a second vehicle the same day as a request, screens to price, book or decline quote requests, offline requests and second vehicle requests, the home screen's needs-you list, and api_smoke_test's returning and quote scenarios with --keep (decision 0101)"
       - "Step 5 follow-up: removing a job keeps every quote something else refers to, a job removed as created by mistake reopens its request and a canceled one closes it, and delete_test_records deletes booked test quote requests with their quotes (decision 0102)"
       - "Step 6: the website on staging - the Astro site in site/ with every current address kept, pages per service and city, the FAQ, reviews and policy pages; prices, services and structured data from the public API at build time; the booking flow's seven steps with the estimate card, quote requests with photos, and the request a time form held and replayed by Cloudflare (a Pages Function, Workers KV and a scheduled Worker) while the server or Google can't be reached; GET price-table, offline quote requests and typed addresses on the server; rebuilds on publish and on a version's effective date; noindex until launch; browser tests and Lighthouse targets in CI (decision 0105)"
+      - "Acceptance changes A: Headlight Restoration an add-on and each add-on only with the services the pricebook lists for it, with a manager's override in the control app; the default staff on every new booking; a needs-you list of decisions only, one item per job, with failing calendar syncs; the quote request Price section with time on site in hours and minutes and the crew as checkboxes; a dollar sign in the calendar file's total; one text consent instead of two (decisions 0106 to 0108)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
       - The booking form shows the photo cards, which have placeholders until each class's picture is set (owner action; the pictures are in site/public/images/vehicle-classes/)

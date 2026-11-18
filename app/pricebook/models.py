@@ -92,6 +92,18 @@ class PricebookVersion(models.Model):
         """The ids of the services that take a condition level in this version."""
         return set(ConditionService.objects.filter(version=self).values_list("service_id", flat=True))
 
+    def add_on_fit_map(self):
+        """{service id: {the ids of the add-ons that go with it}} in this
+        version (decision 0106)."""
+        fits = {}
+        for service_id, add_on_id in AddOnFit.objects.filter(version=self).values_list("service_id", "add_on_id"):
+            fits.setdefault(service_id, set()).add(add_on_id)
+        return fits
+
+    def add_on_ids_for(self, service):
+        """The ids of the add-ons that go with a service in this version."""
+        return set(AddOnFit.objects.filter(version=self, service=service).values_list("add_on_id", flat=True))
+
     def takes_condition_level(self, service):
         """Whether a service takes a condition level in this version: Full
         Detail and Interior Only, the services that cover the interior
@@ -107,7 +119,7 @@ class PricebookVersion(models.Model):
         draft = cls.objects.create(number=(last.number + 1) if last else 1, notes=notes)
         source = cls.objects.filter(status=cls.Status.PUBLISHED).order_by("-number").first()
         if source:
-            for model in (Price, DerivedPriceRule, ConditionLevel, ConditionService, PricingRules):
+            for model in (Price, DerivedPriceRule, ConditionLevel, ConditionService, AddOnFit, PricingRules):
                 rows = model.objects.filter(version=source)
                 if model is Price:
                     # A retired class or size variant is not priced again.
@@ -285,6 +297,28 @@ class ConditionService(VersionContent):
 
     def __str__(self):
         return f"{self.service} takes a condition level"
+
+
+class AddOnFit(VersionContent):
+    """An add-on that goes with a service in this version (decision 0106):
+    Carpet Extraction and Seat Extraction with Full Detail and Interior
+    Only, Headlight Restoration with Full Detail, Exterior Only and the two
+    paint corrections. An add-on goes only with the services listed; the
+    control app can add another with a manager's reason."""
+
+    add_on = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="+")
+    service = models.ForeignKey(Service, on_delete=models.PROTECT, related_name="+")
+
+    history = HistoricalRecords()
+
+    class Meta:
+        default_related_name = "add_on_fits"
+        constraints = [
+            models.UniqueConstraint(fields=["version", "add_on", "service"], name="one_add_on_fit_per_pair")
+        ]
+
+    def __str__(self):
+        return f"{self.add_on} goes with {self.service}"
 
 
 class PricingRules(VersionContent):

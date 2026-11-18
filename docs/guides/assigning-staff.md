@@ -1,12 +1,12 @@
 ---
 title: Assigning staff and the services they may do
-summary: How to set which services each staff member is authorized for, from the staff page or the service page, and how to assign one or two people to a job, including someone in training.
+summary: How to set which services each staff member is authorized for, the default staff assigned to every new booking, and how to change a job's crew to one or two people, including someone in training.
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-18
 tags: [guides, staff, authorization, assignment, control-app]
-related: [docs/reference/control-app.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/guides/booking-a-job.md, data/booking-rules.yaml]
+related: [docs/decisions/0107-default-staff-and-needs-you-for-decisions.md, docs/reference/control-app.md, docs/decisions/0061-staff-authorized-per-service.md, docs/decisions/0069-booking-staffing-and-publishing-in-the-control-app.md, docs/guides/booking-a-job.md, data/booking-rules.yaml]
 ---
 
 # Assigning staff and the services they may do
@@ -34,6 +34,14 @@ Staff members are added in the Django admin, under **Staff members**, until a st
 - **A different crew size** than the job was booked with recalculates its service time and time on site: two people take 60% of the service time and half the setup and breakdown. The price does not change. A warning appears if the job now overlaps another that day.
 - To take everyone off a job, untick them all and tap **Save staff**.
 
-## Automatic assignment
+## The default staff on every new booking
 
-When a one-person job is booked, in the control app, on the website or from a website request, and exactly one active staff member is qualified (today, always the owner), that person is assigned at once and the job says so. A two-person job, such as Monthly Maintenance, always waits for you to pick the crew. A website job left with no one assigned appears on the home screen's "needs you" list as **Assign staff** until you assign someone ([handling-website-bookings.md](handling-website-bookings.md)). The setting is `staff_assignment.automatic_when_one_qualified` in [data/booking-rules.yaml](../../data/booking-rules.yaml), on at launch; it moves to the settings screen in Phase 3.
+Every new booking, in the control app, on the website or from a website request, gets the default staff member at once, whoever else qualifies and whatever the crew size ([decision 0107](../decisions/0107-default-staff-and-needs-you-for-decisions.md)). The job says "Assigned Kris Grassman, the default staff." Change the crew on the job when someone else is going, and add the second person to a two-person job, such as Monthly Maintenance, there. Staffing never appears on the home screen's "needs you" list.
+
+The setting is **Default staff for new bookings**, under **Staff** on **Account → Scheduling settings**, set to Kris Grassman at launch. It was seeded from `staff_assignment.default_staff` in [data/booking-rules.yaml](../../data/booking-rules.yaml). Only a manager changes it.
+
+A quote request is different: when you price it, **Crew** has a checkbox for each active staff member, with the default staff checked. The people you check are assigned when it's booked, and how many you check is the crew size ([handling-website-bookings.md](handling-website-bookings.md)).
+
+## When there is no default staff
+
+With the setting empty, or when the default staff member is inactive or not authorized for the job's services, a one-person job with exactly one qualified active staff member is assigned to that person. Any other job is left for you to assign from its page ("No staff assigned" shows in every schedule view). That rule is `staff_assignment.automatic_when_one_qualified` in [data/booking-rules.yaml](../../data/booking-rules.yaml), on at launch.
