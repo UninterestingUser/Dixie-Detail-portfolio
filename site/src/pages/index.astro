@@ -18,8 +18,10 @@ const page = pages.pages.home;
 const tel = "+1" + business.phone.number.replace(/\D/g, "");
 const jsonLd = [await localBusiness()];
 // The hero photo is the largest thing on a phone's first screen: preloaded,
-// in the sizes the page uses, a little lighter than the other photos.
-const HERO_WIDTHS = [480, 640, 828, 1080, 1600, 2000];
+// in the sizes the page uses, a little lighter than the other photos. 750
+// fits a typical phone (412 points at 1.75x is 721 pixels), which would
+// otherwise download the 828.
+const HERO_WIDTHS = [480, 640, 750, 828, 1080, 1600, 2000];
 const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, format: "webp" });
 ---
 <Base title={page.title} description={page.description} path="/" heroHeader jsonLd={jsonLd}>

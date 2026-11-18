@@ -4,7 +4,7 @@ summary: The Astro website on Cloudflare Pages - its pages and addresses, where 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [website, seo, design, astro, cloudflare, phase-3]
 related: [docs/reference/booking-flow.md, docs/guides/previewing-and-deploying-the-website.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0002-astro-on-cloudflare.md, docs/decisions/0031-website-design-direction.md, docs/decisions/0104-portfolio-copy-leaves-out-unlicensed-pictures.md, data/site-content.yaml, data/site-pages.yaml, docs/reference/public-api.md]
 ---
@@ -46,7 +46,7 @@ The homepage drops from nine sections to fewer, and the content that leaves move
 
 - Red #CC0000 is the base: buttons, the band under the hero, review cards and the call-to-action card.
 - Navy #002D65 is the accent: small labels, prices, links, finished booking steps, and the booking estimate card and its phone bar.
-- Headings are near-black, in Archivo, condensed and uppercase; body text is Archivo too, served with the site. The footer is charcoal (#141518) with a red top edge.
+- Headings are near-black, in Archivo, condensed and uppercase; body text is Archivo too, trimmed and served with the site. The footer is charcoal (#141518) with a red top edge.
 - Footer social links are round logo icons (Facebook, X, Instagram, Google), not text. The Google icon links to the Google Business Profile review link in [data/business.yaml](../../data/business.yaml).
 
 ## Where the content comes from
@@ -80,7 +80,13 @@ Checked on every pull request that touches `site/` or `data/` by Lighthouse CI, 
 | Cumulative layout shift | 0.1 or less |
 | Total blocking time | 200 ms or less |
 
-At the time of building, every page scored 0.97 to 1.0 on performance and 1.0 on accessibility and best practices, with no layout shift and the largest paint at 1.5 to 2.5 seconds. The homepage is closest to the line, because its hero photo shares a slow connection with the font and the photos below it. Text shows at once in Arial sized to Archivo's width, so the swap to Archivo moves no line. Search-engine checks are left out while staging is deliberately not indexable.
+On 2026-11-18 every page scored 0.99 to 1.0 on performance and 1.0 on accessibility and best practices, with no layout shift and the largest paint at 1.2 to 2.2 seconds. The homepage is closest to the line, at about 2.2 seconds: its hero photo shares a slow connection with the font and the logo. Before that day it sat at 2.5 seconds and failed now and then. Three things keep its first screen light:
+
+- **The font is trimmed.** The site serves Archivo cut to the weights (400 to 800), widths (condensed to normal) and characters it uses: 44 KB instead of 90. The list is `site/src/assets/fonts/archivo.json`, and `python3 tools/make_site_font.py` makes the font from it. A unit test fails when a built page uses a character outside the list: add the character and run the script again.
+- **The stylesheet is inside each page,** so the first text needs no second request.
+- **The hero photo has a 750-pixel size,** which a typical phone downloads instead of the 828.
+
+Text shows at once in Arial sized to Archivo's width, so the swap to Archivo moves no line. Search-engine checks are left out while staging is deliberately not indexable.
 
 ## Staging is not indexed
 

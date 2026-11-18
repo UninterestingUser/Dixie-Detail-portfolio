@@ -3,9 +3,9 @@
 // tags, structured data), the header, the footer. The site is on staging
 // until the Phase 5 launch: public/_headers sends noindex and
 // public/robots.txt blocks everything (website-and-seo.md).
-// Archivo, served with the site. Text shows at once in a fallback font and
-// swaps when it arrives, so the font never holds up the first screen.
-import "@fontsource-variable/archivo/wdth.css";
+// Archivo, trimmed and served with the site (src/styles/global.css). Text
+// shows at once in a fallback font and swaps when it arrives, so the font
+// never holds up the first screen.
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
