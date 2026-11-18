@@ -23,7 +23,7 @@ import { dollars, money } from "./money.js";
 import { addressField } from "./places.js";
 import { photoPicker } from "./photos.js";
 import { addDays, clock, hoursText, isoDate, localDate, longDate, moment, MONTHS, monthStart } from "./time.js";
-import { token } from "./turnstile.js";
+import { token, TurnstileError } from "./turnstile.js";
 
 const root = document.querySelector("[data-booking]");
 const config = JSON.parse(document.getElementById("booking-config").textContent);
@@ -602,6 +602,17 @@ function renderStep7() {
   frame(7, offline ? "Review and send" : "Review and book", "", body);
 }
 
+// Why a send failed, in plain words with the phone number. Every send gives
+// up in a set time (api.js, turnstile.js) and the button comes back; the
+// form keeps everything the customer entered, so trying again is one click.
+function sendFailed(error) {
+  if (error instanceof ApiError) {
+    return error.message.includes(config.phone) ? error.message : `${error.message} Questions? Call or text ${config.phone}.`;
+  }
+  const what = error instanceof TurnstileError ? "We couldn't check this browser just now, so nothing was sent." : "We couldn't send that just now.";
+  return `${what} Everything you entered is still here. Please try again, or call or text ${config.phone}.`;
+}
+
 async function sendBooking() {
   if (S.sending) return;
   S.sending = true;
@@ -618,7 +629,7 @@ async function sendBooking() {
     S.sending = false;
     if (error instanceof ApiError) return bookingRefused(error);
     if (error instanceof OfflineError) return failed(error);
-    S.sendError = "We couldn't confirm you're a person. Please try again.";
+    S.sendError = sendFailed(error);
     return render();
   }
   S.sending = false;
@@ -639,7 +650,7 @@ function bookingRefused(error) {
   } else if (error.code === "ask_for_quote") {
     return startRequest("level");
   } else {
-    S.sendError = error.message;
+    S.sendError = sendFailed(error);
   }
   render();
 }
@@ -682,7 +693,7 @@ async function sendTimeRequest() {
     await hold("time-request", { ...offlineBody(), turnstile: value });
   } catch (error) {
     S.sending = false;
-    S.sendError = error instanceof ApiError ? error.message : `We couldn't send that just now. Please try again, or call or text ${config.phone}.`;
+    S.sendError = sendFailed(error);
     return render();
   }
   S.sending = false;
@@ -807,7 +818,7 @@ async function sendRequest() {
       goOffline("We can't reach our booking system just now. Your request can still be sent, without photos.");
       return;
     }
-    S.sendError = error instanceof ApiError ? error.message : `We couldn't send that just now. Please try again, or call or text ${config.phone}.`;
+    S.sendError = sendFailed(error);
     return renderRequest();
   }
   S.sending = false;

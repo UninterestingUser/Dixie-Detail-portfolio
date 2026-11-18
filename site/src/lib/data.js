@@ -12,12 +12,13 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { parse } from "yaml";
+import { setting } from "./settings.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // site/src/lib -> the repository's data/ folder.
 export const DATA_DIR = process.env.DIXIE_DATA_DIR || path.resolve(here, "../../../data");
 
-export const API_BASE = (process.env.API_BASE || "https://api.dixiedetail.com/api/public/v1").replace(/\/$/, "");
+export const API_BASE = setting("API_BASE").replace(/\/+$/, "");
 
 export function readData(name) {
   return parse(readFileSync(path.join(DATA_DIR, name), "utf8"));

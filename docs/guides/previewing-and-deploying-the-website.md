@@ -4,7 +4,7 @@ summary: How to preview the website on the workstation against a fake API, run i
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [website, cloudflare, deploy, preview, guide, phase-3]
 related: [docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
 ---
@@ -27,7 +27,7 @@ npm run preview                    # serves it at http://127.0.0.1:4321
 
 `build:test` builds the site against the fake API in `site/tests/fake/api.mjs`, with invented prices and places, and points Turnstile and Google's address suggestions at local fakes. `npm run preview` serves the build with those fakes, so the whole booking flow works, offline form included, with nothing leaving the workstation. In the fake address box, type "100 Example" for an address in the area and "1 Made Up" for one outside it.
 
-To see the real prices, build against the real API: `API_BASE=https://api.dixiedetail.com/api/public/v1 npx astro build`, then `npx astro preview`. The pages show the published pricebook. The booking page switches to its request a time form, because the API only answers browsers on the addresses in `PUBLIC_API_CORS_ORIGINS`.
+To see the real prices, build against the real API with the server running: `API_BASE=https://api.dixiedetail.com/api/public/v1 PUBLIC_TURNSTILE_SITE_KEY=<the site key> PUBLIC_GOOGLE_MAPS_BROWSER_KEY=<the browser key> npx astro build`, then `npx astro preview`. A build with any of those three empty stops at once with a message naming it. The pages show the published pricebook. The booking page switches to its request a time form, because the API only answers browsers on the addresses in `PUBLIC_API_CORS_ORIGINS`.
 
 ## Run the checks
 
@@ -49,26 +49,44 @@ Do these in order. They need the Cloudflare account that holds dixiedetail.com, 
 
 1. **The KV namespace for held requests.** On the workstation, from `site/`: `npx wrangler@4.48.0 login`, then `npx wrangler@4.48.0 kv namespace create OFFLINE_REQUESTS`. Put the id it prints in `site/workers/offline-replay/wrangler.toml` and commit it; it names the namespace and is not a secret.
 2. **The Pages project.** In the Cloudflare dashboard, Workers & Pages, Create, Pages, Connect to Git. Pick this repository and name the project `dixie-detail`, which gives the staging address `https://dixie-detail.pages.dev`; if that name is taken, use the address Cloudflare gives instead, everywhere below. Production branch `main`, root directory `site`, build command `npm run build`, output directory `dist`.
-3. **Its build settings** (Settings, Variables and Secrets, for Production and Preview), all listed under `website_build_settings` in [data/configuration.yaml](../../data/configuration.yaml):
+3. **Its build settings** (Settings, Variables and Secrets, for Production and Preview), all listed under `website_build_settings` in [data/configuration.yaml](../../data/configuration.yaml). Add each as type **Text**, not Secret: they are public, and the build can't read a Secret. A build with `API_BASE`, `PUBLIC_TURNSTILE_SITE_KEY` or `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` empty stops with a message naming it:
    - `API_BASE` = `https://api.dixiedetail.com/api/public/v1`;
    - `PUBLIC_TURNSTILE_SITE_KEY` = the Turnstile widget's site key;
    - `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` = the browser key;
    - `NODE_VERSION` = `22`.
-4. **The offline piece's bindings** on the same project. Under Settings, Bindings, add a KV namespace binding named `OFFLINE_REQUESTS`, pointing to the namespace from step 1. Under Variables and Secrets, add `API_BASE` as above. Add two secrets, `TURNSTILE_SECRET_KEY` and `OFFLINE_REQUESTS_SIGNING_KEY`, each pasted from the Bitwarden web vault into the dashboard, so neither touches disk. Then redeploy once, so the function picks them up.
+4. **The offline piece's bindings** on the same project. Under Settings, Bindings, add a KV namespace binding named `OFFLINE_REQUESTS`, pointing to the namespace from step 1. Under Variables and Secrets, add `API_BASE` as above. Add two secrets, `TURNSTILE_SECRET_KEY` and `OFFLINE_REQUESTS_SIGNING_KEY`, as type **Secret**, the only two on this project, each pasted from the Bitwarden web vault into the dashboard, so neither touches disk. Then redeploy once, so the function picks them up.
 5. **The replay Worker.** From `site/`: `npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml`, then `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. It then runs every 5 minutes.
 6. **The deploy hook.** On the Pages project, Settings, Builds, Deploy hooks: add one named "Pricebook" for branch `main`. Copy its URL into a new Bitwarden secret `CLOUDFLARE_PAGES_DEPLOY_HOOK` in the "Dixie Detail" project, then restart the stack on the server so the app gets it: `sudo systemctl restart dixie-stack.service`.
-7. **Let the staging site call the API.** In `/srv/dixie-detail/.env` on the server, add the staging address to `PUBLIC_API_CORS_ORIGINS`, such as `https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev`, then restart the stack.
+7. **Let the staging site call the API.** In `/srv/dixie-detail/.env` on the server, add the staging address to `PUBLIC_API_CORS_ORIGINS`, such as `https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev`, then restart the stack. Each entry is `https://` and the host name only, with no trailing slash and no path. The app trims a stray slash or space, and refuses to start, naming the entry, if one is still not a bare origin. The app's log shows the list in use: `docker compose logs app | grep "CORS origins"`. Then check from the workstation:
+
+   ```bash
+   curl -s -o /dev/null -D - -H "Origin: https://dixie-detail.pages.dev" https://api.dixiedetail.com/api/public/v1/vehicles/years
+   ```
+
+   The headers should include `access-control-allow-origin: https://dixie-detail.pages.dev`. Without it, every call from the staging site is refused with a 403, "This address can't be used from that website".
 8. **Turnstile.** In the Turnstile widget's settings, add the staging host name (`dixie-detail.pages.dev`) beside dixiedetail.com.
 9. **Google.** In the Google Cloud console, restrict the browser key to the Places API (New), and to the referrers `https://dixiedetail.com/*`, `https://www.dixiedetail.com/*` and `https://dixie-detail.pages.dev/*`.
 10. **The photo cards' pictures.** In the control app, open each vehicle class's settings and set its photo card picture to `/images/vehicle-classes/` and the file named for it under `class_images` in [data/site-content.yaml](../../data/site-content.yaml), such as `/images/vehicle-classes/vehicle-class-small.webp`.
 
 Then open the staging address on a phone and make a test booking from a number in `TEST_PHONE_NUMBERS`; `delete_test_records` removes it afterwards ([public-api.md](../reference/public-api.md#test-records)).
 
+### Testing the offline form on staging
+
+Order matters, because the build reads the API:
+
+1. **With the server running,** start a build (or let a merge start one) and wait for it to finish. A build started while the server is down fails, and the last good build stays live.
+2. **Then stop the server,** such as `sudo systemctl stop dixie-stack.service`, or stop the tunnel.
+3. **Open the booking page.** It should say it can't reach the booking system and show the request a time form. Send a request from a number in `TEST_PHONE_NUMBERS`; it should say "Request sent", and the request waits in KV under `pending:` ([Checking the offline piece](#checking-the-offline-piece)).
+4. **Start the server again.** Within 5 minutes the Worker replays the request, and it appears in the control app as a website request.
+
+If a send fails instead, the form says so with the phone number and keeps what was typed. The browser's console names the cause, such as a Turnstile error.
+
 ## How changes reach the site
 
 - **A merged pull request** that touches the site or the data files starts a build on Cloudflare; it is live in a few minutes. A pull request gets its own preview address on Cloudflare. Its booking page uses the request a time form, because preview addresses are not in `PUBLIC_API_CORS_ORIGINS`.
 - **A pricebook version published in the control app** calls the deploy hook once the publish is saved. A version published for a later date is rebuilt for on its effective date by the nightly `rebuild_website --if-due`. `python manage.py rebuild_website` asks for a rebuild by hand, from a one-off app container (`docker compose run --rm --no-deps -T app python manage.py rebuild_website`).
-- **A build that can't read the API fails** and the last good build stays live. Cloudflare's build log names the address it couldn't read. Rebuild from the dashboard once the server is back.
+- **A build that can't read the API fails** and the last good build stays live, so the server must be running for any build, a deploy hook's included. Cloudflare's build log names the address it couldn't read. Rebuild from the dashboard once the server is back.
+- **A build with a required setting empty fails** at once, and its log names the setting.
 
 ## Checking the offline piece
 

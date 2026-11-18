@@ -277,3 +277,125 @@ test("on a phone the estimate is a bar that opens into a sheet @phone", async ({
   await page.getByRole("button", { name: "Close" }).click();
   await expect(page.locator("[data-sheet]")).toBeHidden();
 });
+
+// Never hang (booking-flow.md, when a send fails) ------------------------------
+
+const PHONE = "(423) 380-9120";
+
+async function offlineVanRequest(page, request) {
+  await fake(request, { offline: true });
+  await page.goto("/book/");
+  await page.getByRole("button", { name: /^Full-size Vans/ }).click();
+  await page.locator('[data-ask-quote="class"]').click();
+  await page.getByLabel("What do you need?").fill("Conversion van.");
+  await address(page, "100 Example", "100 Example St NW");
+  await page.getByLabel("First name").fill("Morgan");
+  await page.getByLabel("Mobile number").pressSequentially("4235550160");
+}
+
+async function offlineTimeRequestToReview(page, request) {
+  await fake(request, { offline: true });
+  await page.goto("/book/");
+  await page.getByRole("button", { name: /^Medium/ }).click();
+  await page.getByLabel("Year").fill("2019");
+  await page.getByLabel("Make").fill("Toyota");
+  await page.getByLabel("Model").fill("RAV4");
+  await page.getByRole("button", { name: "Two rows" }).click();
+  await cont(page, 1).click();
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await address(page, "100 Example", "100 Example St NW");
+  await cont(page, 4).click();
+  const day = new Date();
+  day.setDate(day.getDate() + 3);
+  if (day.getDay() === 0) day.setDate(day.getDate() + 1);
+  await page.getByLabel("Preferred day").fill(day.toISOString().slice(0, 10));
+  await cont(page, 5).click();
+  await details(page);
+  await cont(page, 6).click();
+}
+
+test("a Turnstile that can't start, as with an empty site key, brings the button back with the phone number", async ({ page, request }) => {
+  await offlineTimeRequestToReview(page, request);
+  await page.evaluate(() => localStorage.setItem("fake-turnstile", "throw"));
+  await page.locator("[data-book]").click();
+  await expect(page.locator("#step-7 .error")).toContainText(`call or text ${PHONE}`);
+  await expect(page.locator("[data-book]")).toHaveText("Send my request");
+  expect((await log(request)).filter((entry) => entry.to === "/offline/time-request")).toHaveLength(0);
+  // Nothing typed is lost: the same form sends once Turnstile works.
+  await page.evaluate(() => localStorage.removeItem("fake-turnstile"));
+  await page.locator("[data-book]").click();
+  await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
+  const held = (await log(request)).find((entry) => entry.to === "/offline/time-request");
+  expect(held.body).toMatchObject({ first_name: "Jordan", mobile: "(423) 555-0142", service: 12 });
+});
+
+test("a blank Turnstile token counts as a failure, and nothing is sent", async ({ page, request }) => {
+  await offlineVanRequest(page, request);
+  await page.evaluate(() => localStorage.setItem("fake-turnstile", "empty"));
+  await page.locator("[data-send-request]").click();
+  await expect(page.locator("[data-request] .error")).toContainText(`call or text ${PHONE}`);
+  await expect(page.locator("[data-send-request]")).toHaveText("Send my request");
+  await expect(page.getByLabel("What do you need?")).toHaveValue("Conversion van.");
+  expect((await log(request)).filter((entry) => entry.to === "/offline/quote-request")).toHaveLength(0);
+});
+
+test("a Turnstile check that never answers gives up, and the button comes back", async ({ page, request }) => {
+  await page.clock.install();
+  await offlineVanRequest(page, request);
+  await page.evaluate(() => localStorage.setItem("fake-turnstile", "hang"));
+  await page.locator("[data-send-request]").click();
+  await expect(page.locator("[data-send-request]")).toHaveText("Sending…");
+  await page.clock.fastForward(46000);
+  await expect(page.locator("[data-request] .error")).toContainText(`call or text ${PHONE}`);
+  await expect(page.locator("[data-send-request]")).toHaveText("Send my request");
+  await expect(page.getByLabel("Mobile number")).toHaveValue("(423) 555-0160");
+});
+
+test("an offline piece that never answers gives up, and the button comes back", async ({ page, request }) => {
+  await page.clock.install();
+  await offlineVanRequest(page, request);
+  let reached;
+  const asked = new Promise((resolve) => (reached = resolve));
+  await page.route("**/offline/quote-request", () => reached()); // never answered
+  await page.locator("[data-send-request]").click();
+  await asked;
+  await expect(page.locator("[data-send-request]")).toHaveText("Sending…");
+  await page.clock.fastForward(21000);
+  await expect(page.locator("[data-request] .error")).toContainText(`call or text ${PHONE}`);
+  await expect(page.locator("[data-send-request]")).toHaveText("Send my request");
+});
+
+// Offline detection: any network failure, timeout or 5xx from the API.
+// Cloudflare's own error pages, such as the 530 while the tunnel is down,
+// carry no CORS headers, so from the real site the browser sees a network
+// failure; here, on one origin, the 530 itself arrives. Both are offline.
+for (const [name, answer] of [
+  ["Cloudflare's 530 while the tunnel is down", (route) => route.fulfill({ status: 530, contentType: "text/html", body: "<html><body>Error 1033: Argo Tunnel error</body></html>" })],
+  ["a 502", (route) => route.fulfill({ status: 502, contentType: "text/html", body: "Bad gateway" })],
+  ["a network failure", (route) => route.abort("failed")],
+]) {
+  test(`${name} from the API switches the site to the offline form`, async ({ page }) => {
+    await page.route("**/api/public/v1/**", answer);
+    await page.goto("/book/");
+    await expect(page.locator("[data-banner]")).toContainText("can't reach our booking system");
+    await expect(page.getByRole("button", { name: /^Medium/ })).toBeVisible();
+  });
+}
+
+test("an API that never answers switches the site to the offline form after its time limit", async ({ page }) => {
+  await page.clock.install();
+  await page.route("**/api/public/v1/**", () => {}); // never answered
+  await page.goto("/book/");
+  await page.clock.fastForward(16000);
+  await expect(page.locator("[data-banner]")).toContainText("can't reach our booking system");
+});
+
+test("a 530 in the middle of a booking switches to the offline form and keeps the vehicle", async ({ page }) => {
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.route("**/api/public/v1/**", (route) => route.fulfill({ status: 530, contentType: "text/html", body: "Error 1033" }));
+  await page.locator('[data-service="Full Detail"]').click();
+  await expect(page.locator("[data-banner]")).toContainText("can't reach our booking system");
+  await expect(page.locator('[data-service="Full Detail"]')).toBeVisible();
+});

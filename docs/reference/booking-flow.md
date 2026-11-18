@@ -4,7 +4,7 @@ summary: The seven booking steps on the website, the running estimate card, addr
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-18
 tags: [booking, website, estimate-card, phase-3]
 related: [docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/guides/previewing-and-deploying-the-website.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/reference/public-api.md, docs/decisions/0099-quote-requests-with-photos.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0072-motorcycles-class.md, docs/reference/vehicle-classification.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/reference/pricing.md, docs/reference/scheduling-and-calendars.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/reference/website-and-seo.md]
 ---
@@ -90,3 +90,9 @@ The site is static on Cloudflare, so its pages and built-in prices load even whe
 Cloudflare's offline piece takes the form. It checks the Turnstile token, tries the server at once, signed, and otherwise holds the request until the server answers, replaying it every 5 minutes ([public-api.md](public-api.md#offline-requests-post-time-requests), [decision 0100](../decisions/0100-public-api-quotes-and-bookings.md)). The server prices it on arrival, keeps it as a request rather than an appointment, and flags it for the owner if the price differs from what the customer saw. The customer is told Dixie Detail will confirm the day and price by text or call.
 
 A quote request sent while the server can't be reached goes the same way, without photos: the form says photos can be sent later and gives the number to text them to.
+
+Any network failure, timeout or server error (5xx) from the API counts as the server being unreachable, whenever it happens. That includes Cloudflare's own error pages, such as the 530 while the tunnel is down: they carry no CORS headers, so the browser sees them as a network failure. A call the server answers with a refusal (4xx) is not an outage; the form shows the server's message.
+
+## When a send fails
+
+No send waits forever. A booking, a quote request and a request a time each give up after a set time: 45 seconds for the Turnstile check (long enough to tick the box if Cloudflare asks), then 15 seconds for the server, or 20 for Cloudflare's offline piece, which tries the server first. Each photo upload gives up after 3 minutes. A Turnstile check that can't start, reports an error or returns no token counts as a failure, and nothing is sent. When a send fails, the button comes back, a plain message says nothing was sent and gives the business phone number, and everything the customer entered stays in the form, so trying again is one press. A booking that fails because the server can't be reached becomes the request a time form instead, keeping the vehicle, service and details.
