@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-19
 ---
 
 # Data files
@@ -18,7 +18,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | [pricing-rules.yaml](pricing-rules.yaml) | Condition levels (which services take one, Level 3 booked by quote), maintenance ratios, service time, crew time, rounding, full-day flag, the quote | Loaded by `load_pricebook` with each version; a difference makes a new draft |
 | [vehicle-classes.yaml](vehicle-classes.yaml) | The eight size-based vehicle classes, their size variants, settings and photo cards, the retired body-type classes, the rule settings, and the possible future classes | Read by `load_pricebook` (classes) and `classify_vehicles` (rule settings) |
 | [site-content.yaml](site-content.yaml) | The website's text in the owner's words: the four service cards and services page sections (with the old pages they redirect from), each service's text and the classes a service is only for (`only_for`), the red box headings, the condition level cards and quote notes, the homepage services subhead and the services page's top, and the picture for each vehicle class and section | Read by the Astro site in `site/` at build time; `old_pages` also makes `_redirects` |
-| [site-pages.yaml](site-pages.yaml) | Each website page's address, title and description, and the text carried over from the current site: how it works, the counties, the questions, the about page and the city pages | Read by the Astro site in `site/` at build time |
+| [site-pages.yaml](site-pages.yaml) | Each website page's address, title and description, and the text carried over from the current site, with the owner's later changes: how it works, the counties, the homepage's map and six questions, every question, the about page and the city pages | Read by the Astro site in `site/` at build time |
 | [vehicle-names.yaml](vehicle-names.yaml) | The names customers know: EPA base models split into nameplates, the other spellings of one vehicle, make spellings, customers' names for vehicles filed under another name or make (some for certain years), and the trim words left off a customer's model name | Read by `import_vehicle_data`, `classify_vehicles`, `link_vehicles` and the booking lookup |
 | [approval-spot-checks.yaml](approval-spot-checks.yaml) | The models the owner spot-checks on the approval list, some for certain model years | Read by the control app's approval list |
 | [size-classes.yaml](size-classes.yaml) | The size-based classification rules (decisions 0082 and 0083): the box-volume lines, the pickup line, smoothing, the vans, the rules in order, the model overrides, seat rows, and the proposed classes for vehicles left in a retired class | Kept in step by `classify_vehicles` (launch rules and overrides the owner has not edited); read by `apply_size_classes` |

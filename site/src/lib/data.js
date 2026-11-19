@@ -8,7 +8,7 @@
 // Text comes from data/site-content.yaml (the owner's words) and
 // data/site-pages.yaml (carried over from the old site).
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { parse } from "yaml";
@@ -24,19 +24,18 @@ export function readData(name) {
   return parse(readFileSync(path.join(DATA_DIR, name), "utf8"));
 }
 
-export function readOptionalData(name) {
-  const file = path.join(DATA_DIR, name);
-  return existsSync(file) ? parse(readFileSync(file, "utf8")) : null;
-}
-
 const cache = new Map();
 
-async function fetchJson(endpoint) {
+async function fetchJson(endpoint, missing) {
   const url = `${API_BASE}/${endpoint}`;
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "dixie-detail-site-build" } });
+      if (response.status === 404 && missing !== undefined) {
+        console.warn(`${url} answered 404: the server predates it, so the build goes on without it.`);
+        return missing;
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -47,17 +46,26 @@ async function fetchJson(endpoint) {
   throw new Error(`The site build could not read ${url}: ${lastError.message}. The last good build stays live.`);
 }
 
-export function api(endpoint) {
-  if (!cache.has(endpoint)) cache.set(endpoint, fetchJson(endpoint));
+// missing, when given, is the answer to use when the endpoint answers 404,
+// as a server deployed before the endpoint was added does.
+export function api(endpoint, missing) {
+  if (!cache.has(endpoint)) cache.set(endpoint, fetchJson(endpoint, missing));
   return cache.get(endpoint);
 }
 
 export const content = readData("site-content.yaml");
 export const pages = readData("site-pages.yaml");
 export const business = readData("business.yaml");
-// Real reviews the owner supplies; never written for the site. The file is
-// optional, and without it the reviews section links to Google only.
-export const reviews = (readOptionalData("reviews.yaml") || {}).reviews || [];
+// The customer reviews shown on the site, from the public API like prices
+// (decision 0109): kept in the control app, so customers' names never enter
+// this repository, and never written for the site. With none shown, the
+// reviews section links to Google only. A server deployed before the
+// endpoint existed answers 404, read as no reviews, so the build that
+// carries this change doesn't fail before the server is updated; any other
+// failure stops the build, as for prices.
+export async function reviews() {
+  return (await api("reviews", { reviews: [] })).reviews;
+}
 
 export const phone = business.phone;
 

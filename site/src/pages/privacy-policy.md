@@ -48,7 +48,7 @@ We do not sell your personal information. We share it only with:
 
 ## Cookies and analytics
 
-Our website uses cookies and similar tools to keep the site working. You can block or delete cookies in your browser settings, and the site will still work.
+Our website uses cookies and similar tools to keep the site working. You can block or delete cookies in your browser settings, and the site will still work. The service area map on our homepage is embedded from Google Maps, which may set its own cookies.
 
 Our booking and quote forms use Cloudflare Turnstile, which checks information about your browser and device to tell real visitors from automated spam. When you type your address, Google Maps suggests matching addresses, so what you type is sent to Google.
 

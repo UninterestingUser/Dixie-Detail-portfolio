@@ -9,6 +9,7 @@ from . import views
 urlpatterns = [
     path("services", views.services, name="api-services"),
     path("booking-options", views.booking_options, name="api-booking-options"),
+    path("reviews", views.reviews, name="api-reviews"),
     path("price-table", views.price_table, name="api-price-table"),
     path("vehicles/years", views.vehicle_years, name="api-vehicle-years"),
     path("vehicles/makes", views.vehicle_makes, name="api-vehicle-makes"),

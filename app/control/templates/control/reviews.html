@@ -1,0 +1,24 @@
+{% extends "control/base.html" %}
+{% block title %}Reviews{% endblock %}
+{% block content %}
+<h1>Reviews</h1>
+<p class="help">The customer reviews the website shows, in this order: the first three on the homepage, all of them on the reviews page. Copy each one from Google. Every change rebuilds the website, ready in a few minutes. Reviews are kept only here, never in the repository.</p>
+<p class="button-row"><a class="button primary" href="{% url 'site-review-new' %}">Add a review</a></p>
+<ul class="list" aria-label="Reviews in website order">
+  {% for review in reviews %}
+    <li class="card review-item{% if not review.shown %} faded{% endif %}" data-review="{{ review.pk }}">
+      <strong>{{ review.name }}</strong>{% if not review.shown %} <span class="badge">Hidden</span>{% endif %}
+      <span class="sub">{{ review.reviewed_on|date:"M j, Y" }}{% if review.stars %} · {{ review.stars }} star{{ review.stars|pluralize }}{% endif %}{% if review.google_url %} · linked to Google{% endif %}</span>
+      <p class="review-text">{{ review.text|truncatechars:180 }}</p>
+      <div class="button-row">
+        <a class="button" href="{% url 'site-review' review.pk %}">Edit</a>
+        <form method="post" action="{% url 'site-review-move' review.pk %}">{% csrf_token %}<input type="hidden" name="direction" value="up"><button type="submit"{% if forloop.first %} disabled{% endif %} aria-label="Move the review by {{ review.name }} up">Move up</button></form>
+        <form method="post" action="{% url 'site-review-move' review.pk %}">{% csrf_token %}<input type="hidden" name="direction" value="down"><button type="submit"{% if forloop.last %} disabled{% endif %} aria-label="Move the review by {{ review.name }} down">Move down</button></form>
+        <form method="post" action="{% url 'site-review-shown' review.pk %}">{% csrf_token %}{% if not review.shown %}<input type="hidden" name="shown" value="on">{% endif %}<button type="submit">{% if review.shown %}Hide{% else %}Show{% endif %}</button></form>
+      </div>
+    </li>
+  {% empty %}
+    <li class="muted">No reviews yet. Until one is shown, the website links to the Google reviews.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

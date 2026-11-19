@@ -29,7 +29,7 @@ from django.utils import timezone
 
 from appointments import booking
 from appointments.models import Appointment
-from billing.methods import website_methods
+from billing.methods import saved_method, website_label
 from customers import matching
 from scheduling.availability import local_midnight
 from staff.authorization import auto_assign
@@ -43,8 +43,8 @@ ORIGIN_SOURCE = "Website"
 
 def parse(data):
     validate.only(data, ["quote", "start", "first_name", "mobile", "payment_method", "consents", "turnstile"], ["last_name", "color"])
-    method = data["payment_method"]
-    if method not in {choice.value for choice in website_methods()}:
+    method = saved_method(data["payment_method"])
+    if method is None:
         raise bad_request("payment_method")
     return {
         "quote": validate.number(data["quote"], "quote"),
@@ -52,7 +52,7 @@ def parse(data):
         "first_name": validate.text(data["first_name"], "first_name", 100),
         "last_name": validate.text(data.get("last_name"), "last_name", 100, required=False),
         "mobile": validate.phone(data["mobile"]),
-        "payment_method": method,
+        "payment_method": method.value,
         "color": validate.text(data.get("color"), "color", 40, required=False),
         "consents": consent.parse(data["consents"]),
         "turnstile": data["turnstile"],
@@ -164,7 +164,7 @@ def summary(web, start, color, payment_method):
     """What was booked, from the quote, the place and this booking only."""
     quote = web.quote
     local = timezone.localtime(start)
-    method_label = dict((choice.value, choice.label) for choice in website_methods())[payment_method]
+    method_label = website_label(payment_method)
     return {
         "service": quote.service.name,
         "add_ons": [add_on.name for add_on in quote.add_ons.order_by("name")],

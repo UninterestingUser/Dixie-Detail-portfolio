@@ -20,7 +20,7 @@ from publicapi.models import WebQuote
 from vehicles.models import Vehicle, VehicleClass
 
 from .consent import wording
-from .testing import CLEVELAND, PLACES, ApiTestCase, PublicClient, add_model, booking_body, eastern, open_day, siteverify
+from .testing import CLEVELAND, PLACES, ApiTestCase, PublicClient, add_model, booking_body, day_after, eastern, open_day, siteverify
 
 
 class BookingTests(ApiTestCase):
@@ -65,7 +65,7 @@ class BookingTests(ApiTestCase):
         self.assertEqual(address.verification, Address.Verification.GOOGLE_PLACE)
         self.assertEqual(address.tax_jurisdiction.name, "Cleveland")
         # A second booking from the same number matches the customer quietly.
-        self.book(start=eastern(open_day(4), 8))
+        self.book(start=eastern(day_after(open_day(3)), 8))
         self.assertEqual(Customer.objects.filter(mobile="4235550142").count(), 1)
 
     def test_consent_records_the_exact_wording_the_time_and_the_source(self):
@@ -184,6 +184,16 @@ class BookingTests(ApiTestCase):
         self.assertEqual(self.book(expect=400, start="2026-12-08 08:00")[1]["field"], "start")
         self.assertEqual(self.book(expect=400, first_name="x" * 101)[1]["field"], "first_name")
         self.assertFalse(Appointment.objects.exists())
+
+    def test_cash_app_is_saved_as_cash_app_pay_and_shown_as_cash_app(self):
+        _, answer = self.book(payment_method="cash_app")
+        appointment = Appointment.objects.get(reference=answer["reference"])
+        self.assertEqual(appointment.preferred_payment_method, "cash_app_pay")
+        self.assertEqual(answer["summary"]["payment_method"], "Cash App")
+        # The two routes are for recording payments; a gift card and the
+        # owner-only methods are never taken from the website.
+        for method in ("gift_card", "trade"):
+            self.assertEqual(self.book(expect=400, payment_method=method)[1]["field"], "payment_method")
 
     def test_a_number_on_the_test_list_makes_test_records(self):
         _, answer = self.book(mobile="(423) 555-0199")

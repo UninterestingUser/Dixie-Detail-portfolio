@@ -1,0 +1,15 @@
+{% extends "control/base.html" %}
+{% block title %}{% if review %}Edit review{% else %}Add a review{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if review %}Edit the review by {{ review.name }}{% else %}Add a review{% endif %}</h1>
+<form method="post" class="stack" novalidate>
+  {% csrf_token %}
+  {% for error in form.non_field_errors %}<p class="error" role="alert">{{ error }}</p>{% endfor %}
+  {% for field in form %}{% include "control/_field.html" %}{% endfor %}
+  <div class="actions">
+    <button type="submit" class="primary">Save</button>
+    <a class="button" href="{% url 'site-reviews' %}">Cancel</a>
+  </div>
+</form>
+{% if review %}<p><a class="button danger" href="{% url 'site-review-delete' review.pk %}">Delete this review</a></p>{% endif %}
+{% endblock %}

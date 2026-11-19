@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import (
-    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, review_views, schedule_views,
+    approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, review_views, schedule_views, site_review_views,
     scheduling_views, staff_views, views,
 )
 
@@ -100,6 +100,13 @@ urlpatterns = [
     path("catalog/differences/retired/<int:pk>/", approval_views.retired_act, name="retired-act"),
     path("catalog/approvals/", approval_views.approval_list, name="approvals"),
     path("catalog/approvals/act/", approval_views.approval_act, name="approval-act"),
+    # The reviews the website shows (decision 0109).
+    path("reviews/", site_review_views.reviews, name="site-reviews"),
+    path("reviews/new/", site_review_views.review_form, name="site-review-new"),
+    path("reviews/<int:pk>/", site_review_views.review_form, name="site-review"),
+    path("reviews/<int:pk>/move/", site_review_views.review_move, name="site-review-move"),
+    path("reviews/<int:pk>/shown/", site_review_views.review_shown, name="site-review-shown"),
+    path("reviews/<int:pk>/delete/", site_review_views.review_delete, name="site-review-delete"),
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("sw.js", views.service_worker, name="service-worker"),
     path("offline/", views.offline, name="offline"),

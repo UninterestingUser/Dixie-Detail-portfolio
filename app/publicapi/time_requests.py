@@ -30,7 +30,7 @@ from decimal import Decimal, InvalidOperation
 from django.conf import settings
 from django.db import transaction
 
-from billing.methods import website_methods
+from billing.methods import saved_method
 
 from . import bookings, catalog, consent, quotes, validate
 from .http import ApiError, bad_request
@@ -66,7 +66,8 @@ def parse(data):
         request_id = uuid.UUID(str(data["request_id"]))
     except ValueError as error:
         raise bad_request("request_id") from error
-    if data["payment_method"] not in {choice.value for choice in website_methods()}:
+    payment_method = saved_method(data["payment_method"])
+    if payment_method is None:
         raise bad_request("payment_method")
     shown = validate.only(data["shown"], ["total", "pricebook_version"], field="shown")
     try:
@@ -92,7 +93,7 @@ def parse(data):
         "first_name": validate.text(data["first_name"], "first_name", 100),
         "last_name": validate.text(data.get("last_name"), "last_name", 100, required=False),
         "mobile": validate.phone(data["mobile"]),
-        "payment_method": data["payment_method"],
+        "payment_method": payment_method.value,
         "color": validate.text(data.get("color"), "color", 40, required=False),
         "consents": consent.parse(data["consents"]),
         "shown_total": shown_total,

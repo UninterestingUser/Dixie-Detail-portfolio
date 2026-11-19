@@ -16,6 +16,13 @@ def services(request):
 
 
 @api_view(["GET"], "read", cache_seconds=CACHE_SECONDS)
+def reviews(request):
+    """The reviews shown on the website, in the owner's order (decision 0109)."""
+    query(request, ())
+    return catalog.reviews()
+
+
+@api_view(["GET"], "read", cache_seconds=CACHE_SECONDS)
 def price_table(request):
     query(request, ())
     return catalog.price_table()

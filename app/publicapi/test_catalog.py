@@ -51,6 +51,12 @@ class PricebookTests(ApiTestCase):
         data = self.client.get_api("booking-options").json()
         methods = {method["value"] for method in data["payment_methods"]}
         self.assertIn("cash", methods)
+        # One entry per method, in the order of payment_methods_accepted in
+        # data/business.yaml, with one Cash App: never its two routes.
+        self.assertEqual(
+            [(method["value"], method["label"]) for method in data["payment_methods"]],
+            [("cash", "Cash"), ("card", "Card"), ("venmo", "Venmo"), ("paypal", "PayPal"), ("cash_app", "Cash App"), ("bitcoin", "Bitcoin")],
+        )
         # Owner-only methods and gift cards are never offered (decision 0053).
         self.assertFalse(methods & {"check", "trade", "gift_card"})
         self.assertEqual(data["consent"]["version"], "2026-11-18")
@@ -211,3 +217,23 @@ class RateLimitTests(ApiTestCase):
 
         # The address is kept only as a keyed hash.
         self.assertFalse(RateCount.objects.filter(visitor__contains="198.51").exists())
+
+
+class ReviewsApiTests(ApiTestCase):
+    """The reviews the website shows (decision 0109). Invented names."""
+
+    def test_only_shown_reviews_in_the_screens_order_and_no_combined_rating(self):
+        import datetime
+
+        from marketing.models import Review
+
+        self.assertEqual(self.client.get_api("reviews").json(), {"reviews": []})
+        Review.objects.create(name="Lee Z.", text="Second.", reviewed_on=datetime.date(2026, 10, 1), position=1)
+        Review.objects.create(name="Pat Q.", text="First.", reviewed_on=datetime.date(2026, 11, 1), stars=5, google_url="https://g.co/kgs/example", position=0)
+        Review.objects.create(name="Hid D.", text="Hidden.", reviewed_on=datetime.date(2026, 9, 1), position=2, shown=False)
+        response = self.client.get_api("reviews")
+        self.assertEqual(response["Cache-Control"], "public, max-age=300")
+        self.assertEqual(response.json(), {"reviews": [
+            {"name": "Pat Q.", "text": "First.", "date": "2026-11-01", "stars": 5, "link": "https://g.co/kgs/example"},
+            {"name": "Lee Z.", "text": "Second.", "date": "2026-10-01", "stars": None, "link": None},
+        ]})

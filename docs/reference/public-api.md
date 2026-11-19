@@ -4,16 +4,16 @@ summary: Every endpoint the website calls under /api/public/v1/, what each takes
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
-tags: [api, booking, website, quotes, photos, phase-3]
-related: [docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
+updated: 2026-11-19
+tags: [api, booking, website, quotes, photos, reviews, phase-3]
+related: [docs/decisions/0109-reviews-kept-in-the-control-app.md, docs/decisions/0110-one-website-list-of-payment-methods.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
 
 # Public API
 
 The public API is the only part of the app the internet can reach, at `https://api.dixiedetail.com/api/public/v1/`, through the Cloudflare Tunnel ([network-and-access.md](../architecture/network-and-access.md), [decision 0038](../decisions/0038-two-doors-access-model.md)). The website's booking form and its build call it. It was built in Phase 3, Step 4 (decisions [0099](../decisions/0099-quote-requests-with-photos.md) and [0100](../decisions/0100-public-api-quotes-and-bookings.md)); the code is in `app/publicapi/`.
 
-It does what the booking form needs and nothing more: list services and prices, look vehicles up, check an address, price a job, show open times, take a booking, take a quote request with photos, and take an offline "request a time" form. Every answer is JSON. Prices are worked out only on the server: the website shows the server's numbers and does no arithmetic ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
+It does what the booking form and the site's build need and nothing more: list services and prices, list the reviews the site shows, look vehicles up, check an address, price a job, show open times, take a booking, take a quote request with photos, and take an offline "request a time" form. Every answer is JSON. Prices are worked out only on the server: the website shows the server's numbers and does no arithmetic ([decision 0059](../decisions/0059-quoted-price-is-price-of-record.md)).
 
 ## Endpoints at a glance
 
@@ -21,6 +21,7 @@ It does what the booking form needs and nothing more: list services and prices, 
 | --- | --- | --- |
 | `GET services` | The published pricebook: services, classes, size variants, condition levels, "from" prices. Cacheable | read |
 | `GET booking-options` | Payment methods, the consent wording, how long a quote lasts, photo limits. Cacheable | read |
+| `GET reviews` | The customer reviews shown on the website, for its build. Cacheable | read |
 | `GET price-table` | The server's total and time on site for every job bookable online, for the website's build. Cacheable | read |
 | `GET vehicles/years` | Model years in the catalog, newest first | read |
 | `GET vehicles/makes?year=` | Makes with a model in that year | read |
@@ -106,14 +107,22 @@ A quote never changes. A changed input, such as another condition level or the a
 
 ## Open times: GET open-times
 
-The quote's number, an optional first date and a number of days (14 by default, 31 at most). The answer lists each day with its open start times, each as an Eastern ISO time and a label such as "8:00 AM", from the availability check with the quote's time on site and the place's location ([scheduling-and-calendars.md](scheduling-and-calendars.md)). Days run from the minimum notice to the furthest bookable date.
+The quote's number, an optional first date and a number of days (14 by default, 31 at most). The answer lists every day from the first date to the last, each with its open start times (none on a closed day: a closed weekday, a holiday or other date exception, Time Off, a full day, or a day the job can't fit), each as an Eastern ISO time and a label such as "8:00 AM", from the availability check with the quote's time on site and the place's location ([scheduling-and-calendars.md](scheduling-and-calendars.md)). Days run from the minimum notice to the furthest bookable date. The booking form lets a visitor pick only a day with at least one time ([booking-flow.md](booking-flow.md)).
 
 - Only open times are shown, never why a time is closed: the reasons name other customers' jobs and the owner's Time Off.
 - Drives not already in the drive-time cache are estimated, never asked of Google, so visitors browsing times can't use up the day's Google Routes calls. The booking checks the time again with real drive times.
 
+## Reviews: GET reviews
+
+The reviews a manager has shown on the control app's Reviews screen, in the screen's order, for the website's build ([decision 0109](../decisions/0109-reviews-kept-in-the-control-app.md)). Each is the `name` as shown (first name and last initial), the `text`, its `date`, `stars` (1 to 5, or null) and `link` to the Google review (or null). There is no combined rating. With none shown the list is empty, and the site keeps only its link to the Google reviews. Saving any change on the Reviews screen asks for a site rebuild through the deploy hook, as a pricebook publish does ([website-and-seo.md](website-and-seo.md)).
+
+## Payment methods
+
+`booking-options` lists the methods a customer can pick as their preferred one, one entry per method in the order of `payment_methods_accepted` in `data/business.yaml`: Cash, Card, Venmo, PayPal, Cash App and Bitcoin, with the values `cash`, `card`, `venmo`, `paypal`, `cash_app` and `bitcoin` ([decision 0110](../decisions/0110-one-website-list-of-payment-methods.md)). Cash App is one choice: a booking with `cash_app` is saved as Cash App Pay, and the two routes it can take, Cash App Pay in the Stripe link and straight to the $cashtag, are for recording a payment in the control app only. `cash_app_pay` and `cash_app_direct`, sent by an older copy of the page, are still taken and saved as themselves. Check, trade and a gift card are refused as a `bad_request` on `payment_method` ([decision 0053](../decisions/0053-check-and-trade-owner-only.md)). The booking summary names the method as the customer saw it, such as "Cash App".
+
 ## Booking: POST bookings
 
-The body is `quote`, `start`, `first_name`, optional `last_name`, `mobile`, `payment_method` (one of the website's methods), optional `color`, `consents` and `turnstile`. In one database transaction the server:
+The body is `quote`, `start`, `first_name`, optional `last_name`, `mobile`, `payment_method` (one of the website's methods, below), optional `color`, `consents` and `turnstile`. In one database transaction the server:
 
 1. checks the Turnstile token;
 2. refuses a quote already booked (`quote_used`);

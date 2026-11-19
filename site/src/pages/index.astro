@@ -15,6 +15,12 @@ import shineInterior from "../assets/photos/shine-interior.webp";
 import { business, content, pages } from "../lib/data.js";
 import { faqSchema, localBusiness } from "../lib/schema.js";
 const page = pages.pages.home;
+// The homepage's six questions, in the owner's order, from the /faq/ list.
+const homeFaq = pages.home_faq.map((question) => {
+  const item = pages.faq.find((entry) => entry.question === question);
+  if (!item) throw new Error(`The homepage question "${question}" is not in faq (data/site-pages.yaml).`);
+  return item;
+});
 const tel = "+1" + business.phone.number.replace(/\D/g, "");
 const jsonLd = [await localBusiness()];
 // The hero photo is the largest thing on a phone's first screen: preloaded,
@@ -68,17 +74,17 @@ const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, 
     </div>
   </section>
 
+  <Reviews />
+
   <section class="section" id="area">
     <div class="wrap"><ServiceArea /></div>
   </section>
-
-  <Reviews />
 
   <section class="section" id="faq">
     <div class="wrap faq">
       <div class="faq-list">
         <h2 class="display" style="margin-bottom:6px">Common questions</h2>
-        <FaqList items={pages.faq.slice(0, 3)} />
+        <FaqList items={homeFaq} />
         <a href="/faq/" style="font-weight:700">See all questions</a>
       </div>
       <Cta />

@@ -4,7 +4,7 @@ summary: "The index of task-based guides for using the Dixie Detail system day t
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-14
+updated: 2026-11-19
 tags: [guides, how-to, index]
 related: [docs/overview/roadmap.md, docs/reference/control-app.md, docs/operations/deploying-changes.md]
 ---
@@ -25,6 +25,7 @@ Running the server itself (deploying, backups, monitoring) is covered in [../ope
 | [Assigning staff and the services they may do](assigning-staff.md) | Owner |
 | [Editing and publishing the pricebook](editing-the-pricebook.md) | Owner |
 | [Handling website bookings](handling-website-bookings.md) | Owner and staff |
+| [Managing the website's reviews](managing-website-reviews.md) | Owner |
 | [Previewing and deploying the website](previewing-and-deploying-the-website.md) | Owner and developer |
 
 ## Planned guides for the owner

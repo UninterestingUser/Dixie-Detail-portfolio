@@ -23,16 +23,25 @@ const CLASSES = [
   { id: 8, name: "Motorcycles", booked_by_quote: false, photo_card: "Motorcycles", examples: [], sizes: [] },
 ];
 
+// In the real API's order: by kind, then name (catalog.pricebook).
 const SERVICES = [
-  { id: 10, name: "Full Detail", kind: "service", description: "Inside and out", condition_applies: true },
-  { id: 11, name: "Interior Only", kind: "service", description: "The interior half", condition_applies: true },
-  { id: 12, name: "Exterior Only", kind: "service", description: "The exterior half", condition_applies: false },
+  { id: 20, name: "Carpet Extraction", kind: "add_on", description: "Carpets", condition_applies: false },
+  { id: 15, name: "Headlight Restoration", kind: "add_on", description: "Both headlights", condition_applies: false },
+  { id: 21, name: "Seat Extraction", kind: "add_on", description: "Cloth seats", condition_applies: false },
   { id: 13, name: "1-Step Paint Correction", kind: "service", description: "One-step polish", condition_applies: false },
   { id: 14, name: "2-Step Paint Correction", kind: "service", description: "Two-step polish", condition_applies: false },
+  { id: 12, name: "Exterior Only", kind: "service", description: "The exterior half", condition_applies: false },
+  { id: 10, name: "Full Detail", kind: "service", description: "Inside and out", condition_applies: true },
+  { id: 11, name: "Interior Only", kind: "service", description: "The interior half", condition_applies: true },
   { id: 17, name: "Motorcycle Detail", kind: "service", description: "A motorcycle detailed", condition_applies: false },
-  { id: 15, name: "Headlight Restoration", kind: "add_on", description: "Both headlights", condition_applies: false },
-  { id: 20, name: "Carpet Extraction", kind: "add_on", description: "Carpets", condition_applies: false },
-  { id: 21, name: "Seat Extraction", kind: "add_on", description: "Cloth seats", condition_applies: false },
+];
+
+// Invented reviews, in the owner's order: never a real customer's.
+const REVIEWS = [
+  { name: "Alex T.", text: "Invented review one. The truck looks new again.", date: "2026-11-02", stars: 5, link: "https://g.co/kgs/example-1" },
+  { name: "Sam R.", text: "Invented review two, with no rating.", date: "2026-10-20", stars: null, link: null },
+  { name: "Jo M.", text: "Invented review three.", date: "2026-10-05", stars: 4, link: null },
+  { name: "Chris P.", text: "Invented review four, on the reviews page only.", date: "2026-09-12", stars: 5, link: null },
 ];
 
 // The services each add-on goes with, as the real pricebook keeps them
@@ -254,8 +263,9 @@ export function createFakeApi() {
     const days = [];
     for (let i = 0; i < Number(params.get("days") || 14); i++) {
       const day = addDays(first, i);
-      if (day.getDay() === 0 || day.getDate() % 5 === 0) continue;
       const date = iso(day);
+      // Like the real API: every day in the window, a closed one with no times.
+      if (day.getDay() === 0 || day.getDate() % 5 === 0) { days.push({ date, times: [] }); continue; }
       days.push({ date, times: ["08:00", "08:30", "09:00"].map((t) => ({ start: `${date}T${t}:00-05:00`, label: t === "08:00" ? "8:00 AM" : t === "08:30" ? "8:30 AM" : "9:00 AM" })) });
     }
     return [200, { quote: web.number, expired: false, from: iso(first), to: iso(addDays(first, 30)), days }];
@@ -312,8 +322,9 @@ export function createFakeApi() {
     const p = url.searchParams;
     if (path === "services") return send(res, 200, pricebook());
     if (path === "price-table") return send(res, 200, priceTable());
+    if (path === "reviews") return send(res, 200, { reviews: REVIEWS });
     if (path === "booking-options") return send(res, 200, {
-      payment_methods: [["card", "Card"], ["cash", "Cash"], ["venmo", "Venmo"], ["paypal", "PayPal"], ["cash_app", "Cash App"], ["bitcoin", "Bitcoin"]].map(([value, label]) => ({ value, label })),
+      payment_methods: [["cash", "Cash"], ["card", "Card"], ["venmo", "Venmo"], ["paypal", "PayPal"], ["cash_app", "Cash App"], ["bitcoin", "Bitcoin"]].map(([value, label]) => ({ value, label })),
       consent: CONSENT, quote_lifetime_minutes: 120, photos: { max_per_request: 6, max_megabytes: 15, types: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] },
     });
     if (path === "vehicles/years") return send(res, 200, { years: [2026, 2025, 2024, 2021, 2020, 2019, 2018, 2015], first_year: 1984 });
