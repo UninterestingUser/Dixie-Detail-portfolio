@@ -1,14 +1,44 @@
 ---
+// The one services page (owner, 2026-11-18): four full-width sections,
+// anchored #detail, #correction, #headlight and #extraction, each with its
+// photo, its services' full text in the owner's words and the red box with
+// its button. No price tables: the price shows on the booking page. The old
+// category pages redirect here (public/_redirects).
+import { Image } from "astro:assets";
 import Base from "../../layouts/Base.astro";
 import PageHead from "../../components/PageHead.astro";
-import ServiceCards from "../../components/ServiceCards.astro";
 import Cta from "../../components/Cta.astro";
-import { pages } from "../../lib/data.js";
-import { localBusiness } from "../../lib/schema.js";
+import { content, pages, serviceSections } from "../../lib/data.js";
+import { localBusiness, serviceSchema } from "../../lib/schema.js";
 const page = pages.pages.services;
+const photos = import.meta.glob("../../assets/page-photos/*.webp", { eager: true });
+const photoFor = (file) => Object.entries(photos).find(([key]) => key.endsWith("/" + file))?.[1]?.default;
+const sections = await serviceSections();
+const url = "https://dixiedetail.com/services/";
+const jsonLd = [await localBusiness(), ...(await Promise.all(sections.flatMap((section) => section.services.map((service) => serviceSchema(service, `${url}#${section.anchor}`)))))];
 ---
-<Base title={page.title} description={page.description} path={page.path} jsonLd={[await localBusiness()]}>
-  <PageHead eyebrow="Services and pricing" heading="Mobile Detailing Services" lead="Every price depends on the vehicle's size and condition. Pick your vehicle and the exact figure shows before you book." />
-  <section class="section tint"><div class="wrap"><ServiceCards /></div></section>
-  <section class="section"><div class="wrap faq"><div class="faq-list"><h2 class="display">Not sure which one?</h2><p class="lead">Call or text and we'll help you find the right service. Or pick your vehicle on the booking page and every price for it shows there.</p></div><Cta /></div></section>
+<Base title={page.title} description={page.description} path={page.path} jsonLd={jsonLd}>
+  <PageHead eyebrow="Services" heading="Mobile Detailing Services" lead="Mobile, in your driveway, across Bradley, McMinn, Hamilton, Polk and Meigs Counties. Pick your vehicle on the booking page and your exact price shows." />
+  {sections.map((section, index) => {
+    const photo = photoFor(content.section_images[section.anchor]);
+    return (
+      <section class:list={["section", "service-section", { tint: index % 2 === 1 }]} id={section.anchor} aria-labelledby={`h-${section.anchor}`}>
+        <div class="wrap service-split">
+          <div class="stack service-text">
+            <h2 class="display" id={`h-${section.anchor}`}>{section.title}</h2>
+            {section.services.map((service) => (
+              <article class="stack" style="gap:10px">
+                <h3>{service.heading}</h3>
+                <p class="lead">{service.full}</p>
+              </article>
+            ))}
+          </div>
+          <div class="stack service-side">
+            {photo && <Image src={photo} alt={`${section.title} by Dixie Detail`} widths={[400, 700]} sizes="(max-width: 900px) 100vw, 480px" />}
+            <Cta button={section.button} />
+          </div>
+        </div>
+      </section>
+    );
+  })}
 </Base>

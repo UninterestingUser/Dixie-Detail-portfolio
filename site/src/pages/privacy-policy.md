@@ -25,11 +25,10 @@ Dixie Detail LLC ("Dixie Detail", "we", "us") provides mobile vehicle detailing 
 - To schedule, perform and follow up on the services you request.
 - To price a job you ask us to quote, using your description and photos.
 - To check your service address, find the sales tax rate that applies to it, and estimate our drive time.
-- To send appointment confirmations, reminders, arrival updates, payment links and receipts.
+- To send appointment confirmations, reminders, arrival updates, payment links, receipts and a review request after your service.
 - To answer your questions.
 - To keep business, tax and accounting records.
 - To understand how our website is used and to improve it.
-- With your separate consent, to send review requests, service reminders and offers.
 
 ## Text messages
 

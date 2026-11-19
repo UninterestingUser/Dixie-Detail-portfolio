@@ -89,6 +89,15 @@ export async function fillPrices(text) {
   });
 }
 
-export function pageFor(slug) {
-  return content.pages.find((page) => page.slug === slug);
+// The four service sections in data/site-content.yaml, each with its
+// services (text and pricebook entry) and its "from" price: the lowest of
+// the pricebook's own prices for its price_from services, cars and trucks
+// only. A comparison, never arithmetic (decision 0059).
+export async function serviceSections() {
+  const priced = await servicesWithPrices();
+  return content.sections.map((section) => {
+    const cells = priced.filter((service) => section.price_from.includes(service.name)).flatMap((service) => service.priced.prices);
+    const from = cells.map((cell) => cell.price).sort((a, b) => Number(a) - Number(b))[0] || null;
+    return { ...section, from, services: section.services.map((name) => priced.find((service) => service.name === name)).filter(Boolean) };
+  });
 }

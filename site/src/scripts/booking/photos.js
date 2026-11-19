@@ -65,7 +65,7 @@ export function photoPicker({ config, limits, box }) {
   const add = h("label", { for: "qr-photos", class: "button outline" }, "Add photos");
   const element = h("div", { class: "stack", style: "gap:10px" },
     h("p", { class: "label", style: "margin:0" }, "Photos"),
-    h("p", { class: "hint", style: "margin:0" }, `Photos are optional, but they help us give you an accurate quote. Up to ${max}.`),
+    h("p", { class: "hint", style: "margin:0" }, `Photos are optional, but helpful in providing an accurate estimate. Add up to ${max} photos.`),
     grid, h("div", {}, input, add), message);
 
   const openSession = () => {

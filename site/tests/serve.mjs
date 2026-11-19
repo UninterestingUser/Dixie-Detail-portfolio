@@ -13,6 +13,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFakeApi, GOOD_TOKEN, PLACES } from "./fake/api.mjs";
+import { parseRedirects } from "../src/lib/redirects.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.resolve(here, "../dist");
@@ -53,6 +54,17 @@ async function places(req, res) {
   res.end(JSON.stringify({ suggestions }));
 }
 
+// Cloudflare Pages' redirects, from the build's _redirects file.
+async function redirect(res, pathname) {
+  let rules = [];
+  try { rules = parseRedirects(await readFile(path.join(dist, "_redirects"), "utf8")); } catch { return false; }
+  const rule = rules.find(([from]) => from === pathname);
+  if (!rule) return false;
+  res.writeHead(rule[2], { Location: rule[1] });
+  res.end();
+  return true;
+}
+
 async function file(res, pathname) {
   let target = path.join(dist, decodeURIComponent(pathname));
   if (!target.startsWith(dist)) { res.writeHead(403); return res.end(); }
@@ -81,5 +93,6 @@ createServer(async (req, res) => {
   const handled = await fake.handle(req, res);
   if (handled !== false) return;
   if (process.env.FAKE_ONLY) { res.writeHead(404); return res.end(); }
+  if (await redirect(res, pathname)) return;
   return file(res, pathname);
 }).listen(port, "127.0.0.1", () => console.log(`serving on http://127.0.0.1:${port}`));

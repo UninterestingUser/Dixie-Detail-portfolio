@@ -57,9 +57,6 @@ pages:
     title: Text Message Terms - Dixie Detail
     description: The terms for text messages from Dixie Detail, including how to stop them and get help.
 
-# Service pages (pages in site-content.yaml) take their title from there:
-# "<page title> in Cleveland TN - Dixie Detail", at /services/<slug>/.
-service_page_title: "{title} in Cleveland TN - Dixie Detail"
 
 hero:
   heading: Mobile Car Detailing in Cleveland Tennessee
@@ -230,10 +227,10 @@ cities:
       Bradley County. If your driveway has a Bradley County address, Dixie
       Detail has you covered.
     services:
-      detailing: Full interior and exterior in the driveway. Daily drivers, campus cars, and work trucks.
-      paint-correction: Swirls and light scratches from automatic washes and I-75 miles. Ceramic wax when we finish.
-      headlight-restoration: Both headlights. UV-damaged lenses on older Cleveland daily drivers.
-      shampoo-and-extraction: For carpets and cloth seats that a regular detail won't pull out of. Added on top of the full detail when the interior needs a deeper reset.
+      detail: Full interior and exterior in the driveway. Daily drivers, campus cars, and work trucks.
+      correction: Swirls and light scratches from automatic washes and I-75 miles. Ceramic wax when we finish.
+      headlight: Both headlights. UV-damaged lenses on older Cleveland daily drivers.
+      extraction: For carpets and cloth seats that a regular detail won't pull out of. Added on top of the full detail when the interior needs a deeper reset.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-
@@ -277,10 +274,10 @@ cities:
       needing a cleanup for the Saturday Cruise-In at Midway Milkshake - Dixie
       Detail is the call to make.
     services:
-      detailing: Showroom-level interior and exterior at the house. Built for daily drivers and well-loved family SUVs - including the 20-year-old Pilot crowd.
-      paint-correction: Dull, swirled clear coat from years of McMinn sun and automatic washes. 1-step or 2-step, then ceramic wax.
-      headlight-restoration: Both lights, multi-stage, with UV protection. Common on older Athens daily drivers.
-      shampoo-and-extraction: For cloth seats and carpets that have taken on clay, spills, and years of kids.
+      detail: Showroom-level interior and exterior at the house. Built for daily drivers and well-loved family SUVs - including the 20-year-old Pilot crowd.
+      correction: Dull, swirled clear coat from years of McMinn sun and automatic washes. 1-step or 2-step, then ceramic wax.
+      headlight: Both lights, multi-stage, with UV protection. Common on older Athens daily drivers.
+      extraction: For cloth seats and carpets that have taken on clay, spills, and years of kids.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-
@@ -324,10 +321,10 @@ cities:
       Signal, or downtown with tight parking, call first - we need a legal
       spot, water, and power for the day.
     services:
-      detailing: Full interior and exterior, mobile. Commuter sedans, family SUVs, and trucks.
-      paint-correction: Swirl removal and gloss restoration, finished with ceramic wax. The right job if Hamilton Place lot washers have hazed the clear coat.
-      headlight-restoration: Both headlights, UV-protected. Not a wipe-on kit.
-      shampoo-and-extraction: Deep pull on carpets and cloth seats. Add it when you book the detail.
+      detail: Full interior and exterior, mobile. Commuter sedans, family SUVs, and trucks.
+      correction: Swirl removal and gloss restoration, finished with ceramic wax. The right job if Hamilton Place lot washers have hazed the clear coat.
+      headlight: Both headlights, UV-protected. Not a wipe-on kit.
+      extraction: Deep pull on carpets and cloth seats. Add it when you book the detail.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-

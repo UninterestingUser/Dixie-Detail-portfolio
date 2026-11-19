@@ -1,11 +1,13 @@
 ---
+// The red box: a heading, one line, its button (button: "See my price" or,
+// for an add-on, "Add to detail") and the phone number, which never wraps.
 import { business } from "../lib/data.js";
 const tel = "+1" + business.phone.number.replace(/\D/g, "");
-const { heading = "Ready for the showroom shine?" } = Astro.props;
+const { heading = "Ready for the showroom shine?", button = "See my price" } = Astro.props;
 ---
 <div class="cta">
   <h2>{heading}</h2>
   <p>See your exact price and pick a day in about two minutes.</p>
-  <a class="button white" href="/book/">See my price</a>
-  <a class="button ghost" href={`tel:${tel}`}>Call or text {business.phone.number}</a>
+  <a class="button white" href="/book/">{button}</a>
+  <a class="button ghost nowrap" href={`tel:${tel}`}>Call or text {business.phone.number}</a>
 </div>
