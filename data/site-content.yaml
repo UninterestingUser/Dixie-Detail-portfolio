@@ -11,7 +11,11 @@ meta:
 # here: the site reads them from the price book.
 # card: the short text on the booking flow's service, add-on and condition cards.
 # section: the services page section that carries the full text.
-# The booking flow lists the services in this order.
+# only_for: the vehicle classes a service is for, when it isn't for cars,
+# trucks and vans. A class named here is offered only the services naming
+# it, in the quote request card's service list (owner, 2026-11-18).
+# The booking flow lists the services in this order, and the add-ons
+# Carpet Extraction, Seat Extraction, Headlight Restoration (owner, 2026-11-18).
 
 # The four service sections (owner, 2026-11-18): the homepage cards, and
 # the anchored sections of the one services page, /services/#<anchor>.
@@ -19,6 +23,7 @@ meta:
 # The card's "from" price is the lowest of the price_from services' prices,
 # cars and trucks only (no motorcycle is priced for these). button is the
 # card's and section's first button: "See my price" or "Add to detail".
+# cta_heading is the heading of the section's red box (owner, 2026-11-18).
 # old_pages are the category pages these sections replace; each redirects
 # permanently to its section (site/public/_redirects).
 sections:
@@ -31,6 +36,7 @@ sections:
     price_from: [Full Detail, Interior Only, Exterior Only]
     button: See my price
     services: [Full Detail, Interior Only, Exterior Only, Motorcycle Detail]
+    cta_heading: Book your detail today
     old_pages: [detailing, motorcycle-detail]
   - anchor: correction
     title: Paint Correction
@@ -40,6 +46,7 @@ sections:
     price_from: [1-Step Paint Correction, 2-Step Paint Correction]
     button: See my price
     services: [1-Step Paint Correction, 2-Step Paint Correction]
+    cta_heading: Book a paint correction
     old_pages: [paint-correction]
   - anchor: headlight
     title: Headlight Restoration
@@ -49,6 +56,7 @@ sections:
     price_from: [Headlight Restoration]
     button: Add to detail
     services: [Headlight Restoration]
+    cta_heading: Restore your headlights
     old_pages: [headlight-restoration]
   - anchor: extraction
     title: Shampoo & Extraction
@@ -58,6 +66,7 @@ sections:
     price_from: [Carpet Extraction, Seat Extraction]
     button: Add to detail
     services: [Carpet Extraction, Seat Extraction]
+    cta_heading: Book your detail today
     old_pages: [shampoo-and-extraction]
 
 services:
@@ -137,24 +146,6 @@ services:
       mirror shine. The service is completed with a final wash and a ceramic
       wax to protect your newly-corrected paint.
 
-  - name: Headlight Restoration
-    section: headlight
-    heading: Headlight Restoration
-    add_on: true       # added to Full Detail, Exterior Only or a paint correction (decision 0106)
-    card: >-
-      Foggy, yellowed lenses restored to clear, with UV protection so they
-      stay that way. Covers both headlights. Add it to a Full Detail,
-      Exterior Only or paint correction.
-    full: >-
-      Over time, headlights become foggy and yellowed due to UV damage,
-      environmental exposure, and normal wear and tear when driving. Dull
-      headlights can be restored to showroom clarity with the proper tools
-      and technique. This is more than a temporary polish. We perform a
-      multi-stage process to remove the damaged outer layer, buff the lens,
-      and add UV protection to ensure lasting results. This service covers
-      both headlights, and is added to a Full Detail, Exterior Only, 1-Step
-      or 2-Step Paint Correction.
-
   - name: Carpet Extraction
     section: extraction
     heading: Carpet Extraction
@@ -184,9 +175,28 @@ services:
       again, matching your freshly detailed interior. Priced by the number
       of seat rows in your vehicle.
 
+  - name: Headlight Restoration
+    section: headlight
+    heading: Headlight Restoration
+    add_on: true       # added to Full Detail, Exterior Only or a paint correction (decision 0106)
+    card: >-
+      Foggy, yellowed lenses restored to clear, with UV protection so they
+      stay that way. Covers both headlights. Add it to a Full Detail,
+      Exterior Only or paint correction.
+    full: >-
+      Over time, headlights become foggy and yellowed due to UV damage,
+      environmental exposure, and normal wear and tear when driving. Dull
+      headlights can be restored to showroom clarity with the proper tools
+      and technique. This is more than a temporary polish. We perform a
+      multi-stage process to remove the damaged outer layer, buff the lens,
+      and add UV protection to ensure lasting results. This service covers
+      both headlights, and is added to a Full Detail, Exterior Only, 1-Step
+      or 2-Step Paint Correction.
+
   - name: Motorcycle Detail
     section: detail
     heading: Motorcycle Detail
+    only_for: [Motorcycles]   # the classes it's for; the other services are for every other class (quote request card)
     card: >-
       A meticulous multi-stage wash around every critical component, finished
       with a ceramic wax for a deep shine.
@@ -222,8 +232,9 @@ condition_levels:
       the years. Significant dog hair, heavy stains, or possibly mold.
     booked_by_quote: true
     quote_note: >-
-      Unique situations require manual quoting. Tell us what you're dealing
-      with, add photos if you can, and we'll get you a price.
+      Unique situations require manual quoting. Hit the button below to tell
+      us what you're dealing with and add photos if you can. We'll respond
+      with a quote, usually within 24 hours.
     request_intro: >-
       Unique situations require a manual estimate. Give us some details about
       the job and we'll reply with a price, usually within a day.
@@ -259,17 +270,29 @@ class_images:
   Full-size Trucks: vehicle-class-fullsizetruck.webp
   Motorcycles: vehicle-class-motorcycles.webp
 
-# Section photos (owner, 2026-11-14), one per services page section. The
-# motorcycle text joined Premium Detailing on 2026-11-18, so its photo is
-# no longer shown. The site makes
-# smaller sizes itself and never shows a photo larger than its own pixels.
-# The owner keeps these five as they are for launch (2026-11-14).
+# Section photos (owner, 2026-11-14), one per section: on the services page
+# and, square, on the homepage service cards. The detailing photo was
+# replaced on 2026-11-18. The motorcycle text joined Premium Detailing on
+# 2026-11-18, so its photo is no longer shown. The site makes smaller sizes
+# itself and never shows a photo larger than its own pixels.
 # The files are in site/src/assets/page-photos/.
 section_images:
-  detail: exterior-wash.webp
+  detail: detailing.webp
   correction: paint-correction.webp
   headlight: headlight-restoration.webp
   extraction: seat-extraction.webp
+
+# The homepage's "Services and pricing" subhead and the services page's top
+# (owner, 2026-11-18).
+home_services_lead: >-
+  We provide upfront pricing right here on our website. Pick your vehicle,
+  see the exact price with tax, and pick a day that works for you. We show up
+  and handle the rest.
+services_page:
+  heading: Mobile Detailing Services
+  lead: >-
+    We come to your driveway in Bradley, McMinn, Hamilton, Polk, and Meigs
+    Counties.
 
 # The two policy pages: Text Message Terms as published; Privacy Policy from
 # the doc "Privacy Policy update for the new website" (final 2026-11-14).

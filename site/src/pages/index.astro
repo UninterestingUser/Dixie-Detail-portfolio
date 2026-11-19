@@ -12,7 +12,7 @@ import Cta from "../components/Cta.astro";
 import hero from "../assets/photos/hero.webp";
 import shineExterior from "../assets/photos/shine-exterior.webp";
 import shineInterior from "../assets/photos/shine-interior.webp";
-import { business, pages } from "../lib/data.js";
+import { business, content, pages } from "../lib/data.js";
 import { faqSchema, localBusiness } from "../lib/schema.js";
 const page = pages.pages.home;
 const tel = "+1" + business.phone.number.replace(/\D/g, "");
@@ -45,18 +45,14 @@ const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, 
   <section class="section" id="how">
     <div class="wrap shine">
       <div class="shine-photos">
-        <Image src={shineExterior} alt="Truck paint after a mobile detail in Bradley County, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
-        <Image src={shineInterior} alt="Mobile interior car detailing at a home in Cleveland, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 300px" quality={60} fetchpriority="low" />
+        <Image src={shineExterior} alt="Truck paint after a mobile detail in Bradley County, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 200px" quality={60} fetchpriority="low" />
+        <Image src={shineInterior} alt="Mobile interior car detailing at a home in Cleveland, TN" widths={[240, 360, 600]} sizes="(max-width: 640px) 45vw, 200px" quality={60} fetchpriority="low" />
       </div>
       <div class="shine-text">
         <p class="eyebrow">{pages.shine.eyebrow}</p>
         <h2 class="display">{pages.shine.heading}</h2>
         <p class="lead">{pages.shine.text}</p>
         <HowItWorks />
-        <div class="buttons">
-          <a class="button" href="/book/">See my price</a>
-          <a class="button outline" href="/contact/">Contact us</a>
-        </div>
       </div>
     </div>
   </section>
@@ -66,7 +62,7 @@ const heroImage = await getImage({ src: hero, widths: HERO_WIDTHS, quality: 50, 
       <div class="stack" style="gap:10px;max-width:720px">
         <p class="eyebrow">Services and pricing</p>
         <h2 class="display">Priced for your vehicle</h2>
-        <p class="lead">Every price depends on the vehicle's size and condition. Pick your vehicle and the exact figure shows before you book.</p>
+        <p class="lead">{content.home_services_lead}</p>
       </div>
       <ServiceCards />
     </div>

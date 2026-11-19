@@ -143,10 +143,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Shine */
 /* How it works: the photos stretch to the text's height and never fall
    short of it, so the text is never taller than the photos beside it. */
-.shine { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: stretch; }
-.shine-photos { min-width: 0; min-height: 520px; display: flex; gap: 14px; }
+/* The photos are a narrow column (owner, 2026-11-18), so on a desktop
+   each step's text fits in two lines; contain: size lets the photos take
+   the text's height and no more. */
+.shine { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 48px; align-items: stretch; }
+.shine-photos { min-width: 0; contain: size; display: flex; gap: 14px; }
 .shine-photos img { flex: 1 1 0; min-width: 0; height: 100%; object-fit: cover; }
-@media (max-width: 900px) { .shine { grid-template-columns: minmax(0, 1fr); gap: 36px; } .shine-photos { min-height: 0; } .shine-photos img { height: auto; aspect-ratio: 3 / 5; } }
+@media (max-width: 900px) { .shine { grid-template-columns: minmax(0, 1fr); gap: 36px; } .shine-photos { contain: none; } .shine-photos img { height: auto; aspect-ratio: 3 / 5; } }
 .shine-photos img:first-child { border-radius: 16px 0 0 16px; }
 .shine-photos img:last-child { border-radius: 0 16px 16px 0; }
 .shine-text { min-width: 0; display: flex; flex-direction: column; gap: 22px; justify-content: center; }
@@ -159,16 +162,44 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Service cards, 2 x 2 like the current dixiedetail.com: light blue, the
    white "from" price box, and two buttons side by side, stacked full width
    when they don't fit the card. */
-.service-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
-@media (max-width: 800px) { .service-cards { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
-.service-card { background: #e5edf9; border-radius: 18px; padding: 32px; display: flex; flex-direction: column; gap: 18px; }
+/* Laid out, and its photos fetched, only as it nears the screen, so on a
+   slow phone the photos never share the connection with the hero (about
+   0.15 s of the homepage's largest paint). The sizes held meanwhile are
+   the cards' usual heights. */
+.service-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; content-visibility: auto; contain-intrinsic-size: auto 702px; }
+@media (max-width: 800px) { .service-cards { grid-template-columns: minmax(0, 1fr); gap: 16px; contain-intrinsic-size: auto 2180px; } }
+/* The photo sits at the top of each card, and from 1328 px up (where the
+   page reaches its full width and each card is 628 px wide) on the card's
+   right side instead: a square, full card height, behind the content, its
+   outer corners following the card's, with the text entirely to its left.
+   The card is its own container, so the photo is 54% of its width (--photo)
+   and the card is at least that tall. With the text at 16 px every card
+   comes out exactly square, the city pages' too; measured, since a line of
+   text more or less changes the height. Narrower, the text no longer fits
+   beside a square, so the photo goes back to the top. */
+.service-card { container-type: inline-size; position: relative; background: #e5edf9; border-radius: 18px; overflow: hidden; }
+.service-card-photo { overflow: hidden; border-radius: 18px 18px 0 0; }
+.service-card-photo img { width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; }
+.service-card-body { position: relative; z-index: 1; padding: 32px; display: flex; flex-direction: column; gap: 16px; }
 .service-card-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .service-card h3 { margin: 0; font-size: 28px; font-weight: 800; line-height: 1.15; }
 .price-box { margin: 0; flex-shrink: 0; background: var(--white); border-radius: 10px; padding: 10px 18px; font-size: 17px; font-weight: 700; color: var(--navy); white-space: nowrap; }
-.service-card .text { margin: 0; font-size: 17px; line-height: 1.55; color: var(--text); flex-grow: 1; }
+.service-card .text { margin: 0; font-size: 17px; line-height: 1.55; color: var(--text); flex-grow: 1; text-align: left; }
 .card-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
 .card-buttons .button { flex: 1 1 150px; white-space: nowrap; }
-@media (max-width: 640px) { .service-card { padding: 22px; } .service-card h3 { font-size: 22px; } }
+@media (min-width: 1328px) {
+  .service-card { --photo: 54cqw; }
+  .service-card-photo { position: absolute; top: 0; right: 0; bottom: 0; width: var(--photo); border-radius: 0 18px 18px 0; }
+  .service-card-photo img { height: 100%; aspect-ratio: auto; }
+  /* The photo's left edge fades into the card, so a long heading that
+     reaches it stays readable, and the outlined button is filled white. */
+  .service-card-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #e5edf9 0, rgba(229, 237, 249, 0.6) 14%, rgba(229, 237, 249, 0) 32%); }
+  .service-card .button.outline { background: var(--white); }
+  .service-card .button.outline:hover { background: var(--navy); }
+  .service-card-body { min-height: var(--photo); gap: 12px; }
+  .service-card .text { font-size: 16px; line-height: 1.5; max-width: calc(100cqw - var(--photo) - 56px); }
+}
+@media (max-width: 640px) { .service-card-body { padding: 22px; } .service-card h3 { font-size: 22px; } }
 
 /* Service area */
 .area { display: flex; flex-wrap: wrap; gap: 40px; align-items: stretch; }
@@ -217,7 +248,16 @@ details.qa p { margin: 12px 0 0; font-size: 17px; line-height: 1.55; color: var(
 .service-side .cta { flex: 0 0 auto; }
 
 /* Page heads for inner pages */
-.page-head { background: var(--charcoal); color: var(--white); padding: 56px 0 64px; border-bottom: 6px solid var(--red); }
+/* The header area of every page but the homepage: the header photo, full
+   width under a 50% black shade, behind the header bar and the page's
+   heading, down to the red line. */
+.page-top { position: relative; background: var(--charcoal); color: var(--white); border-bottom: 6px solid var(--red); }
+.page-top-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 55%; }
+.page-top::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); }
+.page-top > :not(.page-top-photo) { position: relative; z-index: 1; }
+.page-top > .site-header { z-index: 5; }
+.page-top .site-header.solid { background: transparent; }
+.page-head { color: var(--white); padding: 56px 0 64px; }
 .page-head h1 { color: var(--white); }
 .page-head .lead { color: #e6e6e6; margin-top: 14px; max-width: 760px; }
 .split { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }

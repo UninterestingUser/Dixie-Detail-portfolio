@@ -77,7 +77,9 @@ test("a car, from vehicle to the booked confirmation with its calendar file", as
   // Review: the vehicle with its color, the services joined, the new
   // condition wording; one consent box, unchecked, next to the button.
   const review = page.locator("#step-7 .review-list");
-  await expect(review).toContainText("2019 Toyota RAV4 · two rows (silver)");
+  // No size: nobody was asked one for a RAV4.
+  await expect(review).toContainText("2019 Toyota RAV4 (silver)");
+  await expect(review).not.toContainText("two rows");
   await expect(review).toContainText("Full Detail + Seat Extraction");
   await expect(review).toContainText("Needs extra attention");
   await expect(review.locator("dt", { hasText: "Color" })).toHaveCount(0);
@@ -378,13 +380,17 @@ test("a blank Turnstile token counts as a failure, and nothing is sent", async (
   expect((await log(request)).filter((entry) => entry.to === "/offline/quote-request")).toHaveLength(0);
 });
 
-test("a Turnstile check that never answers gives up, and the button comes back", async ({ page, request }) => {
+test("a Turnstile check that never answers is tried four times, then gives up, and the button comes back", async ({ page, request }) => {
   await page.clock.install();
   await offlineVanRequest(page, request);
   await page.evaluate(() => localStorage.setItem("fake-turnstile", "hang"));
   await page.locator("[data-send-request]").click();
   await expect(page.locator("[data-send-request]")).toHaveText("Sending…");
-  await page.clock.fastForward(46000);
+  // Four tries of 15 seconds, 1.5 seconds apart, and nothing shown before.
+  await page.clock.runFor(60000);
+  await expect(page.locator("[data-request] .error")).toHaveCount(0);
+  await page.clock.runFor(6000);
+  expect(await page.evaluate(() => window.fakeTurnstileChecks)).toBe(4);
   await expect(page.locator("[data-request] .error")).toContainText(`call or text ${PHONE}`);
   await expect(page.locator("[data-send-request]")).toHaveText("Send my request");
   await expect(page.getByLabel("Mobile number")).toHaveValue("(423) 555-0160");
@@ -506,7 +512,7 @@ test("Level 3 shows only the owner's note, and the one button reads \"Request qu
   await expect(step.locator(".choice .name")).toHaveText(["Normal wear and tear", "Needs extra attention", "Let's talk"]);
   await expect(cont(page, 3)).toHaveText("Continue to location");
   await page.locator('[data-level="3"]').click();
-  await expect(step.locator("[data-quote-note]")).toHaveText("Unique situations require manual quoting. Tell us what you're dealing with, add photos if you can, and we'll get you a price.");
+  await expect(step.locator("[data-quote-note]")).toHaveText("Unique situations require manual quoting. Hit the button below to tell us what you're dealing with and add photos if you can. We'll respond with a quote, usually within 24 hours.");
   await expect(step.getByText("Quoted by hand")).toHaveCount(0);
   await expect(step.locator("[data-ask-quote]")).toHaveCount(0);
   await expect(cont(page, 3)).toHaveText("Request quote");
@@ -545,4 +551,139 @@ test("the color and \"My vehicle isn't listed\" share a row, and the steps have 
   // Both boxes measured at once: the page scrolls to the new step.
   const gap = await page.evaluate(() => document.getElementById("step-2").getBoundingClientRect().top - document.getElementById("step-1").getBoundingClientRect().bottom);
   expect(gap).toBeGreaterThanOrEqual(10);
+});
+
+// Acceptance changes 2 (owner, 2026-11-18) -----------------------------------
+
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+const twoPhotos = [{ name: "one.png", mimeType: "image/png", buffer: PNG }, { name: "two.png", mimeType: "image/png", buffer: PNG }];
+
+test("a size question stays shown once answered, with the answer selected and changeable @phone", async ({ page }) => {
+  await pickVehicle(page, 2020, "Toyota", "Highlander");
+  const question = page.locator("[data-size-question]");
+  await expect(question).toContainText("Does it have the optional third row?");
+  await question.getByRole("button", { name: "Third row" }).click();
+  await expect(question.getByRole("button", { name: "Third row" })).toHaveAttribute("aria-pressed", "true");
+  await expect(question.getByRole("button", { name: "Two rows" })).toHaveAttribute("aria-pressed", "false");
+  await cont(page, 1).click();
+  await expect(page.locator('[data-service="Full Detail"]')).toContainText("$310");
+  // Step 1 above: still there, and changing it changes the prices.
+  await expect(question.getByRole("button", { name: "Third row" })).toHaveAttribute("aria-pressed", "true");
+  await question.getByRole("button", { name: "Two rows" }).click();
+  await expect(question.getByRole("button", { name: "Two rows" })).toHaveAttribute("aria-pressed", "true");
+  await expect(question.getByRole("button", { name: "Third row" })).toHaveAttribute("aria-pressed", "false");
+  await cont(page, 1).click();
+  await expect(page.locator('[data-service="Full Detail"]')).toContainText("$280");
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await expect(page.locator("#step-4")).toBeVisible();
+  await address(page, "100 Example", "100 Example St NW");
+  await cont(page, 4).click();
+  await page.locator("[data-day]").first().click();
+  await page.locator("[data-time]").first().click();
+  await cont(page, 5).click();
+  await details(page);
+  await cont(page, 6).click();
+  // Answered, so the summary shows it.
+  await expect(page.locator("#step-7 .review-list")).toContainText("2020 Toyota Highlander · two rows");
+});
+
+test("the summary leaves out a size nobody was asked, as for a 2015 Honda Accord", async ({ page }) => {
+  await pickVehicle(page, 2015, "Honda", "Accord");
+  await expect(page.locator("[data-size-question]")).toHaveCount(0);
+  await cont(page, 1).click();
+  await page.locator('[data-service="Full Detail"]').click();
+  await cont(page, 2).click();
+  await page.locator('[data-level="3"]').click();
+  await cont(page, 3).click();
+  const card = page.locator("[data-request]");
+  await expect(card.locator(".review-list")).toContainText("2015 Honda Accord");
+  await expect(card.locator(".review-list")).not.toContainText("two rows");
+});
+
+test("the quote request card offers only the services for the vehicle: no Motorcycle Detail for a van or a car", async ({ page }) => {
+  await pickVehicle(page, 2021, "Ford", "Transit 250");
+  await cont(page, 1).click();
+  const options = page.locator("#qr-service option");
+  await expect(options).toHaveText(["Not sure", "Full Detail", "Interior Only", "Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction"]);
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Full Detail"]').click();
+  await cont(page, 2).click();
+  await page.locator('[data-level="3"]').click();
+  await cont(page, 3).click();
+  await expect(options.filter({ hasText: "Motorcycle Detail" })).toHaveCount(0);
+  await expect(options.filter({ hasText: "Full Detail" })).toHaveCount(1);
+});
+
+test("step 2 lists the add-ons Carpet, Seat, Headlight, and an add-on's price stays on one line on a phone @phone", async ({ page }) => {
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Full Detail"]').click();
+  await expect(page.locator("#step-2 [data-add-on]")).toHaveCount(3);
+  const names = await page.locator("#step-2 [data-add-on]").evaluateAll((boxes) => boxes.map((box) => box.dataset.addOn));
+  expect(names).toEqual(["Carpet Extraction", "Seat Extraction", "Headlight Restoration"]);
+  for (const price of await page.locator("#step-2 .add-on-price").all()) {
+    await expect(price).toHaveText(/^\+ \$\d+$/);
+    const lines = await price.evaluate((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight)));
+    expect(lines).toBe(1);
+  }
+});
+
+test("Turnstile is asked as the quote request card opens, and a check that times out once is retried on its own", async ({ page, request }) => {
+  await page.clock.install();
+  await page.goto("/book/");
+  await page.evaluate(() => localStorage.setItem("fake-turnstile", "hang-once"));
+  await pickVehicle(page, 2021, "Ford", "Transit 250");
+  await cont(page, 1).click();
+  await expect(page.getByRole("heading", { name: "Tell us about the job" })).toBeVisible();
+  // Asked at once, before any photo is picked.
+  await expect.poll(() => page.evaluate(() => window.fakeTurnstileChecks)).toBe(1);
+  await page.setInputFiles("#qr-photos", twoPhotos);
+  await expect(page.locator(".photo-tile .state", { hasText: "Uploading" })).toHaveCount(2);
+  // The first check never answers; the retry does. Nothing is shown meanwhile.
+  await page.clock.runFor(17000);
+  await expect(page.locator(".photo-tile .state", { hasText: "Added" })).toHaveCount(2);
+  await expect(page.locator("[data-request] .error")).toHaveText("");
+  expect(await page.evaluate(() => window.fakeTurnstileChecks)).toBeGreaterThanOrEqual(2);
+  await page.getByLabel("What do you need?").fill("Work van.");
+  await address(page, "100 Example", "100 Example St NW");
+  await page.getByLabel("First name").fill("Morgan");
+  await page.getByLabel("Mobile number").pressSequentially("4235550160");
+  await page.locator("[data-send-request]").click();
+  await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
+  const sent = (await log(request)).find((entry) => entry.to === "quote-requests");
+  expect(sent.body.photos).toHaveLength(2);
+});
+
+test("a kept Turnstile token is replaced before it expires", async ({ page }) => {
+  await page.clock.install();
+  await pickVehicle(page, 2021, "Ford", "Transit 250");
+  await cont(page, 1).click();
+  await expect.poll(() => page.evaluate(() => window.fakeTurnstileChecks)).toBe(1);
+  await page.clock.runFor(241000);
+  expect(await page.evaluate(() => window.fakeTurnstileChecks)).toBe(2);
+});
+
+test("when Turnstile keeps failing, the photos stay with a plain message and can be tried again", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/book/");
+  await page.evaluate(() => localStorage.setItem("fake-turnstile", "fail"));
+  await pickVehicle(page, 2021, "Ford", "Transit 250");
+  await cont(page, 1).click();
+  await page.getByLabel("What do you need?").fill("Work van.");
+  await page.setInputFiles("#qr-photos", twoPhotos);
+  const error = page.locator("[data-request] .error");
+  await page.clock.runFor(1000);
+  await expect(error).toHaveText("");
+  await page.clock.runFor(10000);
+  await expect(error).toHaveText(`We couldn't get the photos ready to send just now. Try them again, or send the request without them and text the photos to ${PHONE}.`);
+  await expect(error).not.toContainText("Turnstile");
+  await expect(page.locator(".photo-tile")).toHaveCount(2);
+  await expect(page.getByLabel("What do you need?")).toHaveValue("Work van.");
+  await page.evaluate(() => localStorage.removeItem("fake-turnstile"));
+  await page.locator("[data-photos-retry]").click();
+  await page.clock.runFor(1000);
+  await expect(page.locator(".photo-tile .state", { hasText: "Added" })).toHaveCount(2);
+  await expect(error).toHaveText("");
 });

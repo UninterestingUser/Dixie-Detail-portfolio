@@ -1,24 +1,35 @@
 ---
 // The four service cards (owner, 2026-11-18), 2 x 2 like the current
 // dixiedetail.com: light blue, the title and a white "from" price box, the
-// owner's text, and two buttons in the "How it works" style. A city page
-// passes its own text for each card, by section anchor.
+// owner's text, and two buttons in the "How it works" style. From 1328 px
+// up the section's photo is a square on the card's right side, full card
+// height, behind the content, with the text entirely to its left; narrower,
+// as on a phone, it sits at the top of the card (src/styles/global.css). A
+// city page passes its own text for each card, by section anchor.
+import { Image } from "astro:assets";
 import { dollars, serviceSections } from "../lib/data.js";
+import { sectionPhoto } from "../lib/photos.js";
 const { texts = {} } = Astro.props;
 const cards = (await serviceSections()).filter((card) => card.from);
 ---
 <div class="service-cards">
-  {cards.map((card) => (
-    <article class="service-card">
-      <div class="service-card-top">
-        <h3>{card.title}</h3>
-        <p class="price-box">from {dollars(card.from)}</p>
-      </div>
-      <p class="text">{texts[card.anchor] || card.card}</p>
-      <div class="card-buttons">
-        <a class="button" href="/book/">{card.button}</a>
-        <a class="button outline" href={`/services/#${card.anchor}`}>More info</a>
-      </div>
-    </article>
-  ))}
+  {cards.map((card) => {
+    const photo = sectionPhoto(card.anchor);
+    return (
+      <article class="service-card">
+        {photo && <div class="service-card-photo"><Image src={photo} alt="" widths={[320, 400, 560]} sizes="(max-width: 800px) 92vw, (max-width: 1327px) 46vw, 340px" quality={40} loading="lazy" fetchpriority="low" /></div>}
+        <div class="service-card-body">
+          <div class="service-card-top">
+            <h3>{card.title}</h3>
+            <p class="price-box">from {dollars(card.from)}</p>
+          </div>
+          <p class="text">{texts[card.anchor] || card.card}</p>
+          <div class="card-buttons">
+            <a class="button" href="/book/">{card.button}</a>
+            <a class="button outline" href={`/services/#${card.anchor}`}>More info</a>
+          </div>
+        </div>
+      </article>
+    );
+  })}
 </div>

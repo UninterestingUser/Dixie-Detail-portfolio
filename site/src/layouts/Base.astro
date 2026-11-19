@@ -9,10 +9,19 @@
 import "../styles/global.css";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
+import { getImage } from "astro:assets";
+import headerPhoto from "../assets/photos/page-header.webp";
 
 const { title, description, path = Astro.url.pathname, solidHeader = true, jsonLd = [], heroHeader = false } = Astro.props;
 const site = "https://dixiedetail.com";
 const canonical = site + path;
+// Every page but the homepage: the header photo fills the header area above
+// the red line, under a 50% black shade (owner, 2026-11-18). It is the
+// largest thing on the first screen, so it is preloaded, in sizes from a
+// phone's to a 1920 screen's, lighter than the other photos since the shade
+// hides the detail.
+const HEADER_WIDTHS = [480, 750, 1080, 1440, 1920];
+const header = heroHeader ? null : await getImage({ src: headerPhoto, widths: HEADER_WIDTHS, quality: 45, format: "webp" });
 ---
 <!doctype html>
 <html lang="en">
@@ -33,11 +42,18 @@ const canonical = site + path;
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     {jsonLd.map((item) => <script type="application/ld+json" set:html={JSON.stringify(item)} />)}
+    {header && <link rel="preload" as="image" imagesrcset={header.srcSet.attribute} imagesizes="100vw" fetchpriority="high" />}
     <slot name="head" />
   </head>
   <body>
     <a class="skip" href="#main">Skip to the content</a>
-    {heroHeader ? <slot name="hero" /> : <Header solid={solidHeader} />}
+    {heroHeader ? <slot name="hero" /> : (
+      <div class="page-top">
+        <img class="page-top-photo" src={header.src} srcset={header.srcSet.attribute} sizes="100vw" alt="" width="2000" height="1165" fetchpriority="high" decoding="async" />
+        <Header solid={solidHeader} />
+        <slot name="top" />
+      </div>
+    )}
     <main id="main">
       <slot />
     </main>

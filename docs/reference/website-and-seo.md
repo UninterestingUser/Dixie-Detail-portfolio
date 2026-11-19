@@ -20,13 +20,15 @@ Every address of the current site is kept, with its title and search description
 | Address | Page | On the current site |
 | --- | --- | --- |
 | `/` | Homepage | Yes |
-| `/services/` | One page with four full-width sections, anchored `#detail`, `#correction`, `#headlight` and `#extraction`: each with its photo, its services' full descriptions (Motorcycle Detail with Premium Detailing) and the red box with its button, "See my price" or "Add to detail". No price tables: the exact price shows on the booking page | Yes |
+| `/services/` | "Mobile Detailing Services", under it "We come to your driveway in Bradley, McMinn, Hamilton, Polk, and Meigs Counties.", then four full-width sections, anchored `#detail`, `#correction`, `#headlight` and `#extraction`: each with its photo, its services' full descriptions (Motorcycle Detail with Premium Detailing) and the red box with its heading ("Book your detail today", "Book a paint correction", "Restore your headlights", "Book your detail today") and its button, "See my price" or "Add to detail". No price tables: the exact price shows on the booking page | Yes |
 | `/services/detailing/`, `/services/paint-correction/`, `/services/headlight-restoration/`, `/services/shampoo-and-extraction/`, `/services/motorcycle-detail/` | The old category pages, redirected permanently (301) to their sections; `motorcycle-detail` goes to `#detail`. The build writes `_redirects` from `old_pages` in [data/site-content.yaml](../../data/site-content.yaml) | Redirected |
 | `/cleveland-tn-mobile-detailing/`, `/athens-tn-mobile-detailing/`, `/chattanooga-tn-mobile-detailing/` | The city pages, with their own questions | Yes |
-| `/reviews/`, `/about/`, `/contact/` | Reviews, the owner's story, how to reach us | Yes |
+| `/reviews/`, `/about/`, `/contact/` | Reviews; the owner's story, headed "About Dixie Detail" with "An eye for perfection and a passion for quality" as a smaller subhead, laid out like the services and reviews pages; how to reach us, under "Have a question or comment? Call or text us and we'll get back to you right away." | Yes |
 | `/faq/` | Every common question | New |
 | `/book/` | The booking flow ([booking-flow.md](booking-flow.md)) | New |
 | `/privacy-policy/`, `/sms-terms/` | The two policy pages, linked in the footer | Yes |
+
+Every page but the homepage has the header photo (`site/src/assets/photos/page-header.webp`, 2026-11-18): it fills the whole header area, the menu bar and the page's heading, full width down to the red line, under a 50% black shade (`site/src/layouts/Base.astro`).
 
 Every address ends in a slash, as WordPress's do. The Phase 5 launch adds redirects for any other old address, such as WordPress's own feeds.
 
@@ -36,8 +38,9 @@ The homepage drops from nine sections to fewer, and the content that leaves move
 
 - The full-width hero photo with a 40% black shade, the script logo (larger than on other pages: 504 px wide on a desktop, 62% of a phone's width), the menu links on a translucent charcoal backing so they stay readable over the photo, and a "See your exact price" year, make and model picker, whose "See Price" button opens the booking flow with the vehicle filled in. On a phone the opened menu sits on top of the page, on the accent blue.
 - A plain red band under the hero, with no text, the same thickness on phones.
-- The "Make your vehicle shine" section with its two side-by-side photos, and the three steps of how it works. The photos stretch to the text's height, so the text is never taller than they are.
-- Four service cards, 2 x 2 like the current dixiedetail.com: Premium Detailing, Paint Correction, Headlight Restoration and Shampoo & Extraction (motorcycles come under Premium Detailing). Each is light blue, with the owner's title and text, a white "from $xx" box (the lowest car and truck price of its services in the price book) and two buttons side by side: "See my price" or "Add to detail", to the booking page, and "More info", to its section of `/services/`. On a phone the buttons stack full width when they don't fit side by side. The cards and sections are `sections` in [data/site-content.yaml](../../data/site-content.yaml).
+- The "Restore the shine" section with its two side-by-side photos, a narrow column (400 px), and the three steps of how it works, each step's text in two lines on a desktop. The photos take the text's height, so the text is never taller than they are. No buttons under the text.
+- "Services and pricing", with the subhead "We provide upfront pricing right here on our website. Pick your vehicle, see the exact price with tax, and pick a day that works for you. We show up and handle the rest.", and four service cards, 2 x 2 like the current dixiedetail.com: Premium Detailing, Paint Correction, Headlight Restoration and Shampoo & Extraction (motorcycles come under Premium Detailing). Each is light blue, with the owner's title and text, a white "from $xx" box (the lowest car and truck price of its services in the price book) and two buttons side by side: "See my price" or "Add to detail", to the booking page, and "More info", to its section of `/services/`. On a phone the buttons stack full width when they don't fit side by side. The cards and sections are `sections` in [data/site-content.yaml](../../data/site-content.yaml).
+- Each card has its section's photo. From 1328 px wide up (where each card is 628 px wide) it is a square on the card's right side, full card height, behind the content, its outer corners following the card's rounding, with the description left-aligned entirely to its left; the heading, price box and buttons stay where they are. The photo's left edge fades into the card's blue, so a long heading that reaches it stays readable, and the outlined "More info" button is filled white over it. The description is 16 px there, which is what lets every card, the city pages' too, come out exactly square; checked by a browser test. Narrower, as on a phone, the text no longer fits beside a square, so the photo sits at the top of the card.
 - The service area, with the three city pages and a short note on each of the five counties. The mockup's map placeholder is that county list for now.
 - The reviews section, over the locked, non-scrolling background photo with a 50% shade, after "We come to you".
 - The first three common questions with a red call-to-action card, whose "Call or text" button stays on one line, and the charcoal footer with a red top edge.
@@ -61,8 +64,8 @@ Content is up to 1280 px wide, for 1920-wide screens.
 | Page titles and descriptions, how it works, the counties, the questions, the about page and the city pages | [data/site-pages.yaml](../../data/site-pages.yaml) | Carried over word for word from the current site. Prices the old pages wrote out are now filled from the pricebook, such as `{from:Full Detail}`. |
 | Real reviews | An optional `data/reviews.yaml`, a list of `name`, `text` and `source` | None yet: the owner decides how to supply them, because they name customers and this repository is published as a portfolio. Until then the reviews section links to the Google reviews and shows no rating figure. Reviews are never written for the site. |
 | The eight vehicle class pictures, 640×480 WebP with transparent backgrounds | `site/public/images/vehicle-classes/` | Served as they are at `/images/vehicle-classes/<file>`, on the booking form's photo cards. The same path goes in each class's photo card picture in the control app. They are third-party renders the owner chose knowing the business holds no license for them, so the public portfolio copy leaves them out ([decision 0104](../decisions/0104-portfolio-copy-leaves-out-unlicensed-pictures.md)). |
-| The five category page photos | `site/src/assets/page-photos/` | Resized by Astro at build time, never shown larger than the original. |
-| The hero, shine and reviews-background photos, the logo, the about and city photos, the sharing image and icons | `site/src/assets/` and `site/public/` | From the design canvas and the current site. |
+| The section photos, one per services page section, also on the homepage and city page service cards (`section_images` in [data/site-content.yaml](../../data/site-content.yaml); the detailing photo replaced 2026-11-18) | `site/src/assets/page-photos/` | Resized by Astro at build time, never shown larger than the original. |
+| The hero, header, shine and reviews-background photos, the logo, the about and city photos, the sharing image and icons | `site/src/assets/` and `site/public/` | From the design canvas and the current site. |
 | The Privacy Policy and Text Message Terms | `site/src/pages/privacy-policy.md` and `site/src/pages/sms-terms.md` | At `/privacy-policy/` and `/sms-terms/`, the addresses in [data/business.yaml](../../data/business.yaml) and the consent wording. Both take effect on the day the new site goes live, filled in at launch. They describe the one text consent (decision 0108): texts about a booked job, a review request after the service included, and no marketing texts. |
 
 ## How content stays current
@@ -71,7 +74,7 @@ The site shows the pricebook as it was when it was last built. Publishing a pric
 
 ## Speed and accessibility targets
 
-Checked on every pull request that touches `site/` or `data/` by Lighthouse CI, on Lighthouse's phone emulation (a mid-range phone on a slow 4G connection), for the homepage, the services page, a city page, the questions and the booking page:
+Checked on every pull request that touches `site/` or `data/` by Lighthouse CI, on Lighthouse's phone emulation (a mid-range phone on a slow 4G connection), for the homepage, the services page, a city page, the questions, the booking page, the about, contact and reviews pages:
 
 | Measure | Target |
 | --- | --- |
@@ -82,12 +85,14 @@ Checked on every pull request that touches `site/` or `data/` by Lighthouse CI, 
 | Cumulative layout shift | 0.1 or less |
 | Total blocking time | 200 ms or less |
 
-On 2026-11-18, after the acceptance changes, every page scored 1.0 on performance, accessibility and best practices, with no layout shift and the largest paint at 1.2 to 1.9 seconds. The homepage is closest to the line, at about 1.9 seconds: its hero photo shares a slow connection with the font and the logo. Before that day it sat at 2.5 seconds and failed now and then. Four things keep its first screen light:
+On 2026-11-18, after the second acceptance changes and with the header photo, every page scored 1.0 on performance, accessibility and best practices, with no layout shift and the largest paint at 1.4 to 1.9 seconds: the homepage and a city page about 1.9, reviews 1.6, services and booking 1.7, about and contact 1.5, the questions 1.4. The homepage is closest to the line, at about 1.9 seconds, as before the changes: its hero photo shares a slow connection with the font and the logo. Before that day it sat at 2.5 seconds and failed now and then. Five things keep the first screens light:
 
 - **The font is trimmed.** The site serves Archivo cut to the weights (400 to 800), widths (condensed to normal) and characters it uses: 44 KB instead of 90. The list is `site/src/assets/fonts/archivo.json`, and `python3 tools/make_site_font.py` makes the font from it. A unit test fails when a built page uses a character outside the list: add the character and run the script again.
 - **The stylesheet is inside each page,** so the first text needs no second request.
 - **The hero photo has a 750-pixel size,** which a typical phone downloads instead of the 828.
-- **The larger logo and the menu backing add nothing to download.** On a typical phone the larger logo still loads the same 480-pixel file, and the backing is a style, not a picture. The service cards have no photos.
+- **The larger logo and the menu backing add nothing to download.** On a typical phone the larger logo still loads the same 480-pixel file, and the backing is a style, not a picture.
+- **The header photo is light and preloaded.** It comes in five sizes (480 to 1920 pixels) at a low quality, since the 50% shade hides the detail: a typical phone downloads the 750-pixel one, 38 KB.
+- **The service card photos wait.** The cards are laid out, and their photos fetched, only as they near the screen (`content-visibility: auto`), so on a phone the photos never share the connection with the hero. Without that the homepage's largest paint went from 1.9 to 2.0 seconds.
 
 Text shows at once in Arial sized to Archivo's width, so the swap to Archivo moves no line. Search-engine checks are left out while staging is deliberately not indexable.
 

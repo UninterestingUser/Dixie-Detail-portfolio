@@ -23,7 +23,7 @@ import { dollars, money } from "./money.js";
 import { addressField } from "./places.js";
 import { photoPicker } from "./photos.js";
 import { addDays, clock, hoursText, isoDate, localDate, longDate, moment, MONTHS, monthStart } from "./time.js";
-import { token, TurnstileError } from "./turnstile.js";
+import { keepReady, stopKeeping, token, TurnstileError } from "./turnstile.js";
 
 const root = document.querySelector("[data-booking]");
 const config = JSON.parse(document.getElementById("booking-config").textContent);
@@ -46,6 +46,12 @@ const fresh = () => ({
   models: [],
   vehicle: { year: "", make: "", model: "", type: "vehicle", card: null, cardText: { year: "", make: "", model: "" }, showCards: false },
   lookup: null,
+  // The size question the lookup asked (cab, third row), kept once it is
+  // answered so the choices stay shown and changeable, and the answer the
+  // customer gave, to it or to a photo card's sizes. The summary shows the
+  // size only when there is an answer (owner, 2026-11-18).
+  question: null,
+  answer: null,
   size: null,
   color: "",
   service: null,
@@ -121,7 +127,7 @@ function vehicleName() {
 // vehicle class itself is internal and never shown (owner, 2026-11-18).
 function sizeLine() {
   const c = vehicleClass();
-  if (!c) return "";
+  if (!c || S.answer == null) return "";
   const size = c.sizes.find((item) => item.value === sizeValue());
   return size ? size.label : "";
 }
@@ -281,13 +287,27 @@ async function loadModels() {
 }
 
 async function lookUp(size) {
+  if (size != null) S.answer = size;
   try {
     S.lookup = await get("vehicles/lookup", { year: S.vehicle.year, make: S.vehicle.make, model: S.vehicle.model, type: S.vehicle.type, size });
   } catch (error) {
     return failed(error);
   }
+  if (S.lookup.question) {
+    S.question = S.lookup.question;
+    S.answer = null;
+  } else if (size == null) {
+    S.question = null;
+  }
   if (S.lookup.photo_cards) S.vehicle.showCards = true;
   vehicleChanged();
+}
+
+// A new vehicle: no lookup, question or answer yet.
+function clearLookup() {
+  S.lookup = null;
+  S.question = null;
+  S.answer = null;
 }
 
 function vehicleChanged() {
@@ -307,7 +327,7 @@ function photoCards() {
       const file = built.text.classImages[card.name];
       return h("button", {
         type: "button", class: "choice photo", "aria-pressed": S.vehicle.card === card.class_id ? "true" : "false",
-        onclick: () => { S.vehicle.card = card.class_id; S.size = null; S.lookup = null; vehicleChanged(); },
+        onclick: () => { S.vehicle.card = card.class_id; S.size = null; clearLookup(); vehicleChanged(); },
       }, file ? h("img", { src: `/images/vehicle-classes/${file}`, alt: "", width: "640", height: "480", loading: "lazy" }) : null,
       h("span", { class: "name" }, card.name), h("span", { class: "desc" }, card.booked_by_quote ? "Ask for a quote" : card.caption),
       card.examples.length ? h("span", { class: "desc" }, `Such as ${card.examples.join(", ")}`) : null);
@@ -322,7 +342,7 @@ function cardDetails() {
     h("p", { class: "hint", style: "margin:0" }, "Tell us the year, make and model if you know them (optional)."),
     h("div", { class: "grid3" }, text("year", "Year"), text("make", "Make"), text("model", "Model")),
     c && c.sizes.length > 1 ? h("div", { class: "stack", style: "gap:8px" }, h("p", { class: "label", style: "margin:0" }, "Which fits it best?"),
-      h("div", { class: "grid2" }, c.sizes.map((size) => h("button", { type: "button", class: "choice", "aria-pressed": S.size === size.value ? "true" : "false", onclick: () => { S.size = size.value; vehicleChanged(); } }, h("span", { class: "name" }, size.label[0].toUpperCase() + size.label.slice(1)))))) : null);
+      h("div", { class: "grid2" }, c.sizes.map((size) => h("button", { type: "button", class: "choice", "aria-pressed": S.size === size.value ? "true" : "false", onclick: () => { S.size = size.value; S.answer = size.value; vehicleChanged(); } }, h("span", { class: "name" }, size.label[0].toUpperCase() + size.label.slice(1)))))) : null);
 }
 
 // For a vehicle booked by quote, the owner's note just above the "Request
@@ -336,20 +356,21 @@ function renderStep1() {
   const parts = [];
   if (S.mode === "online" && !S.vehicle.showCards) {
     parts.push(h("div", { class: "grid3" },
-      select("year", "Year", S.years || [], S.vehicle.year, (value) => { S.vehicle.year = value; S.vehicle.make = ""; S.vehicle.model = ""; S.lookup = null; vehicleChanged(); loadMakes(); }, S.years ? "Select year" : "Loading…"),
-      select("make", "Make", S.makes, S.vehicle.make, (value) => { S.vehicle.make = value; S.vehicle.model = ""; S.lookup = null; vehicleChanged(); loadModels(); }, S.vehicle.year ? "Select make" : "Pick a year first", !S.vehicle.year),
+      select("year", "Year", S.years || [], S.vehicle.year, (value) => { S.vehicle.year = value; S.vehicle.make = ""; S.vehicle.model = ""; clearLookup(); vehicleChanged(); loadMakes(); }, S.years ? "Select year" : "Loading…"),
+      select("make", "Make", S.makes, S.vehicle.make, (value) => { S.vehicle.make = value; S.vehicle.model = ""; clearLookup(); vehicleChanged(); loadModels(); }, S.vehicle.year ? "Select make" : "Pick a year first", !S.vehicle.year),
       field("model", "Model", h("select", { id: "model", disabled: !S.vehicle.make || null, onchange: (event) => {
         const model = S.models.find((m) => m.name === event.target.value);
         S.vehicle.model = model ? model.name : "";
         S.vehicle.type = model ? model.type : "vehicle";
-        S.lookup = null;
+        clearLookup();
         vehicleChanged();
         if (model) lookUp();
       } }, h("option", { value: "" }, S.vehicle.make ? "Select model" : "Pick a make first"),
       S.models.map((m) => h("option", { value: m.name, selected: m.name === S.vehicle.model || null }, m.motorcycle ? `${m.name} (Motorcycle)` : m.name))))));
-    if (S.lookup && S.lookup.question) {
-      parts.push(h("div", { class: "stack", style: "gap:8px" }, h("p", { class: "label", style: "margin:0" }, S.lookup.question.text),
-        h("div", { class: "grid2" }, S.lookup.question.choices.map((choice) => h("button", { type: "button", class: "choice", onclick: () => lookUp(choice.answer) }, h("span", { class: "name" }, choice.label))))));
+    // The question stays once answered, with the answer selected.
+    if (S.question) {
+      parts.push(h("div", { class: "stack", style: "gap:8px", "data-size-question": "" }, h("p", { class: "label", style: "margin:0" }, S.question.text),
+        h("div", { class: "grid2" }, S.question.choices.map((choice) => h("button", { type: "button", class: "choice", "aria-pressed": String(choice.answer) === String(S.answer) ? "true" : "false", onclick: () => lookUp(choice.answer) }, h("span", { class: "name" }, choice.label))))));
     }
   } else {
     if (S.lookup && S.lookup.photo_cards) parts.push(h("p", { class: "hint", style: "margin:0" }, S.lookup.message));
@@ -359,8 +380,8 @@ function renderStep1() {
   // The color (two thirds) and the other way to pick the vehicle (a third)
   // on one row.
   const other = S.mode !== "online" ? null : S.vehicle.showCards
-    ? h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = false; S.vehicle.card = null; vehicleChanged(); } }, "Pick the year, make and model instead")
-    : h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = true; S.lookup = null; vehicleChanged(); } }, "My vehicle isn't listed");
+    ? h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = false; S.vehicle.card = null; S.size = null; S.answer = null; vehicleChanged(); } }, "Pick the year, make and model instead")
+    : h("button", { type: "button", class: "link-button", onclick: () => { S.vehicle.showCards = true; clearLookup(); vehicleChanged(); } }, "My vehicle isn't listed");
   parts.push(h("div", { class: "color-row" },
     field("color", "Color", h("input", { id: "color", class: "input", value: S.color, maxlength: "40", placeholder: "Such as silver or dark blue", oninput: (event) => (S.color = event.target.value) }),
       "Only used to tell your vehicles apart if you have two the same. It never changes the price."),
@@ -404,16 +425,24 @@ async function requote() {
   render();
 }
 
+// Services in the order site-content.yaml lists them; any it doesn't list
+// after them.
+function inOwnerOrder(list) {
+  const listed = built.text.serviceOrder.map((name) => list.find((service) => service.name === name)).filter(Boolean);
+  return [...listed, ...list.filter((service) => !listed.includes(service))];
+}
+
 function renderStep2() {
   const c = vehicleClass();
   if (!c) return frame(2, "Choose your service", "", h("div"));
   // In the owner's order: Full Detail, Interior Only, Exterior Only, then
   // the two paint corrections; anything not listed there after them.
   const offered = book.services.filter((service) => service.kind === "service" && cellPrice(service.id));
-  const listed = built.text.serviceOrder.map((name) => offered.find((service) => service.name === name)).filter(Boolean);
-  const mains = [...listed, ...offered.filter((service) => !listed.includes(service))];
-  // Only the add-ons that go with the chosen service (decision 0106).
-  const addOns = S.service ? book.services.filter((service) => service.kind === "add_on" && fits(S.service, service.id) && cellPrice(service.id)) : [];
+  const mains = inOwnerOrder(offered);
+  // Only the add-ons that go with the chosen service (decision 0106), in
+  // the owner's order: Carpet Extraction, Seat Extraction, Headlight
+  // Restoration.
+  const addOns = S.service ? inOwnerOrder(book.services.filter((service) => service.kind === "add_on" && fits(S.service, service.id) && cellPrice(service.id))) : [];
   const text = (name) => built.text.services[name] || {};
   const body = h("div", { class: "stack" },
     h("div", { class: "choices" }, mains.map((service) => h("button", {
@@ -428,7 +457,7 @@ function renderStep2() {
           reopen(2);
           requote();
         } }),
-        h("span", { class: "body" }, h("span", { class: "top", style: "display:flex;justify-content:space-between;gap:12px" }, h("strong", {}, service.name), h("strong", { style: "color:var(--navy)" }, `+${dollars(cellPrice(service.id))}`)),
+        h("span", { class: "body" }, h("span", { class: "top", style: "display:flex;justify-content:space-between;gap:12px" }, h("strong", {}, service.name), h("strong", { class: "add-on-price" }, `+ ${dollars(cellPrice(service.id))}`)),
           h("span", { class: "desc", style: "font-size:15px;color:var(--text)" }, text(service.name).card || service.description))))) : null,
     S.quoteError ? h("p", { class: "error", role: "alert" }, S.quoteError) : null);
   const intro = `Prices for your ${vehicleName() || c.name}, before any condition adjustment.`;
@@ -736,17 +765,31 @@ function startRequest(reason) {
   document.getElementById("h-request")?.focus({ preventScroll: true });
 }
 
+// Whether a service is for a vehicle class (site-content.yaml, only_for):
+// Motorcycle Detail only for motorcycles, the others never for them, so a
+// van's quote request never offers Motorcycle Detail (owner, 2026-11-18).
+function forClass(service, c) {
+  if (!c) return true;
+  const only = (name) => (built.text.services[name] || {}).onlyFor || [];
+  const special = Object.keys(built.text.services).some((name) => only(name).includes(c.name));
+  return special ? only(service.name).includes(c.name) : only(service.name).length === 0;
+}
+
 function renderRequest() {
   const section = $("[data-request]");
   section.hidden = !S.request || !!S.done;
+  // A Turnstile token is fetched as soon as the card opens and kept fresh
+  // while it is open (turnstile.js), so photos upload at once.
+  if (section.hidden || S.mode === "offline") stopKeeping();
   if (section.hidden) return;
   const r = S.request;
   const offline = S.mode === "offline";
+  if (!offline) keepReady(config, turnstileBox);
   const c = vehicleClass();
   const why = r.reason === "class"
     ? built.text.quoteClass.request_intro.replace("{class}", c ? c.name : "These vehicles")
     : (built.text.levels[r.condition] || {}).requestIntro || "We'll reply with a price, usually within a day.";
-  const mains = book.services.filter((service) => service.kind === "service" && (!c || service.prices.some((p) => p.class_id === c.id) || c.booked_by_quote));
+  const mains = book.services.filter((service) => service.kind === "service" && forClass(service, c) && (!c || c.booked_by_quote || service.prices.some((p) => p.class_id === c.id)));
   if (!offline && !picker) picker = photoPicker({ config, limits: options.photos, box: turnstileBox });
   const serviceControl = h("select", { id: "qr-service", onchange: (event) => {
     r.service = event.target.value === "not_sure" ? "not_sure" : Number(event.target.value); // not money: a service id

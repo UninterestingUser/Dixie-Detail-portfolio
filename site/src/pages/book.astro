@@ -34,7 +34,7 @@ const builtIn = {
   minimumNoticeDays: rules.minimum_notice_days,
   furthestDays: rules.furthest_bookable_days,
   text: {
-    services: Object.fromEntries(content.services.map((service) => [service.name, { card: service.card, heading: service.heading }])),
+    services: Object.fromEntries(content.services.map((service) => [service.name, { card: service.card, heading: service.heading, onlyFor: service.only_for || [] }])),
     levels: Object.fromEntries(content.condition_levels.map((level) => [level.level, { name: level.name, card: level.card, estimate: level.estimate || level.name, quoteNote: level.quote_note || "", requestIntro: level.request_intro || "" }])),
     // Services in the order the owner lists them (Full Detail first).
     serviceOrder: content.services.map((service) => service.name),
@@ -158,6 +158,8 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
   .tick:has(input:checked) { border-color: var(--red); background: var(--red-tint); }
   .tick input { width: 22px; height: 22px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--red); }
   .tick .body { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+  /* An add-on's price stays on one line, "+ $95", even on a phone. */
+  .tick .add-on-price { color: var(--navy); white-space: nowrap; flex-shrink: 0; }
   .consent { font-size: 14px; line-height: 1.5; color: var(--text); }
   .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--ok-tint); border-radius: 12px; padding: 14px 16px; }
   .banner.warn { background: #ffe1e1; }
