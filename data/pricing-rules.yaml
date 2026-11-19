@@ -1,7 +1,7 @@
 meta:
   title: Pricing rules
   summary: The numbers behind pricing and service time - condition levels, maintenance ratios, crew time, rounding and the full-day flag - used to seed the pricebook.
-  updated: 2026-11-14
+  updated: 2026-11-19
   status: current
   explained_in: docs/reference/pricing.md
   note: Launch defaults. Once the control app exists, the live values are in the database; update this file when a default changes.
@@ -71,13 +71,13 @@ price_build_order:
   - sales tax at the service address's rate
   - on-site adjustment with a reason
 
-quote:                    # decision 0059; built in Phase 1 Step 3 (app/pricebook/pricing.py), used by the website from Phase 3
+quote:                    # decision 0059; built in Phase 1 Step 3 (app/pricebook/pricing.py), used by the website since Phase 3
   issued_by: the server's pricing engine only
   holds: [inputs, lines, totals, pricebook version, tax rate, service time, time on site]
   booking: references the quote, never a price sent from the browser
   becomes: the appointment's line snapshot (decision 0033)
   owner_alert: any price change on a booked job not made by the owner
-  sales_tax: rate on the day of service; the price before tax never changes. Zero until Phase 3 adds the rate lookup
+  sales_tax: rate on the day of service for the service address (docs/reference/sales-tax.md); the price before tax never changes
 
 worked_example:
   vehicle: 2019 Toyota RAV4 (Medium, 2 rows)

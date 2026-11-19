@@ -4,7 +4,7 @@ summary: The starting point for all documentation about the Dixie Detail busines
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-19
 tags: [index, documentation]
 related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 ---
@@ -13,7 +13,7 @@ related: [docs/CONVENTIONS.md, data/README.md, llms.txt]
 
 This folder explains the Dixie Detail business system: why it exists, how it is built, the business rules it follows, every decision behind it, and how to run it. It is written for the owner, future staff, developers and AI assistants alike.
 
-**Where things stand (2026-10-29):** Phases 0 (Foundations), 1 (Core data and control app) and 2 (Vehicle catalog) are complete. The vehicle catalog classes every year, make and model into the size-based vehicle classes with the new price book, applied on 2026-10-28, and refreshes itself monthly. Phase 3 (Scheduling and website, with the booking form) is next. See [overview/roadmap.md](overview/roadmap.md).
+**Where things stand (2026-11-19):** Phases 0 (Foundations), 1 (Core data and control app), 2 (Vehicle catalog) and 3 (Scheduling and website) are complete. The server decides open times, prices each job with sales tax and takes bookings through the public API, the calendars mirror the database, and the new website with the booking form runs on a staging address until the Phase 5 launch. Phase 4 (Texts, alerts and payments) is next. See [overview/roadmap.md](overview/roadmap.md).
 
 ## Start here
 
@@ -86,6 +86,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Phase 0 foundations runbook](operations/phase-0-foundations-runbook.md) | The step-by-step procedure that built the server foundation in Phase 0, with every correction found along the way, usable to rebuild the server from scratch. | current |
 | [Phase 1 core data and control app runbook](operations/phase-1-core-data-runbook.md) | The runbook that built Phase 1 (data model, pricebook and pricing engine, Baserow import, control app) as executed from 2026-10-14 to 2026-10-18, kept as a historical record. | historical |
 | [Phase 2 vehicle catalog runbook](operations/phase-2-vehicle-catalog-runbook.md) | The runbook that built Phase 2 (vehicle data, classification, catalog screens, linked vehicles, monthly refresh, size-based classes) as run from 2026-10-21 to 2026-10-29, kept as a historical record. | historical |
+| [Phase 3 scheduling and website runbook](operations/phase-3-scheduling-and-website-runbook.md) | The runbook that built Phase 3 (addresses and tax, scheduling, calendar sync, the public API, website bookings, the Astro site on staging, acceptance) as run from 2026-11-04 to 2026-11-19, kept as a historical record. | historical |
 | [Managing secrets](operations/secrets-management.md) | Step-by-step procedures for adding, renaming and rotating secrets, re-encrypting the server's Bitwarden token, and replacing the deploy key. | current |
 | [Publishing the public portfolio copy](operations/publishing-the-portfolio.md) | How the owner publishes and updates the public copy of this private repository, with every commit rewritten to hide server addresses and private details, and what to do when the publish script stops. | current |
 | [Troubleshooting](operations/troubleshooting.md) | Known problems with the server, stack, backups and tools, each with the exact symptom, the cause and the fix, collected from Phase 0 onward. | current |

@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-11-18
+  updated: 2026-11-19
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -62,26 +62,39 @@ phases:
     done_when: The owner approves the class for every model in the job history and a spot-check list
   - number: 3
     name: Scheduling and website
-    status: next
+    status: done
+    completed: 2026-11-19
+    runbook: docs/operations/phase-3-scheduling-and-website-runbook.md   # historical, as executed
+    note: The owner finished acceptance on 2026-11-19 - test bookings on the Pixel through the staging site matched his own math, the design is approved, the test records are deleted, and the restore test passed with Phase 3's tables (122 of 122, plus the quote photos)
     scope_from_plan_review: [scheduling settings screen, availability check, calendar sync and conflict rules, assign-staff prompt for website bookings]
     built:
-      - "Step 2: the scheduling settings in the database with change history and their screen, date exceptions, the booked jobs a change leaves outside the rules, the availability check, the manager override and the open-times view (decisions 0093 and 0094)"
-      - "Step 2 follow-up: booking off hours inline with the reason shown on the job, the Schedule, Day, 3 Days, Week and Month views, canceling or removing a job from a popup, canceled jobs in the Baserow import, and the customer list sorted by completed jobs (decisions 0095 and 0096)"
-      - "Step 2 follow-up 2: the rules alert before the services are chosen, and the schedule's view bar (decision 0097)"
-      - "Step 3: the Google Calendar sync - Jobs events and Drive to job blocks through a queue and the calendar worker, edits in Google put back, hand-added events flagged, Closed days, the Time Off copy every 5 minutes and at booking, clash flags on the home screen, the stale-copy warning, and the nightly full check with its Healthchecks ping (decision 0098)"
-      - "Step 4: the public API under /api/public/v1/ (docs/reference/public-api.md) - the pricebook, vehicle lists, lookup and photo cards, verified addresses with approved out-of-area places, numbered quotes that expire, open times, bookings checked in one transaction under a per-day lock with consent wording recorded, quote requests with cleaned photos for classes booked by quote, signed offline requests, Turnstile, rate limits and CORS, test records, delete_test_records and api_smoke_test; the photo folder in the nightly backup and the restore test (decisions 0099 and 0100)"
-      - "Step 5: website bookings in the control app - quiet matching of bookings and every request on the mobile number, the review queue with the four actions logged, the color telling identical vehicles apart, automatic assignment with the assign-staff prompt, a second vehicle the same day as a request, screens to price, book or decline quote requests, offline requests and second vehicle requests, the home screen's needs-you list, and api_smoke_test's returning and quote scenarios with --keep (decision 0101)"
-      - "Step 5 follow-up: removing a job keeps every quote something else refers to, a job removed as created by mistake reopens its request and a canceled one closes it, and delete_test_records deletes booked test quote requests with their quotes (decision 0102)"
-      - "Step 6: the website on staging - the Astro site in site/ with every current address kept, pages per service and city, the FAQ, reviews and policy pages; prices, services and structured data from the public API at build time; the booking flow's seven steps with the estimate card, quote requests with photos, and the request a time form held and replayed by Cloudflare (a Pages Function, Workers KV and a scheduled Worker) while the server or Google can't be reached; GET price-table, offline quote requests and typed addresses on the server; rebuilds on publish and on a version's effective date; noindex until launch; browser tests and Lighthouse targets in CI (decision 0105)"
-      - "Acceptance changes A: Headlight Restoration an add-on and each add-on only with the services the pricebook lists for it, with a manager's override in the control app; the default staff on every new booking; a needs-you list of decisions only, one item per job, with failing calendar syncs; the quote request Price section with time on site in hours and minutes and the crew as checkboxes; a dollar sign in the calendar file's total; one text consent instead of two (decisions 0106 to 0108)"
+      - "Step 0 (#48): follow-ups from the 2026-11-03 server incident - the restore test never exits silently or leaves a restic lock, the kernel incident in troubleshooting.md, the kernel update procedure, and vehicle_size_report removed (decisions 0087 and 0088)"
+      - "Step 0b (#49, docs follow-up #50): the off-site backup rides out a slow Google Drive - a 5-minute rclone open timeout, retries after 5 and 15 minutes, rclone limited to 5 Drive calls a second, and the procedure for switching to the business's own Google client (decision 0089)"
+      - "Step 1 (#51, with #53 for addresses the Census geocoder can't match): verified addresses, the service area with approved out-of-area places, Tennessee sales tax rates and boundaries with the morning rate check, traffic-aware drive times with a marked fallback, and counted, capped Google calls (decisions 0090 to 0092)"
+      - "Step 2 (#54): the scheduling settings in the database with change history and their screen, date exceptions, the booked jobs a change leaves outside the rules, the availability check, the manager override and the open-times view (decisions 0093 and 0094)"
+      - "Step 2 follow-up (#55): booking off hours inline with the reason shown on the job, the Schedule, Day, 3 Days, Week and Month views, canceling or removing a job from a popup, canceled jobs in the Baserow import, and the customer list sorted by completed jobs (decisions 0095 and 0096)"
+      - "Step 2 follow-up 2 (#56): the rules alert before the services are chosen, and the schedule's view bar (decision 0097)"
+      - "Step 3 (#57): the Google Calendar sync - Jobs events and Drive to job blocks through a queue and the calendar worker, edits in Google put back, hand-added events flagged, Closed days, the Time Off copy every 5 minutes and at booking, clash flags on the home screen, the stale-copy warning, and the nightly full check with its Healthchecks ping (decision 0098)"
+      - "Step 4 (#58): the public API under /api/public/v1/ (docs/reference/public-api.md) - the pricebook, vehicle lists, lookup and photo cards, verified addresses with approved out-of-area places, numbered quotes that expire, open times, bookings checked in one transaction under a per-day lock with consent wording recorded, quote requests with cleaned photos for classes booked by quote, signed offline requests, Turnstile, rate limits and CORS, test records, delete_test_records and api_smoke_test; the photo folder in the nightly backup and the restore test (decisions 0099 and 0100)"
+      - "Step 5 (#59): website bookings in the control app - quiet matching of bookings and every request on the mobile number, the review queue with the four actions logged, the color telling identical vehicles apart, automatic assignment with the assign-staff prompt, a second vehicle the same day as a request, screens to price, book or decline quote requests, offline requests and second vehicle requests, the home screen's needs-you list, and api_smoke_test's returning and quote scenarios with --keep (decision 0101)"
+      - "Step 5 follow-up (#60): removing a job keeps every quote something else refers to, a job removed as created by mistake reopens its request and a canceled one closes it, and delete_test_records deletes booked test quote requests with their quotes (decision 0102)"
+      - "Step 6 prep (#61): service levels only for jobs that cover the interior, and Service Level 3 booked by quote (decision 0103); the site inputs moved into place (#63)"
+      - "Step 6 (#65): the website on staging - the Astro site in site/ with every current address kept, pages per service and city, the FAQ, reviews and policy pages; prices, services and structured data from the public API at build time; the booking flow's seven steps with the estimate card, quote requests with photos, and the request a time form held and replayed by Cloudflare (a Pages Function, Workers KV and a scheduled Worker) while the server or Google can't be reached; GET price-table, offline quote requests and typed addresses on the server; rebuilds on publish and on a version's effective date; noindex until launch; browser tests and Lighthouse targets in CI (decision 0105)"
+      - "Step 6 follow-ups: never hang on send, fail the build on missing settings, forgiving CORS origins (#66); the location step unlocks on the real API's answers, with a contract test keeping the fake API in step (#67)"
+      - "The faster homepage (#69): a trimmed font, the inlined stylesheet and a 750-pixel hero"
+      - "Acceptance changes A (#68): Headlight Restoration an add-on and each add-on only with the services the pricebook lists for it, with a manager's override in the control app; the default staff on every new booking; a needs-you list of decisions only, one item per job, with failing calendar syncs; the quote request Price section with time on site in hours and minutes and the crew as checkboxes; a dollar sign in the calendar file's total; one text consent instead of two (decisions 0106 to 0108)"
+      - "Acceptance changes B (#70): the website - the menu backing, the larger logo, the four service cards, one /services/ page with anchored sections and redirects from the old addresses, the booking flow's wording and layout, and the one text consent checkbox with both policy pages updated"
+      - "Acceptance changes C (#71, sent as acceptance changes #2): the header photo on every page except the homepage, the new Detailing photo, the service card photos, the page headings, the cab and third-row answers kept shown, size details only when asked, the add-on order, the quote request service list by class, and Turnstile fetched early and retried"
+      - "Acceptance changes D (#72, sent as acceptance changes 3): the header crop, the homepage card text, section order, the Service Area map (Maps Embed API, loaded on approach) and the six common questions; reviews kept in the control app's Reviews screen and served by the public API; the city page headings; unavailable days grayed out in the date step; the quote request service order; Start over on the phone bar; one website payment list (decisions 0109 and 0110)"
+      - "Side tasks during the phase: cloudflared pinned to 2026.10.2 (#52), CI pinned to Ubuntu 24.04 (#62), and the vehicle class pictures left out of the portfolio copy (#64, decision 0104)"
     moved_from_phase_1: [returning-customer review queue, with quiet matching]
     carried_from_phase_2:
-      - The booking form shows the photo cards, which have placeholders until each class's picture is set (owner action; the pictures are in site/public/images/vehicle-classes/)
-      - "Possible future vehicle classes already in data/vehicle-classes.yaml, not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form); each planned with Phase 3 or later"
+      - The booking form shows the photo cards with the class pictures in site/public/images/vehicle-classes/ (done)
+      - "Possible future vehicle classes already in data/vehicle-classes.yaml, not built: Oversized Vans & Trucks, RVs priced by the foot (a new price basis and a length question), and Boats by quote (a quote request on the booking form, which already handles any class booked by quote); each planned for a later phase"
     done_when: The owner completes test bookings on the phone, estimates match the owner's own math, and the design is approved
   - number: 4
     name: Texts, alerts and payments
-    status: planned
+    status: next
     scope_from_plan_review: [arrival and departure taps]
     done_when: One test appointment runs from booking through reminder, payment by every method and review request
   - number: 5
@@ -106,9 +119,15 @@ owner_actions_open:        # answers and checks only the owner can give
   # Carried over from the Phase 2 runbook.
   - Before the booked job on 2026-11-28 - attach the vehicle to the job when the customer says what it is, then settle its price on the booked-job review
   - At each vehicle's next visit - confirm the year of each customer vehicle flagged "year needed", which took its model's newest generation's class (decision 0083)
-  - Before Phase 3 - set each class's photo card picture in the class settings to /images/vehicle-classes/ and its file from class_images in data/site-content.yaml; each shows a placeholder until then
-  # Carried over from the Phase 1 runbook.
-  - Before Phase 3 - the accountant's view on Georgia sales tax for the out-of-area customer, and whether Georgia work creates a Georgia income tax filing (decision 0037, docs/reference/sales-tax.md)
+  # Carried over from the Phase 3 runbook.
+  - Phase 4, start now - Quo carrier registration, with the answers in docs/reference/text-messages.md (one consent checkbox, no promotional texts). The reviewers must see the consent checkbox at the address given, which is the staging site until launch
+  - Phase 4, by 2027-01-15 - the Google Cloud free trial ends about 2027-02-03. Upgrade the account by 2027-01-15 and set the daily quota caps the same day (each free monthly amount divided by 31 - 322 Places autocomplete, 322 Place Details Essentials, 161 Routes); the Maps calls stop if the trial ends first
+  - Phase 4 - switch the off-site backup's rclone remote to the business's own Google OAuth client, following docs/operations/backups-and-restore.md. Drive's rate-limit errors on rclone's shared client continue, though the retries still succeed
+  - Ongoing - the server stays on the pinned kernel until a newer one passes the test in docs/operations/updating-the-kernel.md. Filing the Launchpad bug is optional
+  - Before Phase 5 - ask the accountant about Georgia sales and income tax for the out-of-area customer (decision 0037), and how Tennessee sources sales tax for a mobile service (docs/reference/sales-tax.md)
+  - Before Phase 5 - confirm the licenses of the five service page photos, believed to be royalty-free stock. The vehicle class pictures are renders the business holds no license for (the owner's decision, decision 0104); the original SVG drawings are kept outside the repository as a swap
+  - Phase 5 - the new Privacy Policy and Text Message Terms take the effective date of the day the new site goes live. The WordPress pages stay as they are until the cutover
+  - Always - reviews live only in the control app's Reviews screen (decision 0109). They never go in data files, fixtures or the portfolio copy
   # Before Phase 4 (docs/reference/payments.md).
   - Stripe account check and Tap to Pay test
   - Confirm Venmo and Cash App accounts are business profiles
