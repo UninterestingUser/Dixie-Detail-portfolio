@@ -37,4 +37,4 @@ The website's reviews section waited on the owner to decide how to supply review
 
 ## Consequences
 
-A review goes live within a few minutes of being saved, without a pull request. A site build now also needs `GET reviews` to answer; like the pricebook, if it can't, the build fails and the last good build stays live. `data/reviews.yaml` is no longer read.
+A review goes live within a few minutes of being saved, without a pull request. A site build now also reads `GET reviews`; like the pricebook, if it can't, the build fails and the last good build stays live. The one exception is a 404, which a server deployed before the endpoint existed gives: the build goes on with no reviews and a warning, so the site's change and the server's can be deployed in either order. `data/reviews.yaml` is no longer read.

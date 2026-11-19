@@ -26,12 +26,16 @@ export function readData(name) {
 
 const cache = new Map();
 
-async function fetchJson(endpoint) {
+async function fetchJson(endpoint, missing) {
   const url = `${API_BASE}/${endpoint}`;
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const response = await fetch(url, { headers: { Accept: "application/json", "User-Agent": "dixie-detail-site-build" } });
+      if (response.status === 404 && missing !== undefined) {
+        console.warn(`${url} answered 404: the server predates it, so the build goes on without it.`);
+        return missing;
+      }
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
@@ -42,8 +46,10 @@ async function fetchJson(endpoint) {
   throw new Error(`The site build could not read ${url}: ${lastError.message}. The last good build stays live.`);
 }
 
-export function api(endpoint) {
-  if (!cache.has(endpoint)) cache.set(endpoint, fetchJson(endpoint));
+// missing, when given, is the answer to use when the endpoint answers 404,
+// as a server deployed before the endpoint was added does.
+export function api(endpoint, missing) {
+  if (!cache.has(endpoint)) cache.set(endpoint, fetchJson(endpoint, missing));
   return cache.get(endpoint);
 }
 
@@ -53,9 +59,12 @@ export const business = readData("business.yaml");
 // The customer reviews shown on the site, from the public API like prices
 // (decision 0109): kept in the control app, so customers' names never enter
 // this repository, and never written for the site. With none shown, the
-// reviews section links to Google only.
+// reviews section links to Google only. A server deployed before the
+// endpoint existed answers 404, read as no reviews, so the build that
+// carries this change doesn't fail before the server is updated; any other
+// failure stops the build, as for prices.
 export async function reviews() {
-  return (await api("reviews")).reviews;
+  return (await api("reviews", { reviews: [] })).reviews;
 }
 
 export const phone = business.phone;
