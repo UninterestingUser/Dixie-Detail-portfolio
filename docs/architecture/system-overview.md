@@ -4,7 +4,7 @@ summary: The parts of the Dixie Detail business system, how they connect, how da
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-19
 tags: [architecture, overview]
 related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-access.md, docs/architecture/integrations.md, docs/overview/project-goals.md]
 ---
@@ -13,11 +13,11 @@ related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-a
 
 One database feeds the website, the control app and every outside service. Customers only ever touch the website on Cloudflare. The home server sits behind an outbound tunnel, and every outside service connects through the core app, never straight to the database.
 
-Phase 0 built the foundation: the server stack, private and public access, backups and monitoring. The website, the business screens and the outside services arrive in later phases; parts not built yet are marked "planned" below.
+Phase 0 built the foundation: the server stack, private and public access, backups and monitoring. Phases 1 to 3 added the business screens, the vehicle data, scheduling, the calendars and the website. Parts not built yet are marked "planned" below.
 
 ```mermaid
 flowchart TB
-    customers["Customers<br/>any phone or computer"] --> website["Public website (planned)<br/>Astro on Cloudflare"]
+    customers["Customers<br/>any phone or computer"] --> website["Public website<br/>Astro on Cloudflare"]
     staff["Owner and staff<br/>Fedora desktops, Pixel"] -- "Tailscale<br/>private door" --> caddy
     website -- "Cloudflare Tunnel<br/>public door" --> caddy
 
@@ -32,7 +32,7 @@ flowchart TB
     core -. planned .-> stripe["Stripe"]
     core -. planned .-> quo["Quo"]
     core --> google["Google Workspace calendars<br/>and Maps Platform"]
-    core -. planned .-> govdata["EPA, NHTSA, Census,<br/>Tennessee Revenue"]
+    core --> govdata["EPA, NHTSA, Census,<br/>Tennessee Revenue"]
     db --> backups["Nightly backups<br/>RAID and Google Drive"]
 ```
 
@@ -46,18 +46,18 @@ flowchart TB
 | Reverse proxy | Caddy | Gives the app two separate doors, one private and one public | Running |
 | Private access | Tailscale, with `tailscale serve` | Already in use by the owner; the control app is never on the public internet | Running |
 | Public access | Cloudflare Tunnel | Outbound-only connection: no open ports, no static IP | Running |
-| Public website | Astro static site on Cloudflare's free plan | Plain HTML is fast and strong for search; the site stays up when the server is down | Planned (Phase 3) |
-| Scheduling | Built into the core app | Services, durations and availability live in the same database; replaces Setmore | Planned (Phase 3) |
+| Public website | Astro static site on Cloudflare's free plan | Plain HTML is fast and strong for search; the site stays up when the server is down | Running on a staging address (Phase 3); public at the Phase 5 launch |
+| Scheduling | Built into the core app | Services, durations and availability live in the same database; replaces Setmore at the Phase 5 launch | Running (Phase 3) |
 | Secrets | Bitwarden Secrets Manager | The owner's standard; nothing secret stored in plaintext | Running |
 | Backups | pg_dump to the RAID, restic to Google Drive | The database is the business | Running |
-| Monitoring | Healthchecks.io | Emails the owner when backups stop or the public path breaks | Running |
+| Monitoring | Healthchecks.io | Emails the owner when backups, the vehicle data refresh, the tax rate check or the calendar check stop or the public path breaks | Running |
 
-## How data moves (once built)
+## How data moves
 
 - **Prices and service descriptions** are published into the website when it is built. Publishing a pricebook change in the control app triggers a site rebuild, live within a few minutes.
 - **The booking flow** reads live prices, quotes and open slots from the public API through the tunnel ([../reference/public-api.md](../reference/public-api.md)). The final price is always calculated on the server; the website only displays it.
 - **If the server is unreachable,** the website and its prices still load, and the booking form switches to a "request a time" form that Cloudflare holds and delivers when the server returns.
-- **Outside services** report back by webhook through the tunnel: Stripe for payments, Quo for replies.
+- **Outside services** will report back by webhook through the tunnel from Phase 4: Stripe for payments, Quo for replies.
 - **Calendars** receive one event per appointment from the core app, through a queue and a calendar worker; the Time Off calendar is read back every few minutes to block time (decision 0098).
 - **GnuCash** receives a CSV export that the owner imports. Nothing writes to GnuCash directly.
 

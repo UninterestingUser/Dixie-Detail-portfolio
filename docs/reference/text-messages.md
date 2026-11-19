@@ -4,7 +4,7 @@ summary: Which automated texts the system sends, the one consent they need, the 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-19
 tags: [texting, sms, consent, compliance, quo]
 related: [data/consent-wording.yaml, docs/reference/public-api.md, data/message-templates.yaml, docs/decisions/0026-carrier-registration-timing.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0030-two-text-consents.md, docs/decisions/0007-quo-phone-and-texts.md]
 ---
@@ -13,10 +13,10 @@ related: [data/consent-wording.yaml, docs/reference/public-api.md, data/message-
 
 The business uses Quo (formerly OpenPhone) for one number that handles calls, the owner's own texts and the automated texts. Automated texts are built in Phase 4. US carriers will not deliver automated texts until the business and its message types are registered, so consent and registration rules come first. This page is not legal advice; the consent wording deserves a quick professional check.
 
-## Registration status (2026-10-13)
+## Registration status (2026-11-19)
 
 - The Quo account is open on a new number on the Starter plan, which includes the API and webhooks.
-- Carrier registration has **not** been submitted. It will be submitted once, for every message type, as soon as the new website's booking form with its consent checkbox is public (Phase 3).
+- Carrier registration has **not** been submitted. It is submitted once, for every message type, with the answers below. The booking form with its consent checkbox is public on the staging site, so the owner can start it now (an owner action for Phase 4 in [../overview/roadmap.md](../overview/roadmap.md#owner-actions-still-open)); the address given to the reviewers is the staging site until launch.
 - The business number (423) 380-9120 stays with its current VoIP provider. It is ported to Quo only after registration is approved, because Quo blocks texts from unregistered numbers and registration does not carry over from the old provider. The owner weighed porting early on 2026-10-13 and chose to wait.
 - Setmore keeps sending its own reminders until launch.
 

@@ -4,14 +4,14 @@ summary: How every price is built from the price matrix, which add-ons go with w
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-19
 tags: [pricing, pricebook, crew, quote]
 related: [docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0083-applying-the-size-based-classes.md, docs/decisions/0082-size-based-vehicle-classes.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, docs/decisions/0058-service-times-exclude-setup-and-breakdown.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0055-percentage-promotions-round-to-the-cent.md, data/booking-rules.yaml, data/price-matrix.csv, data/pricing-rules.yaml, data/services.yaml, data/vehicle-classes.yaml, docs/reference/pricebook-changes.md, docs/reference/sales-tax.md]
 ---
 
 # Pricing rules
 
-These rules are settled business policy. Since Phase 1 Step 3 the pricebook is in the database, loaded by the `load_pricebook` command (once loaded, it changes no published price and loads a matrix that differs from the published version as a draft for the owner to publish, after the price book check below), and one module, the pricing engine (`app/pricebook/pricing.py`), applies these rules; the booking flow uses it from Phase 3. The numbers live in [data/price-matrix.csv](../../data/price-matrix.csv) and [data/pricing-rules.yaml](../../data/pricing-rules.yaml); this page explains them.
+These rules are settled business policy. Since Phase 1 Step 3 the pricebook is in the database, loaded by the `load_pricebook` command (once loaded, it changes no published price and loads a matrix that differs from the published version as a draft for the owner to publish, after the price book check below), and one module, the pricing engine (`app/pricebook/pricing.py`), applies these rules, for the control app and the website's booking flow alike. The numbers live in [data/price-matrix.csv](../../data/price-matrix.csv) and [data/pricing-rules.yaml](../../data/pricing-rules.yaml); this page explains them.
 
 ## The price matrix is the only price source
 
@@ -24,7 +24,7 @@ A price is looked up by three things together: service, vehicle class and size v
 1. **Base price,** looked up by service, vehicle class and size variant.
 2. **Condition adjustment,** for Full Detail and Interior Only only: nothing at Level 1 and 10% of the base price at Level 2, rounded to the whole dollar. The same percentage lengthens the main service's service time. Level 3 has no price: the job is quoted by hand ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)).
 3. **Add-ons,** each only with a service it goes with (below), then **promotions.** A percentage promotion is rounded to the nearest cent, an exact half cent up ([decision 0055](../decisions/0055-percentage-promotions-round-to-the-cent.md)).
-4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md). Until Phase 3 adds the rate lookup, quotes carry a tax rate of zero.
+4. **Sales tax** at the rate for the service address, added on top. See [sales-tax.md](sales-tax.md).
 5. **On-site adjustment,** entered by the owner at the job, always with a reason, shown on the invoice.
 
 Worked example: a 2019 Toyota RAV4 (Medium, two rows) booked for a Full Detail at the second condition level, with Seat Extraction. Base $250 and 4 hours, condition +10% = $25 and 0.4 hours, Seat Extraction $80 and 1.5 hours. Total $355 before tax. The service time is 4 + 0.4 + 1.5 = 5.9 one-person hours, rounded to 6 hours, and the time on site, with 30 minutes of setup and 30 of breakdown, is 7 hours, under the 8 hours that flag a full day.
@@ -125,7 +125,7 @@ The website and the control app show the same price from one source, and the own
 
 - **One source.** Only the server's pricing engine computes prices. The website's estimate card and the control app display its results and do no arithmetic of their own.
 - **A price set by hand is a quote record too.** A quote request, or a job at a condition level booked by quote, gets its price and time on site from the owner, stored as a quote record marked priced by hand, with one line for the whole job. A pricebook change never re-prices it ([decision 0103](../decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md)).
-- **The price shown is the price booked.** The server issues a quote record holding the inputs, lines, totals, pricebook version, tax rate, service time and time on site. A quote never changes once issued. A booking refers to the quote, never to a price sent from the browser, and the quote's lines become the appointment's line snapshot exactly ([decision 0033](../decisions/0033-pricebook-versions-and-line-snapshots.md)). A quote books one appointment. The control app never re-prices a booked job. The quote record exists since Phase 1 Step 3; the website will use it in Phase 3.
+- **The price shown is the price booked.** The server issues a quote record holding the inputs, lines, totals, pricebook version, tax rate, service time and time on site. A quote never changes once issued. A booking refers to the quote, never to a price sent from the browser, and the quote's lines become the appointment's line snapshot exactly ([decision 0033](../decisions/0033-pricebook-versions-and-line-snapshots.md)). A quote books one appointment. The control app never re-prices a booked job. The quote record exists since Phase 1 Step 3, and the website has used it since Phase 3.
 - **The owner is notified of any change.** If a booked job's price changes for any reason other than a choice the owner made, such as a sales tax rate change, the owner gets a push alert and the control app shows the booked total beside the new one. The owner's own edits need a reason and are logged.
 - **Sales tax** is charged at the rate on the day of service. If the rate changes after booking, the new rate applies and the owner is notified; the price before tax never changes. See [sales-tax.md](sales-tax.md).
 - **Nothing extra.** There is no customer re-confirmation step, no quote-number text, no nightly price check and no end-to-end booking test; the normal test suite covers pricing.

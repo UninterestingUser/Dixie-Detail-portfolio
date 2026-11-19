@@ -1,20 +1,20 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-11-08
+  updated: 2026-11-19
   status: current
   explained_in: docs/architecture/integrations.md
 
 services:
   - name: Cloudflare
-    purpose: DNS for dixiedetail.com, the Tunnel, and (Phase 3) website hosting on Pages
+    purpose: DNS for dixiedetail.com, the Tunnel, and website hosting on Pages
     phase: 0
     status: In use; tunnel dixie-detail with route api.dixiedetail.com
     plan: Free
   - name: Cloudflare Turnstile
     purpose: Checks that bookings, quote requests and photo upload sessions come from a person (docs/reference/public-api.md)
     phase: 3
-    status: Built on the server (Phase 3, Step 4); needs the widget created in Cloudflare and its secret key in Bitwarden as TURNSTILE_SECRET_KEY
+    status: Working (Phase 3, Steps 4 and 6); one widget in Managed mode for dixiedetail.com and the staging address, its secret key the Bitwarden secret TURNSTILE_SECRET_KEY and its site key the Pages build variable PUBLIC_TURNSTILE_SITE_KEY
     plan: Free
   - name: Tailscale
     purpose: Private access to the control app
@@ -35,7 +35,7 @@ services:
   - name: Healthchecks.io
     purpose: Alerts when the backup, the public path, the monthly vehicle data refresh, the morning sales tax rate check or the nightly calendar check stops checking in or fails, and when a tax rate change waits for approval
     phase: 0
-    status: In use; three checks, a fourth (sales tax rate check, Phase 3, Step 1) and a fifth (calendar check, Phase 3, Step 3) to add
+    status: In use; five checks (docs/operations/monitoring.md)
     plan: Free
   - name: EPA FuelEconomy.gov
     purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984
@@ -57,12 +57,13 @@ services:
   - name: Google Workspace Calendar
     purpose: Jobs and Time Off calendars, through a service account with the calendar.events scope only; the app writes Jobs and reads Time Off (decisions 0057 and 0098)
     phase: 3
-    status: Sync built (Phase 3, Step 3) - a queue in PostgreSQL, the calendar-worker container pushing changes within seconds and copying Time Off every 5 minutes, and dixie-calendar-check.timer running the full check nightly at 3:35 AM. Calendars created 2026-10-11; waits for the service account key GOOGLE_SERVICE_ACCOUNT_JSON and the two calendar IDs (docs/operations/connecting-the-google-calendars.md)
+    status: Working (Phase 3, Step 3, connected 2026-11-08) through the service account, its key the Bitwarden secret GOOGLE_SERVICE_ACCOUNT_JSON - a queue in PostgreSQL, the calendar-worker container pushing changes within seconds and copying Time Off every 5 minutes, and dixie-calendar-check.timer running the full check nightly at 3:35 AM (docs/operations/connecting-the-google-calendars.md)
     plan: Free with Google Workspace; the Calendar API has no charge
   - name: Google Maps Platform
-    purpose: Address suggestions (Places Autocomplete, in the browser), the server's lookup of the picked address (Place Details, Essentials fields only), Text Search (place IDs only) for typed addresses the Census geocoder cannot find, and traffic-aware drive times (Routes)
+    purpose: Address suggestions (Places API (New) Autocomplete, in the browser), the server's lookup of the picked address (Place Details, Essentials fields only), Text Search (place IDs only) for typed addresses the Census geocoder cannot find, traffic-aware drive times (Routes), and the homepage's service area map (Maps Embed API, view mode, in the browser)
     phase: 3
-    status: Server side built (Phase 3, Step 1); waits for the server key GOOGLE_MAPS_SERVER_KEY. Daily limits set in Google Cloud, 322 for each Places method and 161 for Routes; the app's caps sit below them and every call is counted (decisions 0091 and 0092). Autocomplete arrives with the booking form
+    status: Working (Phase 3) - the server key GOOGLE_MAPS_SERVER_KEY for Place Details, Text Search and Routes, and the browser key in the site's build settings for autocomplete and the Maps Embed API. The app's caps sit below the Google limits and every call is counted (decisions 0091 and 0092). The account is on Google's free trial, which locks the quotas, so the daily limits (322 for each Places method, 161 for Routes) are set the day it is upgraded, by 2027-01-15
+    plan: Free trial until about 2027-02-03; then pay as you go within the free monthly amounts; the Maps Embed API has no charge
   - name: US Census Bureau geocoder
     purpose: Coordinates and county for addresses the owner types, and for the home base; verify_addresses checks existing addresses with it
     phase: 3
@@ -75,14 +76,24 @@ services:
     status: Working (Phase 3, Step 1); import_tax_rates loads them, and dixie-tax-rate-check.timer checks the rates every morning at 5:15 AM (decision 0090)
     url: https://tnmap.tn.gov/arcgis/rest/services/COMMUNITY/REVENUE_TAX_RATE_BOUNDARIES/MapServer
     plan: Free, no key
+  - name: Cloudflare Pages
+    purpose: Hosts the Astro website, built from site/ in this repository, with the request a time form's Pages Function
+    phase: 3
+    status: Working (Phase 3, Step 6) on the staging address until launch; the deploy hook CLOUDFLARE_PAGES_DEPLOY_HOOK rebuilds the site when a pricebook version is published or takes effect, and when reviews change (docs/guides/previewing-and-deploying-the-website.md)
+    plan: Free
+  - name: Cloudflare Workers and Workers KV
+    purpose: Holds request a time forms while the server or Google can't be reached, and replays them to the public API every 5 minutes (the offline-replay Worker and its KV namespace, decision 0105)
+    phase: 3
+    status: Working (Phase 3, Step 6)
+    plan: Free
   - name: Quo
     purpose: Calls, owner texts and automated texts
     phase: 3-5
-    status: Account open on a new number, Starter plan; carrier registration waits for the new booking form; business number not ported
+    status: Planned for Phase 4. Account open on a new number, Starter plan; carrier registration not yet submitted (the booking form with its consent checkbox is on the staging site, so it can start); business number not ported
   - name: Stripe
     purpose: Card payment links, Cash App Pay, Tap to Pay
     phase: 4
-    status: Owner to confirm the account is in the business's name and test Tap to Pay
+    status: Planned for Phase 4. Owner to confirm the account is in the business's name and test Tap to Pay
   - name: GnuCash
     purpose: General ledger, fed by a multi-split CSV export
     phase: 6
@@ -90,7 +101,7 @@ services:
   - name: BTCPay Server
     purpose: Bitcoin invoices
     phase: 7
-    status: Deferred
+    status: Planned for Phase 7
 
 considered_not_used:
   - name: Directus
