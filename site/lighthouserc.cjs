@@ -12,7 +12,7 @@ module.exports = {
     collect: {
       startServerCommand: "node tests/serve.mjs",
       startServerReadyPattern: "serving on",
-      url: ["/", "/services/", "/cleveland-tn-mobile-detailing/", "/faq/", "/book/"].map((path) => `http://127.0.0.1:4321${path}`),
+      url: ["/", "/services/", "/cleveland-tn-mobile-detailing/", "/faq/", "/book/", "/about/", "/contact/", "/reviews/"].map((path) => `http://127.0.0.1:4321${path}`),
       numberOfRuns: 3,
       chromePath: process.env.CHROME_PATH || chromium.executablePath(),
       settings: { chromeFlags: "--no-sandbox --headless=new" },

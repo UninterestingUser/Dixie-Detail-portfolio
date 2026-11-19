@@ -26,7 +26,9 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 // "execute", then execute() calls back with a token. localStorage
 // "fake-turnstile" makes it misbehave as the real one can: "throw" (render
 // throws, as with an empty site key), "fail" (the error callback), "hang"
-// (no answer ever) or "empty" (a blank token).
+// (no answer ever), "hang-once" (no answer to the first check only, as when
+// a first photo upload sat on "Uploading") or "empty" (a blank token).
+// window.fakeTurnstileChecks counts the checks.
 const TURNSTILE = `window.turnstile = {
   render(el, options) {
     if (localStorage.getItem("fake-turnstile") === "throw") throw new Error('Invalid input for parameter "sitekey", got ""');
@@ -34,7 +36,9 @@ const TURNSTILE = `window.turnstile = {
   },
   execute() {
     const mode = localStorage.getItem("fake-turnstile");
+    window.fakeTurnstileChecks = (window.fakeTurnstileChecks || 0) + 1;
     if (mode === "hang") return;
+    if (mode === "hang-once" && window.fakeTurnstileChecks === 1) return;
     setTimeout(() => mode === "fail" ? this.options["error-callback"]?.() : this.options.callback(mode === "empty" ? "" : "${GOOD_TOKEN}"), 10);
   },
   reset() {}, remove() {}

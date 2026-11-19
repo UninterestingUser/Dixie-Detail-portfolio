@@ -9,18 +9,17 @@ import Base from "../../layouts/Base.astro";
 import PageHead from "../../components/PageHead.astro";
 import Cta from "../../components/Cta.astro";
 import { content, pages, serviceSections } from "../../lib/data.js";
+import { sectionPhoto } from "../../lib/photos.js";
 import { localBusiness, serviceSchema } from "../../lib/schema.js";
 const page = pages.pages.services;
-const photos = import.meta.glob("../../assets/page-photos/*.webp", { eager: true });
-const photoFor = (file) => Object.entries(photos).find(([key]) => key.endsWith("/" + file))?.[1]?.default;
 const sections = await serviceSections();
 const url = "https://dixiedetail.com/services/";
 const jsonLd = [await localBusiness(), ...(await Promise.all(sections.flatMap((section) => section.services.map((service) => serviceSchema(service, `${url}#${section.anchor}`)))))];
 ---
 <Base title={page.title} description={page.description} path={page.path} jsonLd={jsonLd}>
-  <PageHead eyebrow="Services" heading="Mobile Detailing Services" lead="Mobile, in your driveway, across Bradley, McMinn, Hamilton, Polk and Meigs Counties. Pick your vehicle on the booking page and your exact price shows." />
+  <PageHead slot="top" heading={content.services_page.heading} lead={content.services_page.lead} />
   {sections.map((section, index) => {
-    const photo = photoFor(content.section_images[section.anchor]);
+    const photo = sectionPhoto(section.anchor);
     return (
       <section class:list={["section", "service-section", { tint: index % 2 === 1 }]} id={section.anchor} aria-labelledby={`h-${section.anchor}`}>
         <div class="wrap service-split">
@@ -35,7 +34,7 @@ const jsonLd = [await localBusiness(), ...(await Promise.all(sections.flatMap((s
           </div>
           <div class="stack service-side">
             {photo && <Image src={photo} alt={`${section.title} by Dixie Detail`} widths={[400, 700]} sizes="(max-width: 900px) 100vw, 480px" />}
-            <Cta button={section.button} />
+            <Cta heading={section.cta_heading} button={section.button} />
           </div>
         </div>
       </section>

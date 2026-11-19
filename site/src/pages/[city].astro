@@ -21,7 +21,7 @@ const others = pages.cities.filter((item) => item.slug !== city.slug);
 const jsonLd = [await localBusiness(), await faqSchema(city.faq)];
 ---
 <Base title={city.title} description={city.description} path={`/${city.slug}/`} jsonLd={jsonLd}>
-  <PageHead eyebrow={`${city.city}, Tennessee`} heading={city.heading} lead={city.intro} />
+  <PageHead slot="top" eyebrow={`${city.city}, Tennessee`} heading={city.heading} lead={city.intro} />
   <section class="section">
     <div class="wrap split">
       <div class="stack">

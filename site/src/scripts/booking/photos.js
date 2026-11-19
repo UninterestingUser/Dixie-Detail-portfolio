@@ -6,10 +6,15 @@
 // it is shrunk before sending (at most 2560 pixels on its long side, as a
 // JPEG); one it can't read, such as HEIC on most browsers, goes as it is.
 // The server checks and cleans every photo either way.
+//
+// The Turnstile token for the upload session is usually ready before the
+// first photo is picked (turnstile.js). If Turnstile still fails after its
+// own retries, the photos stay in the card with a plain message and a
+// button to try them again; nothing typed is lost.
 
 import { apiUrl, del, post } from "./api.js";
 import { h } from "./dom.js";
-import { token } from "./turnstile.js";
+import { token, TurnstileError } from "./turnstile.js";
 
 const LONG_SIDE = 2560;
 
@@ -61,12 +66,13 @@ export function photoPicker({ config, limits, box }) {
   let opening = null;
   const grid = h("div", { class: "photos", "aria-live": "polite" });
   const message = h("p", { class: "error", role: "alert" });
+  const retry = h("button", { type: "button", class: "link-button", hidden: true, "data-photos-retry": "", onclick: () => again() }, "Try the photos again");
   const input = h("input", { type: "file", id: "qr-photos", accept: limits.types.join(",") + ",image/*", multiple: true, class: "visually-hidden" });
   const add = h("label", { for: "qr-photos", class: "button outline" }, "Add photos");
   const element = h("div", { class: "stack", style: "gap:10px" },
     h("p", { class: "label", style: "margin:0" }, "Photos"),
     h("p", { class: "hint", style: "margin:0" }, `Photos are optional, but helpful in providing an accurate estimate. Add up to ${max} photos.`),
-    grid, h("div", {}, input, add), message);
+    grid, h("div", {}, input, add), message, retry);
 
   const openSession = () => {
     opening ||= token(config, box)
@@ -112,7 +118,26 @@ export function photoPicker({ config, limits, box }) {
     } catch (error) {
       photo.failed = true;
       photo.state.textContent = "Not added";
-      message.textContent = error.message;
+      if (error instanceof TurnstileError) {
+        message.textContent = `We couldn't get the photos ready to send just now. Try them again, or send the request without them and text the photos to ${config.phone}.`;
+        retry.hidden = false;
+      } else {
+        message.textContent = error.message;
+      }
+    }
+  }
+
+  function start(photo) {
+    photo.failed = false;
+    photo.done = upload(photo);
+  }
+
+  function again() {
+    message.textContent = "";
+    retry.hidden = true;
+    for (const photo of photos.filter((item) => item.failed)) {
+      photo.state.textContent = "Waiting";
+      start(photo);
     }
   }
 
@@ -127,7 +152,7 @@ export function photoPicker({ config, limits, box }) {
       const photo = { file, preview, id: null };
       photos.push(photo);
       grid.append(tile(photo));
-      photo.done = upload(photo);
+      start(photo);
     }
     input.value = "";
   });

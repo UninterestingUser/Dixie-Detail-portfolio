@@ -94,3 +94,75 @@ for (const [old, anchor] of [["detailing", "detail"], ["paint-correction", "corr
     await expect(page).toHaveURL(new RegExp(`/services/#${anchor}$`));
   });
 }
+
+// Acceptance changes 2 (owner, 2026-11-18) -----------------------------------
+
+test("every page but the homepage has the header photo, under a 50% shade, down to the red line", async ({ page }) => {
+  for (const path of ["/services/", "/about/", "/contact/", "/reviews/", "/faq/", "/book/", "/privacy-policy/", "/cleveland-tn-mobile-detailing/"]) {
+    await page.goto(path);
+    const photo = page.locator(".page-top > img.page-top-photo");
+    await expect(photo).toHaveAttribute("srcset", /page-header/);
+    const box = await photo.boundingBox();
+    const top = await page.locator(".page-top").boundingBox();
+    expect(box.width).toBeCloseTo(page.viewportSize().width, -1);
+    expect(box.height).toBeCloseTo(top.height - 6, 0);
+    expect(await page.locator(".page-top").evaluate((el) => getComputedStyle(el, "::after").backgroundColor)).toBe("rgba(0, 0, 0, 0.5)");
+  }
+  await page.goto("/");
+  await expect(page.locator(".page-top")).toHaveCount(0);
+});
+
+test("the homepage: \"Restore the shine\", no buttons under it, each step two lines, and the services subhead", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await expect(page.locator("#how h2")).toHaveText("Restore the shine");
+  await expect(page.locator("#how .button")).toHaveCount(0);
+  const lines = await page.locator(".steps span.text").evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight))));
+  expect(lines).toEqual([2, 2, 2]);
+  await expect(page.locator("#services .lead")).toHaveText("We provide upfront pricing right here on our website. Pick your vehicle, see the exact price with tax, and pick a day that works for you. We show up and handle the rest.");
+});
+
+test("on a desktop each service card's photo is a full-height square on the right, with the text left of it", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  for (const path of ["/", "/cleveland-tn-mobile-detailing/"]) {
+    await page.goto(path);
+    await page.evaluate(() => document.fonts.ready);
+    for (const card of await page.locator(".service-card").all()) {
+      const c = await card.boundingBox();
+      const p = await card.locator(".service-card-photo img").boundingBox();
+      const t = await card.locator(".text").boundingBox();
+      expect(Math.abs(p.width - p.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(p.height - c.height)).toBeLessThanOrEqual(1);
+      expect(Math.abs(p.x + p.width - (c.x + c.width))).toBeLessThanOrEqual(1);
+      expect(t.x + t.width).toBeLessThanOrEqual(p.x);
+    }
+  }
+});
+
+test("on a phone each service card's photo sits at the top @phone", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone only");
+  await page.goto("/");
+  for (const card of await page.locator(".service-card").all()) {
+    const c = await card.boundingBox();
+    const p = await card.locator(".service-card-photo img").boundingBox();
+    expect(Math.abs(p.y - c.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(p.width - c.width)).toBeLessThanOrEqual(1);
+  }
+});
+
+test("the services, about and contact page tops and the red box headings use the owner's words", async ({ page }) => {
+  await page.goto("/services/");
+  await expect(page.locator(".page-head .eyebrow")).toHaveCount(0);
+  await expect(page.locator(".page-head h1")).toHaveText("Mobile Detailing Services");
+  await expect(page.locator(".page-head .lead")).toHaveText("We come to your driveway in Bradley, McMinn, Hamilton, Polk, and Meigs Counties.");
+  for (const [anchor, heading] of [["detail", "Book your detail today"], ["correction", "Book a paint correction"], ["headlight", "Restore your headlights"], ["extraction", "Book your detail today"]]) {
+    await expect(page.locator(`#${anchor} .cta h2`)).toHaveText(heading);
+  }
+  await page.goto("/about/");
+  await expect(page.locator(".page-head .eyebrow")).toHaveCount(0);
+  await expect(page.locator(".page-head h1")).toHaveText("About Dixie Detail");
+  await expect(page.locator(".page-head .lead")).toHaveText("An eye for perfection and a passion for quality");
+  await page.goto("/contact/");
+  await expect(page.locator(".page-head .lead")).toHaveText("Have a question or comment? Call or text us and we'll get back to you right away.");
+});

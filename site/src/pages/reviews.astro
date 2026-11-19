@@ -6,6 +6,6 @@ import { pages } from "../lib/data.js";
 const page = pages.pages.reviews;
 ---
 <Base title={page.title} description={page.description} path={page.path}>
-  <PageHead heading={pages.reviews.heading} lead={pages.reviews.text} />
+  <PageHead slot="top" heading={pages.reviews.heading} lead={pages.reviews.text} />
   <Reviews heading="What customers say" limit={100} />
 </Base>

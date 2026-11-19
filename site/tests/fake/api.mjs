@@ -316,7 +316,7 @@ export function createFakeApi() {
       payment_methods: [["card", "Card"], ["cash", "Cash"], ["venmo", "Venmo"], ["paypal", "PayPal"], ["cash_app", "Cash App"], ["bitcoin", "Bitcoin"]].map(([value, label]) => ({ value, label })),
       consent: CONSENT, quote_lifetime_minutes: 120, photos: { max_per_request: 6, max_megabytes: 15, types: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] },
     });
-    if (path === "vehicles/years") return send(res, 200, { years: [2026, 2025, 2024, 2021, 2020, 2019, 2018], first_year: 1984 });
+    if (path === "vehicles/years") return send(res, 200, { years: [2026, 2025, 2024, 2021, 2020, 2019, 2018, 2015], first_year: 1984 });
     if (path === "vehicles/makes") return send(res, 200, { year: Number(p.get("year")), makes: Object.keys(MODELS).sort() });
     if (path === "vehicles/models") return send(res, 200, { year: Number(p.get("year")), make: p.get("make"), models: (MODELS[p.get("make")] || []).map(([name, type]) => ({ name, type, motorcycle: type === "motorcycle" })) });
     if (path === "vehicles/lookup") return send(res, 200, lookup(p));

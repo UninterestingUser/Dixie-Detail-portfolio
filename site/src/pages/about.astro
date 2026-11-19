@@ -9,7 +9,7 @@ const page = pages.pages.about;
 const about = pages.about;
 ---
 <Base title={page.title} description={page.description} path={page.path}>
-  <PageHead eyebrow={about.heading} heading={about.subheading} />
+  <PageHead slot="top" heading={about.heading} lead={about.subheading} />
   <section class="section">
     <div class="wrap split">
       <div class="prose">{about.paragraphs.map((text) => <p>{text}</p>)}</div>

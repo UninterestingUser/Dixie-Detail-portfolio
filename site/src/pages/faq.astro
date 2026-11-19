@@ -8,7 +8,7 @@ import { faqSchema } from "../lib/schema.js";
 const page = pages.pages.faq;
 ---
 <Base title={page.title} description={page.description} path={page.path} jsonLd={[await faqSchema(pages.faq)]}>
-  <PageHead heading="Common questions" />
+  <PageHead slot="top" heading="Common questions" />
   <section class="section">
     <div class="wrap faq">
       <div class="faq-list"><FaqList items={pages.faq} /></div>
