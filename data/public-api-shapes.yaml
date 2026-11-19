@@ -1,7 +1,7 @@
 meta:
   title: Public API answer shapes
   summary: The shape of every public API answer the website reads, the contract the real API and the website's fake API are both tested against so they can't drift apart.
-  updated: 2026-11-18
+  updated: 2026-11-19
   status: current
   explained_in: docs/reference/public-api.md
   note: >-
@@ -144,6 +144,13 @@ answers:
         $or_null: true
         label: string
         value: number
+  reviews:
+    reviews:
+    - date: string
+      link: string|null
+      name: string
+      stars: number|null
+      text: string
   services:
     classes:
     - booked_by_quote: boolean

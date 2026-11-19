@@ -1,17 +1,63 @@
 ---
+// The homepage's service area (owner, 2026-11-19): the heading and the
+// counties on the left; on the right the three city buttons and a Google
+// map centered on Cleveland, with no marker, zoomed just far enough to take
+// in Chattanooga, Athens, Decatur and Ocoee. On a phone they stack: the
+// counties, the buttons, the map.
+//
+// The map is the Maps Embed API in view mode (free, and view mode draws no
+// marker), with the browser key. It loads only as the visitor scrolls near
+// it: the frame is written in when the placeholder comes within MAP_MARGIN
+// of the screen, so it adds nothing to the first screen or the speed scores.
 import { pages } from "../lib/data.js";
+import { setting } from "../lib/settings.js";
 const area = pages.service_area;
+const map = area.map;
+const src = `https://www.google.com/maps/embed/v1/view?${new URLSearchParams({
+  key: setting("PUBLIC_GOOGLE_MAPS_BROWSER_KEY"),
+  center: `${map.center.latitude},${map.center.longitude}`,
+  zoom: String(map.zoom),
+})}`;
+const open = `https://www.google.com/maps/@${map.center.latitude},${map.center.longitude},${map.zoom}z`;
 ---
 <div class="area">
   <div class="area-text">
     <p class="eyebrow">Service area</p>
     <h2 class="display">We come to you</h2>
-    <p class="lead">{area.text} You provide water and power within 50 feet, and we bring everything else, tent included.</p>
-    <div class="pills">
-      {pages.cities.map((city) => <a class="pill" href={`/${city.slug}/`}>{city.city}</a>)}
+    <ul class="counties" aria-label="Counties we serve">
+      {area.counties.map((county) => <li><strong>{county.name}</strong><span>{county.text}</span></li>)}
+    </ul>
+  </div>
+  <div class="area-map">
+    <div class="buttons area-cities">
+      {pages.cities.map((city) => <a class="button outline" href={`/${city.slug}/`}>{city.city}</a>)}
+    </div>
+    <div class="map" data-map={src} data-map-title={map.title}>
+      <a class="map-link" href={open}>Open the service area map on Google Maps</a>
     </div>
   </div>
-  <ul class="counties" aria-label="Counties we serve">
-    {area.counties.map((county) => <li><strong>{county.name}</strong><span>{county.text}</span></li>)}
-  </ul>
 </div>
+<script>
+  // Write the map's frame in as its placeholder nears the screen.
+  const MAP_MARGIN = "400px 0px";
+  for (const box of document.querySelectorAll<HTMLElement>("[data-map]")) {
+    const show = () => {
+      const frame = document.createElement("iframe");
+      frame.src = box.dataset.map!;
+      frame.title = box.dataset.mapTitle!;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.allowFullscreen = true;
+      box.replaceChildren(frame);
+    };
+    if (!("IntersectionObserver" in window)) show();
+    else {
+      const watch = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          watch.disconnect();
+          show();
+        }
+      }, { rootMargin: MAP_MARGIN });
+      watch.observe(box);
+    }
+  }
+</script>

@@ -1,0 +1,11 @@
+{% extends "control/base.html" %}
+{% block title %}Delete review{% endblock %}
+{% block content %}
+<h1>Delete the review by {{ review.name }}?</h1>
+<p>It comes off the website after the rebuild. To take it off for now and keep it, hide it instead.</p>
+<form method="post" class="actions">
+  {% csrf_token %}
+  <button type="submit" class="danger">Delete for good</button>
+  <a class="button" href="{% url 'site-reviews' %}">Cancel</a>
+</form>
+{% endblock %}

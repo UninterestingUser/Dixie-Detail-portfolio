@@ -1,7 +1,7 @@
 meta:
   title: Website pages
   summary: Each website page's address, title and search description, and the page text carried over from the current dixiedetail.com - how it works, the counties, the questions, the about page and the three city pages - with prices read from the price book.
-  updated: 2026-11-14
+  updated: 2026-11-19
   status: current
   explained_in: docs/reference/website-and-seo.md
   read_by: the Astro site in site/, at build time
@@ -13,7 +13,9 @@ meta:
     service's lowest price) or {price:Headlight Restoration} (its one price),
     because the old figures were out of date; and the questions that named
     prices or vans say what the price book and decision 0103 now say, marked
-    "updated:" below.
+    "updated:" below. The owner's later changes are marked "owner," with
+    their date: the city pages' headings and subheads, the homepage's map
+    and questions (2026-11-19).
 
 # Every address the current site has keeps working with its title and
 # description (website-and-seo.md, search ranking safeguards).
@@ -94,10 +96,13 @@ how_it_works:
 
 service_area:
   heading: Serving Cleveland, Athens, Chattanooga, and nearby counties
-  text: >-
-    Dixie Detail is based in Calhoun, between Cleveland and Athens, and we
-    come to you across Southeast Tennessee. If you can park it, and you're in
-    the counties below, you're in range.
+  # The homepage's map (owner, 2026-11-19): centered on Cleveland TN with no
+  # marker, at the closest zoom that still shows Chattanooga, Athens,
+  # Decatur and Ocoee on a phone. title is for screen readers.
+  map:
+    center: { latitude: 35.1595, longitude: -84.8766 }
+    zoom: 9
+    title: Map of the Dixie Detail service area around Cleveland, Tennessee
   counties:
     - name: Bradley County
       text: >-
@@ -121,13 +126,34 @@ service_area:
     - name: Meigs County
       text: Decatur, Ten Mile, and surrounding Meigs County. Same full detail, same driveway service.
 
+# The homepage's questions (owner, 2026-11-19): these six, in this order,
+# each the question of an entry in faq below.
+home_faq:
+  - Is there a Dixie Detail shop where I can drop off my car?
+  - What do you need from me on the day of the appointment?
+  - I have stuff in my car. Does it need to be empty before you arrive?
+  - Do the glove box and center console need to be empty?
+  - I have a situation that goes beyond a normal detail. How do I book that?
+  - How much are your services?
+
+# Every question on /faq/, in order. Prices are {from:Service} and
+# {price:Service} tokens, filled from the pricebook at build time.
 faq:
   - question: Do you come to Cleveland, Athens, and Chattanooga?
     answer: >-
       Yes. Dixie Detail is mobile. We regularly book driveways across
       Bradley, McMinn, Hamilton, Polk, and Meigs Counties.
-  - question: How much is a mobile car detail?
-    # updated: the old answer's price ranges were out of date.
+  # owner, 2026-11-19.
+  - question: Is there a Dixie Detail shop where I can drop off my car?
+    answer: >-
+      We are strictly mobile at this time and do not have a retail shop
+      location. This keeps overhead low and allows more flexibility for how
+      we serve our customers. If there is enough demand in the future, we may
+      look at adding a fixed location, but for now we're happy to come to
+      your driveway.
+  # owner, 2026-11-19: replaces "How much is a mobile car detail?", with
+  # the same answer. Prices from the pricebook.
+  - question: How much are your services?
     answer: >-
       A Full Detail starts at {from:Full Detail}, depending on the vehicle's
       size. Paint correction starts at {from:1-Step Paint Correction}.
@@ -135,11 +161,33 @@ faq:
       Carpet and seat extraction are add-ons from {from:Carpet Extraction}.
       Pick your vehicle on the booking page and the exact price shows before
       you book.
-  - question: What do I need to provide on the day of the appointment?
+  # owner, 2026-11-19: replaces "What do I need to provide on the day of the
+  # appointment?".
+  - question: What do you need from me on the day of the appointment?
     answer: >-
-      All we need is a space to perform the service and water and power
-      connections nearby. We bring all of the necessary equipment including
-      cords, hoses, and a tent to cover the vehicle.
+      We bring all of the cleaning equipment and expertise. The only things
+      we need from you are a suitable space to perform the work, a water
+      connection, and a power connection. We supply cords, hoses, and a tent
+      to shield from sun and rain during the process.
+  # owner, 2026-11-19.
+  - question: I have stuff in my car. Does it need to be empty before you arrive?
+    answer: >-
+      A few items in the car is normal. We'll carefully move or clean around
+      them. If parts of the vehicle are buried in items or trash, it will need
+      to be removed prior to service. The car doesn't need to be perfect. We
+      expect to remove some trash along the way since we get into the areas
+      where nobody looks, but if there are too many loose items in the
+      vehicle, it becomes difficult to tell what should be kept or thrown
+      away. It also cuts into the service time and we can't get your car as
+      clean as we otherwise would due to time constraints. Just give the car a
+      good pickup before we arrive and we'll take it to the finish line.
+  # owner, 2026-11-19.
+  - question: Do the glove box and center console need to be empty?
+    answer: >-
+      The glove box and center console are included in an interior detail,
+      but it's your choice. If they're full and you'd rather we just leave
+      them alone, we can do that. If they're empty or just have a few items,
+      we're happy to get them clean.
   - question: How long does the service take?
     answer: >-
       Plan on most of a day for a full detail. Larger trucks and SUVs, heavy
@@ -153,6 +201,16 @@ faq:
       SUVs, minivans, full-size trucks, and motorcycles. Pricing is by
       vehicle class when you book. Full-size vans are quoted by hand: send a
       quote request from the booking page and we'll reply with a price.
+  # owner, 2026-11-19.
+  - question: I have a situation that goes beyond a normal detail. How do I book that?
+    answer: >-
+      You can give us a call at (423) 380-9120 and we'll be happy to discuss
+      it. Also, you can visit the booking page to enter your vehicle and
+      select your service. For all full details or interior details, there is
+      an additional question about the condition of the vehicle. Select
+      "Let's talk" and it will take you to a form to provide a description and
+      submit photos. Either way, if it's something we can help with, we'll
+      get you a quote.
   - question: What's the difference between a detail and paint correction?
     answer: >-
       A detail addresses dirt and contamination inside and outside the
@@ -213,24 +271,15 @@ cities:
     photo_alt: Mobile car detailing in Cleveland, Tennessee.
     title: Mobile Detailing in Cleveland TN - Dixie Detail
     description: Mobile car detailing at your Cleveland, TN driveway. Dixie Detail serves Bradley County - Lee University, Paul Huff, Charleston, Georgetown.
-    heading: Mobile Detailing in Cleveland & Bradley County
-    intro: >-
-      Dixie Detail comes to your driveway in Cleveland, Tennessee. No
-      drop-off, no shop wait. We bring the tent, cords, and equipment; you
-      just provide a suitable space (usually a driveway) with water and power
-      connections nearby. We handle the rest.
+    heading: Mobile detailing in Cleveland TN
+    intro: "We'll come to your driveway anywhere in Bradley County."
     where_heading: Where we work in Bradley County
     where: >-
       Downtown Cleveland, north Cleveland and the Paul Huff / Bradley Square
       area, the Lee University and Ocoee Street neighborhoods, south
-      Cleveland, Charleston, Georgetown, McDonald, Waterlevel, and the rest of
-      Bradley County. If your driveway has a Bradley County address, Dixie
-      Detail has you covered.
-    services:
-      detail: Full interior and exterior in the driveway. Daily drivers, campus cars, and work trucks.
-      correction: Swirls and light scratches from automatic washes and I-75 miles. Ceramic wax when we finish.
-      headlight: Both headlights. UV-damaged lenses on older Cleveland daily drivers.
-      extraction: For carpets and cloth seats that a regular detail won't pull out of. Added on top of the full detail when the interior needs a deeper reset.
+      Cleveland, Charleston, Georgetown, McDonald, Waterlevel Hwy, Dalton
+      Pike, and the rest of Bradley County. If your driveway has a Bradley
+      County address, Dixie Detail has you covered.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-
@@ -260,24 +309,14 @@ cities:
     photo_alt: Mobile car detailing in McMinn County, Tennessee.
     title: Mobile Car Detailing in Athens TN - Dixie Detail
     description: Mobile car detailing in Athens TN and McMinn County. Based in Calhoun, Dixie Detail serves Athens, Etowah, Englewood, and Niota.
-    heading: Mobile Detailing in Athens & McMinn County
-    intro: >-
-      Athens is a short run from our base in Calhoun. Dixie Detail provides
-      mobile car detailing for McMinn County driveways. Congress Parkway
-      commuters, Tennessee Wesleyan area, and family vehicles that pick up red
-      clay and oak pollen. We come to you. No need to drive to Cleveland or
-      Chattanooga for a shop appointment.
+    heading: Mobile detailing in Athens TN
+    intro: "We'll come to your driveway anywhere in McMinn County."
     where_heading: Where we work in McMinn County
     where: >-
       Athens proper, Calhoun, Etowah, Englewood, Niota, Riceville, and the
       rest of McMinn County. Farm trucks, daily commuters, and show cars
       needing a cleanup for the Saturday Cruise-In at Midway Milkshake - Dixie
       Detail is the call to make.
-    services:
-      detail: Showroom-level interior and exterior at the house. Built for daily drivers and well-loved family SUVs - including the 20-year-old Pilot crowd.
-      correction: Dull, swirled clear coat from years of McMinn sun and automatic washes. 1-step or 2-step, then ceramic wax.
-      headlight: Both lights, multi-stage, with UV protection. Common on older Athens daily drivers.
-      extraction: For cloth seats and carpets that have taken on clay, spills, and years of kids.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-
@@ -306,13 +345,8 @@ cities:
     photo_alt: Mobile car detailing in Chattanooga, TN.
     title: Mobile Car Detailing in Chattanooga TN - Dixie Detail
     description: Mobile car detailing for Chattanooga and Hamilton County. Dixie Detail comes to Ooltewah, Collegedale, Hixson, Soddy-Daisy, and Red Bank. Call 423-380-9120.
-    heading: Mobile Detailing in Chattanooga & Hamilton County
-    intro: >-
-      Dixie Detail is a mobile detailer based north of the city toward
-      Cleveland. We come into Hamilton County - Ooltewah, Collegedale, Hixson,
-      Soddy-Daisy, Red Bank, and Harrison - and work in your driveway. You get
-      a full-day detail without crossing town to a shop or leaving a car
-      overnight.
+    heading: Mobile detailing in Chattanooga TN
+    intro: "We'll come to your driveway anywhere in Hamilton County."
     where_heading: Where we work in Hamilton County
     where: >-
       Ooltewah, Collegedale, Apison, Harrison, Hixson, Soddy-Daisy, Red Bank,
@@ -320,11 +354,6 @@ cities:
       is the natural run from our Calhoun base. If you are on Lookout,
       Signal, or downtown with tight parking, call first - we need a legal
       spot, water, and power for the day.
-    services:
-      detail: Full interior and exterior, mobile. Commuter sedans, family SUVs, and trucks.
-      correction: Swirl removal and gloss restoration, finished with ceramic wax. The right job if Hamilton Place lot washers have hazed the clear coat.
-      headlight: Both headlights, UV-protected. Not a wipe-on kit.
-      extraction: Deep pull on carpets and cloth seats. Add it when you book the detail.
     faq:
       - question: Do I need to drive to a shop?
         answer: >-

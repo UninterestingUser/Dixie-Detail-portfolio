@@ -1,27 +1,34 @@
 ---
-// Real reviews the owner supplies (data/reviews.yaml), never written for
-// the site. Without any, the section points to the Google reviews.
+// The customer reviews kept on the control app's Reviews screen, read from
+// the public API at build time (decision 0109), never written for the site:
+// each with the name as shown, the text, its stars when given and a link to
+// the review on Google when given. No combined rating. With none shown, the
+// section keeps only the link to the Google reviews. On the homepage it sits
+// over the locked car photo; the reviews page passes plain, for the plain
+// white page of the other pages.
 import { Image } from "astro:assets";
 import backdrop from "../assets/photos/reviews-background.webp";
+import Icon from "./Icon.astro";
 import { business, reviews } from "../lib/data.js";
-const { heading = "What Cleveland and Athens customers say", limit = 3 } = Astro.props;
+const { heading = "What Cleveland and Athens customers say", limit = 3, plain = false } = Astro.props;
 const google = business.social_profiles.google_business_profile;
-const shown = reviews.slice(0, limit);
+const shown = (await reviews()).slice(0, limit);
 ---
-<section class="reviews" id="reviews" aria-labelledby="reviews-heading">
-  <Image class="backdrop" src={backdrop} alt="" widths={[800, 1400, 2000]} sizes="100vw" loading="lazy" />
+<section class:list={["reviews", { plain }]} id="reviews" aria-labelledby="reviews-heading">
+  {!plain && <Image class="backdrop" src={backdrop} alt="" widths={[800, 1400, 2000]} sizes="100vw" loading="lazy" />}
   <div class="wrap">
     <div class="stack">
-      <p class="eyebrow">Reviews</p>
+      {!plain && <p class="eyebrow">Reviews</p>}
       <h2 class="display" id="reviews-heading">{heading}</h2>
       {google && <p style="margin:0;font-size:17px">Read every review, or leave one, on <a href={google}>Google</a>.</p>}
     </div>
     {shown.length > 0 && (
       <div class="review-grid">
         {shown.map((review) => (
-          <figure class="review">
+          <figure class="review" data-review>
+            {review.stars && <p class="stars" role="img" aria-label={`${review.stars} out of 5 stars`}>{[1, 2, 3, 4, 5].map((n) => <span class:list={{ off: n > review.stars }}><Icon name="star" size={20} /></span>)}</p>}
             <blockquote>“{review.text}”</blockquote>
-            <figcaption><strong>{review.name}</strong> · {review.source || "Google review"}</figcaption>
+            <figcaption><strong>{review.name}</strong>{review.link ? <> · <a href={review.link}>Google review</a></> : " · Google review"}</figcaption>
           </figure>
         ))}
       </div>

@@ -8,7 +8,7 @@
 // Text comes from data/site-content.yaml (the owner's words) and
 // data/site-pages.yaml (carried over from the old site).
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { parse } from "yaml";
@@ -22,11 +22,6 @@ export const API_BASE = setting("API_BASE").replace(/\/+$/, "");
 
 export function readData(name) {
   return parse(readFileSync(path.join(DATA_DIR, name), "utf8"));
-}
-
-export function readOptionalData(name) {
-  const file = path.join(DATA_DIR, name);
-  return existsSync(file) ? parse(readFileSync(file, "utf8")) : null;
 }
 
 const cache = new Map();
@@ -55,9 +50,13 @@ export function api(endpoint) {
 export const content = readData("site-content.yaml");
 export const pages = readData("site-pages.yaml");
 export const business = readData("business.yaml");
-// Real reviews the owner supplies; never written for the site. The file is
-// optional, and without it the reviews section links to Google only.
-export const reviews = (readOptionalData("reviews.yaml") || {}).reviews || [];
+// The customer reviews shown on the site, from the public API like prices
+// (decision 0109): kept in the control app, so customers' names never enter
+// this repository, and never written for the site. With none shown, the
+// reviews section links to Google only.
+export async function reviews() {
+  return (await api("reviews")).reviews;
+}
 
 export const phone = business.phone;
 

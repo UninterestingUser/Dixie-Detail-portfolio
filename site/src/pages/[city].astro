@@ -21,7 +21,7 @@ const others = pages.cities.filter((item) => item.slug !== city.slug);
 const jsonLd = [await localBusiness(), await faqSchema(city.faq)];
 ---
 <Base title={city.title} description={city.description} path={`/${city.slug}/`} jsonLd={jsonLd}>
-  <PageHead slot="top" eyebrow={`${city.city}, Tennessee`} heading={city.heading} lead={city.intro} />
+  <PageHead slot="top" heading={city.heading} lead={city.intro} />
   <section class="section">
     <div class="wrap split">
       <div class="stack">
@@ -36,7 +36,7 @@ const jsonLd = [await localBusiness(), await faqSchema(city.faq)];
     <div class="wrap stack" style="gap:28px">
       <h2 class="display">Services offered in {city.city} TN</h2>
       <p class="lead">Pricing based on the size and type of vehicle. Pick your vehicle on the booking page and your exact price shows.</p>
-      <ServiceCards texts={city.services} />
+      <ServiceCards />
     </div>
   </section>
   <section class="section">

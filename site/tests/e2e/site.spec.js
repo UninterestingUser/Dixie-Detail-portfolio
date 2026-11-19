@@ -100,12 +100,17 @@ for (const [old, anchor] of [["detailing", "detail"], ["paint-correction", "corr
 test("every page but the homepage has the header photo, under a 50% shade, down to the red line", async ({ page }) => {
   for (const path of ["/services/", "/about/", "/contact/", "/reviews/", "/faq/", "/book/", "/privacy-policy/", "/cleveland-tn-mobile-detailing/"]) {
     await page.goto(path);
-    const photo = page.locator(".page-top > img.page-top-photo");
+    const photo = page.locator(".page-top > .page-top-photo > img");
     await expect(photo).toHaveAttribute("srcset", /page-header/);
     const box = await photo.boundingBox();
     const top = await page.locator(".page-top").boundingBox();
     expect(box.width).toBeCloseTo(page.viewportSize().width, -1);
-    expect(box.height).toBeCloseTo(top.height - 6, 0);
+    // Twice the header's height, so the photo's middle row, the bottom of
+    // the nearest car's headlights, sits on the red line; the box clips it.
+    expect(box.y).toBeCloseTo(top.y, 0);
+    expect(box.height).toBeCloseTo(2 * (top.height - 6), 0);
+    const clip = await page.locator(".page-top-photo").boundingBox();
+    expect(clip.height).toBeCloseTo(top.height - 6, 0);
     expect(await page.locator(".page-top").evaluate((el) => getComputedStyle(el, "::after").backgroundColor)).toBe("rgba(0, 0, 0, 0.5)");
   }
   await page.goto("/");
@@ -125,7 +130,7 @@ test("the homepage: \"Restore the shine\", no buttons under it, each step two li
 
 test("on a desktop each service card's photo is a full-height square on the right, with the text left of it", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
-  for (const path of ["/", "/cleveland-tn-mobile-detailing/"]) {
+  for (const path of ["/", "/cleveland-tn-mobile-detailing/", "/athens-tn-mobile-detailing/", "/chattanooga-tn-mobile-detailing/"]) {
     await page.goto(path);
     await page.evaluate(() => document.fonts.ready);
     for (const card of await page.locator(".service-card").all()) {
@@ -165,4 +170,143 @@ test("the services, about and contact page tops and the red box headings use the
   await expect(page.locator(".page-head .lead")).toHaveText("An eye for perfection and a passion for quality");
   await page.goto("/contact/");
   await expect(page.locator(".page-head .lead")).toHaveText("Have a question or comment? Call or text us and we'll get back to you right away.");
+});
+
+// Acceptance changes 3 (owner, 2026-11-19) -----------------------------------
+
+const CITIES = [
+  ["/cleveland-tn-mobile-detailing/", "Mobile detailing in Cleveland TN", "We'll come to your driveway anywhere in Bradley County."],
+  ["/athens-tn-mobile-detailing/", "Mobile detailing in Athens TN", "We'll come to your driveway anywhere in McMinn County."],
+  ["/chattanooga-tn-mobile-detailing/", "Mobile detailing in Chattanooga TN", "We'll come to your driveway anywhere in Hamilton County."],
+];
+
+const CARD_TEXT = [
+  "A full-service cleaning that meticulously reaches every corner of your car, inside and out. This isn't just a quick vacuum and wipe down. It's a complete restoration and you get a new car again.",
+  "Decontamination plus a machine polish to remove imperfections, finished with ceramic wax that protects for up to a year. This goes beyond the detailed cleaning to restore the glossy finish.",
+  "Multi-stage removal of the UV-damaged outer layer followed by a polish and buff to restore clarity. We finish by adding UV protection to ensure they don't turn hazy again in a month.",
+  "For carpets and cloth seats that need a deeper cleaning. Add this to any interior detail service to pull out smells and filth that have embedded deep into the seats or carpet.",
+];
+
+// Answers any call to Google Maps from the test, so nothing leaves the machine.
+async function fakeGoogleMaps(page) {
+  const asked = [];
+  await page.route("https://www.google.com/maps/**", (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ contentType: "text/html", body: "<!doctype html><title>map</title>" });
+  });
+  return asked;
+}
+
+test("the homepage's cards carry the owner's text, and the city pages show the same cards", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".service-card .text")).toHaveText(CARD_TEXT);
+  const home = await page.locator(".service-card").evaluateAll((cards) => cards.map((card) => card.innerText));
+  for (const [path, heading, lead] of CITIES) {
+    await page.goto(path);
+    expect(await page.locator(".service-card").evaluateAll((cards) => cards.map((card) => card.innerText))).toEqual(home);
+    await expect(page.locator(".page-head .eyebrow")).toHaveCount(0);
+    await expect(page.locator(".page-head h1")).toHaveText(heading);
+    await expect(page.locator(".page-head .lead")).toHaveText(lead);
+  }
+  await page.goto(CITIES[0][0]);
+  await expect(page.locator("main .split .lead").first()).toHaveText("Downtown Cleveland, north Cleveland and the Paul Huff / Bradley Square area, the Lee University and Ocoee Street neighborhoods, south Cleveland, Charleston, Georgetown, McDonald, Waterlevel Hwy, Dalton Pike, and the rest of Bradley County. If your driveway has a Bradley County address, Dixie Detail has you covered.");
+});
+
+test("the homepage menu's backing is 10% darker, with the buttons' corners", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  const nav = page.locator(".site-header .nav");
+  expect(await nav.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgba(20, 21, 24, 0.72)");
+  const [backing, button] = await Promise.all([nav.evaluate((el) => getComputedStyle(el).borderRadius), nav.locator(".button").evaluate((el) => getComputedStyle(el).borderRadius)]);
+  expect(backing).toBe(button);
+  expect(await nav.evaluate((el) => getComputedStyle(el).padding)).toBe("6px 6px 6px 26px");
+});
+
+test("the homepage's sections: reviews after services, then the service area, then the six questions", async ({ page }) => {
+  await page.goto("/");
+  const order = await page.locator("#services, #reviews, #area, #faq").evaluateAll((els) => els.map((el) => el.id));
+  expect(order).toEqual(["services", "reviews", "area", "faq"]);
+  await expect(page.locator("#faq summary")).toHaveText([
+    "Is there a Dixie Detail shop where I can drop off my car?",
+    "What do you need from me on the day of the appointment?",
+    "I have stuff in my car. Does it need to be empty before you arrive?",
+    "Do the glove box and center console need to be empty?",
+    "I have a situation that goes beyond a normal detail. How do I book that?",
+    "How much are your services?",
+  ]);
+  // The prices come from the pricebook: the fake's, not the owner's typed ones.
+  await page.locator("#faq summary").last().click();
+  await expect(page.locator("#faq details").last().locator("p")).toHaveText(/^A Full Detail starts at \$\d+, depending on the vehicle's size\. Paint correction starts at \$\d+\. Headlight restoration is \$\d+ for both lights\. Carpet and seat extraction are add-ons from \$\d+\./);
+  // All six are on /faq/ too.
+  await page.goto("/faq/");
+  const all = await page.locator("summary").allTextContents();
+  expect(new Set(all).size).toBe(all.length);
+  for (const question of ["Is there a Dixie Detail shop where I can drop off my car?", "How much are your services?", "I have a situation that goes beyond a normal detail. How do I book that?"]) expect(all).toContain(question);
+});
+
+test("the service area: counties under the heading, the city buttons over the map, and the map loads only on approach", async ({ page }) => {
+  const asked = await fakeGoogleMaps(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  const area = page.locator("#area");
+  await expect(area.locator(".lead")).toHaveCount(0);
+  await expect(area.locator(".area-cities a")).toHaveText(["Cleveland", "Athens", "Chattanooga"]);
+  await expect(area.locator(".area-cities a").first()).toHaveClass(/button/);
+  // Nothing from Google on the first screen.
+  await page.waitForLoadState("networkidle");
+  expect(asked).toEqual([]);
+  await expect(area.locator("iframe")).toHaveCount(0);
+  await area.scrollIntoViewIfNeeded();
+  const frame = area.locator("iframe");
+  await expect(frame).toHaveAttribute("title", "Map of the Dixie Detail service area around Cleveland, Tennessee");
+  const src = new URL(await frame.getAttribute("src"));
+  expect(src.origin + src.pathname).toBe("https://www.google.com/maps/embed/v1/view");
+  expect(src.searchParams.get("center")).toBe("35.1595,-84.8766");
+  expect(src.searchParams.get("zoom")).toBe("9");
+  expect(src.searchParams.get("q")).toBeNull();
+  expect(src.searchParams.get("key")).toBeTruthy();
+  await expect.poll(() => asked.length).toBe(1);
+  // The counties under the heading, the map to their right, the buttons just above the map.
+  const [heading, counties, buttons, map] = await Promise.all(["h2", ".counties", ".area-cities", ".map"].map((s) => area.locator(s).boundingBox()));
+  expect(counties.y).toBeGreaterThan(heading.y);
+  expect(map.x).toBeGreaterThan(counties.x + counties.width);
+  expect(buttons.y + buttons.height).toBeLessThanOrEqual(map.y);
+  expect(map.y - (buttons.y + buttons.height)).toBeLessThan(24);
+});
+
+test("on a phone the service area stacks the counties, the buttons and the map @phone", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone only");
+  await fakeGoogleMaps(page);
+  await page.goto("/");
+  const area = page.locator("#area");
+  const [counties, buttons, map] = await Promise.all([".counties", ".area-cities", ".map"].map((s) => area.locator(s).boundingBox()));
+  expect(buttons.y).toBeGreaterThan(counties.y + counties.height);
+  expect(map.y).toBeGreaterThan(buttons.y + buttons.height);
+  expect(map.width).toBeCloseTo(counties.width, 0);
+});
+
+test("reviews come from the API: name, text and stars when given, the Google link, no combined rating", async ({ page }) => {
+  await page.goto("/");
+  const reviews = page.locator("#reviews [data-review]");
+  await expect(reviews).toHaveCount(3);
+  await expect(reviews.locator("figcaption strong")).toHaveText(["Alex T.", "Sam R.", "Jo M."]);
+  await expect(reviews.first().locator("blockquote")).toHaveText("“Invented review one. The truck looks new again.”");
+  await expect(reviews.nth(0).locator(".stars")).toHaveAttribute("aria-label", "5 out of 5 stars");
+  await expect(reviews.nth(1).locator(".stars")).toHaveCount(0);
+  await expect(reviews.nth(2).locator(".stars")).toHaveAttribute("aria-label", "4 out of 5 stars");
+  await expect(reviews.nth(0).locator("figcaption a")).toHaveAttribute("href", "https://g.co/kgs/example-1");
+  await expect(page.locator("#reviews").getByRole("link", { name: "Google", exact: true })).toBeVisible();
+  await expect(page.locator("#reviews")).not.toContainText(/average|out of 5 from|\d\.\d stars/i);
+  await expect(page.locator("#reviews img.backdrop")).toHaveCount(1);
+
+  await page.goto("/reviews/");
+  await expect(page.locator("[data-review]")).toHaveCount(4);
+  // The plain white page, with no car photo behind it.
+  await expect(page.locator("#reviews img.backdrop")).toHaveCount(0);
+  expect(await page.locator("#reviews").evaluate((el) => getComputedStyle(el).backgroundColor)).toBe("rgb(255, 255, 255)");
+});
+
+test("the privacy policy says the map may set Google's cookies", async ({ page }) => {
+  await page.goto("/privacy-policy/");
+  await expect(page.getByText("The service area map on our homepage is embedded from Google Maps, which may set its own cookies.", { exact: false })).toBeVisible();
 });

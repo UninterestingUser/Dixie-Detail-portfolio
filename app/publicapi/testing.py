@@ -83,6 +83,13 @@ def open_day(days_ahead=7):
     return day + datetime.timedelta(days=1) if day.weekday() == 6 else day
 
 
+def day_after(day):
+    """The next Monday to Saturday after day. open_day(n + 1) is the same
+    day as open_day(n) when open_day(n) moves off a Sunday."""
+    day += datetime.timedelta(days=1)
+    return day + datetime.timedelta(days=1) if day.weekday() == 6 else day
+
+
 def eastern(day, hour, minute=0):
     return timezone.make_aware(datetime.datetime.combine(day, datetime.time(hour, minute)))
 

@@ -4,14 +4,14 @@ summary: How each payment method is taken at the job and marked paid, and the pa
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-10-17
+updated: 2026-11-19
 tags: [payments, stripe, billing]
-related: [docs/reference/bookkeeping-gnucash.md, docs/decisions/0008-stripe-and-manual-payments.md, docs/decisions/0009-bitcoin-later-phase.md, docs/decisions/0053-check-and-trade-owner-only.md, docs/decisions/0054-gift-cards-and-vouchers.md, docs/architecture/data-model.md]
+related: [docs/decisions/0110-one-website-list-of-payment-methods.md, docs/reference/bookkeeping-gnucash.md, docs/decisions/0008-stripe-and-manual-payments.md, docs/decisions/0009-bitcoin-later-phase.md, docs/decisions/0053-check-and-trade-owner-only.md, docs/decisions/0054-gift-cards-and-vouchers.md, docs/architecture/data-model.md]
 ---
 
 # Payments
 
-Payment is due at the time of service, with no deposit and no card on file. The customer's preferred payment method is saved at booking. Card and Cash App payments mark themselves paid; the rest use a one-tap "paid" button on the owner's phone. These are settled rules; the payment features are built in Phase 4.
+Payment is due at the time of service, with no deposit and no card on file. The customer's preferred payment method is saved at booking. The website offers one list, one entry per method, in the order of `payment_methods_accepted` in [data/business.yaml](../../data/business.yaml): cash, card, Venmo, PayPal, Cash App and Bitcoin; a Cash App choice is saved as Cash App Pay, and both Cash App routes below stay for recording payments ([decision 0110](../decisions/0110-one-website-list-of-payment-methods.md)). Card and Cash App payments mark themselves paid; the rest use a one-tap "paid" button on the owner's phone. These are settled rules; the payment features are built in Phase 4.
 
 ## How each method works
 

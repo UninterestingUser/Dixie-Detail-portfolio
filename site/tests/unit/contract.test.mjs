@@ -78,6 +78,7 @@ test("every fake answer the website reads has the real API's shape", async () =>
   fits("services", await call("services"), 200, 200);
   fits("booking-options", await call("booking-options"), 200, 200);
   fits("price-table", await call("price-table"), 200, 200);
+  fits("reviews", await call("reviews"), 200, 200);
   fits("vehicles/years", await call("vehicles/years"), 200, 200);
   fits("vehicles/makes", await call("vehicles/makes", { params: { year: 2019 } }), 200, 200);
   fits("vehicles/models", await call("vehicles/models", { params: { year: 2019, make: "Toyota" } }), 200, 200);

@@ -4,12 +4,11 @@
 // owner's text, and two buttons in the "How it works" style. From 1328 px
 // up the section's photo is a square on the card's right side, full card
 // height, behind the content, with the text entirely to its left; narrower,
-// as on a phone, it sits at the top of the card (src/styles/global.css). A
-// city page passes its own text for each card, by section anchor.
+// as on a phone, it sits at the top of the card (src/styles/global.css).
+// The city pages show the same cards, with the same text (owner, 2026-11-19).
 import { Image } from "astro:assets";
 import { dollars, serviceSections } from "../lib/data.js";
 import { sectionPhoto } from "../lib/photos.js";
-const { texts = {} } = Astro.props;
 const cards = (await serviceSections()).filter((card) => card.from);
 ---
 <div class="service-cards">
@@ -17,13 +16,13 @@ const cards = (await serviceSections()).filter((card) => card.from);
     const photo = sectionPhoto(card.anchor);
     return (
       <article class="service-card">
-        {photo && <div class="service-card-photo"><Image src={photo} alt="" widths={[320, 400, 560]} sizes="(max-width: 800px) 92vw, (max-width: 1327px) 46vw, 340px" quality={40} loading="lazy" fetchpriority="low" /></div>}
+        {photo && <div class="service-card-photo"><Image src={photo} alt="" widths={[320, 400, 560]} sizes="(max-width: 800px) 92vw, (max-width: 1327px) 46vw, 364px" quality={40} loading="lazy" fetchpriority="low" /></div>}
         <div class="service-card-body">
           <div class="service-card-top">
             <h3>{card.title}</h3>
             <p class="price-box">from {dollars(card.from)}</p>
           </div>
-          <p class="text">{texts[card.anchor] || card.card}</p>
+          <p class="text">{card.card}</p>
           <div class="card-buttons">
             <a class="button" href="/book/">{card.button}</a>
             <a class="button outline" href={`/services/#${card.anchor}`}>More info</a>

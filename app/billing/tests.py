@@ -5,18 +5,31 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from appointments.models import Appointment
-from billing.methods import PaymentMethod, website_methods
+from billing.methods import PaymentMethod, saved_method, website_label, website_methods
 from billing.models import GiftCard, GiftCardBalanceError, Payment
 from customers.models import Customer
 
 
 class PaymentMethodTests(SimpleTestCase):
     def test_check_and_trade_are_never_offered_on_the_website(self):
-        offered = website_methods()
-        self.assertNotIn(PaymentMethod.CHECK, offered)
-        self.assertNotIn(PaymentMethod.TRADE, offered)
-        self.assertNotIn(PaymentMethod.GIFT_CARD, offered)
-        self.assertIn(PaymentMethod.CARD, offered)
+        saved = [method.saved for method in website_methods()]
+        self.assertNotIn(PaymentMethod.CHECK, saved)
+        self.assertNotIn(PaymentMethod.TRADE, saved)
+        self.assertNotIn(PaymentMethod.GIFT_CARD, saved)
+        self.assertIn(PaymentMethod.CARD, saved)
+        for value in ("check", "trade", "gift_card", "cash_app_direct_typo"):
+            self.assertIsNone(saved_method(value), value)
+
+    def test_the_website_list_follows_business_yaml_with_one_cash_app(self):
+        self.assertEqual([method.label for method in website_methods()], ["Cash", "Card", "Venmo", "PayPal", "Cash App", "Bitcoin"])
+        self.assertEqual(saved_method("cash_app"), PaymentMethod.CASH_APP_PAY)
+        # A request an older page sent keeps its route; both read "Cash App".
+        self.assertEqual(saved_method("cash_app_direct"), PaymentMethod.CASH_APP_DIRECT)
+        self.assertEqual(website_label(PaymentMethod.CASH_APP_DIRECT), "Cash App")
+        self.assertEqual(website_label(PaymentMethod.CASH_APP_PAY), "Cash App")
+        # The control app keeps both routes for recording payments.
+        self.assertIn(PaymentMethod.CASH_APP_PAY, PaymentMethod)
+        self.assertIn(PaymentMethod.CASH_APP_DIRECT, PaymentMethod)
 
 
 class PaymentTests(TestCase):

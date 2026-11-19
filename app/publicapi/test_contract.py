@@ -139,6 +139,12 @@ class ContractTests(ApiTestCase):
         keep("services", client.get_api("services"), 200)
         keep("booking-options", client.get_api("booking-options"), 200)
         keep("price-table", client.get_api("price-table"), 200)
+        from marketing.models import Review
+
+        keep("reviews", client.get_api("reviews"), 200)
+        Review.objects.create(name="Pat Q.", text="Invented for the test.", reviewed_on="2026-11-01", stars=5, google_url="https://g.co/kgs/example")
+        Review.objects.create(name="Lee Z.", text="Also invented.", reviewed_on="2026-10-01")
+        keep("reviews", client.get_api("reviews"), 200)
         keep("vehicles/years", client.get_api("vehicles/years"), 200)
         keep("vehicles/makes", client.get_api("vehicles/makes", {"year": 2019}), 200)
         keep("vehicles/models", client.get_api("vehicles/models", {"year": 2019, "make": "Toyota"}), 200)

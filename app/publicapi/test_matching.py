@@ -11,7 +11,7 @@ from publicapi.models import SecondVehicleRequest
 from staff.models import ServiceAuthorization, StaffMember
 from vehicles.models import Vehicle
 
-from .testing import CLEVELAND, ApiTestCase, eastern, open_day
+from .testing import CLEVELAND, ApiTestCase, day_after, eastern, open_day
 
 
 class MatchingTestCase(ApiTestCase):
@@ -169,7 +169,7 @@ class MatchingTests(MatchingTestCase):
     def test_the_color_never_changes_the_price(self):
         self.returning(vehicles=(("White",), ("Dark Blue",)))
         first, _ = self.book(color="White")
-        second, _ = self.book(color=None, start=eastern(open_day(4), 8))
+        second, _ = self.book(color=None, start=eastern(day_after(open_day(3)), 8))
         self.assertEqual(first.total_before_tax, second.total_before_tax)
 
     def test_test_bookings_match_only_test_customers(self):

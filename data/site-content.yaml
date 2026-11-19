@@ -1,7 +1,7 @@
 meta:
   title: Website content
   summary: The website's text in the owner's words - the four service cards and services page sections, each service's text, the condition level cards and the quote notes - and which picture goes with each vehicle class and section. Prices and times come from the price book.
-  updated: 2026-11-18
+  updated: 2026-11-19
   status: current
   explained_in: docs/reference/website-and-seo.md
   read_by: the Astro site in site/, at build time
@@ -19,7 +19,8 @@ meta:
 
 # The four service sections (owner, 2026-11-18): the homepage cards, and
 # the anchored sections of the one services page, /services/#<anchor>.
-# title and card are the owner's words from the current dixiedetail.com.
+# title is the owner's words from the current dixiedetail.com; card is the
+# owner's card text (2026-11-19), the same on the homepage and city pages.
 # The card's "from" price is the lowest of the price_from services' prices,
 # cars and trucks only (no motorcycle is priced for these). button is the
 # card's and section's first button: "See my price" or "Add to detail".
@@ -30,9 +31,9 @@ sections:
   - anchor: detail
     title: Premium Detailing
     card: >-
-      Full interior and exterior detail services. Paint, wheels, tires,
-      undercarriage, engine, between and under the seats, trunk, and door
-      jambs. Built for daily drivers that need to look new again.
+      A full-service cleaning that meticulously reaches every corner of your
+      car, inside and out. This isn't just a quick vacuum and wipe down. It's
+      a complete restoration and you get a new car again.
     price_from: [Full Detail, Interior Only, Exterior Only]
     button: See my price
     services: [Full Detail, Interior Only, Exterior Only, Motorcycle Detail]
@@ -41,8 +42,9 @@ sections:
   - anchor: correction
     title: Paint Correction
     card: >-
-      Decontamination plus a 1-step or 2-step polish to cut swirls and light
-      scratches, finished with ceramic wax that protects for up to a year.
+      Decontamination plus a machine polish to remove imperfections, finished
+      with ceramic wax that protects for up to a year. This goes beyond the
+      detailed cleaning to restore the glossy finish.
     price_from: [1-Step Paint Correction, 2-Step Paint Correction]
     button: See my price
     services: [1-Step Paint Correction, 2-Step Paint Correction]
@@ -51,8 +53,9 @@ sections:
   - anchor: headlight
     title: Headlight Restoration
     card: >-
-      Both headlights. We remove the damaged outer layer, buff the lens, and
-      add UV protection so they don't haze over again in a month.
+      Multi-stage removal of the UV-damaged outer layer followed by a polish
+      and buff to restore clarity. We finish by adding UV protection to ensure
+      they don't turn hazy again in a month.
     price_from: [Headlight Restoration]
     button: Add to detail
     services: [Headlight Restoration]
@@ -61,8 +64,9 @@ sections:
   - anchor: extraction
     title: Shampoo & Extraction
     card: >-
-      For carpets and cloth seats that a regular detail won't pull out of.
-      Added on top of the full detail when the interior needs a deeper reset.
+      For carpets and cloth seats that need a deeper cleaning. Add this to any
+      interior detail service to pull out smells and filth that have embedded
+      deep into the seats or carpet.
     price_from: [Carpet Extraction, Seat Extraction]
     button: Add to detail
     services: [Carpet Extraction, Seat Extraction]

@@ -552,3 +552,37 @@ class ApproveRateForm(forms.Form):
 class StateRateForm(forms.Form):
     percent = forms.DecimalField(label="Rate (%)", min_value=0, max_value=20, max_digits=6, decimal_places=3)
     effective_from = forms.DateField(label="In effect from", widget=forms.DateInput(attrs={"type": "date"}))
+
+
+class ReviewForm(forms.ModelForm):
+    """One review on the Reviews screen (decision 0109)."""
+
+    stars = forms.TypedChoiceField(
+        label="Star rating",
+        choices=[("", "No rating")] + [(str(n), f"{n} star{'s' if n > 1 else ''}") for n in range(5, 0, -1)],
+        coerce=int,
+        empty_value=None,
+        required=False,
+    )
+
+    class Meta:
+        from marketing.models import Review
+
+        model = Review
+        fields = ["name", "text", "reviewed_on", "stars", "google_url", "shown"]
+        widgets = {
+            "reviewed_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "text": forms.Textarea(attrs={"rows": 6}),
+        }
+
+    def clean_name(self):
+        return " ".join(self.cleaned_data["name"].split())
+
+    def clean_text(self):
+        return self.cleaned_data["text"].strip()
+
+    def clean_google_url(self):
+        url = self.cleaned_data["google_url"].strip()
+        if url and not url.startswith("https://"):
+            raise ValidationError("Give the link that starts with https://.")
+        return url

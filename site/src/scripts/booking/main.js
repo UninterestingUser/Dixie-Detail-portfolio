@@ -544,7 +544,11 @@ async function loadTimes(from) {
 
 function renderCalendar() {
   if (!S.times) return h("p", { class: "loading" }, "Finding open days…");
-  const open = new Map(S.times.days.map((day) => [day.date, day.times]));
+  // Only a day with a start time the job fits can be picked. The server
+  // lists every day in the window, a closed one (a closed weekday, a
+  // holiday, Time Off, a full day, or a day the job can't fit) with no
+  // times; days too soon or past the booking window aren't listed.
+  const open = new Map(S.times.days.filter((day) => day.times.length).map((day) => [day.date, day.times]));
   const first = monthStart(localDate(S.times.from));
   const cells = [];
   for (let i = 0; i < first.getDay(); i++) cells.push(h("span"));
@@ -789,7 +793,8 @@ function renderRequest() {
   const why = r.reason === "class"
     ? built.text.quoteClass.request_intro.replace("{class}", c ? c.name : "These vehicles")
     : (built.text.levels[r.condition] || {}).requestIntro || "We'll reply with a price, usually within a day.";
-  const mains = book.services.filter((service) => service.kind === "service" && forClass(service, c) && (!c || c.booked_by_quote || service.prices.some((p) => p.class_id === c.id)));
+  // Not sure first, then the owner's order (owner, 2026-11-19).
+  const mains = inOwnerOrder(book.services.filter((service) => service.kind === "service" && forClass(service, c) && (!c || c.booked_by_quote || service.prices.some((p) => p.class_id === c.id))));
   if (!offline && !picker) picker = photoPicker({ config, limits: options.photos, box: turnstileBox });
   const serviceControl = h("select", { id: "qr-service", onchange: (event) => {
     r.service = event.target.value === "not_sure" ? "not_sure" : Number(event.target.value); // not money: a service id
@@ -1080,9 +1085,8 @@ const goCurrent = (event) => {
   target?.scrollIntoView({ block: "start" });
   (target?.querySelector("[data-continue]") || target?.querySelector("h2"))?.focus({ preventScroll: true });
 };
-$("[data-bar-continue]").addEventListener("click", goCurrent);
 $("[data-sheet-continue]").addEventListener("click", goCurrent);
-$("[data-start-over]").addEventListener("click", () => {
+function startOver() {
   const years = S.years;
   const mode = S.mode;
   S = fresh();
@@ -1092,6 +1096,16 @@ $("[data-start-over]").addEventListener("click", () => {
   picker = null;
   render();
   window.scrollTo({ top: 0 });
+}
+$("[data-start-over]").addEventListener("click", startOver);
+// On a phone the bottom bar's Start over asks first (owner, 2026-11-19), so
+// a stray tap doesn't wipe the form.
+const confirmDialog = $("[data-confirm-start-over]");
+$("[data-bar-start-over]").addEventListener("click", () => confirmDialog.showModal());
+$("[data-keep-answers]").addEventListener("click", () => confirmDialog.close());
+$("[data-confirm-start-over-yes]").addEventListener("click", () => {
+  confirmDialog.close();
+  startOver();
 });
 
 // Start ----------------------------------------------------------------------

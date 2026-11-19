@@ -687,3 +687,87 @@ test("when Turnstile keeps failing, the photos stay with a plain message and can
   await expect(page.locator(".photo-tile .state", { hasText: "Added" })).toHaveCount(2);
   await expect(error).toHaveText("");
 });
+
+// Acceptance changes 3 (owner, 2026-11-19) -----------------------------------
+
+async function toDateStep(page) {
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await address(page, "100 Example", "100 Example St NW");
+  await cont(page, 4).click();
+  await expect(page.locator("[data-day]").first()).toBeVisible();
+}
+
+test("the intro reads the owner's words", async ({ page }) => {
+  await page.goto("/book/");
+  await expect(page.locator(".book-head .lead")).toHaveText("Complete the form and see your estimate immediately. Nothing is charged until work is completed.");
+});
+
+test("a day the server lists without a start time is grayed out and can't be picked, nor can one outside the window", async ({ page }) => {
+  // The fake, like the real API, lists every day in the window and gives a
+  // closed one (Sundays, and every fifth of the month) no times.
+  const times = [];
+  page.on("response", async (response) => {
+    if (response.url().includes("/open-times")) times.push(await response.json());
+  });
+  await toDateStep(page);
+  const answer = times.at(-1);
+  const closed = answer.days.filter((day) => !day.times.length).map((day) => day.date);
+  const open = answer.days.filter((day) => day.times.length).map((day) => day.date);
+  expect(closed.length).toBeGreaterThan(0);
+  const shownMonth = open[0].slice(0, 7);
+  const buttons = await page.locator("[data-day]").evaluateAll((els) => els.map((el) => el.dataset.day));
+  expect(buttons).toEqual(open.filter((date) => date.startsWith(shownMonth)));
+  for (const date of closed.filter((day) => day.startsWith(shownMonth))) expect(buttons).not.toContain(date);
+  // Every other day of the month, closed, before the window or past it, is a
+  // gray, crossed-out number, not a button.
+  const grayed = page.locator(".calendar span.day");
+  await expect(grayed.first()).toHaveAttribute("aria-label", /not open$/);
+  expect(await grayed.count()).toBeGreaterThanOrEqual(closed.filter((day) => day.startsWith(shownMonth)).length);
+  expect(await grayed.first().evaluate((el) => getComputedStyle(el).color)).toBe("rgb(154, 160, 168)");
+  await grayed.first().click({ force: true });
+  await expect(page.locator("[data-time]")).toHaveCount(0);
+});
+
+test("on a phone the bar's Start over asks first, and only clears the form when confirmed @phone", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone only");
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Full Detail"]').click();
+  const bar = page.locator("[data-phone-bar]");
+  await expect(bar.getByRole("button", { name: "Continue" })).toHaveCount(0);
+  await bar.getByRole("button", { name: "Start over" }).click();
+  const ask = page.locator("[data-confirm-start-over]");
+  await expect(ask).toBeVisible();
+  await expect(ask.locator("p")).toHaveText("Start over? Your answers will be cleared.");
+  await ask.getByRole("button", { name: "Keep my answers" }).click();
+  await expect(ask).toBeHidden();
+  await expect(page.locator("[data-bar-total]")).toHaveText("$250.00");
+  await expect(page.getByLabel("Model", { exact: true })).toHaveValue("RAV4");
+  await bar.getByRole("button", { name: "Start over" }).click();
+  await ask.getByRole("button", { name: "Start over" }).click();
+  await expect(ask).toBeHidden();
+  await expect(page.getByLabel("Year")).toHaveValue("");
+  await expect(page.locator("#step-2")).toBeHidden();
+  // The continue buttons in each step stay.
+  await page.getByLabel("Year").selectOption("2019");
+  await page.getByLabel("Make").selectOption("Toyota");
+  await page.getByLabel("Model", { exact: true }).selectOption("RAV4");
+  await expect(cont(page, 1)).toBeVisible();
+});
+
+test("the payment list is one entry per method, in the owner's order, with one Cash App", async ({ page }) => {
+  await toDateStep(page);
+  await page.locator("[data-day]").first().click();
+  await page.locator("[data-time]").first().click();
+  await cont(page, 5).click();
+  await expect(page.getByRole("group", { name: "Payment method" }).getByRole("button")).toHaveText(["Cash", "Card", "Venmo", "PayPal", "Cash App", "Bitcoin"]);
+});
+
+test("the quote request card lists Not sure, then the services in the owner's order, though the API sends them by name", async ({ page }) => {
+  await pickVehicle(page, 2021, "Ford", "Transit 250");
+  await cont(page, 1).click();
+  await expect(page.locator("#qr-service option")).toHaveText(["Not sure", "Full Detail", "Interior Only", "Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction"]);
+});

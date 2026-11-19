@@ -53,7 +53,7 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
     <div class="wrap book-head">
       <div>
         <h1 class="display" style="font-size:clamp(34px,4vw,52px)">Get your price and book</h1>
-        <p class="lead">Answer one step at a time. Your estimate updates as you go, and nothing is charged until the job is done.</p>
+        <p class="lead">Complete the form and see your estimate immediately. Nothing is charged until work is completed.</p>
       </div>
       <a class="call-link" href={`tel:${tel}`}><Icon name="phone" size={18} />Questions? {business.phone.number}</a>
     </div>
@@ -98,8 +98,15 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
         <span class="amount" data-bar-total></span>
         <span class="note" data-bar-note></span>
       </button>
-      <a class="button" href="#" data-bar-continue>Continue<Icon name="down" size={18} /></a>
+      <button type="button" class="button ghost bar-start-over" data-bar-start-over><Icon name="restart" size={18} />Start over</button>
     </div>
+    <dialog class="confirm-sheet" data-confirm-start-over aria-labelledby="confirm-start-over">
+      <p id="confirm-start-over">Start over? Your answers will be cleared.</p>
+      <div class="buttons">
+        <button type="button" class="button outline" data-keep-answers>Keep my answers</button>
+        <button type="button" class="button" data-confirm-start-over-yes>Start over</button>
+      </div>
+    </dialog>
     <dialog class="estimate-sheet" data-sheet aria-label="Your estimate">
       <div data-sheet-body></div>
       <div class="buttons sheet-buttons">
@@ -222,6 +229,11 @@ const steps = ["Vehicle", "Service", "Condition", "Location", "Date", "Details",
   .sheet-buttons { padding: 0 24px 24px; }
   .sheet-buttons .button { flex: 1 1 0; }
   .start-over { width: 100%; }
+  .bar-start-over { flex: 0 0 auto; min-height: 48px; padding: 0 16px; white-space: nowrap; }
+  .confirm-sheet { border: 0; border-radius: var(--radius); padding: 24px; width: min(420px, calc(100% - 32px)); }
+  .confirm-sheet::backdrop { background: rgba(0, 0, 0, 0.5); }
+  .confirm-sheet p { margin: 0 0 18px; font-size: 18px; font-weight: 700; color: var(--ink); }
+  .confirm-sheet .button { flex: 1 1 0; padding: 0 10px; font-size: 16px; white-space: nowrap; }
   .loading { color: var(--muted); }
   .turnstile-box { position: fixed; right: 16px; bottom: 100px; z-index: 30; }
 </style>

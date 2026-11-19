@@ -1,8 +1,10 @@
-"""Review requests and follow-up campaigns. Where each customer came from is
-Customer.source."""
+"""Review requests, the reviews the website shows, and follow-up campaigns.
+Where each customer came from is Customer.source."""
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class ReviewRequest(models.Model):
@@ -46,3 +48,30 @@ class CampaignRecipient(models.Model):
 
     def __str__(self):
         return f"{self.customer} in {self.campaign}"
+
+
+class Review(models.Model):
+    """A customer review the website shows (decision 0109), kept only here
+    so customers' names never enter the repository. A manager adds them
+    on the control app's Reviews screen, copied from Google."""
+
+    name = models.CharField(
+        "Reviewer's name", max_length=60, help_text="First name and last initial, as on Google."
+    )
+    text = models.TextField("Review", max_length=3000)
+    reviewed_on = models.DateField("Date of the review")
+    stars = models.PositiveSmallIntegerField(
+        "Star rating", null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    google_url = models.URLField(
+        "Link to the Google review", max_length=500, blank=True, help_text="Optional. Starts with https://."
+    )
+    shown = models.BooleanField("Shown on the website", default=True)
+    position = models.PositiveIntegerField(default=0, help_text="Lower first.")
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ["position", "pk"]
+
+    def __str__(self):
+        return f"Review by {self.name}"

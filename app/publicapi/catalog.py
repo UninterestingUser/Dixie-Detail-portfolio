@@ -375,3 +375,23 @@ def lookup_json(found):
     else:
         answer["message"] = f"{found.vehicle_class.name} identified."
     return answer
+
+
+def reviews():
+    """The shown reviews, in the order the Reviews screen sets: the name as
+    shown, the text, the date, the stars (or null) and the link to the
+    Google review (or null). Never a combined rating."""
+    from marketing.models import Review
+
+    return {
+        "reviews": [
+            {
+                "name": review.name,
+                "text": review.text,
+                "date": review.reviewed_on.isoformat(),
+                "stars": review.stars,
+                "link": review.google_url or None,
+            }
+            for review in Review.objects.filter(shown=True)
+        ]
+    }

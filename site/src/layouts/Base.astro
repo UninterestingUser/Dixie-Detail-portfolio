@@ -49,7 +49,7 @@ const header = heroHeader ? null : await getImage({ src: headerPhoto, widths: HE
     <a class="skip" href="#main">Skip to the content</a>
     {heroHeader ? <slot name="hero" /> : (
       <div class="page-top">
-        <img class="page-top-photo" src={header.src} srcset={header.srcSet.attribute} sizes="100vw" alt="" width="2000" height="1165" fetchpriority="high" decoding="async" />
+        <div class="page-top-photo"><img src={header.src} srcset={header.srcSet.attribute} sizes="100vw" alt="" width="2000" height="1165" fetchpriority="high" decoding="async" /></div>
         <Header solid={solidHeader} />
         <slot name="top" />
       </div>
