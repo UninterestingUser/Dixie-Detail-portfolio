@@ -541,7 +541,8 @@ test("the color and \"My vehicle isn't listed\" share a row, and the steps have 
   expect(link.x).toBeGreaterThan(color.x + color.width);
   await pickVehicle(page, 2019, "Toyota", "RAV4");
   await cont(page, 1).click();
-  const one = await page.locator("#step-1").boundingBox();
-  const two = await page.locator("#step-2").boundingBox();
-  expect(two.y - (one.y + one.height)).toBeGreaterThanOrEqual(10);
+  await expect(page.locator("#step-2")).toBeVisible();
+  // Both boxes measured at once: the page scrolls to the new step.
+  const gap = await page.evaluate(() => document.getElementById("step-2").getBoundingClientRect().top - document.getElementById("step-1").getBoundingClientRect().bottom);
+  expect(gap).toBeGreaterThanOrEqual(10);
 });
