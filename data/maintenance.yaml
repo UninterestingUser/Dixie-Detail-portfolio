@@ -74,11 +74,11 @@ components:
     test: tools/run-tests.sh, then after the deploy the app's healthcheck and the control app.
 
   - name: Pillow and libheif
-    pinned: "Pillow 12.x, pillow-heif 1.x (its wheels include libheif)"
+    pinned: "Pillow 13.x (from 12.x in decision 0120), pillow-heif 1.x (its wheels include libheif)"
     pinned_in: app/requirements.txt
     end_of_life: none published; fixes go to the newest release
     watched_by: dependabot
-    update: Dependabot's pip pull request. They read customers' quote request photos, so take their security updates promptly.
+    update: Dependabot's pip pull request; a major update comes on its own. They read customers' quote request photos, so take their security updates promptly, and keep the upload limited to the four accepted decoders (decision 0120).
     test: tools/run-tests.sh (the quote request photo tests read JPEG and HEIC photos).
 
   - name: Node on Cloudflare Pages
