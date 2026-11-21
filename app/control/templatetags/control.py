@@ -72,3 +72,11 @@ def notice_given(delta):
         parts.append(f"{hours} hour{'' if hours == 1 else 's'}")
     text = ", ".join(parts)
     return text + ("' notice" if text.endswith("s") else "'s notice")
+
+
+@register.filter
+def pretty_json(value):
+    """A stored JSON value, indented for reading."""
+    import json
+
+    return json.dumps(value, indent=2, ensure_ascii=False, sort_keys=True)

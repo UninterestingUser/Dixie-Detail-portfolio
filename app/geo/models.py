@@ -31,6 +31,14 @@ class LocationSettings(models.Model):
     # for each Places method, 161 for Routes), so the fallbacks start before
     # Google refuses.
     place_details_daily_cap = models.PositiveIntegerField(default=300)
+    # The website's public share of it (decision 0115): the public address
+    # lookups (POST addresses) stop here, and the rest of the cap is the
+    # reserve for the control app and the server's own address checks, such
+    # as an offline request looked up when it arrives.
+    place_details_public_daily_cap = models.PositiveIntegerField(
+        "Place Details public share", default=250,
+        help_text="Website address lookups a day. The rest of the Place Details cap is kept for the control app.",
+    )
     text_search_daily_cap = models.PositiveIntegerField(default=300)
     routes_daily_cap = models.PositiveIntegerField(default=150)
 
@@ -91,6 +99,10 @@ class ApiUsage(models.Model):
     calls = models.PositiveIntegerField(default=0)
     # Calls not made because the day's cap was reached.
     refused = models.PositiveIntegerField(default=0)
+    # Of those, the website's public lookups (decision 0115): calls made,
+    # and calls refused once the public share was used.
+    public_calls = models.PositiveIntegerField(default=0, db_default=0)
+    public_refused = models.PositiveIntegerField(default=0, db_default=0)
 
     class Meta:
         ordering = ["-day", "api"]

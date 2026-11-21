@@ -4,12 +4,16 @@
 # The signing key is a Worker secret. Wrangler asks for it; paste it from the
 # Bitwarden web vault, so it never touches disk:
 #   npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml
+# The Healthchecks ping URL is a Worker secret too, from the Bitwarden secret
+# HEALTHCHECKS_OFFLINE_URL (decision 0114):
+#   npx wrangler@4.48.0 secret put HEALTHCHECKS_OFFLINE_URL --config workers/offline-replay/wrangler.toml
 name = "dixie-offline-replay"
 main = "index.js"
 compatibility_date = "2026-11-01"
 
 [triggers]
-# Every 5 minutes: at most 288 KV list calls a day, inside the free plan's 1,000.
+# Every 5 minutes: two KV list calls a run (the held requests and the refused
+# ones), 576 a day, inside the free plan's 1,000.
 crons = ["*/5 * * * *"]
 
 [vars]

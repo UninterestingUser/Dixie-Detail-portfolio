@@ -104,13 +104,25 @@ def place_json(place):
     }
 
 
-def verify_place(place_id, session_token=""):
+LOOKUPS_USED = (
+    "We can't look up addresses online any more today. Type your address and send your booking as a request, "
+    "and we'll confirm by text or call."
+)
+
+
+def verify_place(place_id, session_token="", public=True):
     """Look a place up, check the service area, and keep it. Raises
-    ApiError for anything the website can't use."""
+    ApiError for anything the website can't use. A website lookup (public)
+    counts against the public share of the day's Google calls; past it the
+    answer is lookups_used_up, and the site takes a typed address and a
+    request instead (decision 0115). The server's own checks, such as an
+    offline request arriving, use the reserve (public=False)."""
     try:
-        address = address_from_place(None, place_id, session_token)
+        address = address_from_place(None, place_id, session_token, public=public)
     except VerificationError as error:
         raise ApiError(422, "not_an_address", str(error)) from error
+    except google.PublicShareUsed as error:
+        raise ApiError(429, "lookups_used_up", LOOKUPS_USED) from error
     except google.GoogleUnavailable as error:
         raise ApiError(503, "unavailable", "We couldn't look that address up just now. Please try again in a minute.") from error
     except ValueError as error:

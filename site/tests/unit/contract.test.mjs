@@ -93,9 +93,11 @@ test("every fake answer the website reads has the real API's shape", async () =>
   ]) fits("vehicles/lookup", await call("vehicles/lookup", { params }), 200, 200);
   fits("vehicles/photo-cards", await call("vehicles/photo-cards"), 200, 200);
 
-  const place = await call("addresses", { body: { place_id: "ChIJfakeCleveland00001", session_token: "session-1" } });
+  const lookup = await call("addresses/sessions", { body: { turnstile: GOOD_TOKEN } });
+  fits("addresses/sessions", lookup, 201, 201);
+  const place = await call("addresses", { body: { place_id: "ChIJfakeCleveland00001", session_token: "session-1", lookup_session: lookup.body.session } });
   fits("addresses", place, 201, 201);
-  fits("error", await call("addresses", { body: { place_id: "ChIJfakeKnoxville00001" } }), 422, 422);
+  fits("error", await call("addresses", { body: { place_id: "ChIJfakeKnoxville00001", lookup_session: lookup.body.session } }), 422, 422);
 
   const rav4 = { year: 2019, make: "Toyota", model: "RAV4" };
   fits("quotes", await call("quotes", { body: { vehicle: rav4, service: 10, condition: 1, add_ons: [21] } }), 201, 201);

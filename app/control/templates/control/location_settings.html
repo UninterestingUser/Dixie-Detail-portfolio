@@ -15,13 +15,13 @@
 
 <section aria-labelledby="usage">
   <h2 id="usage">Calls to outside services, {{ month|date:"F Y" }}</h2>
-  <p class="help">Counted by Pacific date, the day Google's daily limits use. Address suggestions on the website are made by the customer's browser and are not counted here; Google's own daily limit caps them.</p>
+  <p class="help">Counted by Pacific date, the day Google's daily limits use. Address suggestions on the website are made by the customer's browser and are not counted here; Google's own daily limit caps them. The website's address lookups use only the Place Details public share; the rest of the cap is kept for the control app and for offline requests looked up as they arrive.</p>
   <div class="table-scroll">
     <table>
       <thead><tr><th>Service</th><th>This month</th><th>Today</th><th>Daily cap</th><th>Refused at the cap this month</th></tr></thead>
       <tbody>
         {% for row in usage %}
-          <tr><td>{{ row.label }}</td><td>{{ row.month }}</td><td>{{ row.today }}</td><td>{{ row.cap|default:"None" }}</td><td>{{ row.refused }}</td></tr>
+          <tr><td>{{ row.label }}</td><td>{{ row.month }}</td><td>{{ row.today }}</td><td>{{ row.cap|default:"None" }}{% if row.public_cap is not None %} <span class="sub">website: {{ row.public_today }} of {{ row.public_cap }} today</span>{% endif %}</td><td>{{ row.refused }}</td></tr>
         {% endfor %}
       </tbody>
     </table>

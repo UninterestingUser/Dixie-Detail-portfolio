@@ -136,4 +136,6 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0110](0110-one-website-list-of-payment-methods.md) | 2026-11-19 | payments | The website offers one list of payment methods, one entry per method, with one Cash App | accepted |
 | [0112](0112-confirming-bookings-from-new-customers.md) | 2026-11-21 | booking | A new customer's website booking holds its time but waits to be confirmed, within two caps | accepted |
 | [0113](0113-one-answer-for-a-booking-that-becomes-a-request.md) | 2026-11-21 | booking | Every website booking that becomes a request gets one answer, which never mentions an existing booking | accepted |
+| [0114](0114-offline-requests-kept-whatever-they-hold.md) | 2026-11-21 | website | Offline requests are kept whatever they hold, and the replay Worker reports to Healthchecks | accepted |
+| [0115](0115-address-lookup-sessions-and-a-public-share.md) | 2026-11-21 | website | Website address lookups need a Turnstile-opened session and stop at a public share of the daily cap | accepted |
 | [0111](0111-portfolio-from-an-allowlist.md) | 2026-11-21 | repository | The public portfolio copy is built from an include list, without operations docs or restricted files | accepted |

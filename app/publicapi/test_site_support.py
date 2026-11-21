@@ -94,10 +94,14 @@ class OfflineTimeRequestTests(ApiTestCase):
         self.assertIn("2018 Subaru Outback", request.inputs["vehicle_text"])
 
     def test_a_place_id_or_an_address_but_not_both(self):
-        self.assertEqual(self.send(self.body(place_id=CLEVELAND), expect=400)["field"], "place_id")
-        self.assertEqual(self.send(self.body(address=None), expect=400)["field"], "place_id")
+        """Both or neither is kept, with the problem, never refused (decision 0114)."""
+        self.send(self.body(place_id=CLEVELAND))
+        self.send(self.body(address=None))
+        for kept in TimeRequest.objects.all():
+            self.assertIn("Address: couldn't be read as sent", kept.problem)
+            self.assertIsNotNone(kept.as_sent)
         self.send(self.body(address=None, place_id=CLEVELAND))
-        self.assertIsNotNone(TimeRequest.objects.get().service_address)
+        self.assertIsNotNone(TimeRequest.objects.get(problem="").service_address)
 
 
 class OfflineQuoteRequestTests(ApiTestCase):

@@ -23,6 +23,7 @@ from django.views.decorators.http import require_safe
 from appointments import confirmation
 from appointments.models import Appointment
 from calendars import sync as calendar_sync
+from geo import google
 from scheduling.availability import day_reasons, load_rules, local_midnight
 from scheduling.models import OpenWeekday, SchedulingSettings
 from staff.authorization import user_is_manager
@@ -328,6 +329,8 @@ def schedule(request):
         # Everything waiting for the owner, newest first (control-app.md).
         "needs_you": needs_you.summary(request.user),
         "time_off_warning": calendar_sync.time_off_warning(),
+        # The website's share of today's address lookups is used up (decision 0115).
+        "lookups_used_up": google.public_share_used(),
         "is_manager": user_is_manager(request.user),
         # Unconfirmed jobs that start soon, with call and text links (decision 0112).
         "unconfirmed_soon": unconfirmed_soon(),

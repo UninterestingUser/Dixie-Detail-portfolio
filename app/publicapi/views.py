@@ -2,7 +2,7 @@
 Each view checks its input strictly and answers JSON; http.api_view adds
 CORS, the rate limit and the generic errors."""
 
-from . import bookings, catalog, quote_requests, quotes, time_requests, validate
+from . import bookings, catalog, lookups, quote_requests, quotes, time_requests, validate
 from .http import api_view, bad_request, read_json
 
 # Pricebook and catalog answers change rarely; the website and browsers may
@@ -73,15 +73,23 @@ def photo_cards(request):
     return {"photo_cards": catalog.cards_json()}
 
 
+@api_view(["POST"], "lookup_session")
+def lookup_session(request):
+    return lookups.open_session(request, read_json(request))
+
+
 @api_view(["POST"], "address")
 def addresses(request):
+    """One public address lookup, counted on its lookup session and
+    against the day's public share of Google calls (decision 0115)."""
     data = read_json(request)
-    validate.only(data, ["place_id"], ["session_token"])
+    validate.only(data, ["place_id", "lookup_session"], ["session_token"])
     if not isinstance(data["place_id"], str) or len(data["place_id"]) > 300:
         raise bad_request("place_id")
     session_token = data.get("session_token") or ""
     if not isinstance(session_token, str) or len(session_token) > 64:
         raise bad_request("session_token")
+    lookups.use(data["lookup_session"])
     return 201, quotes.place_json(quotes.verify_place(data["place_id"], session_token))
 
 
@@ -135,9 +143,13 @@ def create_quote_request(request):
 
 @api_view(["POST"], "offline")
 def create_offline_quote_request(request):
+    # The signature first, so an unsigned body is refused as unsigned
+    # whatever it holds (decision 0114).
+    time_requests.check_signature(request)
     return quote_requests.receive_offline(request, read_json(request))
 
 
 @api_view(["POST"], "offline")
 def create_time_request(request):
+    time_requests.check_signature(request)
     return time_requests.receive(request, read_json(request))

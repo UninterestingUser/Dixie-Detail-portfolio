@@ -60,23 +60,51 @@ def quota_day(now=None):
     return (now or timezone.now()).astimezone(PACIFIC).date()
 
 
-def take_call(api, cap=None):
+class PublicShareUsed(CapReached):
+    """The website's public share of the day's calls is used up; the reserve
+    is kept for the control app (decision 0115)."""
+
+
+def take_call(api, cap=None, public_cap=None):
     """Count one call to api today, or raise CapReached once cap calls have
-    been made today. A refused call is counted as refused."""
+    been made today. A refused call is counted as refused. With public_cap,
+    the call is one of the website's public lookups: it is refused, with
+    PublicShareUsed, once public_cap of those have been made today, so the
+    rest of the cap stays for the control app."""
     day = quota_day()
     ApiUsage.objects.get_or_create(api=api, day=day)
+    public = public_cap is not None
     with transaction.atomic():
         usage = ApiUsage.objects.select_for_update().get(api=api, day=day)
-        refused = cap is not None and usage.calls >= cap
+        over_cap = cap is not None and usage.calls >= cap
+        over_share = public and usage.public_calls >= public_cap
+        refused = over_cap or over_share
+        fields = []
         if refused:
             usage.refused += 1
-            usage.save(update_fields=["refused"])
+            fields.append("refused")
+            if public:
+                usage.public_refused += 1
+                fields.append("public_refused")
         else:
             usage.calls += 1
-            usage.save(update_fields=["calls"])
+            fields.append("calls")
+            if public:
+                usage.public_calls += 1
+                fields.append("public_calls")
+        usage.save(update_fields=fields)
     # Raised after the block, so the refusal is counted, not rolled back.
+    if over_share and not over_cap:
+        raise PublicShareUsed(f"{usage.get_api_display()} used today's public share of {public_cap} calls")
     if refused:
         raise CapReached(f"{usage.get_api_display()} reached today's cap of {cap} calls")
+
+
+def public_share_used(day=None):
+    """Whether today's public share of Place Details is used up, for the
+    control app's notice (decision 0115)."""
+    usage = ApiUsage.objects.filter(api=ApiUsage.Api.PLACE_DETAILS, day=day or quota_day()).first()
+    return usage is not None and (usage.public_refused > 0 or usage.public_calls >= LocationSettings.get().place_details_public_daily_cap)
 
 
 def server_key():
@@ -86,16 +114,21 @@ def server_key():
     return key
 
 
-def place_details(place_id, session_token=""):
+def place_details(place_id, session_token="", public=False):
     """The place's address components, formatted address and location, as
     Google's JSON. The server looks the place up itself; nothing from the
-    browser but the place ID and session token is used."""
+    browser but the place ID and session token is used. public is a
+    website lookup, counted against the public share (decision 0115)."""
     if not PLACE_ID.match(place_id or ""):
         raise ValueError("That is not a Google place ID.")
     if session_token and not SESSION_TOKEN.match(session_token):
         raise ValueError("That is not an autocomplete session token.")
     key = server_key()
-    take_call(ApiUsage.Api.PLACE_DETAILS, LocationSettings.get().place_details_daily_cap)
+    location = LocationSettings.get()
+    take_call(
+        ApiUsage.Api.PLACE_DETAILS, location.place_details_daily_cap,
+        public_cap=location.place_details_public_daily_cap if public else None,
+    )
     params = {"languageCode": "en", "regionCode": "us"}
     if session_token:
         params["sessionToken"] = session_token

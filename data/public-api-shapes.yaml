@@ -30,6 +30,10 @@ answers:
     tax:
       jurisdiction: string
       rate_percent: string
+  addresses/sessions:
+    expires_at: string
+    lookups: number
+    session: string
   booking-options:
     consent:
       appointment: string

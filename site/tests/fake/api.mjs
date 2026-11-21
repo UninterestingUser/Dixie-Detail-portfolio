@@ -13,6 +13,8 @@
 //                      "requested": true, "known": true}
 //     requested: every booking is taken as a request, answered 202 (decision 0113);
 //     known: bookings come back "confirmed", as for a known customer (decision 0112).
+//     lookupLimit: lookups a session allows (10); lookupsUsedUp: the day's
+//     public share is used, so every lookup is answered lookups_used_up (decision 0115).
 //   GET  /__fake/log    what was sent to the API and the offline piece
 //   POST /__fake/reset
 
@@ -177,7 +179,7 @@ function addDays(date, days) {
 const iso = (date) => date.toISOString().slice(0, 10);
 
 export function createFakeApi() {
-  const state = { mode: { offline: false, odd: false }, quotes: new Map(), quotePlaces: new Map(), places: new Map(), sessions: new Map(), log: [], counter: 0 };
+  const state = { mode: { offline: false, odd: false }, quotes: new Map(), quotePlaces: new Map(), places: new Map(), sessions: new Map(), lookups: new Map(), log: [], counter: 0 };
   const next = (prefix) => `${prefix}${String(++state.counter).padStart(6, "0")}`;
 
   function lookup(params) {
@@ -314,7 +316,7 @@ export function createFakeApi() {
     if (req.method === "OPTIONS") return send(res, 204, {});
     if (url.pathname === "/__fake/mode") { Object.assign(state.mode, JSON.parse((await readBody(req)).toString() || "{}")); return send(res, 200, state.mode); }
     if (url.pathname === "/__fake/log") return send(res, 200, state.log);
-    if (url.pathname === "/__fake/reset") { state.mode = { offline: false, odd: false, requested: false, known: false }; state.log = []; return send(res, 200, {}); }
+    if (url.pathname === "/__fake/reset") { state.mode = { offline: false, odd: false, requested: false, known: false, lookupLimit: 10, lookupsUsedUp: false }; state.lookups = new Map(); state.log = []; return send(res, 200, {}); }
 
     // The Cloudflare offline piece, as the site calls it (functions/offline).
     if (url.pathname.startsWith("/offline/")) {
@@ -342,7 +344,18 @@ export function createFakeApi() {
     if (path === "vehicles/models") return send(res, 200, { year: Number(p.get("year")), make: p.get("make"), models: (MODELS[p.get("make")] || []).map(([name, type]) => ({ name, type, motorcycle: type === "motorcycle" })) });
     if (path === "vehicles/lookup") return send(res, 200, lookup(p));
     if (path === "vehicles/photo-cards") return send(res, 200, { photo_cards: cards() });
+    // Address lookup sessions (decision 0115).
+    if (path === "addresses/sessions") {
+      if (body.turnstile !== GOOD_TOKEN) return send(res, 403, { error: "turnstile_failed", message: "We couldn't confirm the form was sent by a person. Please try again." });
+      const session = next("L").padEnd(12, "S");
+      state.lookups.set(session, 0);
+      return send(res, 201, { session, expires_at: new Date(Date.now() + 30 * 60000).toISOString(), lookups: state.mode.lookupLimit || 10 });
+    }
     if (path === "addresses") {
+      const used = state.lookups.get(body.lookup_session);
+      if (used == null || used >= (state.mode.lookupLimit || 10)) return send(res, 403, { error: "lookup_session", message: "Your address search has timed out. Please pick your address again." });
+      state.lookups.set(body.lookup_session, used + 1);
+      if (state.mode.lookupsUsedUp) return send(res, 429, { error: "lookups_used_up", message: "We can't look up addresses online any more today. Type your address and send your booking as a request, and we'll confirm by text or call." });
       const place = PLACES[body.place_id];
       if (!place) return send(res, 422, { error: "not_an_address", message: "That doesn't look like a street address." });
       if (!place.in) return send(res, 422, { error: "outside_area", message: "Sorry, that address is outside the area we serve. If you think we can still help, call or text (423) 380-9120." });

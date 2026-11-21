@@ -4,9 +4,9 @@ summary: How to preview the website on the workstation against a fake API, run i
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-21
 tags: [website, cloudflare, deploy, preview, guide, phase-3]
-related: [docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
+related: [docs/decisions/0114-offline-requests-kept-whatever-they-hold.md, docs/decisions/0115-address-lookup-sessions-and-a-public-share.md, docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
 ---
 
 # Previewing and deploying the website
@@ -55,7 +55,7 @@ Do these in order. They need the Cloudflare account that holds dixiedetail.com, 
    - `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` = the browser key;
    - `NODE_VERSION` = `22`.
 4. **The offline piece's bindings** on the same project. Under Settings, Bindings, add a KV namespace binding named `OFFLINE_REQUESTS`, pointing to the namespace from step 1. Under Variables and Secrets, add `API_BASE` as above. Add two secrets, `TURNSTILE_SECRET_KEY` and `OFFLINE_REQUESTS_SIGNING_KEY`, as type **Secret**, the only two on this project, each pasted from the Bitwarden web vault into the dashboard, so neither touches disk. Then redeploy once, so the function picks them up.
-5. **The replay Worker.** From `site/`: `npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml`, then `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. It then runs every 5 minutes.
+5. **The replay Worker.** From `site/`: `npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml`, then `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. Then `npx wrangler@4.48.0 secret put HEALTHCHECKS_OFFLINE_URL --config workers/offline-replay/wrangler.toml` and paste the offline requests check's ping address from Bitwarden the same way ([monitoring.md](../operations/monitoring.md#the-offline-requests-check), [decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). It then runs every 5 minutes and reports each run to that check.
 6. **The deploy hook.** On the Pages project, Settings, Builds, Deploy hooks: add one named "Pricebook" for branch `main`. Copy its URL into a new Bitwarden secret `CLOUDFLARE_PAGES_DEPLOY_HOOK` in the "Dixie Detail" project, then restart the stack on the server so the app gets it: `sudo systemctl restart dixie-stack.service`.
 7. **Let the staging site call the API.** In `/srv/dixie-detail/.env` on the server, add the staging address to `PUBLIC_API_CORS_ORIGINS`, such as `https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev`, then restart the stack. Each entry is `https://` and the host name only, with no trailing slash and no path. The app trims a stray slash or space, and refuses to start, naming the entry, if one is still not a bare origin. The app's log shows the list in use: `docker compose logs app | grep "CORS origins"`. Then check from the workstation:
 
@@ -90,14 +90,14 @@ If a send fails instead, the form says so with the phone number and keeps what w
 
 ## Checking the offline piece
 
-Requests the Worker hasn't delivered yet are in the KV namespace under `pending:`. Any the server refused are kept under `refused:` with the server's answer, so none is lost:
+Requests the Worker hasn't delivered yet are in the KV namespace under `pending:`. The server keeps every signed request it can read, listing any problem for the owner ([decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)), so a refusal is rare: a body that isn't JSON or has no request id. Any the server refused are kept under `refused:` with the server's answer, so none is lost, and the offline requests check in Healthchecks fails until they are dealt with:
 
 ```bash
 npx wrangler@4.48.0 kv key list --namespace-id=<the namespace id> --prefix=refused:
 npx wrangler@4.48.0 kv key get --namespace-id=<the namespace id> "refused:time-request:<request id>"
 ```
 
-A refused request needs the owner to contact the customer from what it holds. The Worker's own log (Workers & Pages, `dixie-offline-replay`, Logs) shows each run's counts. A line saying the server refused the signature means the two copies of `OFFLINE_REQUESTS_SIGNING_KEY` on Cloudflare don't match Bitwarden: put them there again, as in steps 4 and 5.
+A refused request needs the owner to contact the customer from what it holds; then delete the key with `npx wrangler@4.48.0 kv key delete --namespace-id=<the namespace id> "refused:time-request:<request id>"`, and the check turns green on the next run. The Worker's own log (Workers & Pages, `dixie-offline-replay`, Logs) shows each run's counts, never a request. A line saying the server refused the signature means the two copies of `OFFLINE_REQUESTS_SIGNING_KEY` on Cloudflare don't match Bitwarden: put them there again, as in steps 4 and 5.
 
 ## At the Phase 5 launch
 

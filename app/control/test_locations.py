@@ -87,7 +87,7 @@ class AddressFormTests(LocationScreensTestCase):
 class LocationSettingsTests(LocationScreensTestCase):
     def settings_data(self, **changes):
         data = {"home_line1": "100 Example St NW", "home_city": "Cleveland", "home_state": "TN", "home_zip_code": "37311",
-                "home_latitude": "", "home_longitude": "", "place_details_daily_cap": "300", "text_search_daily_cap": "300", "routes_daily_cap": "150",
+                "home_latitude": "", "home_longitude": "", "place_details_daily_cap": "300", "place_details_public_daily_cap": "250", "text_search_daily_cap": "300", "routes_daily_cap": "150",
                 "estimate_road_factor": "1.30", "estimate_speed_mph": "40", "drive_time_cache_days": "30",
                 "tax_sourcing": "service_address"}
         data.update(changes)

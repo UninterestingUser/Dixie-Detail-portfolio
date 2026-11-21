@@ -1,0 +1,9 @@
+{# An offline request kept with a field that couldn't be read: exactly what arrived, so nothing is lost (decision 0114). #}
+{% load control %}
+{% if item.as_sent %}
+<details class="card as-sent">
+  <summary>The request as it arrived</summary>
+  <p class="sub">Some of it couldn't be read, so it is kept here exactly as the website sent it. Check it with the customer.</p>
+  <pre class="prewrap">{{ item.as_sent|pretty_json }}</pre>
+</details>
+{% endif %}

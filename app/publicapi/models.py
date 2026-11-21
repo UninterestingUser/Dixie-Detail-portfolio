@@ -165,7 +165,12 @@ class QuoteRequest(models.Model):
     # address as typed is then in address_text, and problem says why.
     service_address = models.ForeignKey("customers.Address", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
     address_text = models.CharField(max_length=200, blank=True)
-    problem = models.CharField(max_length=300, blank=True)
+    # Everything to check, such as an address that couldn't be looked up or
+    # a field that couldn't be read (decision 0114).
+    problem = models.TextField(blank=True)
+    # An offline request with a field that couldn't be read, exactly as it
+    # arrived, so nothing the customer sent is lost (decision 0114).
+    as_sent = models.JSONField(null=True, blank=True)
     # The vehicle record quiet matching gave the request: the customer's own,
     # or a new one held off the record until the request is booked.
     vehicle = models.ForeignKey("vehicles.Vehicle", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
@@ -231,6 +236,22 @@ class QuoteRequest(models.Model):
         return None
 
 
+class LookupSession(models.Model):
+    """Opened after a Turnstile check at the booking form's location step,
+    so the public address lookups (POST addresses) can't be called in a
+    loop (decision 0115). It allows ADDRESS_LOOKUP_SESSION_LOOKUPS lookups
+    within ADDRESS_LOOKUP_SESSION_MINUTES."""
+
+    token = models.CharField(max_length=40, unique=True, default=new_token)
+    visitor = models.CharField(max_length=64)
+    lookups = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Lookup session from {self.created_at:%Y-%m-%d %H:%M}"
+
+
 class UploadSession(models.Model):
     """Opened after a Turnstile check, so photos can upload one by one as
     the customer picks them. Photos never attached to a sent request are
@@ -294,7 +315,10 @@ class TimeRequest(models.Model):
     # Priced on arrival from the pricebook in effect, or empty with the reason.
     quote = models.ForeignKey("pricebook.Quote", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     price_differs = models.BooleanField(default=False)
-    problem = models.CharField(max_length=300, blank=True)
+    # Everything to check (decision 0114).
+    problem = models.TextField(blank=True)
+    # The request exactly as it arrived, when a field couldn't be read.
+    as_sent = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
     decline_reason = models.CharField(max_length=300, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
