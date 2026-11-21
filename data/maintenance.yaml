@@ -90,7 +90,7 @@ components:
     test: The Site workflow, then a staging build and a test booking (docs/guides/previewing-and-deploying-the-website.md).
 
   - name: Astro
-    pinned: "5.x"
+    pinned: "7.x (from 5.x in decision 0119)"
     pinned_in: site/package.json and site/package-lock.json
     end_of_life: none published; Astro gives security fixes to the previous major version only
     watched_by: dependabot
