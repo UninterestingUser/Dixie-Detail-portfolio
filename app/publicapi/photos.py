@@ -25,8 +25,15 @@ from .http import ApiError
 
 pillow_heif.register_heif_opener()
 
-# Formats as Pillow names them once it has opened the file.
-FORMATS = {"JPEG", "PNG", "WEBP", "HEIF"}
+# Formats as Pillow names them. Only these decoders ever see an upload:
+# Image.open tries no other, so a file in any other format (TIFF, GIF, PDF,
+# EPS and the rest, where most of Pillow's security bugs have been) is
+# refused before any of its bytes are parsed (decision 0120).
+FORMATS = ("JPEG", "PNG", "WEBP", "HEIF")
+# A JPEG holding more than one picture, as some Android phones and cameras
+# write, opens through the JPEG decoder as "MPO". Only its first picture, the
+# photo itself, is read: nothing here seeks to the others.
+OPENED_AS = {*FORMATS, "MPO"}
 LONG_SIDE = 2560
 # A 48-megapixel phone photo is about 49 million pixels. Anything far past
 # that is refused before it is decoded.
@@ -55,13 +62,13 @@ def clean_jpeg(data):
         # A decompression bomb is refused, never decoded.
         warnings.simplefilter("error", Image.DecompressionBombWarning)
         try:
-            image = Image.open(io.BytesIO(data))
-            if image.format not in FORMATS:
+            image = Image.open(io.BytesIO(data), formats=FORMATS)
+            if image.format not in OPENED_AS:
                 raise not_an_image()
             width, height = image.size
             if width < 1 or height < 1 or width * height > MAX_PIXELS:
                 raise ApiError(422, "not_an_image", "That photo's size isn't one we can use. Please send an ordinary photo.")
-            if image.format == "JPEG":
+            if image.format in ("JPEG", "MPO"):
                 # Decode a large JPEG at a reduced scale, still at least the
                 # final size: far less memory for a phone's 48-megapixel photo.
                 image.draft("RGB", (LONG_SIDE, LONG_SIDE))

@@ -204,6 +204,35 @@ class PhotoTests(QuoteRequestTestCase):
         self.assertEqual(self.upload(session, gif.getvalue(), "photo.gif", "image/gif", expect=422)["error"], "not_an_image")
         self.assertEqual(os.listdir(self.photo_dir), [])
 
+    def test_a_multi_picture_jpeg_keeps_its_first_picture(self):
+        # Some Android phones and cameras save a JPEG with a second picture in
+        # it; Pillow opens it as MPO. The first picture is the photo.
+        out = io.BytesIO()
+        Image.new("RGB", (64, 48), (200, 0, 0)).save(out, "MPO", save_all=True, append_images=[Image.new("RGB", (64, 48), (0, 0, 200))])
+        uploaded = self.upload(self.session(), out.getvalue(), "photo.jpg", "image/jpeg")
+        _, path = self.stored(uploaded["photo"])
+        with Image.open(path) as image:
+            self.assertEqual(image.format, "JPEG")
+            red, green, blue = image.convert("RGB").getpixel((32, 24))
+            self.assertGreater(red, 150)
+            self.assertLess(blue, 60)
+
+    def test_other_formats_never_reach_their_decoders(self):
+        # Decision 0120: Image.open tries only the four accepted formats, so a
+        # file in any other format is refused before its decoder reads it.
+        from PIL import TiffImagePlugin
+
+        session = self.session()
+        for kind in ("TIFF", "GIF", "BMP", "PDF"):
+            out = io.BytesIO()
+            Image.new("RGB", (10, 10)).save(out, kind)
+            with self.subTest(kind), mock.patch.object(TiffImagePlugin.TiffImageFile, "_open", side_effect=AssertionError("TIFF decoder reached")) as tiff:
+                answer = self.upload(session, out.getvalue(), "photo.jpg", "image/jpeg", expect=422)
+                self.assertEqual(answer["error"], "not_an_image")
+                tiff.assert_not_called()
+        self.assertEqual(photos.FORMATS, ("JPEG", "PNG", "WEBP", "HEIF"))
+        self.assertEqual(os.listdir(self.photo_dir), [])
+
     def test_an_absurd_pixel_count(self):
         out = io.BytesIO()
         Image.new("1", (9000, 9000)).save(out, "PNG")
