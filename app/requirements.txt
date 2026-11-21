@@ -3,7 +3,7 @@ django-simple-history==3.13.0
 Django==5.2.18
 gunicorn==26.2.0
 pillow-heif==1.8.1
-Pillow==12.3.0
+Pillow==13.0.0
 psycopg[binary]==3.3.6
 PyYAML==6.0.3
 whitenoise==6.12.0
