@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
 # Publish the public portfolio copy of this repository.
 #
-# Clones main from the private repository into a temporary folder, rewrites
-# every commit with git filter-repo (text replacements and commit emails kept
-# in "$HOME/Dixie Detail/github-portfolio"), leaves out the paths in
-# left_out_paths, checks the result, and pushes it to the public repository.
-# The private repository is never changed.
+# Clones main from the private repository into a temporary folder and builds
+# the public copy from an allowlist (decision 0111):
+#   1. tools/portfolio_paths.py reads data/portfolio-include.txt as it is in
+#      that commit and chooses the paths to publish: those on the include
+#      list, less everything under docs/operations/, every file marked
+#      visibility: restricted, and the exclude list.
+#   2. git filter-repo keeps only those paths, in every commit.
+#   3. A second git filter-repo pass applies the text replacements and the
+#      commit emails kept in "$HOME/Dixie Detail/github-portfolio".
+# It then checks the result and pushes it to the public repository. The
+# private repository is never changed.
 #
 # Usage: tools/publish-portfolio.sh [--dry-run] [--force] [--yes]
 #   --dry-run  rewrite and check, show what would be published, push nothing
 #   --force    allow replacing the public history (needed after a change to
-#              the replacement list or the mailmap)
+#              the include list's rules, the replacement list or the mailmap)
 #   --yes      push without asking
 #
 # See docs/operations/publishing-the-portfolio.md.
@@ -30,24 +36,21 @@ for arg in "$@"; do
     --force) force=1 ;;
     --yes) yes=1 ;;
     --dry-run) dry=1 ;;
-    -h | --help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "publish-portfolio: unknown option $arg" >&2; exit 2 ;;
   esac
 done
 
 die() { echo "publish-portfolio: $*" >&2; exit 1; }
 
-# Files the public copy never holds, in any commit. The vehicle class
-# pictures are third-party renders the business shows on its own site but
-# holds no license to redistribute (data/site-content.yaml, class_images).
-# They were in website/ before the site moved to site/ in Phase 3, Step 6,
-# so both paths stay listed: older commits hold the first.
-left_out_paths=(website/public/images/vehicle-classes/ site/public/images/vehicle-classes/)
+tools_dir="$(cd "$(dirname "$0")" && pwd)"
+include_list=data/portfolio-include.txt
 
 git filter-repo --version > /dev/null 2>&1 \
   || die "git filter-repo is not installed (Fedora: sudo dnf install git-filter-repo)"
 [[ -s "$replacements" ]] || die "missing $replacements"
 [[ -s "$mailmap" ]] || die "missing $mailmap"
+command -v python3 > /dev/null || die "python3 is not installed"
 [[ -s "$public_url_file" ]] || die "missing $public_url_file (one line: the public repository's URL)"
 public_url="$(head -n 1 "$public_url_file")"
 
@@ -61,15 +64,26 @@ echo "Cloning main from $private_url"
 git clone --quiet --single-branch --branch main --no-tags "$private_url" "$work/repo"
 cd "$work/repo"
 
-echo "Rewriting every commit"
-path_args=()
-for path in "${left_out_paths[@]}"; do path_args+=(--path "$path"); done
+commits_before="$(git rev-list --count main)"
+
+echo "Choosing the files from $include_list"
+git show "main:$include_list" > "$work/include-list.txt" 2> /dev/null \
+  || die "$include_list is not in main"
+python3 "$tools_dir/portfolio_paths.py" select . main "$work/include-list.txt" "$work/paths.txt" \
+  || die "could not choose the files; see the message above"
+[[ -s $work/paths.txt ]] || die "no file in main is on the include list"
+
+echo "Keeping only those files in every commit"
+git filter-repo --force --paths-from-file "$work/paths.txt" > "$work/filter-repo.log" 2>&1 \
+  || { cat "$work/filter-repo.log" >&2; die "git filter-repo failed"; }
+
+echo "Replacing text and commit emails in every commit"
 git filter-repo --force \
-  "${path_args[@]}" --invert-paths \
   --replace-text "$replacements" \
   --replace-message "$replacements" \
   --mailmap "$mailmap" > "$work/filter-repo.log" 2>&1 \
   || { cat "$work/filter-repo.log" >&2; die "git filter-repo failed"; }
+commits_kept="$(git rev-list --count main)"
 
 echo "Checking the rewritten copy"
 problems=0
@@ -108,12 +122,9 @@ if grep -v -E '(@users\.noreply\.github\.com|^noreply@github\.com)$' "$work/emai
   problems=1
 fi
 
-# 4. No commit holds a left-out path.
-if git log --format= --name-only main -- "${left_out_paths[@]}" | grep . > "$work/hits.txt"; then
-  echo "  FAIL: files that are left out of the public copy are still in its history:"
-  sort -u "$work/hits.txt" | head -n 10 | sed 's/^/    /'
-  problems=1
-fi
+# 4. Every path in every commit is on the include list; none is under
+#    docs/operations/; no version of any file is marked visibility: restricted.
+python3 "$tools_dir/portfolio_paths.py" check . main "$work/include-list.txt" || problems=1
 
 # 5. For review: email addresses and phone numbers in file content.
 grep -o -h -E '[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$content" \
@@ -127,8 +138,9 @@ if [[ -s $work/review-emails.txt || -s $work/review-phones.txt ]]; then
   sed 's/^/    phone /' "$work/review-phones.txt"
 fi
 
-[[ $problems -eq 0 ]] || die "nothing was published. Fix the items above (usually a new line in $replacements) and run again."
+[[ $problems -eq 0 ]] || die "nothing was published. Fix the items above (usually a new line in $replacements or $include_list) and run again."
 echo "  Checks passed."
+echo "Summary: $(git ls-tree -r --name-only main | wc -l) files in the public main; $commits_kept of $commits_before commits kept (a commit that changed only left-out files is dropped)."
 
 # Compare with what is already public.
 git remote add public "$public_url"
@@ -146,7 +158,7 @@ if grep -q 'refs/heads/main$' <<< "$remote_heads"; then
     echo "$count new commit(s) to publish:"
     git log --oneline "$public_head"..main | sed 's/^/  /'
   else
-    [[ $force -eq 1 ]] || die "the rewritten history no longer matches the public copy, usually because the replacement list or the mailmap changed. Allow force pushes in the public repository's ruleset, then run again with --force."
+    [[ $force -eq 1 ]] || die "the rewritten history no longer matches the public copy, usually because the include list's rules, the replacement list or the mailmap changed. Allow force pushes in the public repository's ruleset, then run again with --force."
     echo "The public history will be replaced (--force)."
     push_args=(--force-with-lease="main:$public_head" public main)
   fi

@@ -4,7 +4,7 @@ summary: What each structured data file in data/ holds, which are seeds for the 
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-19
+updated: 2026-11-21
 ---
 
 # Data files
@@ -34,6 +34,7 @@ Structured facts live here so that code and people read the same numbers. Each Y
 | [consent-wording.yaml](consent-wording.yaml) | The two text consent checkboxes' exact wording, by version | Read by the public API, which serves the current version and records the words shown with each answer |
 | [business.yaml](business.yaml) | Contact details, brand, profiles | Reference |
 | [phases.yaml](phases.yaml) | Build phases and status | Reference |
+| [portfolio-include.txt](portfolio-include.txt) | The paths the public portfolio copy holds, and an exclude list (decision 0111) | Read by `tools/publish-portfolio.sh` from the commit it publishes |
 
 ## Seeds and the database
 

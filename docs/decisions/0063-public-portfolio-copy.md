@@ -7,10 +7,10 @@ area: repository
 status: accepted
 audience: [owner, developer]
 visibility: internal
-updated: 2026-10-17
+updated: 2026-11-21
 supersedes: []
 superseded_by: []
-related: [docs/operations/publishing-the-portfolio.md, tools/publish-portfolio.sh, README.md, CLAUDE.md, docs/decisions/0044-documentation-as-code.md]
+related: [docs/operations/publishing-the-portfolio.md, docs/decisions/0111-portfolio-from-an-allowlist.md, tools/publish-portfolio.sh, README.md, CLAUDE.md, docs/decisions/0044-documentation-as-code.md]
 ---
 
 # 0063: The working repository stays private; a rewritten public copy serves as a portfolio
@@ -41,3 +41,5 @@ The owner uses his GitHub repositories as part of his résumé for technical job
 - The private repository keeps real values where operations need them; new writing still follows the rule in `CLAUDE.md` to stay fit for publishing.
 - Pull request discussions and issues stay private; the public copy carries the commits only.
 - Publishing is a manual step with a review list, so a new private detail is caught by the owner before it goes out.
+
+*Note, 2026-11-21:* decision 0111 adds an include list. The public copy now holds only the paths on it, without `docs/operations/` or the documents marked restricted, and the replacements run on what is left.
