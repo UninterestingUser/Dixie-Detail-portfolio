@@ -1,7 +1,7 @@
 ---
 id: 113
 title: "Every website booking that becomes a request gets one answer, which never mentions an existing booking"
-summary: A booking past a confirmation cap, or for a number with a job that day, is answered request_instead with the day picked, and the site sends a request; no answer reveals a booking.
+summary: A booking past a confirmation cap, or for a number with a job that day, is kept as a booking request with its quote and answered the same way every time, so no answer reveals a booking.
 date: 2026-11-21
 area: booking
 status: accepted
@@ -23,18 +23,18 @@ A review (finding L1) found that a booking for a number that already had a job t
 
 ## Decision
 
-- **One answer.** A booking past either confirmation cap, or for a number that already has a job that day, is answered `409` `request_instead`, with the same message, "We can't book this time online. Send it as a request, with the day you picked, and we'll confirm by text or call.", and `preferred_day`, the date picked. Nothing is written, so no time is held.
+- **One answer.** A booking past either confirmation cap, or for a number that already has a job that day, is answered `202` with its request number, `status: "requested"`, the same message, "Thanks! We've got your request for this time. We'll confirm it by text or call. Your request number is …", and the summary built only from this booking. The site shows the message under "Request received".
+- **The server keeps the request itself,** as a booking request (the `SecondVehicleRequest` model, which keeps its first name), with the quote the customer saw, the time they picked and the reason, which only the owner sees: another job that day, or past the limit on unconfirmed bookings. It holds no time. Its address and vehicle wait off the customer's record until it is booked. The owner approves it, which books that quote as issued (decision 0059), confirmed as booked in the control app, or declines it.
 - **The time is checked first,** for every booking, before the number is looked at, so a taken time is answered `time_taken` whatever the number holds.
-- **The site sends the request a time form** in place of the booking, keeping everything entered, with the day and arrival picked as the preferred ones. It goes through Cloudflare's offline piece to `POST time-requests`, which tries the server at once, marked `from_booking`. The request lands on "needs you" as a booking request, and the owner books or declines it on the same screen as an offline request.
-- **No more second vehicle requests.** The same-day case no longer makes a second vehicle request; any still waiting are approved or declined on their screen as before.
 - **Every public answer checked:** quotes, open times, quote requests and offline requests answer the same whatever a number holds. The only answer that depends on a number's history is the booking's `confirmation` (decision 0112).
 
 ## Alternatives considered
 
-- **Keep the second vehicle request, with a vaguer message.** The `202` with a request reference still differed from the cap answer, which tells the two apart.
-- **Make the API record the request itself and answer "request received".** One step fewer for the customer, but it would book a request without the customer seeing it as one, and the owner asked for the request form with the day filled in.
+- **Keep the same-day request with a vaguer message, and answer capped bookings differently.** The two answers would still tell the cases apart.
+- **Answer `request_instead` and have the site send the request a time form, with the day filled in.** The first version of this change did that. The customer pressed Send twice, and the request was priced again on arrival instead of keeping the quote the customer saw. The owner chose the server-side request instead (2026-11-21).
 
 ## Consequences
 
-- A second vehicle the same day now needs one more press from the customer, and arrives priced for the day like an offline request rather than at the quote they were shown. At launch this is only a second motorcycle.
-- The site no longer needs its "second" confirmation screen.
+- A booking past a cap still reaches the owner, with its price, without the customer doing anything more.
+- Requests aren't capped: someone who fills the caps can keep sending requests, but they hold no time and need Turnstile and the rate limit, and the owner declines them.
+- "Second vehicle the same day" is now "Booking request" in the control app, covering both reasons.

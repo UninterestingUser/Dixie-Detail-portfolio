@@ -39,7 +39,7 @@ A booking holds its time as soon as it is made, but only a known customer's is c
 
 Each is followed by the booking reference. With the box ticked, the confirmation request text is queued for Phase 4's sender ([text-messages.md](text-messages.md#the-confirmation-request)). Until Phase 4 sends texts the first message is shown anyway: the site isn't public before then. Without the box ticked, the job goes on the control app's "needs you" list as "Call to confirm". In the control app an unconfirmed job is yellow, and so is its Jobs calendar event ([control-app.md](control-app.md#unconfirmed-jobs)).
 
-**The caps.** A new number can hold one open unconfirmed booking, and five new customers' bookings can be unconfirmed at once (scheduling settings). A booking past either cap, or one for a number that already has a job that day, is not booked: the form becomes the request a time form below, keeping everything entered, with the day and arrival picked filled in as the preferred ones, and the banner reads "We can't book this time online. Send it as a request, with the day you picked, and we'll confirm by text or call." Every such booking gets the same words, whatever the reason, so the page never says whether a number already has a booking ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md)). The request goes on "needs you" as a booking request, and the owner books it or declines it.
+**The caps.** A new number can hold one open unconfirmed booking, and five new customers' bookings can be unconfirmed at once (scheduling settings). A booking past either cap, or one for a number that already has a job that day, is not booked: the server keeps it as a request with the quote the customer saw, and the form shows "Request received" with "Thanks! We've got your request for this time. We'll confirm it by text or call. Your request number is …", and no calendar file. Every such booking gets the same words, whatever the reason, so the page never says whether a number already has a booking ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md)). The request goes on "needs you" as a booking request, and the owner approves it, which books that quote, or declines it.
 
 ## How the steps behave
 
@@ -91,7 +91,7 @@ Sending it books nothing and holds no time: the customer is told Dixie Detail wi
 
 ## Other cases
 
-- **A second vehicle the same day** is taken as a request. When quiet matching finds the customer already has a job that day, the booking becomes a request, with the same answer and the same request a time form as a booking past the caps above; nothing says why ([public-api.md](public-api.md#booking-post-bookings), [returning-customers.md](returning-customers.md#a-second-vehicle-the-same-day)). The time is checked first, so at launch this is a second motorcycle; a day takes one job otherwise.
+- **A second vehicle the same day** is taken as a request. When quiet matching finds the customer already has a job that day, the booking becomes a booking request, with the same answer as a booking past the caps above; nothing says why ([public-api.md](public-api.md#booking-post-bookings), [returning-customers.md](returning-customers.md#a-second-vehicle-the-same-day)). The time is checked first, so at launch this is a second motorcycle; a day takes one job otherwise.
 
 
 ## When the server can't be reached

@@ -1,7 +1,8 @@
 """Confirming website bookings from new customers (decision 0112) and the
 one answer for a booking that becomes a request (decision 0113), through
 the public API: who is confirmed at once, the reasons, the queued text,
-the two caps, and that no answer says whether a number has a booking."""
+the two caps, the booking request kept with its quote, and that no answer
+says whether a number has a booking."""
 
 import datetime
 
@@ -11,6 +12,7 @@ from appointments import confirmation
 from appointments.models import Appointment
 from customers.models import Customer
 from messaging.models import Message
+from publicapi.models import SecondVehicleRequest
 from scheduling.models import SchedulingSettings
 
 from .testing import ApiTestCase, eastern, open_day
@@ -114,10 +116,13 @@ class CapTests(ConfirmationTestCase):
     def test_one_open_unconfirmed_booking_per_new_number(self):
         self.booked(self.post(day=3))
         response = self.post(day=4)
-        self.assertEqual(response.status_code, 409, response.content)
-        self.assertEqual(response.json()["error"], "request_instead")
-        self.assertEqual(response.json()["preferred_day"], open_day(4).isoformat())
+        self.assertEqual(response.status_code, 202, response.content)
+        self.assertEqual(response.json()["status"], "requested")
         self.assertEqual(Appointment.objects.count(), 1)
+        request = SecondVehicleRequest.objects.get(reference=response.json()["request"])
+        self.assertEqual(request.reason, SecondVehicleRequest.Reason.OVER_CAP)
+        self.assertEqual(request.start, eastern(open_day(4), 8))
+        self.assertIsNone(request.same_day_appointment)
         # Another number still books.
         self.booked(self.post(day=4, mobile="4235550111"))
 
@@ -125,7 +130,7 @@ class CapTests(ConfirmationTestCase):
         for number in range(5):
             self.booked(self.post(day=3 + number, mobile=f"42355501{number:02d}"))
         response = self.post(day=9, mobile="4235550198")
-        self.assertEqual(response.json()["error"], "request_instead")
+        self.assertEqual(response.json()["status"], "requested")
         self.assertEqual(Appointment.objects.count(), 5)
 
     def test_a_known_customer_is_never_capped(self):
@@ -152,13 +157,13 @@ class CapTests(ConfirmationTestCase):
                 self.booked(self.post(day=3 + _, mobile="4235550100"))
             SchedulingSettings.objects.filter(pk=1).update(unconfirmed_per_number=1, unconfirmed_new_customers=2)
             self.booked(self.post(day=6, mobile="4235550111"))
-            self.assertEqual(self.post(day=7, mobile="4235550100").json()["error"], "request_instead")
+            self.assertEqual(self.post(day=7, mobile="4235550100").json()["status"], "requested")
 
     def test_the_caps_are_scheduling_settings(self):
         SchedulingSettings.objects.filter(pk=1).update(unconfirmed_per_number=2)
         self.booked(self.post(day=3))
         self.booked(self.post(day=4))
-        self.assertEqual(self.post(day=5).json()["error"], "request_instead")
+        self.assertEqual(self.post(day=5).json()["status"], "requested")
 
 
 class OneAnswerTests(ConfirmationTestCase):
@@ -167,8 +172,12 @@ class OneAnswerTests(ConfirmationTestCase):
 
     def answer_for(self, day, mobile, **changes):
         response = self.post(day=day, mobile=mobile, **changes)
-        self.assertEqual(response.status_code, 409, response.content)
-        return response.json()
+        self.assertEqual(response.status_code, 202, response.content)
+        answer = response.json()
+        # The request number is the request's own; everything else must match.
+        reference = answer.pop("request")
+        answer["message"] = answer["message"].replace(reference, "REFERENCE")
+        return answer
 
     def test_the_caps_and_a_job_that_day_give_identical_answers(self):
         """At launch only Motorcycle Detail and Monthly Maintenance share a
@@ -189,12 +198,13 @@ class OneAnswerTests(ConfirmationTestCase):
         everyone = self.answer_for(day, "4235550299", hour=12, motorcycle=True)
         self.assertEqual(per_number, same_day)
         self.assertEqual(per_number, everyone)
-        self.assertEqual(set(per_number), {"error", "message", "preferred_day"})
-        self.assertEqual(per_number["preferred_day"], day.isoformat())
+        self.assertEqual(set(per_number), {"status", "message", "summary"})
         for word in ("already", "booking for this number", "another", "limit", "unconfirmed"):
             self.assertNotIn(word, per_number["message"].lower())
+        reasons = sorted(SecondVehicleRequest.objects.values_list("reason", flat=True))
+        self.assertEqual(reasons, ["over_cap", "over_cap", "same_day"])
         # Below the caps, a new number books that same time.
-        Appointment.objects.filter(customer__mobile="42355502" "03").update(status=Appointment.Status.CANCELED)
+        Appointment.objects.filter(customer__mobile="4235550203").update(status=Appointment.Status.CANCELED)
         self.booked(self.post(day=day, mobile="4235550277", hour=12, motorcycle=True))
 
     def test_a_taken_time_is_refused_before_the_caps_are_looked_at(self):
@@ -203,24 +213,23 @@ class OneAnswerTests(ConfirmationTestCase):
         stranger = self.post(day=3, mobile="4235550122")
         self.assertEqual(capped.json(), stranger.json())
         self.assertEqual(capped.json()["error"], "time_taken")
+        self.assertFalse(SecondVehicleRequest.objects.exists())
 
-    def test_the_request_form_comes_in_marked_from_a_booking(self):
-        import uuid
 
-        from publicapi.models import TimeRequest
+class BookingRequestTests(ConfirmationTestCase):
+    def test_approving_a_capped_request_books_the_quote_the_customer_saw(self):
+        from django.contrib.auth import get_user_model
 
-        from .test_quote_requests import signed
-        from .testing import BASE, CLEVELAND, PublicClient
+        from publicapi import decisions
+        from publicapi.models import WebQuote
 
-        body = {
-            "request_id": str(uuid.uuid4()), "submitted_at": timezone.now().isoformat(),
-            "vehicle": {"year": 2019, "make": "Toyota", "model": "RAV4"}, "condition": 1, "service": self.full_detail.pk,
-            "place_id": CLEVELAND, "preferred_start": eastern(open_day(4), 8).isoformat(),
-            "first_name": "Avery", "mobile": "4235550123", "payment_method": "card",
-            "consents": {"version": "2026-11-18", "appointment": True}, "shown": {"total": "100.00", "pricebook_version": 1},
-            "from_booking": True,
-        }
-        raw, headers = signed(body)
-        response = PublicClient(origin=None, visitor="104.16.0.1").post(f"{BASE}time-requests", raw, content_type="application/json", headers=headers)
-        self.assertEqual(response.status_code, 201, response.content)
-        self.assertTrue(TimeRequest.objects.get().from_booking)
+        self.booked(self.post(day=3))
+        response = self.post(day=4)
+        request = SecondVehicleRequest.objects.get(reference=response.json()["request"])
+        user = get_user_model().objects.create_user("owner", password="an-invented-password-1")
+        job, _ = decisions.approve_second_vehicle(request, request.start, user)
+        self.assertEqual(job.quote, WebQuote.objects.get(number=request.web_quote.number).quote)
+        self.assertEqual(job.total_before_tax, request.web_quote.quote.total_before_tax)
+        # Booked by the owner in the control app, so confirmed.
+        self.assertEqual(job.confirmed_how, Appointment.ConfirmedHow.CONTROL_APP)
+        self.assertEqual(job.customer, Appointment.objects.exclude(pk=job.pk).get().customer)

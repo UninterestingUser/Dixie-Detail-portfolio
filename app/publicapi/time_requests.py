@@ -10,10 +10,6 @@ each replay with the Bitwarden secret OFFLINE_REQUESTS_SIGNING_KEY:
     X-Dixie-Timestamp: seconds since 1970, within 5 minutes of now
     X-Dixie-Signature: hex HMAC-SHA256 of "<timestamp>.<raw body>"
 
-The same form is sent in place of a booking the server answered with
-request_instead (decision 0113), marked from_booking, with the day the
-customer picked as the preferred day.
-
 A request is not an appointment. It is priced on arrival from the pricebook
 in effect, and flagged for the owner when that price differs from the one
 the customer saw. The website's request id makes a second replay harmless.
@@ -64,8 +60,7 @@ def parse(data):
     validate.only(
         data,
         ["request_id", "submitted_at", "vehicle", "service", "first_name", "mobile", "payment_method", "consents", "shown"],
-        ["size", "condition", "add_ons", "preferred_start", "preferred_note", "last_name", "color", "session_token", "place_id", "address",
-         "from_booking"],
+        ["size", "condition", "add_ons", "preferred_start", "preferred_note", "last_name", "color", "session_token", "place_id", "address"],
     )
     try:
         request_id = uuid.UUID(str(data["request_id"]))
@@ -103,7 +98,6 @@ def parse(data):
         "consents": consent.parse(data["consents"]),
         "shown_total": shown_total,
         "shown_version": validate.integer(shown["pricebook_version"], "shown.pricebook_version", 1, 100_000),
-        "from_booking": validate.boolean(data["from_booking"], "from_booking") if "from_booking" in data else False,
     }
 
 
@@ -186,6 +180,5 @@ def receive(request, data):
             price_differs=quote is not None and quote.total_before_tax != form["shown_total"],
             problem=problem[:300],
             is_test=customer.is_test,
-            from_booking=form["from_booking"],
         )
     return 201, {"received": True}

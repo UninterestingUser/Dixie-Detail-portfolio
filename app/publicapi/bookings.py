@@ -24,9 +24,10 @@ the site picks its words.
 
 The booking becomes a request instead, with one answer whatever the reason
 (decision 0113): the number already has a job that day, or an unconfirmed
-booking would pass a cap. The time is checked first for every booking, so
-a taken time gets the same answer whatever the number. No answer says
-whether a number already has a booking.
+booking would pass a cap. The request keeps the quote the customer saw,
+for the owner to approve or decline. The time is checked first for every
+booking, so a taken time gets the same answer whatever the number. No
+answer says whether a number already has a booking.
 """
 
 import datetime
@@ -201,18 +202,13 @@ def fresh_quote_error(code, message, web, day=None):
     return ApiError(409, code, message, quote=quotes.quote_json(fresh))
 
 
-# The one answer for a booking that becomes a request (decision 0113): the
-# site shows the request a time form with the day filled in. It never says
-# why, so it never tells anyone whether a number already has a booking.
-REQUEST_INSTEAD = (
-    "We can't book this time online. Send it as a request, with the day you picked, "
-    "and we'll confirm by text or call."
+# The one answer for a booking that becomes a request (decision 0113). It
+# never says why, so it never tells anyone whether a number already has a
+# booking.
+REQUESTED_MESSAGE = (
+    "Thanks! We've got your request for this time. We'll confirm it by text or call. "
+    "Your request number is {reference}."
 )
-
-
-def request_instead(start):
-    error = ApiError(409, "request_instead", REQUEST_INSTEAD, preferred_day=timezone.localtime(start).date().isoformat())
-    return error.status, {"error": error.code, "message": error.message, **error.extra}
 
 
 def book(request, data):
@@ -244,10 +240,16 @@ def book(request, data):
                 check_time(web, start)
                 customer, _ = matching.find_match(typed.mobile, typed.is_test, typed.first_name, typed.last_name)
                 known = confirmation.is_known_customer(customer)
-                if same_day_job(customer, day) is not None or (
-                    not known and confirmation.over_a_cap(customer, typed.is_test, SchedulingSettings.get())
-                ):
-                    return request_instead(start)
+                other = same_day_job(customer, day)
+                if other is not None:
+                    reason = SecondVehicleRequest.Reason.SAME_DAY
+                elif not known and confirmation.over_a_cap(customer, typed.is_test, SchedulingSettings.get()):
+                    reason = SecondVehicleRequest.Reason.OVER_CAP
+                else:
+                    reason = None
+                if reason is not None:
+                    held = write_request(web, form, start, typed, reason, other)
+                    return 202, requested_answer(web, held, form)
                 appointment = write_booking(web, form, start, typed, known)
         except booking.RulesBroken as error:
             raise ApiError(409, "time_taken", "That time is no longer open. Please pick another time.") from error
@@ -290,6 +292,37 @@ def write_booking(web, form, start, typed, known):
     if not known and text_consent:
         confirmation.queue_request(appointment)
     return appointment
+
+
+def write_request(web, form, start, typed, reason, other=None):
+    """A booking request: the booking as sent, its quote kept for the owner
+    to approve, with its address and vehicle held off the record until then.
+    The time was checked already."""
+    intake = take_in(typed, form["consents"], form["mobile"], hold=True)
+    return SecondVehicleRequest.objects.create(
+        reference=unique_reference(),
+        web_quote=web,
+        customer=intake.customer,
+        service_address=intake.address,
+        vehicle=intake.vehicle,
+        start=start,
+        payment_method=form["payment_method"],
+        same_day_appointment=other,
+        reason=reason,
+        intake=intake.as_json(),
+        is_test=intake.customer.is_test,
+    )
+
+
+def requested_answer(web, held, form):
+    """The same for every reason: the request number, the message and the
+    summary, built only from this booking."""
+    return {
+        "request": held.reference,
+        "status": "requested",
+        "message": REQUESTED_MESSAGE.format(reference=held.reference),
+        "summary": summary(web, held.start, form["color"], form["payment_method"]),
+    }
 
 
 def booking_answer(web, appointment, form):

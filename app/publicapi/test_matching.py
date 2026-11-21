@@ -240,20 +240,27 @@ class SecondVehicleTests(MatchingTestCase):
         body = self.booking_body(second_quote, self.same_day_start(second_quote, day), color="Black")
         return customer, Appointment.objects.get(reference=first.json()["reference"]), body
 
-    def test_a_second_vehicle_the_same_day_becomes_a_request_instead(self):
+    def test_a_second_vehicle_the_same_day_comes_in_as_a_request(self):
         """The same answer as any booking that becomes a request (decision
         0113): it never mentions the booking the number already has."""
         customer, first, body = self.two_motorcycles()
         response = self.client.post_json("bookings", body)
-        self.assertEqual(response.status_code, 409, response.content)
+        self.assertEqual(response.status_code, 202, response.content)
         answer = response.json()
-        self.assertEqual(answer["error"], "request_instead")
-        self.assertEqual(answer["preferred_day"], open_day(3).isoformat())
+        self.assertEqual(answer["status"], "requested")
+        self.assertIn("confirm it by text or call", answer["message"])
         self.assertNotIn("already", answer["message"])
-        self.assertNotIn("booking for this number", answer["message"])
-        # Nothing is booked or held: the customer sends the request form.
+        self.assertNotIn("calendar_file", answer)
+        # Not an appointment: the customer still has one job that day.
         self.assertEqual(Appointment.objects.filter(customer=customer).count(), 1)
-        self.assertEqual(SecondVehicleRequest.objects.count(), 0)
+        request = SecondVehicleRequest.objects.get(reference=answer["request"])
+        self.assertEqual((request.customer, request.same_day_appointment), (customer, first))
+        self.assertEqual(request.reason, SecondVehicleRequest.Reason.SAME_DAY)
+        self.assertEqual(request.web_quote.number, body["quote"])
+        # The vehicle it brought waits off the record until it is booked.
+        self.assertFalse(request.vehicle.active)
+        self.assertEqual(request.intake["flags"][0]["field"], MatchFlag.Field.VEHICLE)
+        # Nothing from the record is in the answer.
         self.assertNotIn("Gold Wing", str(answer))
 
     def test_a_new_customer_never_gets_a_request(self):
@@ -282,6 +289,11 @@ class SecondVehicleTests(MatchingTestCase):
         Appointment.objects.filter(pk=first.pk).update(status=Appointment.Status.CANCELED)
         second, _ = self.book(start=eastern(open_day(3), 8))
         self.assertEqual(second.customer, first.customer)
+
+    def test_the_quote_cant_be_booked_again(self):
+        _, _, body = self.two_motorcycles()
+        self.assertEqual(self.client.post_json("bookings", body).status_code, 202)
+        self.assertEqual(self.client.post_json("bookings", body).json()["error"], "quote_used")
 
 
 class MatchingUnitTests(MatchingTestCase):

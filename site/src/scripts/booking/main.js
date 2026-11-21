@@ -76,8 +76,6 @@ const fresh = () => ({
   preferredDate: "",
   preferredTime: "",
   preferredNote: "",
-  // The request a time form was sent in place of a booking (decision 0113).
-  fromBooking: false,
   first: "",
   last: "",
   mobile: "",
@@ -684,26 +682,10 @@ async function sendBooking() {
     return render();
   }
   S.sending = false;
-  S.done = { kind: "booked", answer: answer.body };
+  // 202: the server took it as a request (decision 0113), and says only
+  // that we'll confirm, never why.
+  S.done = { kind: answer.status === 202 ? "requested" : "booked", answer: answer.body };
   render();
-}
-
-// The server couldn't take the booking online (decision 0113): the form
-// becomes the request a time form, keeping everything entered, with the day
-// and arrival picked filled in as the preferred ones. The answer never says
-// why, and neither does the page.
-function requestInstead(error) {
-  const day = error.body.preferred_day || S.day;
-  const arrival = (S.start || "").slice(11, 16);
-  const reached = S.reached;
-  S.fromBooking = true;
-  goOffline(`${error.message} Questions? Call or text ${config.phone}.`);
-  S.preferredDate = day || "";
-  S.preferredTime = arrival;
-  // The address and vehicle are already settled: go straight back to review.
-  if (sizeSettled() && S.placeId && reached >= 7) S.reached = 7;
-  render();
-  $("#step-7")?.scrollIntoView({ block: "start" });
 }
 
 // What the customer is told once booked, from the server's confirmation
@@ -727,8 +709,6 @@ function bookingRefused(error) {
     showBanner(error.message, true);
   } else if (error.code === "ask_for_quote") {
     return startRequest("level");
-  } else if (error.code === "request_instead") {
-    return requestInstead(error);
   } else {
     S.sendError = sendFailed(error);
   }
@@ -770,7 +750,7 @@ async function sendTimeRequest() {
   render();
   try {
     const value = await token(config, turnstileBox);
-    await hold("time-request", { ...offlineBody(), ...(S.fromBooking ? { from_booking: true } : {}), turnstile: value });
+    await hold("time-request", { ...offlineBody(), turnstile: value });
   } catch (error) {
     S.sending = false;
     S.sendError = sendFailed(error);
@@ -943,6 +923,8 @@ function renderDone() {
       h("div", { class: "buttons" }, h("a", { class: "button", href, download: file.name, "data-calendar-file": "" }, "Add to my calendar")),
       h("ul", {}, s.notes.map((note) => h("li", {}, note))),
     ];
+  } else if (d.kind === "requested") {
+    body = [h("h2", { id: "h-done", tabindex: "-1" }, "Request received"), h("p", { class: "lead", "data-requested": "" }, d.answer.message)];
   } else if (d.kind === "request") {
     body = [h("h2", { id: "h-done", tabindex: "-1" }, "Request sent"), h("p", { class: "lead" }, d.answer.message)];
   } else if (d.kind === "request-held") {

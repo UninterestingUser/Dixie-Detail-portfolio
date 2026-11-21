@@ -182,8 +182,8 @@ class ContractTests(ApiTestCase):
         from scheduling.models import SchedulingSettings
 
         SchedulingSettings.objects.filter(pk=1).update(unconfirmed_new_customers=1)
-        another = client.post_json("quotes", {"vehicle": rav4, "service": self.full_detail.pk, "condition": 1, "place": token}).json()
-        keep("error", client.post_json("bookings", self.booking_body(another, self.first_open(another), mobile="4235550177")), 409)
+        another = client.post_json("quotes", {"vehicle": rav4, "service": self.full_detail.pk, "condition": 1, "add_ons": [self.seats.pk], "place": token}).json()
+        keep("bookings-requested", client.post_json("bookings", self.booking_body(another, self.first_open(another), mobile="4235550177")), 202)
 
         session = client.post_json("quote-requests/uploads", {"turnstile": GOOD_TOKEN})
         keep("quote-requests/uploads", session, 201)

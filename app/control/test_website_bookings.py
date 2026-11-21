@@ -279,29 +279,15 @@ class DefaultStaffTests(ControlTestCase):
 
 class SecondVehicleScreenTests(ControlTestCase, SecondVehicleTests):
     def request(self):
-        """A second vehicle request as the website made them before decision
-        0113. New ones are no longer made, but those waiting are still
-        approved or declined on this screen."""
-        import datetime
-
-        from publicapi import bookings, consent
-        from publicapi.models import WebQuote
-
         customer, first, body = self.two_motorcycles()
-        web = WebQuote.objects.get(number=body["quote"])
-        typed = bookings.given("Jordan", "Sample", "4235550142", web.place, bookings.quote_vehicle(web, "Black"))
-        intake = bookings.take_in(typed, consent.parse(body["consents"]), "4235550142", hold=True)
-        item = SecondVehicleRequest.objects.create(
-            reference=bookings.unique_reference(), web_quote=web, customer=intake.customer, service_address=intake.address,
-            vehicle=intake.vehicle, start=datetime.datetime.fromisoformat(body["start"]), payment_method="cash",
-            same_day_appointment=first, intake=intake.as_json(),
-        )
-        return customer, item
+        answer = self.client.post_json("bookings", body).json()
+        return customer, SecondVehicleRequest.objects.get(reference=answer["request"])
 
     def test_approve_books_the_quote_at_the_time_picked(self):
         customer, item = self.request()
         page = self.tailnet.get(f"/requests/second-vehicle/{item.pk}/")
-        self.assertContains(page, "Second vehicle the same day")
+        self.assertContains(page, "Booking request")
+        self.assertContains(page, "Another job that day")
         self.assertContains(page, "Road King")
         local = timezone.localtime(item.start)
         response = self.tailnet.post(f"/requests/second-vehicle/{item.pk}/book/", {"book-date": local.date(), "book-time": local.strftime("%H:%M")})
@@ -351,21 +337,6 @@ class OfflineRequestScreenTests(ControlTestCase):
     def book(self, item, start, **extra):
         local = timezone.localtime(start)
         return self.tailnet.post(f"/requests/offline/{item.pk}/book/", {"book-date": local.date(), "book-time": local.strftime("%H:%M"), **extra})
-
-    def test_a_request_sent_in_place_of_a_booking_is_labeled_so(self):
-        """Decision 0113: the website sends the request a time form when the
-        server answers a booking with request_instead."""
-        offline = self.send()
-        item = self.send(from_booking=True)
-        titles = {found.url: (found.title, found.detail) for found in needs_you.items()}
-        self.assertEqual(titles[f"/requests/offline/{offline.pk}/"][0], "Offline request: Avery")
-        title, detail = titles[f"/requests/offline/{item.pk}/"]
-        self.assertEqual(title, "Booking request: Avery")
-        self.assertIn("The website couldn't book it · asked for", detail)
-        # Booked from the control app, it is confirmed (decision 0112).
-        self.book(item, item.preferred_start)
-        item.refresh_from_db()
-        self.assertEqual(item.appointment.confirmed_how, Appointment.ConfirmedHow.CONTROL_APP)
 
     def test_the_screen_shows_the_price_the_customer_saw_beside_todays(self):
         item = self.send()

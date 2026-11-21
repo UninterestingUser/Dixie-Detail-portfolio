@@ -1,18 +1,19 @@
 {% extends "control/base.html" %}
 {% load control %}
-{% block title %}Second vehicle {{ item.reference }}{% endblock %}
+{% block title %}Booking request {{ item.reference }}{% endblock %}
 {% block content %}
 <p><a href="{% url 'requests' %}">Website requests</a></p>
-<h1>Second vehicle the same day</h1>
+<h1>Booking request</h1>
 {% if item.is_test %}<p class="notice">A test record.</p>{% endif %}
-<p class="help">A returning customer booked another job on a day they already have one, so it came in as a request, not a job. Approve it to book it, at the time they picked or another, or decline it. The customer was told you'd confirm.</p>
+<p class="help">The website took this booking as a request, not a job: {% if item.reason == 'same_day' %}the customer already has a job that day, usually a second vehicle{% else %}a new number past the limit on unconfirmed bookings (decision 0112){% endif %}. The time was open when they sent it but isn't held. Approve it to book it, at the time they picked or another, or decline it. The customer was told only that you'd confirm by text or call, never why.</p>
 <dl class="facts">
   <dt>Request</dt><dd>{{ item.reference }} · {{ item.get_status_display }}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
+  <dt>Why</dt><dd>{{ item.get_reason_display }}</dd>
   <dt>Customer</dt><dd><a href="{% url 'customer' item.customer.pk %}">{{ item.customer }}</a></dd>
   <dt>Wants</dt><dd>{{ item.start|date:"D, M j, Y" }}, {{ item.start|local_time }}</dd>
   <dt>Vehicle</dt><dd>{{ item.vehicle }}</dd>
   <dt>Address</dt><dd>{{ item.service_address }}</dd>
-  <dt>Already booked</dt><dd>{% if item.same_day_appointment %}<a href="{% url 'appointment' item.same_day_appointment.pk %}">{{ item.same_day_appointment.scheduled_start|local_time }}: {{ item.same_day_appointment.vehicle|default:"no vehicle" }}</a>{% else %}<span class="muted">No longer on file</span>{% endif %}</dd>
+  {% if item.reason == 'same_day' %}<dt>Already booked</dt><dd>{% if item.same_day_appointment %}<a href="{% url 'appointment' item.same_day_appointment.pk %}">{{ item.same_day_appointment.scheduled_start|local_time }}: {{ item.same_day_appointment.vehicle|default:"no vehicle" }}</a>{% else %}<span class="muted">No longer on file</span>{% endif %}</dd>{% endif %}
   <dt>Job</dt><dd>{% if item.appointment %}<a href="{% url 'appointment' item.appointment.pk %}">{{ item.appointment.scheduled_start|date:"D, M j, Y" }}, {{ item.appointment.scheduled_start|local_time }}</a>{% else %}None yet{% endif %}</dd>
 </dl>
 {% include "control/_contact.html" %}

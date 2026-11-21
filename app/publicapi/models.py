@@ -10,8 +10,9 @@
   photos (decision 0099).
 - TimeRequest: a "request a time" form sent while the server was offline
   and replayed later (decision 0100).
-- SecondVehicleRequest: a booking from a returning customer who already
-  has a job that day, taken as a request the owner approves (booking-flow.md).
+- SecondVehicleRequest: a booking request, a website booking taken as a
+  request the owner approves: the number has a job that day, or the
+  booking would pass a confirmation cap (decisions 0112 and 0113).
 - UploadSession, RateCount and SmokeTestPass: the abuse controls.
 """
 
@@ -268,10 +269,9 @@ class QuotePhoto(models.Model):
 
 class TimeRequest(models.Model):
     """A "request a time" form the website held while the server was
-    offline, replayed by Cloudflare when it came back (decision 0100), or
-    sent in place of a booking the server answered with request_instead
-    (decision 0113, from_booking). Not an appointment: priced on arrival,
-    and flagged when that price differs from the one the customer saw."""
+    offline, replayed by Cloudflare when it came back (decision 0100). Not
+    an appointment: priced on arrival, and flagged when that price differs
+    from the one the customer saw."""
 
     class Status(models.TextChoices):
         NEW = "new", "New"
@@ -302,10 +302,6 @@ class TimeRequest(models.Model):
     intake = models.JSONField(null=True, blank=True)
     appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     is_test = models.BooleanField("test record", default=False)
-    # Sent in place of a booking the website couldn't take (decision 0113),
-    # rather than while the server was offline. The website says which; it
-    # changes only how the request is labeled.
-    from_booking = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         ordering = ["-received_at"]
@@ -315,15 +311,23 @@ class TimeRequest(models.Model):
 
 
 class SecondVehicleRequest(models.Model):
-    """A website booking from a returning customer who already has a job on
-    that day, usually a second vehicle (booking-flow.md). It is not an
+    """A booking request: a website booking the server took as a request
+    instead of booking it (decision 0113), because the number already has a
+    job that day (usually a second vehicle), or because one more unconfirmed
+    booking would pass a cap (decision 0112). Called a booking request in
+    the control app; the model keeps its first name. It is not an
     appointment and holds no time: the owner approves it, which books the
-    quote through the availability check, or declines it with a reason."""
+    quote the customer saw through the availability check, or declines it
+    with a reason. The customer is never told the reason."""
 
     class Status(models.TextChoices):
         NEW = "new", "New"
         BOOKED = "booked", "Booked"
         DECLINED = "declined", "Declined"
+
+    class Reason(models.TextChoices):
+        SAME_DAY = "same_day", "Another job that day"
+        OVER_CAP = "over_cap", "Past the limit on unconfirmed bookings"
 
     reference = models.CharField(max_length=12, unique=True)
     web_quote = models.OneToOneField(WebQuote, on_delete=models.PROTECT, related_name="second_vehicle_request")
@@ -336,6 +340,9 @@ class SecondVehicleRequest(models.Model):
     same_day_appointment = models.ForeignKey(
         "appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # Why it wasn't booked, for the owner only. Requests from before
+    # decision 0113 were all same-day.
+    reason = models.CharField(max_length=10, choices=Reason.choices, default=Reason.SAME_DAY, db_default=Reason.SAME_DAY)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.NEW)
     decline_reason = models.CharField(max_length=300, blank=True)
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -349,7 +356,7 @@ class SecondVehicleRequest(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Second vehicle request {self.reference}"
+        return f"Booking request {self.reference}"
 
 
 class RateCount(models.Model):

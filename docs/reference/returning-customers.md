@@ -28,9 +28,9 @@ A quote request and a "request a time" form, sent offline or in place of a booki
 
 ## A second vehicle the same day
 
-When the matched customer already has a job that day (not canceled), a website booking for that day is not booked. The time is checked first, as for every booking. At launch a day takes one job, and only Motorcycle Detail and Monthly Maintenance share a day, so in practice this is a second motorcycle. The answer is the same as for any booking that becomes a request, such as one past the new-customer caps, and never mentions the booking the number already has ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md), [public-api.md](public-api.md#booking-post-bookings)). The form becomes the request a time form with the day filled in, and the request goes on "needs you" as a booking request, where the owner books it or declines it.
+When the matched customer already has a job that day (not canceled), a website booking for that day comes in as a booking request the owner approves or declines, not an appointment. The time is checked first, as for every booking. At launch a day takes one job, and only Motorcycle Detail and Monthly Maintenance share a day, so in practice this is a second motorcycle. The request keeps the quote the customer saw. The answer is the same as for any booking that becomes a request, such as one past the new-customer caps, and never mentions the booking the number already has ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md), [public-api.md](public-api.md#booking-post-bookings)).
 
-Until 2026-11-21 such a booking came in as a second vehicle request, and the website told the customer there was already a booking for the number that day. Any still waiting are handled on their screen as before.
+Until 2026-11-21 the website told the customer there was already a booking for the number that day.
 
 ## Known customers and confirming
 

@@ -69,11 +69,30 @@ answers:
       total: string
       total_before_tax: string
       vehicle: string
+  bookings-requested:
+    message: string
+    request: string
+    status: string
+    summary:
+      add_ons:
+      - string
+      address: string
+      arrival: string
+      color: string
+      date: string
+      notes:
+      - string
+      payment_method: string
+      sales_tax: string
+      service: string
+      time_on_site: string
+      total: string
+      total_before_tax: string
+      vehicle: string
   error:
     error: string
     field?: string
     message: string
-    preferred_day?: string
   open-times:
     days:
     - date: string

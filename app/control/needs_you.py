@@ -3,9 +3,9 @@ a decision, newest first, with a count (decision 0107):
 
 - a new customer's booking with no text consent, to call and confirm
   (decision 0112), with call and text links and "Mark confirmed";
-- quote requests to price, request a time forms to price and book (sent
-  while the server was offline, or in place of a booking the website
-  couldn't take, decision 0113), and a second vehicle the same day;
+- quote requests to price, offline requests to price and book, and booking
+  requests: a website booking taken as a request because the number has a
+  job that day or is past a confirmation cap (decision 0113);
 - returning-customer differences: review flags from quiet matching;
 - Time Off over a booked job (decision 0098), and a job the calendar sync
   keeps failing to push;
@@ -122,17 +122,13 @@ def items(user=None):
             reverse("quote-request", args=[item.pk]), item.is_test,
         ))
     for item in TimeRequest.objects.filter(status=TimeRequest.Status.NEW).select_related("customer"):
-        if item.from_booking:
-            title = f"Booking request: {item.customer}"
-            detail = "The website couldn't book it" + (f" · asked for {when_text(item.preferred_start)}" if item.preferred_start else "")
-        else:
-            title, detail = f"Offline request: {item.customer}", "Sent while the server was offline"
-        detail += ", price differs" if item.price_differs else ""
-        found.append(Item("time_request", item.received_at, title, detail, reverse("time-request", args=[item.pk]), item.is_test))
+        detail = "Sent while the server was offline" + (", price differs" if item.price_differs else "")
+        found.append(Item("time_request", item.received_at, f"Offline request: {item.customer}", detail,
+                          reverse("time-request", args=[item.pk]), item.is_test))
     for item in SecondVehicleRequest.objects.filter(status=SecondVehicleRequest.Status.NEW).select_related("customer", "vehicle"):
         found.append(Item(
-            "second_vehicle", item.created_at, f"Second vehicle the same day: {item.customer}",
-            f"{when_text(item.start)} · {item.vehicle}", reverse("second-vehicle-request", args=[item.pk]), item.is_test,
+            "second_vehicle", item.created_at, f"Booking request: {item.customer}",
+            f"{when_text(item.start)} · {item.vehicle} · {item.get_reason_display().lower()}", reverse("second-vehicle-request", args=[item.pk]), item.is_test,
         ))
     for flag in CalendarFlag.objects.filter(outcome=CalendarFlag.Outcome.OPEN, kind=CalendarFlag.Kind.CLASH).select_related("appointment__customer"):
         job = flag.appointment

@@ -805,17 +805,13 @@ test("a known customer sees the confirmation as before", async ({ page, request 
   await expect(page.locator("[data-confirmation]")).toHaveText(/^We'll text you a confirmation\. Your booking reference is /);
 });
 
-test("a booking the server can't take becomes a request with the day filled in", async ({ page, request }) => {
-  await fake(request, { requestInstead: true });
+test("a booking the server takes as a request says only that we'll confirm", async ({ page, request }) => {
+  await fake(request, { requested: true });
   await toReview(page);
-  const day = await page.locator("[data-day][aria-pressed=true]").getAttribute("data-day");
   await page.locator("[data-book]").click();
-  await expect(page.locator("[data-banner]")).toContainText("We can't book this time online. Send it as a request");
-  await expect(page.locator("[data-banner]")).not.toContainText("already");
-  await expect(page.locator("#step-7 .review-list")).toContainText("Preferred");
-  await page.locator("[data-book]").click();
-  await expect(page.getByRole("heading", { name: "Request sent" })).toBeVisible();
-  const held = (await log(request)).find((entry) => entry.to === "/offline/time-request");
-  expect(held.body).toMatchObject({ from_booking: true, first_name: "Jordan", mobile: "(423) 555-0142", place_id: "ChIJfakeCleveland00001" });
-  expect(held.body.preferred_start.slice(0, 10)).toBe(day);
+  await expect(page.getByRole("heading", { name: "Request received" })).toBeVisible();
+  await expect(page.locator("[data-requested]")).toHaveText(/^Thanks! We've got your request for this time\. We'll confirm it by text or call\. Your request number is R/);
+  await expect(page.locator("[data-requested]")).not.toContainText("already");
+  await expect(page.locator("[data-calendar-file]")).toHaveCount(0);
+  expect((await log(request)).filter((entry) => entry.to === "/offline/time-request")).toHaveLength(0);
 });

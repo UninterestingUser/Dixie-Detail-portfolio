@@ -28,7 +28,7 @@ Call, confirm the day, then tap **Mark confirmed**, with a note if it helps, suc
 
 The banner at the top of the Schedule screen lists unconfirmed jobs that start within 48 hours, each with **Call**, **Text** and **Mark confirmed**, so none is missed the day before. The 48 hours, and the caps below, are on **Account → Scheduling settings**, under **Confirming new customers**.
 
-**The caps.** One new number can hold one unconfirmed booking, and five new customers can be waiting at once. Past either, the website doesn't book: it asks the customer to send the booking as a request, which arrives as a **Booking request** (below). A booking for a number that already has a job that day gets the same answer. The website never says which reason it was.
+**The caps.** One new number can hold one unconfirmed booking, and five new customers can be waiting at once. Past either, the website doesn't book: it takes the booking as a request, which arrives as a **Booking request** (below), and tells the customer you'll confirm by text or call. A booking for a number that already has a job that day gets the same answer. The website never tells the customer which reason it was; the request's screen tells you.
 
 ## Check the booking: differences from the record
 
@@ -54,13 +54,13 @@ A quote request is a job the website can't price: a full-size van, or a Full Det
 
 If you booked the job by mistake, remove it with **Cancel job → Created by mistake**: the request comes back to **Needs you**, marked "priced, not booked", with its price, description and photos, ready to book again. Canceling the job (customer or Dixie Detail) closes the request.
 
-## Offline and booking requests
+## Offline requests
 
-An offline request was sent while the server was down, or while Google's address suggestions were, so nothing is booked. A **booking request** is the same form, sent when the website couldn't take a booking: a new number past a cap, or a number that already has a job that day ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md)). Its preferred day and time are the ones the customer picked. Both are handled the same way. When the customer typed the address, the screen says it wasn't checked: check it with them before booking. The screen shows today's price beside the price the customer saw, and says when they differ. Enter the date and time, which start at the time the customer wanted, and tap **Book**. The job is priced for that day. Tick **Honor the price the customer saw** to book it at their price instead. Or decline it with a reason.
+An offline request was sent while the server was down, or while Google's address suggestions were, so nothing is booked. When the customer typed the address, the screen says it wasn't checked: check it with them before booking. The screen shows today's price beside the price the customer saw, and says when they differ. Enter the date and time, which start at the time the customer wanted, and tap **Book**. The job is priced for that day. Tick **Honor the price the customer saw** to book it at their price instead. Or decline it with a reason.
 
-## A second vehicle the same day
+## Booking requests
 
-When a returning customer books on a day they already have a job, such as a second motorcycle, it now arrives as a **booking request** (above), with the day they picked. A **Second vehicle the same day** item is one made before 2026-11-21: **Approve and book** books it at the price they were shown, at the time they picked or another. Or decline it with a reason, and let them know.
+A booking request is a website booking taken as a request instead of a job ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md)). The screen says why: **Another job that day**, when a returning customer books a second vehicle, such as a second motorcycle, on a day they already have a job; or **Past the limit on unconfirmed bookings**, when a new number is past one of the caps above. The customer was told only that you'll confirm by text or call. The time isn't held, so call or text them soon. **Approve and book** books it at the price they were shown, at the time they picked or another. Or decline it with a reason, and let them know.
 
 ## Time Off, calendar sync and sales tax
 
