@@ -7,9 +7,10 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST, require_safe
 
-from appointments import booking
+from appointments import booking, confirmation
 from appointments.models import Appointment
 from billing.tax import tax_line, tax_line_for_appointment
 from calendars import sync as calendar_sync
@@ -24,6 +25,7 @@ from staff.authorization import CrewError, assign_crew, auto_assign, default_sta
 from staff.models import StaffMember
 
 from .forms import AppointmentForm, FinalPriceForm
+from .request_views import contact_links
 
 
 def parse_date(text, default=None):
@@ -388,6 +390,8 @@ def appointment_context(appointment, user=None, **extra):
         "open_flags": appointment.match_flags.filter(resolution="").count(),
         "resolved_flags": appointment.match_flags.exclude(resolution="").count(),
         "quote_requests": list(appointment.quote_requests.prefetch_related("photos")),
+        # Call and text links for an unconfirmed job (decision 0112).
+        "contact": contact_links(appointment.customer) if appointment.is_unconfirmed else None,
     }
     context.update(extra)
     return context
@@ -508,4 +512,26 @@ def appointment_staff(request, pk):
             messages.info(request, f"Crew of {len(members)}: time on site is now {stay.total_minutes // 60}:{stay.total_minutes % 60:02d}.")
         warn_overlaps(request, appointment)
     messages.success(request, "Staff saved." if members else "No one is assigned.")
+    return redirect("appointment", pk=pk)
+
+
+@require_POST
+def appointment_confirm(request, pk):
+    """Mark confirmed, managers only (decision 0112), with an optional note.
+    Goes back to the screen it was pressed on: the schedule's banner, "needs
+    you" or the job page."""
+    appointment = get_object_or_404(Appointment.objects.select_related("customer"), pk=pk)
+    if not user_is_manager(request.user):
+        messages.error(request, "Only a manager can mark a job confirmed.")
+    else:
+        try:
+            confirmation.confirm(appointment, Appointment.ConfirmedHow.MANAGER, request.user, request.POST.get("note", ""))
+        except confirmation.ConfirmationError as error:
+            messages.error(request, str(error))
+        else:
+            local = timezone.localtime(appointment.scheduled_start)
+            messages.success(request, f"Confirmed: {appointment.customer}, {local:%b} {local.day}.")
+    back = request.POST.get("next", "")
+    if back and url_has_allowed_host_and_scheme(back, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+        return redirect(back)
     return redirect("appointment", pk=pk)

@@ -76,6 +76,8 @@ const fresh = () => ({
   preferredDate: "",
   preferredTime: "",
   preferredNote: "",
+  // The request a time form was sent in place of a booking (decision 0113).
+  fromBooking: false,
   first: "",
   last: "",
   mobile: "",
@@ -682,8 +684,35 @@ async function sendBooking() {
     return render();
   }
   S.sending = false;
-  S.done = { kind: answer.status === 202 ? "second" : "booked", answer: answer.body };
+  S.done = { kind: "booked", answer: answer.body };
   render();
+}
+
+// The server couldn't take the booking online (decision 0113): the form
+// becomes the request a time form, keeping everything entered, with the day
+// and arrival picked filled in as the preferred ones. The answer never says
+// why, and neither does the page.
+function requestInstead(error) {
+  const day = error.body.preferred_day || S.day;
+  const arrival = (S.start || "").slice(11, 16);
+  const reached = S.reached;
+  S.fromBooking = true;
+  goOffline(`${error.message} Questions? Call or text ${config.phone}.`);
+  S.preferredDate = day || "";
+  S.preferredTime = arrival;
+  // The address and vehicle are already settled: go straight back to review.
+  if (sizeSettled() && S.placeId && reached >= 7) S.reached = 7;
+  render();
+  $("#step-7")?.scrollIntoView({ block: "start" });
+}
+
+// What the customer is told once booked, from the server's confirmation
+// state (decision 0112). Until Phase 4 sends texts the first is shown anyway:
+// the site isn't public before then.
+function bookedLead(answer) {
+  if (answer.confirmation === "text") return "Check your phone. We've texted you to confirm your appointment. Reply YES to confirm it.";
+  if (answer.confirmation === "call") return "We'll call you to confirm your appointment.";
+  return S.appointment ? "We'll text you a confirmation." : "";
 }
 
 function bookingRefused(error) {
@@ -698,6 +727,8 @@ function bookingRefused(error) {
     showBanner(error.message, true);
   } else if (error.code === "ask_for_quote") {
     return startRequest("level");
+  } else if (error.code === "request_instead") {
+    return requestInstead(error);
   } else {
     S.sendError = sendFailed(error);
   }
@@ -739,7 +770,7 @@ async function sendTimeRequest() {
   render();
   try {
     const value = await token(config, turnstileBox);
-    await hold("time-request", { ...offlineBody(), turnstile: value });
+    await hold("time-request", { ...offlineBody(), ...(S.fromBooking ? { from_booking: true } : {}), turnstile: value });
   } catch (error) {
     S.sending = false;
     S.sendError = sendFailed(error);
@@ -907,13 +938,11 @@ function renderDone() {
     const href = `data:${file.content_type};charset=utf-8,${encodeURIComponent(file.content)}`;
     body = [
       h("h2", { id: "h-done", tabindex: "-1" }, "You're booked"),
-      h("p", { class: "lead" }, `Your booking reference is ${d.answer.reference}. ${S.appointment ? "We'll text you a confirmation." : ""}`),
+      h("p", { class: "lead", "data-confirmation": d.answer.confirmation }, `${bookedLead(d.answer)} Your booking reference is ${d.answer.reference}.`.trim()),
       h("dl", { class: "review-list" }, [["Service", [s.service, ...s.add_ons].join(", ")], ["Vehicle", s.vehicle], ["Arrival", s.arrival], ["Time on site", s.time_on_site], ["Address", s.address], ["Total before tax", money(s.total_before_tax)], ["Sales tax", money(s.sales_tax)], ["Estimated total", money(s.total)], ["Payment", s.payment_method]].map(([k, v]) => h("div", {}, h("dt", {}, k), h("dd", {}, v)))),
       h("div", { class: "buttons" }, h("a", { class: "button", href, download: file.name, "data-calendar-file": "" }, "Add to my calendar")),
       h("ul", {}, s.notes.map((note) => h("li", {}, note))),
     ];
-  } else if (d.kind === "second") {
-    body = [h("h2", { id: "h-done", tabindex: "-1" }, "Request received"), h("p", { class: "lead" }, d.answer.message)];
   } else if (d.kind === "request") {
     body = [h("h2", { id: "h-done", tabindex: "-1" }, "Request sent"), h("p", { class: "lead" }, d.answer.message)];
   } else if (d.kind === "request-held") {

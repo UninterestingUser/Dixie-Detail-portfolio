@@ -563,3 +563,35 @@ class CalendarKeyMigrationTests(JobsTestCase):
         a = booking.book(self.customer, self.vehicle, local(open_day(10)), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
         b = booking.book(self.customer, self.vehicle, local(open_day(11)), booking.JobInputs(self.full_detail, self.crossover, self.two_rows, 1))
         self.assertNotEqual(a.calendar_key, b.calendar_key)
+
+
+class UnconfirmedColorTests(SyncTestCase):
+    """An unconfirmed job's event is Banana yellow, and goes back to the
+    calendar's own color once confirmed (decision 0112)."""
+
+    def test_the_color_follows_the_confirmation(self):
+        from appointments import confirmation
+
+        job = self.book()
+        job.confirmation, job.unconfirmed_reason = Appointment.Confirmation.UNCONFIRMED, Appointment.UnconfirmedReason.TEXT_REPLY
+        job.save()
+        self.push()
+        event_id = events.job_event_id(job.calendar_key.hex)
+        event = self.google.live(JOBS)[event_id]
+        self.assertEqual(event["colorId"], events.UNCONFIRMED_COLOR)
+        self.assertEqual(events.UNCONFIRMED_COLOR, "5")  # Banana
+        self.assertIn("Not confirmed yet: waiting for a text reply.", event["description"])
+        confirmation.confirm(job, Appointment.ConfirmedHow.MANAGER)
+        self.push()
+        event = self.google.live(JOBS)[event_id]
+        self.assertNotIn("colorId", event)
+        self.assertNotIn("Not confirmed yet", event["description"])
+
+    def test_a_color_changed_in_google_is_put_back(self):
+        job = self.book()
+        self.push()
+        event_id = events.job_event_id(job.calendar_key.hex)
+        self.google.edit_by_hand(JOBS, event_id, colorId="11")
+        sync.check_jobs(self.google)
+        self.assertNotIn("colorId", self.google.live(JOBS)[event_id])
+        self.assertEqual(CalendarFlag.objects.get(kind="reset").detail, "Changed in Google (color); put back as the app has it.")

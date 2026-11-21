@@ -268,9 +268,10 @@ class QuotePhoto(models.Model):
 
 class TimeRequest(models.Model):
     """A "request a time" form the website held while the server was
-    offline, replayed by Cloudflare when it came back (decision 0100). Not
-    an appointment: priced on arrival, and flagged when that price differs
-    from the one the customer saw."""
+    offline, replayed by Cloudflare when it came back (decision 0100), or
+    sent in place of a booking the server answered with request_instead
+    (decision 0113, from_booking). Not an appointment: priced on arrival,
+    and flagged when that price differs from the one the customer saw."""
 
     class Status(models.TextChoices):
         NEW = "new", "New"
@@ -301,6 +302,10 @@ class TimeRequest(models.Model):
     intake = models.JSONField(null=True, blank=True)
     appointment = models.ForeignKey("appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     is_test = models.BooleanField("test record", default=False)
+    # Sent in place of a booking the website couldn't take (decision 0113),
+    # rather than while the server was offline. The website says which; it
+    # changes only how the request is labeled.
+    from_booking = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         ordering = ["-received_at"]

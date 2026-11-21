@@ -275,8 +275,11 @@ def book_request(quote, customer, vehicle, start, *, address=None, user=None, ma
     for its day, or an approved second vehicle. The quote is booked as
     issued, through the same availability check as the website, with the
     day locked. A manager can book outside a rule with a reason, which is
-    logged, as on the booking form."""
+    logged, as on the booking form. Booked in the control app, so it is
+    confirmed (decision 0112)."""
     from calendars.sync import refresh_time_off_for_booking
+
+    from .confirmation import confirmed_fields
 
     if Appointment.objects.filter(quote=quote).exists():
         raise BookingError("That quote has already been booked.")
@@ -298,6 +301,7 @@ def book_request(quote, customer, vehicle, start, *, address=None, user=None, ma
         drive_minutes=drive.minutes if drive else None,
         drive_estimated=drive.estimated if drive else False,
         is_test=customer.is_test,
+        **confirmed_fields(Appointment.ConfirmedHow.CONTROL_APP, user),
         **fields,
     )
     if reasons:
@@ -310,6 +314,8 @@ def book(customer, vehicle, start, inputs, *, address=None, notes="", series=Non
     """Book one job: issue a quote priced from the pricebook in effect on its
     date, with the sales tax for its address, copy the quote's lines onto the
     new appointment, and work out the drive from the home base."""
+    from .confirmation import confirmed_fields
+
     quote = inputs.quote(on=local_date(start), address=address)
     drive = drive_from_home(address, start)
     return Appointment.book_from_quote(
@@ -324,6 +330,7 @@ def book(customer, vehicle, start, inputs, *, address=None, notes="", series=Non
         status=Appointment.Status.BOOKED,
         drive_minutes=drive.minutes if drive else None,
         drive_estimated=drive.estimated if drive else False,
+        **(confirmed_fields(Appointment.ConfirmedHow.CONTROL_APP) if source == Appointment.Source.OWNER else {}),
     )
 
 

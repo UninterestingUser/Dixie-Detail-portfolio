@@ -65,6 +65,7 @@ class SchedulingSettingsForm(forms.ModelForm):
             "jobs_per_day", "minimum_gap_minutes", "round_start_up_to_minutes",
             "time_off_buffer_minutes", "time_off_check_minutes", "stale_copy_warning_minutes",
             "leave_buffer_minutes", "default_staff",
+            "unconfirmed_per_number", "unconfirmed_new_customers", "unconfirmed_banner_hours",
         ]
         labels = {
             "setup_minutes_one_person": "Setup minutes, one person",
@@ -77,6 +78,9 @@ class SchedulingSettingsForm(forms.ModelForm):
             "stale_copy_warning_minutes": "Warn when the Time Off copy is older than, minutes",
             "leave_buffer_minutes": "Time-to-leave buffer, minutes",
             "default_staff": "Default staff for new bookings",
+            "unconfirmed_per_number": "Unconfirmed bookings per new customer's number",
+            "unconfirmed_new_customers": "Unconfirmed bookings from new customers at once",
+            "unconfirmed_banner_hours": "List unconfirmed jobs starting within, hours",
         }
 
     def __init__(self, *args, **kwargs):

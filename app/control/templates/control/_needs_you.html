@@ -8,7 +8,9 @@
       <li><a class="row needs-{{ item.kind }}" href="{{ item.url }}">
         <strong>{{ item.title }}</strong>{% if item.is_test %} <span class="badge">Test</span>{% endif %}
         <span class="sub">{{ item.detail }} · {{ item.when|date:"M j, g:i A" }}</span>
-      </a></li>
+      </a>
+      {% if item.confirm_url %}{% include "control/_confirm_actions.html" with contact=item.contact confirm_url=item.confirm_url %}{% endif %}
+      </li>
     {% endfor %}
   </ul>
   {% if needs_you.more %}<p class="sub">And {{ needs_you.more }} more. <a href="{% url 'requests' %}">Website requests</a> · <a href="{% url 'match-reviews' %}">Review queue</a></p>{% endif %}

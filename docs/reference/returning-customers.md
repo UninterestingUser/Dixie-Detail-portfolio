@@ -1,12 +1,12 @@
 ---
 title: Returning customers and quiet matching
-summary: How a website booking or request is matched to a customer by mobile number without showing anything, how a second vehicle the same day becomes a request, and how the owner resolves differences.
+summary: How a website booking or request is matched to a customer by mobile number without showing anything, which bookings are confirmed at once, and how the owner resolves differences.
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-21
 tags: [customers, booking, matching, privacy]
-related: [docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/reference/control-app.md, docs/reference/public-api.md, docs/decisions/0034-quiet-customer-matching.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/reference/booking-flow.md, docs/architecture/data-model.md]
+related: [docs/decisions/0112-confirming-bookings-from-new-customers.md, docs/decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/reference/control-app.md, docs/reference/public-api.md, docs/decisions/0034-quiet-customer-matching.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, docs/reference/booking-flow.md, docs/architecture/data-model.md]
 ---
 
 # Returning customers and quiet matching
@@ -24,11 +24,17 @@ Returning customers are matched quietly by phone number when a booking is submit
 
 ## Requests are matched too
 
-A quote request, an offline "request a time" form and a second vehicle the same day are matched the same way when they arrive, and go on the matched customer. An address or vehicle a request brings is kept off the record until the request is booked; its flags are raised on the job then. A declined request leaves the record as it was.
+A quote request and a "request a time" form, sent offline or in place of a booking, are matched the same way when they arrive, and go on the matched customer. An address or vehicle a request brings is kept off the record until the request is booked; its flags are raised on the job then. A declined request leaves the record as it was.
 
 ## A second vehicle the same day
 
-When the matched customer already has a job that day (not canceled), a website booking for that day comes in as a request the owner approves or declines, not an appointment. The time must still be open. At launch a day takes one job, and only Motorcycle Detail and Monthly Maintenance share a day, so in practice this is a second motorcycle. The website tells the customer the booking is a request and that Dixie Detail will confirm it by text or call ([public-api.md](public-api.md#booking-post-bookings)).
+When the matched customer already has a job that day (not canceled), a website booking for that day is not booked. The time is checked first, as for every booking. At launch a day takes one job, and only Motorcycle Detail and Monthly Maintenance share a day, so in practice this is a second motorcycle. The answer is the same as for any booking that becomes a request, such as one past the new-customer caps, and never mentions the booking the number already has ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md), [public-api.md](public-api.md#booking-post-bookings)). The form becomes the request a time form with the day filled in, and the request goes on "needs you" as a booking request, where the owner books it or declines it.
+
+Until 2026-11-21 such a booking came in as a second vehicle request, and the website told the customer there was already a booking for the number that day. Any still waiting are handled on their screen as before.
+
+## Known customers and confirming
+
+Quiet matching also decides whether a website booking is confirmed at once ([decision 0112](../decisions/0112-confirming-bookings-from-new-customers.md)): a number that matches a customer with at least one completed job is a known customer, and the booking is confirmed. Any other number, a returning customer whose jobs are all still booked or canceled included, books an unconfirmed job that holds its time until the customer confirms. See [booking-flow.md](booking-flow.md#confirming-a-new-customers-booking).
 
 ## Telling identical vehicles apart by color
 

@@ -1,0 +1,11 @@
+{# Call and text links and "Mark confirmed" for an unconfirmed job (decision 0112). Marking is for managers. #}
+{% include "control/_contact.html" %}
+{% if is_manager %}
+<form method="post" action="{{ confirm_url }}" class="confirm-form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <label class="sub" for="confirm-note-{{ confirm_url|slugify }}">Note (optional)</label>
+  <input id="confirm-note-{{ confirm_url|slugify }}" name="note" maxlength="300" placeholder="Such as: confirmed by phone">
+  <button type="submit">Mark confirmed</button>
+</form>
+{% endif %}

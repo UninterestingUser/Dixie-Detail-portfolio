@@ -71,6 +71,13 @@
     <p class="help">Assigned to every new booking, from the website or the control app, whoever else qualifies. Change the crew on the job when someone else is going.</p>
     {% include "control/_field.html" with field=form.default_staff %}
   </fieldset>
+  <fieldset{% if not can_edit %} disabled{% endif %}>
+    <legend>Confirming new customers</legend>
+    <p class="help">A website booking from a new customer holds its time but waits to be confirmed. Past either limit, the website takes a request instead of a booking. The schedule's banner lists unconfirmed jobs that start soon.</p>
+    {% include "control/_field.html" with field=form.unconfirmed_per_number %}
+    {% include "control/_field.html" with field=form.unconfirmed_new_customers %}
+    {% include "control/_field.html" with field=form.unconfirmed_banner_hours %}
+  </fieldset>
   {% if can_edit %}
   <div class="actions">
     <button type="submit" class="primary">Save</button>

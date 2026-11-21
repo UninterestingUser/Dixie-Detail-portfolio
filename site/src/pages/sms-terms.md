@@ -13,7 +13,7 @@ These terms cover text messages sent by Dixie Detail LLC ("Dixie Detail", "we", 
 
 ## What we send
 
-If you agree to texts, we send messages about your service: booking confirmations, reminders, preparation details, arrival updates, payment links, receipts, replies to your questions, and a request for a review after the work is done. We do not send marketing or promotional texts.
+If you agree to texts, we send messages about your service: booking confirmations, a request to confirm a new booking, reminders, preparation details, arrival updates, payment links, receipts, replies to your questions, and a request for a review after the work is done. We do not send marketing or promotional texts.
 
 ## How you sign up
 

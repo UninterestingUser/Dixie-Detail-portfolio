@@ -1,7 +1,7 @@
 meta:
   title: Booking and scheduling rules
-  summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps), calendar sync timing and alert timing.
-  updated: 2026-11-18
+  summary: The launch values of the scheduling settings (open days, hours, start times, notice, setup and breakdown, daily capacity, gaps, confirmation caps), calendar sync timing and alert timing.
+  updated: 2026-11-21
   status: current
   explained_in: docs/reference/scheduling-and-calendars.md
   note: >-
@@ -64,6 +64,13 @@ manager_override: a manager can book outside any rule in the control app after a
 staff_assignment:
   default_staff: Kris Grassman         # seeds the default staff setting: assigned to every new booking, website or control app, whoever else qualifies (decision 0107)
   automatic_when_one_qualified: true   # with no default staff set, or one not authorized for the job: assign the only qualified active staff member to a one-person job (decision 0061)
+
+# Confirming website bookings from new customers (decision 0112)
+new_customer_confirmation:
+  confirmed_at_once: a website booking whose number matches a customer with a completed job, and every booking made in the control app
+  unconfirmed_per_number: 1        # open unconfirmed bookings one new customer's number may hold; past it, the booking becomes a request
+  unconfirmed_new_customers: 5     # open unconfirmed bookings from new customers at once; past it, the booking becomes a request
+  banner_hours: 48                 # the schedule's banner lists unconfirmed jobs starting within this many hours
 
 time_to_leave_alert:
   lead: drive time + buffer

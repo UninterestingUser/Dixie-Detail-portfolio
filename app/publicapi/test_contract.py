@@ -178,6 +178,12 @@ class ContractTests(ApiTestCase):
         keep("open-times", client.get_api("open-times", {"quote": quote["number"], "days": 31}), 200)
         start = self.first_open(quote)
         keep("bookings", client.post_json("bookings", self.booking_body(quote, start)), 201)
+        # A booking that becomes a request (decision 0113), here past the cap.
+        from scheduling.models import SchedulingSettings
+
+        SchedulingSettings.objects.filter(pk=1).update(unconfirmed_new_customers=1)
+        another = client.post_json("quotes", {"vehicle": rav4, "service": self.full_detail.pk, "condition": 1, "place": token}).json()
+        keep("error", client.post_json("bookings", self.booking_body(another, self.first_open(another), mobile="4235550177")), 409)
 
         session = client.post_json("quote-requests/uploads", {"turnstile": GOOD_TOKEN})
         keep("quote-requests/uploads", session, 201)

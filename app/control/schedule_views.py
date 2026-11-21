@@ -2,7 +2,9 @@
 Schedule, a list of the days with jobs that loads more as it scrolls; Day,
 3 Days and Week, with hour rows and a column a day; and Month, a grid.
 
-Weeks start on Sunday. Canceled jobs are on none of them. The last view
+Weeks start on Sunday. Canceled jobs are on none of them. An unconfirmed
+job is yellow in every view, with its reason, and a banner at the top lists
+those that start soon (decision 0112). The last view
 used is remembered on each device in a cookie; with none, the screen opens
 in Schedule. A bar of icons along the top, one per view, picks the view
 (decision 0097).
@@ -18,15 +20,17 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.http import require_safe
 
+from appointments import confirmation
 from appointments.models import Appointment
 from calendars import sync as calendar_sync
 from scheduling.availability import day_reasons, load_rules, local_midnight
-from scheduling.models import OpenWeekday
+from scheduling.models import OpenWeekday, SchedulingSettings
 from staff.authorization import user_is_manager
 from staff.models import Assignment
 from vehicles.models import ModelYearClassification, VehicleDataRefresh
 
 from . import calendar_views, needs_you
+from .request_views import contact_links
 
 VIEWS = {"schedule": "Schedule", "day": "Day", "3day": "3 Days", "week": "Week", "month": "Month"}
 # Each view's icon in the bar along the top: the Material Symbols the Google
@@ -297,6 +301,13 @@ def span_title(first, last):
     return f"{first:%B %-d} to {last.day}, {last.year}"
 
 
+def unconfirmed_soon():
+    """[(job, contact links)] for the unconfirmed jobs that start within the
+    banner's hours (a scheduling setting), soonest first."""
+    hours = SchedulingSettings.get().unconfirmed_banner_hours
+    return {"hours": hours, "jobs": [(job, contact_links(job.customer)) for job in confirmation.soon(hours)]}
+
+
 @require_safe
 def schedule(request):
     view = chosen_view(request)
@@ -318,6 +329,8 @@ def schedule(request):
         "needs_you": needs_you.summary(request.user),
         "time_off_warning": calendar_sync.time_off_warning(),
         "is_manager": user_is_manager(request.user),
+        # Unconfirmed jobs that start soon, with call and text links (decision 0112).
+        "unconfirmed_soon": unconfirmed_soon(),
     }
     if view == "schedule":
         days, after = later_chunk(day)

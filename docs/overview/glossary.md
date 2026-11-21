@@ -4,7 +4,7 @@ summary: The exact meaning of every business and technical term used in the Dixi
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-21
 tags: [glossary, terms]
 related: [docs/reference/pricing.md, docs/architecture/system-overview.md]
 ---
@@ -125,6 +125,12 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Offline request.** A "request a time" form the website held while the server was offline, replayed by Cloudflare when it came back, priced on arrival and flagged if the price differs from what the customer saw. It is not an appointment.
 
+**Booking request.** A "request a time" form the website sends in place of a booking it couldn't take: a new number past a confirmation cap, or a number with a job that day. It carries the day the customer picked, and the customer is never told why (decision 0113).
+
+**Unconfirmed job.** A booked job the customer hasn't confirmed yet: a new customer's website booking, which holds its time while it waits for a text reply or a call. Yellow in the control app and on the Jobs calendar until confirmed (decision 0112).
+
+**Known customer.** A customer with at least one completed job. Their website bookings are confirmed at once (decision 0112).
+
 **Time Off calendar.** The Google calendar "Dixie Detail Time Off", written by the owner. An all-day event closes that day for booking; a timed event blocks only its own time.
 
 **Time on site.** How long the crew is at the customer's address: setup + service time + breakdown, rounded to the nearest 15 minutes. The Jobs calendar event and the estimate card show time on site.
@@ -143,7 +149,7 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Review queue (customers).** The website bookings whose name, address or vehicle differs from the customer record they were matched to, each with the four actions: update the record, keep the record, add alongside, or move the booking to a new customer. Under **Account → Review queue** in the control app. Not the same as the vehicle review queue.
 
-**Second vehicle request.** A returning customer's website booking on a day they already have a job, taken as a request the owner approves or declines instead of an appointment.
+**Second vehicle request.** A returning customer's website booking on a day they already have a job, taken as a request the owner approves or declines instead of an appointment. None are made since decision 0113; a second vehicle the same day arrives as a booking request.
 
 **Needs you.** The list at the top of the control app's home screen of only what needs the owner's decision, newest first, one item per job at most: review flags, requests waiting for a decision, Time Off over a booked job, a job the calendar sync keeps failing to push, and sales tax rates to approve (decision 0107). New bookings and staffing are not on it.
 
