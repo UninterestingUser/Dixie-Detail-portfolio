@@ -16,6 +16,7 @@ urlpatterns = [
     path("vehicles/models", views.vehicle_models, name="api-vehicle-models"),
     path("vehicles/lookup", views.vehicle_lookup, name="api-vehicle-lookup"),
     path("vehicles/photo-cards", views.photo_cards, name="api-photo-cards"),
+    path("addresses/sessions", views.lookup_session, name="api-lookup-sessions"),
     path("addresses", views.addresses, name="api-addresses"),
     path("quotes", views.create_quote, name="api-quotes"),
     path("open-times", views.open_times, name="api-open-times"),

@@ -521,7 +521,7 @@ class LocationSettingsForm(forms.ModelForm):
         model = LocationSettings
         fields = [
             "home_line1", "home_city", "home_state", "home_zip_code", "home_latitude", "home_longitude",
-            "place_details_daily_cap", "text_search_daily_cap", "routes_daily_cap",
+            "place_details_daily_cap", "place_details_public_daily_cap", "text_search_daily_cap", "routes_daily_cap",
             "estimate_road_factor", "estimate_speed_mph", "drive_time_cache_days", "tax_sourcing",
         ]
         help_texts = {
@@ -537,6 +537,9 @@ class LocationSettingsForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        share, cap = cleaned.get("place_details_public_daily_cap"), cleaned.get("place_details_daily_cap")
+        if share is not None and cap is not None and share > cap:
+            self.add_error("place_details_public_daily_cap", "The public share is part of the Place Details cap, so it can't be larger.")
         if (cleaned.get("home_latitude") is None) != (cleaned.get("home_longitude") is None):
             self.add_error("home_longitude", "Give both coordinates, or neither.")
         return cleaned

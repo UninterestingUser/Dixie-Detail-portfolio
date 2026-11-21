@@ -25,7 +25,7 @@ from django.test import SimpleTestCase
 
 from vehicles.models import VehicleClass
 
-from .testing import BASE, CLEVELAND, GOOD_TOKEN, KNOXVILLE, ApiTestCase, jpeg
+from .testing import BASE, CLEVELAND, GOOD_TOKEN, KNOXVILLE, ApiTestCase, jpeg, lookup_session
 from .test_quote_requests import upload_file
 
 SHAPES_FILE = settings.DATA_DIR / "public-api-shapes.yaml"
@@ -160,10 +160,12 @@ class ContractTests(ApiTestCase):
             keep("vehicles/lookup", client.get_api("vehicles/lookup", params), 200)
         keep("vehicles/photo-cards", client.get_api("vehicles/photo-cards"), 200)
 
-        place = client.post_json("addresses", {"place_id": CLEVELAND, "session_token": "session-token-1"})
+        lookup = lookup_session(client)
+        keep("addresses/sessions", client.post_json("addresses/sessions", {"turnstile": GOOD_TOKEN}), 201)
+        place = client.post_json("addresses", {"place_id": CLEVELAND, "session_token": "session-token-1", "lookup_session": lookup})
         keep("addresses", place, 201)
         token = place.json()["place"]
-        keep("error", client.post_json("addresses", {"place_id": KNOXVILLE}), 422)
+        keep("error", client.post_json("addresses", {"place_id": KNOXVILLE, "lookup_session": lookup}), 422)
 
         rav4 = {"year": 2019, "make": "Toyota", "model": "RAV4"}
         keep("quotes", client.post_json("quotes", {"vehicle": rav4, "service": self.full_detail.pk, "condition": 1, "add_ons": [self.seats.pk]}), 201)

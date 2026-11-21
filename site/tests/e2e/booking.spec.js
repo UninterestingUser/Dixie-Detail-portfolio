@@ -815,3 +815,45 @@ test("a booking the server takes as a request says only that we'll confirm", asy
   await expect(page.locator("[data-calendar-file]")).toHaveCount(0);
   expect((await log(request)).filter((entry) => entry.to === "/offline/time-request")).toHaveLength(0);
 });
+
+// Address lookups (decision 0115) ------------------------------------------
+
+test("the location step opens a lookup session with a Turnstile token, and each lookup carries it", async ({ page, request }) => {
+  await toReview(page);
+  const sent = await log(request);
+  const opened = sent.filter((entry) => entry.to === "addresses/sessions");
+  expect(opened).toHaveLength(1);
+  expect(opened[0].body).toEqual({ turnstile: "fake-turnstile-token" });
+  const lookups = sent.filter((entry) => entry.to === "addresses");
+  expect(lookups.length).toBeGreaterThan(0);
+  expect(lookups.every((entry) => entry.body.lookup_session && entry.body.lookup_session.startsWith("L"))).toBe(true);
+  // Booking still sends a Turnstile token of its own.
+  await page.locator("[data-book]").click();
+  await expect(page.getByRole("heading", { name: "You're booked" })).toBeVisible();
+  const booking = (await log(request)).find((entry) => entry.to === "bookings");
+  expect(booking.body.turnstile).toBe("fake-turnstile-token");
+});
+
+test("a used-up lookup session is replaced at once, without the customer noticing", async ({ page, request }) => {
+  await fake(request, { lookupLimit: 1 });
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await address(page, "100 Example", "100 Example St NW");
+  await expect(page.locator("[data-in-area]")).toHaveText("In our service area");
+  await address(page, "100 Example", "100 Example St NW");
+  await expect(page.locator("[data-in-area]")).toHaveText("In our service area");
+  expect((await log(request)).filter((entry) => entry.to === "addresses/sessions")).toHaveLength(2);
+});
+
+test("once the day's public lookups are used up, the address is typed and the booking becomes a request", async ({ page, request }) => {
+  await fake(request, { lookupsUsedUp: true });
+  await pickVehicle(page, 2019, "Toyota", "RAV4");
+  await cont(page, 1).click();
+  await page.locator('[data-service="Exterior Only"]').click();
+  await cont(page, 2).click();
+  await address(page, "100 Example", "100 Example St NW");
+  await expect(page.locator("[data-banner]")).toContainText("We can't look up addresses online any more today");
+  await expect(page.locator("#address-typed")).toBeVisible();
+});

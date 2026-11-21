@@ -118,11 +118,14 @@ def items(user=None):
     for item in QuoteRequest.objects.filter(status=QuoteRequest.Status.NEW).select_related("customer"):
         found.append(Item(
             "quote_request", item.created_at, f"Quote request: {item.customer}",
-            (item.vehicle_text or "Vehicle not given") + (" · priced, not booked" if item.quote_id else ""),
+            (item.vehicle_text or "Vehicle not given") + (" · priced, not booked" if item.quote_id else "")
+            + (" · something to check" if item.problem else ""),
             reverse("quote-request", args=[item.pk]), item.is_test,
         ))
     for item in TimeRequest.objects.filter(status=TimeRequest.Status.NEW).select_related("customer"):
         detail = "Sent while the server was offline" + (", price differs" if item.price_differs else "")
+        # Kept whatever it held (decision 0114): say when something needs checking.
+        detail += ", something to check" if item.problem else ""
         found.append(Item("time_request", item.received_at, f"Offline request: {item.customer}", detail,
                           reverse("time-request", args=[item.pk]), item.is_test))
     for item in SecondVehicleRequest.objects.filter(status=SecondVehicleRequest.Status.NEW).select_related("customer", "vehicle"):

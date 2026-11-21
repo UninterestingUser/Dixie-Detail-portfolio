@@ -14,7 +14,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from . import photos
-from .models import QuotePhoto, QuoteRequest, RateCount, SmokeTestPass, UploadSession, VerifiedPlace
+from .models import QuotePhoto, QuoteRequest, RateCount, SmokeTestPass, LookupSession, UploadSession, VerifiedPlace
 
 DAY = datetime.timedelta(days=1)
 
@@ -48,6 +48,7 @@ def run(now=None):
     cleaned = Cleaned()
     cleaned.unattached_photos = photos.delete_photos(QuotePhoto.objects.filter(request__isnull=True, uploaded_at__lt=now - DAY))
     UploadSession.objects.filter(expires_at__lt=now - DAY, photos__isnull=True).delete()
+    LookupSession.objects.filter(expires_at__lt=now - DAY).delete()
 
     cutoff = now - datetime.timedelta(days=settings.QUOTE_REQUEST_PHOTO_DAYS)
     for request in closed_requests(cutoff):

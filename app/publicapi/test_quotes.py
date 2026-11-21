@@ -27,14 +27,14 @@ class AddressTests(ApiTestCase):
         self.assertTrue(VerifiedPlace.objects.filter(token=place["place"]).exists())
 
     def test_an_address_outside_the_area_is_refused_politely(self):
-        response = self.client.post_json("addresses", {"place_id": KNOXVILLE})
+        response = self.client.post_json("addresses", {"lookup_session": self.lookup(), "place_id": KNOXVILLE})
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["error"], "outside_area")
         self.assertIn("outside the area we serve", response.json()["message"])
         self.assertFalse(VerifiedPlace.objects.exists())
 
     def test_an_approved_out_of_area_address_passes_when_the_place_matches(self):
-        refused = self.client.post_json("addresses", {"place_id": COHUTTA})
+        refused = self.client.post_json("addresses", {"lookup_session": self.lookup(), "place_id": COHUTTA})
         self.assertEqual(refused.json()["error"], "outside_area")
         customer = Customer.objects.create(first_name="Casey", mobile="4235550177")
         approved = Address.objects.create(
@@ -50,13 +50,13 @@ class AddressTests(ApiTestCase):
         self.assertNotIn("Lane", str(place))
 
     def test_a_place_that_is_not_a_street_address(self):
-        response = self.client.post_json("addresses", {"place_id": TOWN_ONLY})
+        response = self.client.post_json("addresses", {"lookup_session": self.lookup(), "place_id": TOWN_ONLY})
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["error"], "not_an_address")
 
     def test_strict_input(self):
-        self.assertEqual(self.client.post_json("addresses", {"place_id": "../../etc"}).status_code, 400)
-        self.assertEqual(self.client.post_json("addresses", {"place_id": CLEVELAND, "latitude": 35}).json()["field"], "latitude")
+        self.assertEqual(self.client.post_json("addresses", {"lookup_session": self.lookup(), "place_id": "../../etc"}).status_code, 400)
+        self.assertEqual(self.client.post_json("addresses", {"lookup_session": self.lookup(), "place_id": CLEVELAND, "latitude": 35}).json()["field"], "latitude")
         self.assertEqual(self.google.calls, [])
 
 

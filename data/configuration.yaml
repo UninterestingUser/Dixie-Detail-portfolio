@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-14
+  updated: 2026-11-21
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -99,6 +99,16 @@ settings:
     default: 90
     purpose: Days a quote request's photos are kept after it is declined, or its job is done or canceled
     used_by: app container (clean_public_api, run by dixie-api-cleanup.timer)
+    phase: 3
+  - name: ADDRESS_LOOKUP_SESSION_LOOKUPS
+    default: 10
+    purpose: Public address lookups one lookup session allows (decision 0115)
+    used_by: app container
+    phase: 3
+  - name: ADDRESS_LOOKUP_SESSION_MINUTES
+    default: 30
+    purpose: Minutes an address lookup session lasts after it opens (decision 0115)
+    used_by: app container
     phase: 3
   - name: TEST_PHONE_NUMBERS
     example: "4235550199"
@@ -206,6 +216,11 @@ secrets:
     used_by: ops/calendar-check.sh
     note: Optional; without it the check runs with no pings
     phase: 3
+  - name: HEALTHCHECKS_OFFLINE_URL
+    purpose: Ping address for the offline requests check; the replay Worker pings it after each run, success or /fail (decision 0114, docs/operations/monitoring.md)
+    used_by: the dixie-offline-replay Worker on Cloudflare, as a Worker secret put there from Bitwarden with wrangler secret put, without touching disk; never the server
+    note: Optional; without it the Worker replays and logs that the run was not reported
+    phase: 3
   - name: GOOGLE_MAPS_SERVER_KEY
     purpose: Server-side Google Maps Platform key for Place Details (looking up the address a customer picked), Text Search (finding a typed address the Census geocoder cannot) and Routes (drive times), restricted to the Places API (New) and the Routes API
     used_by: ops/stack-start.sh (app container, as the file named by GOOGLE_MAPS_SERVER_KEY_FILE)
@@ -249,6 +264,10 @@ database_settings:
     - name: Place Details daily cap
       default: 300
       purpose: Google Place Details calls allowed per Pacific day, below the 322 a day set in Google Cloud
+      phase: 3
+    - name: Place Details public share
+      default: 250
+      purpose: Of the Place Details daily cap, the website's address lookups; the rest is kept for the control app and for offline requests looked up as they arrive (decision 0115)
       phase: 3
     - name: Text Search daily cap
       default: 300

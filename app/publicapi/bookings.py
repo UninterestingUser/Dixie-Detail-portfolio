@@ -88,9 +88,11 @@ def given(first_name, last_name, mobile, place=None, vehicle=None, smoke_test=Fa
 
 def take_in(form_given, answers, mobile, hold=False, when=None):
     """Match the booking or request, put it on its customer and record the
-    consent answers there. Returns the Intake."""
+    consent answers there. Returns the Intake. An offline request whose
+    answer or number couldn't be read records no consent (decision 0114)."""
     intake = matching.take_in(form_given, source=ORIGIN_SOURCE, hold=hold)
-    intake.consent_ids = [row.pk for row in consent.record(intake.customer, mobile, answers, when=when)]
+    recorded = consent.record(intake.customer, mobile, answers, when=when) if answers is not None and mobile else []
+    intake.consent_ids = [row.pk for row in recorded]
     return intake
 
 

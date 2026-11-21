@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { onRequestPost } from "../../functions/offline/[kind].js";
-import { deliver, replay, sign } from "../../shared/offline.js";
+import { deliver, holdRequest, replay, report, sign, status, STUCK_AFTER } from "../../shared/offline.js";
+import { run } from "../../workers/offline-replay/index.js";
 
 const KEY = "made-up-offline-signing-key-for-tests";
 const ID = "0b9f1d5e-4c1a-4a6b-9f0e-2d3c4b5a6978";
@@ -12,10 +13,15 @@ function kv() {
   const store = new Map();
   return {
     store,
-    async put(key, value) { store.set(key, value); },
+    meta: new Map(),
+    lists: 0,
+    async put(key, value, options = {}) { store.set(key, value); if (options.metadata) this.meta.set(key, options.metadata); },
     async get(key, type) { const value = store.get(key); return value && type === "json" ? JSON.parse(value) : value ?? null; },
-    async delete(key) { store.delete(key); },
-    async list({ prefix }) { return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)).sort().map((name) => ({ name })), list_complete: true }; },
+    async delete(key) { store.delete(key); this.meta.delete(key); },
+    async list({ prefix }) {
+      this.lists++;
+      return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)).sort().map((name) => ({ name, ...(this.meta.has(name) ? { metadata: this.meta.get(name) } : {}) })), list_complete: true };
+    },
   };
 }
 
@@ -82,8 +88,108 @@ test("the replay sends each held request, keeps a refused one aside, and stops w
   await e.OFFLINE_REQUESTS.put(`pending:time-request:${second}`, JSON.stringify({ kind: "time-request", body: { request_id: second } }));
   const quiet = { error() {} };
   let counts = await replay(e, async () => new Response("", { status: 503 }), quiet);
-  assert.deepEqual(counts, { sent: 0, refused: 0, held: 2 });
+  assert.deepEqual({ ...counts, waiting: counts.waiting.length }, { sent: 0, refused: 0, held: 2, waiting: 2 });
   counts = await replay(e, async (url, options) => new Response("{}", { status: JSON.parse(options.body).request_id === ID ? 201 : 400 }), quiet);
-  assert.deepEqual(counts, { sent: 1, refused: 1, held: 0 });
+  assert.deepEqual(counts, { sent: 1, refused: 1, held: 0, waiting: [] });
   assert.deepEqual([...e.OFFLINE_REQUESTS.store.keys()], [`refused:time-request:${second}`]);
+});
+
+// The health report (decision 0114) ------------------------------------------
+
+const HOUR = 3600 * 1000;
+const quietLog = { error() {}, log() {} };
+
+function healthEnv() {
+  return { ...env(), HEALTHCHECKS_OFFLINE_URL: "https://hc-ping.example.test/made-up-check" };
+}
+
+// A server that answers /health with health, and every request with request.
+function server({ health = 200, request = 201, pings }) {
+  return async (url, options = {}) => {
+    const address = String(url);
+    if (address.startsWith("https://hc-ping.example.test")) {
+      pings.push({ url: address, body: options.body });
+      return new Response("OK");
+    }
+    if (address.endsWith("/health")) {
+      if (health === null) throw new Error("no route");
+      return new Response("ok", { status: health });
+    }
+    return new Response("{}", { status: request });
+  };
+}
+
+test("a held request keeps when it was held in its key's metadata", async () => {
+  const e = env();
+  await holdRequest(e, "time-request", { request_id: ID }, Date.parse("2026-11-21T12:00:00Z"));
+  assert.deepEqual(e.OFFLINE_REQUESTS.meta.get(`pending:time-request:${ID}`), { held_at: "2026-11-21T12:00:00.000Z" });
+});
+
+test("a clean run pings success, with only the counts", async () => {
+  const e = healthEnv();
+  await holdRequest(e, "time-request", { request_id: ID, first_name: "Jordan", mobile: "4235550142" });
+  const pings = [];
+  const logged = [];
+  const summary = await run(e, server({ pings }), { error: (line) => logged.push(line), log: (line) => logged.push(line) });
+  assert.deepEqual(summary, { sent: 1, refused: 0, held: 0, stuck: 0 });
+  assert.deepEqual(pings, [{ url: "https://hc-ping.example.test/made-up-check", body: "sent=1 refused=0 held=0 stuck=0" }]);
+  assert.ok(!logged.join(" ").includes("Jordan") && !logged.join(" ").includes("4235550142"), "no request contents are logged");
+  assert.ok(!pings[0].body.includes("Jordan"));
+});
+
+test("a refused request makes the check fail until it is dealt with", async () => {
+  const e = healthEnv();
+  await holdRequest(e, "time-request", { request_id: ID });
+  const pings = [];
+  await run(e, server({ request: 400, pings }), quietLog);
+  assert.equal(pings[0].url, "https://hc-ping.example.test/made-up-check/fail");
+  // Nothing new held, but the refused one is still there.
+  await run(e, server({ pings }), quietLog);
+  assert.equal(pings[1].url, "https://hc-ping.example.test/made-up-check/fail");
+  assert.equal(pings[1].body, "sent=0 refused=1 held=0 stuck=0");
+});
+
+test("a request held over an hour fails the check only while the server answers", async () => {
+  const e = healthEnv();
+  await holdRequest(e, "time-request", { request_id: ID }, Date.now() - STUCK_AFTER - 60000);
+  const pings = [];
+  // The server is down: /health doesn't answer, so the request is waiting, not stuck.
+  let summary = await run(e, server({ health: null, request: 503, pings }), quietLog);
+  assert.deepEqual(summary, { sent: 0, refused: 0, held: 1, stuck: 0 });
+  assert.equal(pings[0].url, "https://hc-ping.example.test/made-up-check");
+  // The server answers, but this request keeps failing to reach it.
+  summary = await run(e, server({ request: 503, pings }), quietLog);
+  assert.deepEqual(summary, { sent: 0, refused: 0, held: 1, stuck: 1 });
+  assert.equal(pings[1].url, "https://hc-ping.example.test/made-up-check/fail");
+});
+
+test("a request held under an hour is not stuck, and the server isn't asked", async () => {
+  const e = healthEnv();
+  await holdRequest(e, "time-request", { request_id: ID }, Date.now() - HOUR / 2);
+  let asked = false;
+  const counts = await replay(e, async () => new Response("", { status: 503 }), quietLog);
+  const summary = await status(e, counts, async (url) => { asked = String(url).endsWith("/health"); return new Response("ok"); });
+  assert.equal(summary.stuck, 0);
+  assert.equal(asked, false);
+});
+
+test("a request held before the metadata existed is timed from its stored value", async () => {
+  const e = healthEnv();
+  await e.OFFLINE_REQUESTS.put(`pending:time-request:${ID}`, JSON.stringify({ kind: "time-request", body: { request_id: ID }, held_at: new Date(Date.now() - 2 * HOUR).toISOString() }));
+  const counts = await replay(e, async () => new Response("", { status: 503 }), quietLog);
+  assert.equal((await status(e, counts, async () => new Response("ok"))).stuck, 1);
+});
+
+test("a run makes two KV list calls when nothing is held over", async () => {
+  const e = healthEnv();
+  await holdRequest(e, "time-request", { request_id: ID });
+  await run(e, server({ pings: [] }), quietLog);
+  assert.equal(e.OFFLINE_REQUESTS.lists, 2);
+});
+
+test("without the ping URL the run still happens and says it wasn't reported", async () => {
+  const e = env();
+  const errors = [];
+  assert.equal(await report(e, { sent: 0, refused: 0, held: 0, stuck: 0 }, async () => { throw new Error("no ping expected"); }, { error: (line) => errors.push(line) }), true);
+  assert.match(errors[0], /HEALTHCHECKS_OFFLINE_URL is not set/);
 });

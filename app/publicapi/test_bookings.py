@@ -20,7 +20,7 @@ from publicapi.models import WebQuote
 from vehicles.models import Vehicle, VehicleClass
 
 from .consent import wording
-from .testing import CLEVELAND, PLACES, ApiTestCase, PublicClient, add_model, booking_body, day_after, eastern, open_day, siteverify
+from .testing import CLEVELAND, PLACES, ApiTestCase, PublicClient, add_model, booking_body, day_after, eastern, lookup_session, open_day, siteverify
 
 
 class BookingTests(ApiTestCase):
@@ -232,7 +232,7 @@ class DoubleBookingRaceTests(TransactionTestCase):
         self.full_detail = Service.objects.get(name="Full Detail")
 
     def quote(self, client):
-        place = client.post_json("addresses", {"place_id": CLEVELAND}).json()["place"]
+        place = client.post_json("addresses", {"place_id": CLEVELAND, "lookup_session": lookup_session(client)}).json()["place"]
         body = {"vehicle": {"year": 2019, "make": "Toyota", "model": "RAV4"}, "service": self.full_detail.pk, "condition": 1, "place": place}
         return client.post_json("quotes", body).json()
 

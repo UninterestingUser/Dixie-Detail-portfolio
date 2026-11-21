@@ -162,8 +162,11 @@ class Command(BaseCommand):
         self.say(f"2019 Toyota RAV4 is {lookup['class']['name']}")
         return lookup["question"]["choices"][-1]["answer"] if lookup["question"] else None
 
-    def place(self, api, place_id):
-        place = api.ok("POST", "addresses", body={"place_id": place_id})
+    def place(self, api, place_id, token):
+        """The address, looked up as the site does: a lookup session opened
+        with a Turnstile pass, then the lookup (decision 0115)."""
+        session = api.ok("POST", "addresses/sessions", body={"turnstile": token})
+        place = api.ok("POST", "addresses", body={"place_id": place_id, "lookup_session": session["session"]})
         self.say(f"address in the area, tax {place['tax']['rate_percent']}%")
         return place
 
@@ -229,7 +232,7 @@ class Command(BaseCommand):
 
     def basic(self, api, place_id, token, made):
         service, size = self.service(api), self.size(api)
-        place = self.place(api, place_id)
+        place = self.place(api, place_id, token)
         quote = self.get_quote(api, service, size, place)
         self.say(f"quote {quote['number']}: total {quote['total']}, {quote['time_on_site_minutes']} minutes on site")
         _, start = self.open_start(api, quote)
@@ -243,7 +246,7 @@ class Command(BaseCommand):
         """A returning customer with two identical vehicles books three times,
         at a new address, with each kind of color answer (decision 0067)."""
         service, size = self.service(api), self.size(api)
-        place = self.place(api, place_id)
+        place = self.place(api, place_id, token)
         customer = make_returning_customer()
         made["customers"].append(customer.pk)
         self.say(f"test customer {customer} with two 2019 Toyota RAV4s, white and dark blue, and an address elsewhere")
@@ -271,7 +274,7 @@ class Command(BaseCommand):
 
     def vans_quote_request(self, api, place_id, token, made):
         """A quote request for a Full-size Vans vehicle with two photos."""
-        place = self.place(api, place_id)
+        place = self.place(api, place_id, token)
         card = self.quote_card(api)
         vehicle = {"photo_card": card["class_id"], "year": 2021, "make": "Ford", "model": "Transit"}
         sent, request = self.send_request(

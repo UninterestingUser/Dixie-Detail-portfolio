@@ -50,6 +50,10 @@ QUOTE_LIFETIME_MINUTES = env_int("QUOTE_LIFETIME_MINUTES", 120)
 QUOTE_REQUEST_MAX_PHOTOS = env_int("QUOTE_REQUEST_MAX_PHOTOS", 6)
 QUOTE_REQUEST_PHOTO_MAX_MB = env_int("QUOTE_REQUEST_PHOTO_MAX_MB", 15)
 QUOTE_REQUEST_PHOTO_DAYS = env_int("QUOTE_REQUEST_PHOTO_DAYS", 90)
+# Address lookup sessions (decision 0115): how many address lookups one
+# session allows, and for how many minutes after it opens.
+ADDRESS_LOOKUP_SESSION_LOOKUPS = env_int("ADDRESS_LOOKUP_SESSION_LOOKUPS", 10)
+ADDRESS_LOOKUP_SESSION_MINUTES = env_int("ADDRESS_LOOKUP_SESSION_MINUTES", 30)
 # Where the photos are kept in the app container: the host folder
 # /srv/dixie-quote-photos is mounted here (compose.yaml).
 QUOTE_PHOTO_DIR = Path(os.environ.get("QUOTE_PHOTO_DIR", "/srv/quote-photos"))
@@ -67,6 +71,7 @@ PUBLIC_API_RATE_LIMITS = {
     "read": (600, 10),
     "quote": (120, 10),
     "address": (30, 10),
+    "lookup_session": (10, 60),
     "booking": (10, 60),
     "quote_request": (6, 60),
     "upload_session": (10, 60),

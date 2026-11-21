@@ -8,6 +8,7 @@
 {% if item.price_differs %}<p class="notice warn-notice" role="status">Today's price, {{ item.quote.total_before_tax|money }} before tax, differs from the {{ item.shown_total|money }} the customer saw (pricebook version {{ item.shown_pricebook_version }}).</p>{% endif %}
 {% if item.problem %}<p class="notice warn-notice" role="status">{{ item.problem }}</p>{% endif %}
 <p class="help">Sent while the server was offline, so nothing is booked yet. Book it into a time, priced for that day, or decline it.</p>
+{% include "control/_as_sent.html" %}
 <dl class="facts">
   <dt>Status</dt><dd>{{ item.get_status_display }}{% if item.decline_reason %}: {{ item.decline_reason }}{% endif %}</dd>
   <dt>Sent</dt><dd>{{ item.submitted_at|date:"D, M j, Y, g:i A" }} (arrived {{ item.received_at|date:"D, M j, g:i A" }})</dd>

@@ -43,6 +43,15 @@ def siteverify(token, remote_ip):
     return {"success": token == GOOD_TOKEN, "error-codes": [] if token == GOOD_TOKEN else ["invalid-input-response"]}
 
 
+def lookup_session(client):
+    """A new address lookup session for client, opened as the site does
+    with a Turnstile token (decision 0115)."""
+    with mock.patch("publicapi.turnstile.siteverify", side_effect=siteverify):
+        response = client.post_json("addresses/sessions", {"turnstile": GOOD_TOKEN})
+    assert response.status_code == 201, response.content
+    return response.json()["session"]
+
+
 def jpeg(size=(640, 480), color="navy", exif=None, image_format="JPEG", mode="RGB"):
     out = io.BytesIO()
     image = Image.new(mode, size, color)
@@ -177,9 +186,17 @@ class ApiTestCase(TestCase):
     # Helpers ---------------------------------------------------------------
 
     def place(self, place_id=CLEVELAND):
-        response = self.client.post_json("addresses", {"place_id": place_id, "session_token": "session-token-1"})
+        response = self.client.post_json(
+            "addresses", {"place_id": place_id, "session_token": "session-token-1", "lookup_session": self.lookup()}
+        )
         self.assertEqual(response.status_code, 201, response.content)
         return response.json()
+
+    def lookup(self):
+        """This test's address lookup session, opened on first use."""
+        if getattr(self, "_lookup", None) is None:
+            self._lookup = lookup_session(self.client)
+        return self._lookup
 
     def quote(self, vehicle=None, service=None, expect=201, **body):
         payload = {"vehicle": vehicle or {"year": 2019, "make": "Toyota", "model": "RAV4"}, "service": (service or self.full_detail).pk}

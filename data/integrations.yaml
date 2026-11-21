@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-11-19
+  updated: 2026-11-21
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -35,7 +35,7 @@ services:
   - name: Healthchecks.io
     purpose: Alerts when the backup, the public path, the monthly vehicle data refresh, the morning sales tax rate check or the nightly calendar check stops checking in or fails, and when a tax rate change waits for approval
     phase: 0
-    status: In use; five checks (docs/operations/monitoring.md)
+    status: In use; six checks, one pinged by the offline replay Worker (docs/operations/monitoring.md)
     plan: Free
   - name: EPA FuelEconomy.gov
     purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984

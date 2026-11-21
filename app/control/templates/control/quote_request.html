@@ -15,7 +15,7 @@
   {% if add_ons %}<dt>Add-ons wanted</dt><dd>{{ add_ons|join:", " }}</dd>{% endif %}
   <dt>Address</dt><dd>{% if item.service_address %}{{ item.service_address }}{% elif item.address_text %}{{ item.address_text }} <span class="badge">Not checked</span>{% else %}<span class="muted">Not given</span>{% endif %}</dd>
   {% if item.request_id %}<dt>Sent</dt><dd>While the website couldn't reach the server, so it has no photos; the customer was told to text them</dd>{% endif %}
-  {% if item.problem %}<dt>Check</dt><dd class="warn">{{ item.problem }}</dd>{% endif %}
+  {% if item.problem %}<dt>Check</dt><dd class="warn">{{ item.problem }}{% include "control/_as_sent.html" %}</dd>{% endif %}
   <dt>Drive</dt><dd>{% if drive %}{{ drive.minutes|duration }} from the home base{% if drive.estimated %} <span class="badge">Estimated</span>{% endif %}{% else %}<span class="muted">Unknown</span>{% endif %}</dd>
   <dt>Sales tax</dt><dd>{% if tax %}{{ tax.jurisdiction.name|default:"No jurisdiction" }}, {{ tax.rate|percent }}%{% if tax.needs_check %} <span class="badge">Check</span>{% endif %}{% else %}<span class="muted">No address</span>{% endif %}</dd>
   {% if item.preferred_days %}<dt>Preferred days</dt><dd class="prewrap">{{ item.preferred_days }}</dd>{% endif %}

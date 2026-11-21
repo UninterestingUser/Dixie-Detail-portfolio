@@ -32,7 +32,7 @@ from django.utils import timezone
 from pricebook.models import Price
 from pricebook.pricing import NotPriced, base_price
 
-from . import bookings, catalog, consent, photos, quotes, turnstile, validate
+from . import bookings, catalog, consent, lenient, photos, quotes, turnstile, validate
 from .http import ApiError, bad_request, not_found, visitor_key
 from .models import QuotePhoto, QuoteRequest, UploadSession
 
@@ -255,48 +255,47 @@ OFFLINE_THANKS = (
 )
 
 
+OFFLINE_REQUIRED = ["request_id", "submitted_at", "vehicle", "service", "description", "first_name", "mobile", "consents"]
+OFFLINE_OPTIONAL = ["last_name", "preferred_days", "size", "condition", "add_ons", "place_id", "address", "session_token"]
+
+
 def parse_offline(data):
     """A quote request the website held while the server was offline: the
     request form's fields, less the photos and Turnstile (checked by
     Cloudflare when it was sent), plus the website's request id, when it was
-    sent, and the address as a place id or as typed."""
-    import uuid
+    sent, and the address as a place id or as typed. Each field is read on
+    its own, and one that can't be read is left empty with its problem
+    listed (decision 0114). Returns (form, Lenient)."""
+    from .time_requests import NO_NAME, typed_place
 
-    from .time_requests import typed_place
-
-    validate.only(
-        data,
-        ["request_id", "submitted_at", "vehicle", "service", "description", "first_name", "mobile", "consents"],
-        ["last_name", "preferred_days", "size", "condition", "add_ons", "place_id", "address", "session_token"],
+    form = {"request_id": lenient.request_id(data)}
+    read = lenient.Lenient(data, OFFLINE_REQUIRED, OFFLINE_OPTIONAL)
+    get = data.get
+    service = read.take(
+        "Service", lambda: quotes.parse_service(data["service"]) if data["service"] != "not_sure" else None
     )
-    try:
-        request_id = uuid.UUID(str(data["request_id"]))
-    except ValueError as error:
-        raise bad_request("request_id") from error
-    service = data["service"]
-    service = quotes.parse_service(service) if service != "not_sure" else None
-    condition = validate.integer(data.get("condition"), "condition", 1, 3, required=False)
+    condition = read.take("Condition", lambda: validate.integer(get("condition"), "condition", 1, 3, required=False))
     if service is None and condition is not None:
-        raise bad_request("condition", quotes.CONDITION_NOT_TAKEN)
-    place_id, typed_address = typed_place(data)
-    return {
-        "request_id": request_id,
-        "submitted_at": validate.moment(data["submitted_at"], "submitted_at"),
-        "vehicle": catalog.parse_vehicle(data["vehicle"], free_text_with_card=True),
-        "size": validate.integer(data.get("size"), "size", 1, 9, required=False),
-        "service": service,
-        "condition": condition,
-        "add_ons": quotes.parse_add_ons(data.get("add_ons")),
-        "description": validate.text(data["description"], "description", 2000, multiline=True),
-        "place_id": place_id,
-        "address": typed_address,
-        "session_token": validate.text(data.get("session_token"), "session_token", 64, required=False),
-        "first_name": validate.text(data["first_name"], "first_name", 100),
-        "last_name": validate.text(data.get("last_name"), "last_name", 100, required=False),
-        "mobile": validate.phone(data["mobile"]),
-        "consents": consent.parse(data["consents"]),
-        "preferred_days": validate.text(data.get("preferred_days"), "preferred_days", 300, required=False, multiline=True),
-    }
+        read.note(f"Condition: {quotes.CONDITION_NOT_TAKEN}")
+        condition = None
+    form["service"], form["condition"] = service, condition
+    form["submitted_at"] = read.take("When it was sent", lambda: validate.moment(data["submitted_at"], "submitted_at"))
+    form["vehicle"] = read.take("Vehicle", lambda: catalog.parse_vehicle(data["vehicle"], free_text_with_card=True))
+    form["size"] = read.take("Size", lambda: validate.integer(get("size"), "size", 1, 9, required=False))
+    form["add_ons"] = read.take("Add-ons", lambda: quotes.parse_add_ons(get("add_ons")), [])
+    form["description"] = read.take(
+        "Description", lambda: validate.text(data["description"], "description", 2000, multiline=True), ""
+    )
+    form["place_id"], form["address"] = read.take("Address", lambda: typed_place(data), (None, ""))
+    form["session_token"] = read.take("Address", lambda: validate.text(get("session_token"), "session_token", 64, required=False), "")
+    form["first_name"] = read.take("First name", lambda: validate.text(data["first_name"], "first_name", 100), NO_NAME)
+    form["last_name"] = read.take("Last name", lambda: validate.text(get("last_name"), "last_name", 100, required=False), "")
+    form["mobile"] = read.take("Mobile number", lambda: validate.phone(data["mobile"]), "")
+    form["consents"] = read.take("Text consent", lambda: consent.parse(data["consents"]))
+    form["preferred_days"] = read.take(
+        "Preferred days", lambda: validate.text(get("preferred_days"), "preferred_days", 300, required=False, multiline=True), ""
+    )
+    return form, read
 
 
 def typed_vehicle(vehicle):
@@ -311,34 +310,37 @@ def receive_offline(request, data):
     """Keep a replayed quote request. Nothing the customer sent is lost: an
     address that can't be checked, or a job the site would book online, is
     kept with the problem noted for the owner, as an offline "request a
-    time" form is. A second replay of the same request id changes nothing."""
+    time" form is, and so is anything that can't be read (decision 0114). A
+    second replay of the same request id changes nothing."""
     from .time_requests import check_signature, unchecked_address
 
     check_signature(request)
-    form = parse_offline(data)
+    form, read = parse_offline(data)
     if QuoteRequest.objects.filter(request_id=form["request_id"]).exists():
         return 200, {"received": True, "duplicate": True}
-    problems = []
-    try:
-        found, level = by_quote_job(form["vehicle"], form["size"], form["service"], form["condition"], form["add_ons"])
-    except ApiError as error:
-        found, level = None, None
-        problems.append(f"Vehicle or service: {error.message}")
+    unreadable = bool(read.problems)
+    found, level = None, None
+    if form["vehicle"] is not None:
+        try:
+            found, level = by_quote_job(form["vehicle"], form["size"], form["service"], form["condition"], form["add_ons"])
+        except ApiError as error:
+            read.note(f"Vehicle or service: {error.message}")
     place = None
     if form["place_id"] is None:
-        problems.append(unchecked_address(form["address"]))
+        read.note(unchecked_address(form["address"]) if form["address"] else "No address given")
     else:
         try:
-            place = quotes.verify_place(form["place_id"], form["session_token"])
+            # The server's reserve of Google calls, not the public share (decision 0115).
+            place = quotes.verify_place(form["place_id"], form["session_token"], public=False)
         except ApiError as error:
-            problems.append(f"Address: {error.message}")
-    vehicle = typed_vehicle(form["vehicle"]) if found is None else None
+            read.note(f"Address: {error.message}")
+    vehicle = typed_vehicle(form["vehicle"] or {}) if found is None else None
     with transaction.atomic():
         typed = bookings.given(
             form["first_name"], form["last_name"], form["mobile"], place,
             vehicle_fields(found) if found is not None else None,
         )
-        intake = bookings.take_in(typed, form["consents"], form["mobile"], hold=True, when=form["submitted_at"])
+        intake = bookings.take_in(typed, form["consents"], form["mobile"], hold=True, when=form["submitted_at"] or timezone.now())
         customer = intake.customer
         quote_request = QuoteRequest.objects.create(
             reference=bookings.unique_reference(),
@@ -358,7 +360,9 @@ def receive_offline(request, data):
             condition_level=(level.level if level is not None else form["condition"]),
             description=form["description"],
             preferred_days=form["preferred_days"],
-            problem="; ".join(problems)[:300],
+            problem=read.problem_text(),
+            # Kept as sent when anything couldn't be read, so nothing is lost.
+            as_sent=data if unreadable else None,
             is_test=customer.is_test,
         )
         quote_request.add_ons.set(form["add_ons"])

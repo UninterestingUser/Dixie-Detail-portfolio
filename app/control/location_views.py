@@ -96,7 +96,8 @@ def address_form(request, customer_pk=None, pk=None):
 def month_usage(day):
     """This month's call counts per outside service, Pacific dates."""
     first = day.replace(day=1)
-    totals = {row["api"]: row for row in ApiUsage.objects.filter(day__gte=first, day__lte=day).values("api").annotate(calls=Sum("calls"), refused=Sum("refused"))}
+    totals = {row["api"]: row for row in ApiUsage.objects.filter(day__gte=first, day__lte=day).values("api").annotate(
+        calls=Sum("calls"), refused=Sum("refused"), public_calls=Sum("public_calls"))}
     today = {usage.api: usage for usage in ApiUsage.objects.filter(day=day)}
     settings = LocationSettings.get()
     caps = {
@@ -111,6 +112,9 @@ def month_usage(day):
             "refused": totals.get(api, {}).get("refused", 0),
             "today": getattr(today.get(api), "calls", 0),
             "cap": caps.get(api),
+            # The website's public share, for Place Details (decision 0115).
+            "public_today": getattr(today.get(api), "public_calls", 0) if api == ApiUsage.Api.PLACE_DETAILS else None,
+            "public_cap": settings.place_details_public_daily_cap if api == ApiUsage.Api.PLACE_DETAILS else None,
         }
         for api, label in ApiUsage.Api.choices
     ]

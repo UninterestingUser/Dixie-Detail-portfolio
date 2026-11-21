@@ -56,7 +56,7 @@ If you booked the job by mistake, remove it with **Cancel job → Created by mis
 
 ## Offline requests
 
-An offline request was sent while the server was down, or while Google's address suggestions were, so nothing is booked. When the customer typed the address, the screen says it wasn't checked: check it with them before booking. The screen shows today's price beside the price the customer saw, and says when they differ. Enter the date and time, which start at the time the customer wanted, and tap **Book**. The job is priced for that day. Tick **Honor the price the customer saw** to book it at their price instead. Or decline it with a reason.
+An offline request was sent while the server was down, or while Google's address suggestions were, or once the day's website address lookups ran out, so nothing is booked. Every one is kept, even when part of it couldn't be read, such as a phone number with missing digits: the screen lists what to check, and **The request as it arrived** shows exactly what the customer sent, so you can call or text them ([decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). A request with a number that couldn't be read isn't matched to a returning customer and has no text consent. When the customer typed the address, the screen says it wasn't checked: check it with them before booking. The screen shows today's price beside the price the customer saw, and says when they differ. Enter the date and time, which start at the time the customer wanted, and tap **Book**. The job is priced for that day. Tick **Honor the price the customer saw** to book it at their price instead. Or decline it with a reason.
 
 ## Booking requests
 

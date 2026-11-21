@@ -100,10 +100,11 @@ def parts_from_place(answer):
     }
 
 
-def address_from_place(customer, place_id, session_token="", address=None):
+def address_from_place(customer, place_id, session_token="", address=None, public=False):
     """A verified, unsaved Address for customer from a Google place ID.
-    Raises VerificationError, google.GoogleUnavailable or ValueError."""
-    parts = parts_from_place(google.place_details(place_id, session_token))
+    Raises VerificationError, google.GoogleUnavailable or ValueError. public
+    is a website lookup, counted against the public share (decision 0115)."""
+    parts = parts_from_place(google.place_details(place_id, session_token, public=public))
     address = address or Address(customer=customer)
     for name in ("line1", "line2", "city", "state", "zip_code", "county", "latitude", "longitude"):
         setattr(address, name, parts[name])

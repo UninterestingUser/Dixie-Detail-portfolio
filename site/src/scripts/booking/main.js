@@ -76,6 +76,13 @@ const fresh = () => ({
   preferredDate: "",
   preferredTime: "",
   preferredNote: "",
+  // The address lookup session (decision 0115): opened with a Turnstile
+  // token as the location step is reached, good for a few lookups.
+  lookupSession: null,
+  lookupExpires: 0,
+  // Who asked turnstile.js to keep a token ready: the booking, once its
+  // lookup session is open, or the quote request card.
+  keepingFor: null,
   first: "",
   last: "",
   mobile: "",
@@ -484,6 +491,44 @@ function renderStep3() {
 
 // Step 4: the location ------------------------------------------------------
 
+// Open an address lookup session with a Turnstile token (decision 0115),
+// once at a time. Then keep a fresh token ready, out of sight, for the Book
+// button, because each token is used once.
+let lookupOpening = null;
+function openLookup() {
+  lookupOpening ||= (async () => {
+    const answer = await post("addresses/sessions", { turnstile: await token(config, turnstileBox) });
+    S.lookupSession = answer.body.session;
+    S.lookupExpires = Date.parse(answer.body.expires_at);
+    if (!S.keepingFor && S.mode === "online") {
+      S.keepingFor = "booking";
+      keepReady(config, turnstileBox);
+    }
+    return S.lookupSession;
+  })().finally(() => (lookupOpening = null));
+  return lookupOpening;
+}
+
+async function lookupSession() {
+  if (S.lookupSession && Date.now() < S.lookupExpires - 30000) return S.lookupSession;
+  S.lookupSession = null;
+  return openLookup();
+}
+
+async function lookUpAddress(placeId, sessionToken, retry = true) {
+  const session = await lookupSession();
+  try {
+    return (await post("addresses", { place_id: placeId, session_token: sessionToken, lookup_session: session })).body;
+  } catch (error) {
+    // The session expired or its lookups are used: open a new one, once.
+    if (retry && error instanceof ApiError && error.code === "lookup_session") {
+      S.lookupSession = null;
+      return lookUpAddress(placeId, sessionToken, false);
+    }
+    throw error;
+  }
+}
+
 async function placePicked({ placeId, sessionToken, text }) {
   S.addressText = text;
   S.addressError = "";
@@ -492,16 +537,30 @@ async function placePicked({ placeId, sessionToken, text }) {
   S.sessionToken = sessionToken;
   if (S.mode === "offline") return render();
   try {
-    S.place = (await post("addresses", { place_id: placeId, session_token: sessionToken })).body;
+    S.place = await lookUpAddress(placeId, sessionToken);
   } catch (error) {
     S.place = null;
+    // The day's public lookups are used up: type the address and send a
+    // request, as when Google's suggestions fail (decision 0115).
+    if (error instanceof ApiError && error.code === "lookups_used_up") return lookupsUsedUp(error.message);
     if (error instanceof ApiError) {
       S.addressError = error.message;
+      return render();
+    }
+    if (error instanceof TurnstileError) {
+      S.addressError = sendFailed(error);
       return render();
     }
     return failed(error);
   }
   await requote();
+}
+
+function lookupsUsedUp(message) {
+  if (S.googleDown) return;
+  S.googleDown = true;
+  S.placeId = null;
+  goOffline(message);
 }
 
 function googleDown() {
@@ -512,6 +571,10 @@ function googleDown() {
 }
 
 function renderStep4() {
+  // The lookup session opens as the step is reached, so the first address
+  // picked is looked up at once. A failure here shows nothing: picking an
+  // address tries again.
+  if (S.mode === "online" && S.reached >= 4 && !S.lookupSession && !lookupOpening) queueMicrotask(() => openLookup().catch(() => {}));
   const typed = S.googleDown;
   const parts = [];
   if (typed) {
@@ -794,12 +857,19 @@ function renderRequest() {
   const section = $("[data-request]");
   section.hidden = !S.request || !!S.done;
   // A Turnstile token is fetched as soon as the card opens and kept fresh
-  // while it is open (turnstile.js), so photos upload at once.
-  if (section.hidden || S.mode === "offline") stopKeeping();
+  // while it is open (turnstile.js), so photos upload at once. Closing the
+  // card stops only the keeping it started.
+  if ((section.hidden || S.mode === "offline") && S.keepingFor === "request") {
+    stopKeeping();
+    S.keepingFor = null;
+  }
   if (section.hidden) return;
   const r = S.request;
   const offline = S.mode === "offline";
-  if (!offline) keepReady(config, turnstileBox);
+  if (!offline) {
+    S.keepingFor = "request";
+    keepReady(config, turnstileBox);
+  }
   const c = vehicleClass();
   const why = r.reason === "class"
     ? built.text.quoteClass.request_intro.replace("{class}", c ? c.name : "These vehicles")
