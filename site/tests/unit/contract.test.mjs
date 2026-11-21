@@ -110,6 +110,12 @@ test("every fake answer the website reads has the real API's shape", async () =>
   const start = times.body.days.find((day) => day.times.length).times[0].start;
   const consents = { version: "2026-11-18", appointment: true };
   fits("bookings", await call("bookings", { body: { quote: quote.body.number, start, first_name: "Jordan", mobile: "(423) 555-0142", payment_method: "cash", consents, turnstile: GOOD_TOKEN } }), 201, 201);
+  // A booking taken as a request (decision 0113).
+  const mode = (data) => fetch(new URL("/__fake/mode", base), { method: "POST", body: JSON.stringify(data) });
+  await mode({ requested: true });
+  const second = await call("quotes", { body: { vehicle: rav4, service: 10, condition: 1, place: place.body.place } });
+  fits("bookings-requested", await call("bookings", { body: { quote: second.body.number, start, first_name: "Jordan", mobile: "(423) 555-0142", payment_method: "cash", consents, turnstile: GOOD_TOKEN } }), 202, 202);
+  await mode({ requested: false });
 
   const session = await call("quote-requests/uploads", { body: { turnstile: GOOD_TOKEN } });
   fits("quote-requests/uploads", session, 201, 201);

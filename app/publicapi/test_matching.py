@@ -241,17 +241,22 @@ class SecondVehicleTests(MatchingTestCase):
         return customer, Appointment.objects.get(reference=first.json()["reference"]), body
 
     def test_a_second_vehicle_the_same_day_comes_in_as_a_request(self):
+        """The same answer as any booking that becomes a request (decision
+        0113): it never mentions the booking the number already has."""
         customer, first, body = self.two_motorcycles()
         response = self.client.post_json("bookings", body)
         self.assertEqual(response.status_code, 202, response.content)
         answer = response.json()
         self.assertEqual(answer["status"], "requested")
-        self.assertIn("confirm", answer["message"])
+        self.assertIn("confirm it by text or call", answer["message"])
+        self.assertNotIn("already", answer["message"])
         self.assertNotIn("calendar_file", answer)
         # Not an appointment: the customer still has one job that day.
         self.assertEqual(Appointment.objects.filter(customer=customer).count(), 1)
         request = SecondVehicleRequest.objects.get(reference=answer["request"])
         self.assertEqual((request.customer, request.same_day_appointment), (customer, first))
+        self.assertEqual(request.reason, SecondVehicleRequest.Reason.SAME_DAY)
+        self.assertEqual(request.web_quote.number, body["quote"])
         # The vehicle it brought waits off the record until it is booked.
         self.assertFalse(request.vehicle.active)
         self.assertEqual(request.intake["flags"][0]["field"], MatchFlag.Field.VEHICLE)
@@ -267,11 +272,16 @@ class SecondVehicleTests(MatchingTestCase):
         self.assertEqual(response.status_code, 201, response.content)
 
     def test_the_time_must_still_be_open(self):
+        """A taken time is refused the same way whatever the number holds,
+        so the answer can't tell anyone the number has a job that day."""
         self.returning()
         self.book(start=eastern(open_day(3), 8))
         response = self.client.post_json("bookings", self.booking_body(self.quote(place=self.place_token), eastern(open_day(3), 8)))
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(SecondVehicleRequest.objects.count(), 0)
+        self.assertEqual((response.status_code, response.json()["error"]), (409, "time_taken"))
+        stranger = self.client.post_json(
+            "bookings", self.booking_body(self.quote(place=self.place_token), eastern(open_day(3), 8), mobile="4235550188")
+        )
+        self.assertEqual(stranger.json(), response.json())
 
     def test_a_canceled_job_that_day_does_not_count(self):
         self.returning()

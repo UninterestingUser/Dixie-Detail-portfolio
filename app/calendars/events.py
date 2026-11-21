@@ -33,6 +33,10 @@ ON_THE_CALENDAR = (Appointment.Status.BOOKED, Appointment.Status.COMPLETED)
 # A job imported without its times shows as an hour.
 UNKNOWN_LENGTH = datetime.timedelta(hours=1)
 SERVICE_KINDS = (AppointmentLine.Kind.SERVICE, AppointmentLine.Kind.CUSTOM)
+# Google's event color "Banana", for a job not confirmed yet (decision
+# 0112). A confirmed job has no colorId, so it takes the calendar's own
+# color; each push replaces the whole event, so confirming puts it back.
+UNCONFIRMED_COLOR = "5"
 LISTED_KINDS = (AppointmentLine.Kind.SERVICE, AppointmentLine.Kind.ADD_ON, AppointmentLine.Kind.CUSTOM)
 
 
@@ -107,10 +111,14 @@ def job_event(appointment):
         notes.append("Time on site not recorded; shown as an hour.")
     if appointment.status == Appointment.Status.COMPLETED:
         notes.append("Completed.")
+    if appointment.is_unconfirmed:
+        notes.append(f"Not confirmed yet: {appointment.get_unconfirmed_reason_display().lower()}.")
     notes.append("Booked in the Dixie Detail control app. Change it there: edits made here are put back.")
     start = appointment.scheduled_start
     end = appointment.ends_at or start + UNKNOWN_LENGTH
+    color = {"colorId": UNCONFIRMED_COLOR} if appointment.is_unconfirmed else {}
     return {
+        **color,
         "summary": f"{', '.join(main)} · {vehicle}",
         "location": str(appointment.service_address) if appointment.service_address else "",
         "description": "\n".join(notes),
@@ -232,6 +240,7 @@ COMPARED = {
     "description": "notes",
     "start": "time",
     "end": "time",
+    "colorId": "color",
 }
 
 
@@ -242,6 +251,7 @@ def comparable(event):
         "description": event.get("description", ""),
         "start": moment_of(event.get("start")),
         "end": moment_of(event.get("end")),
+        "colorId": event.get("colorId", ""),
     }
 
 

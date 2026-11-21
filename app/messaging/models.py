@@ -33,9 +33,16 @@ class Message(models.Model):
         FAILED = "failed", "Failed"
         RECEIVED = "received", "Received"
 
+    class Kind(models.TextChoices):
+        # Queued at booking for a new customer with text consent (decision
+        # 0112); Phase 4's sender sends it.
+        CONFIRMATION_REQUEST = "confirmation_request", "Confirmation request"
+
     customer = models.ForeignKey(
         "customers.Customer", on_delete=models.CASCADE, null=True, blank=True, related_name="messages"
     )
+    # What the text is for, when the app wrote it for a purpose; empty otherwise.
+    kind = models.CharField(max_length=30, choices=Kind.choices, blank=True)
     appointment = models.ForeignKey(
         "appointments.Appointment", on_delete=models.SET_NULL, null=True, blank=True, related_name="messages"
     )

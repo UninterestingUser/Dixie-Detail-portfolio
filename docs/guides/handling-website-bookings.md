@@ -1,12 +1,12 @@
 ---
 title: Handling website bookings
-summary: How to work through the home screen's "needs you" list of decisions - differences from the record, quote, offline and second vehicle requests, calendar problems and tax rates - and try it with test records.
+summary: How to work through the home screen's "needs you" list - calls to confirm new customers, differences from the record, requests, calendar problems and tax rates - and try it with test records.
 audience: [owner, staff]
 visibility: internal
 status: current
-updated: 2026-11-18
+updated: 2026-11-21
 tags: [guides, booking, website, matching, requests, control-app]
-related: [docs/decisions/0107-default-staff-and-needs-you-for-decisions.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/reference/control-app.md, docs/reference/returning-customers.md, docs/reference/public-api.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/decisions/0099-quote-requests-with-photos.md, docs/guides/assigning-staff.md, docs/guides/booking-a-job.md]
+related: [docs/decisions/0112-confirming-bookings-from-new-customers.md, docs/decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md, docs/decisions/0107-default-staff-and-needs-you-for-decisions.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/reference/control-app.md, docs/reference/returning-customers.md, docs/reference/public-api.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/decisions/0099-quote-requests-with-photos.md, docs/guides/assigning-staff.md, docs/guides/booking-a-job.md]
 ---
 
 # Handling website bookings
@@ -15,7 +15,20 @@ Website bookings land in the control app on their own. They are matched to retur
 
 ## A new booking is not a "needs you" item
 
-A new website booking needs no decision, so it isn't listed, and neither is assigning staff. Until Phase 4 brings push notifications, which will announce new bookings, the Jobs calendar event on your phone is the notice of a new booking.
+A new website booking needs no decision, so it isn't listed, and neither is assigning staff. Until Phase 4 brings push notifications, which will announce new bookings, the Jobs calendar event on your phone is the notice of a new booking. The exception is a new customer who didn't agree to texts: that booking needs a call (below).
+
+## Confirming a new customer's booking
+
+A booking from someone who has never had a completed job holds its time but isn't confirmed yet ([decision 0112](../decisions/0112-confirming-bookings-from-new-customers.md)). It is yellow in every schedule view, on its page and on the Jobs calendar, with the reason:
+
+- **Waiting for a text reply.** The customer ticked the text box, so they were asked by text to reply YES. From Phase 4 a YES confirms it by itself. Until then no text actually goes out, so call them as below.
+- **Call to confirm.** They didn't tick the box. The booking is under **Needs you** at once as **Call to confirm**, with **Call** (and **Text**, only if they agreed to texts some other time).
+
+Call, confirm the day, then tap **Mark confirmed**, with a note if it helps, such as "Confirmed by phone". It turns the normal color everywhere, the Jobs calendar included. Only a manager can mark a job confirmed. If they don't want it after all, cancel it as usual ([booking-a-job.md](booking-a-job.md)).
+
+The banner at the top of the Schedule screen lists unconfirmed jobs that start within 48 hours, each with **Call**, **Text** and **Mark confirmed**, so none is missed the day before. The 48 hours, and the caps below, are on **Account → Scheduling settings**, under **Confirming new customers**.
+
+**The caps.** One new number can hold one unconfirmed booking, and five new customers can be waiting at once. Past either, the website doesn't book: it takes the booking as a request, which arrives as a **Booking request** (below), and tells the customer you'll confirm by text or call. A booking for a number that already has a job that day gets the same answer. The website never tells the customer which reason it was; the request's screen tells you.
 
 ## Check the booking: differences from the record
 
@@ -45,9 +58,9 @@ If you booked the job by mistake, remove it with **Cancel job → Created by mis
 
 An offline request was sent while the server was down, or while Google's address suggestions were, so nothing is booked. When the customer typed the address, the screen says it wasn't checked: check it with them before booking. The screen shows today's price beside the price the customer saw, and says when they differ. Enter the date and time, which start at the time the customer wanted, and tap **Book**. The job is priced for that day. Tick **Honor the price the customer saw** to book it at their price instead. Or decline it with a reason.
 
-## A second vehicle the same day
+## Booking requests
 
-When a returning customer books on a day they already have a job, such as a second motorcycle, the booking comes in as a request and the customer is told you will confirm it. **Approve and book** books it at the price they were shown, at the time they picked or another. Or decline it with a reason, and let them know.
+A booking request is a website booking taken as a request instead of a job ([decision 0113](../decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md)). The screen says why: **Another job that day**, when a returning customer books a second vehicle, such as a second motorcycle, on a day they already have a job; or **Past the limit on unconfirmed bookings**, when a new number is past one of the caps above. The customer was told only that you'll confirm by text or call. The time isn't held, so call or text them soon. **Approve and book** books it at the price they were shown, at the time they picked or another. Or decline it with a reason, and let them know.
 
 ## Time Off, calendar sync and sales tax
 

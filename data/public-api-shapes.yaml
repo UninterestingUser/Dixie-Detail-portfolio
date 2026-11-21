@@ -1,7 +1,7 @@
 meta:
   title: Public API answer shapes
   summary: The shape of every public API answer the website reads, the contract the real API and the website's fake API are both tested against so they can't drift apart.
-  updated: 2026-11-19
+  updated: 2026-11-21
   status: current
   explained_in: docs/reference/public-api.md
   note: >-
@@ -51,7 +51,28 @@ answers:
       content: string
       content_type: string
       name: string
+    confirmation: string
     reference: string
+    summary:
+      add_ons:
+      - string
+      address: string
+      arrival: string
+      color: string
+      date: string
+      notes:
+      - string
+      payment_method: string
+      sales_tax: string
+      service: string
+      time_on_site: string
+      total: string
+      total_before_tax: string
+      vehicle: string
+  bookings-requested:
+    message: string
+    request: string
+    status: string
     summary:
       add_ons:
       - string

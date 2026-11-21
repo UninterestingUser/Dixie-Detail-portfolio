@@ -169,6 +169,10 @@ class ApiTestCase(TestCase):
         time_off = mock.patch("calendars.sync.refresh_time_off_for_booking", return_value=False)
         time_off.start()
         self.addCleanup(time_off.stop)
+        # Most tests book one number more than once. The confirmation caps
+        # (decision 0112) are tested at their launch values in
+        # publicapi/test_confirmation.py, which sets them back.
+        SchedulingSettings.objects.filter(pk=1).update(unconfirmed_per_number=1000, unconfirmed_new_customers=1000)
 
     # Helpers ---------------------------------------------------------------
 

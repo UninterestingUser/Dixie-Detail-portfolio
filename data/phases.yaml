@@ -1,7 +1,7 @@
 meta:
   title: Build phases
   summary: The eight build phases with their scope, done-when test and status.
-  updated: 2026-11-19
+  updated: 2026-11-21
   status: current
   explained_in: docs/overview/roadmap.md
 
@@ -96,6 +96,7 @@ phases:
     name: Texts, alerts and payments
     status: next
     scope_from_plan_review: [arrival and departure taps]
+    scope_from_review_fixes: [send the queued confirmation requests, confirm a job from a YES reply, put other replies and undeliverable confirmation texts on needs you (decision 0112)]
     done_when: One test appointment runs from booking through reminder, payment by every method and review request
   - number: 5
     name: Launch

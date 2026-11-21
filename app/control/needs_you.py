@@ -1,8 +1,11 @@
 """The "needs you" list on the home screen (control-app.md): only what needs
 a decision, newest first, with a count (decision 0107):
 
-- quote requests to price, offline requests to price and book, and a second
-  vehicle the same day;
+- a new customer's booking with no text consent, to call and confirm
+  (decision 0112), with call and text links and "Mark confirmed";
+- quote requests to price, offline requests to price and book, and booking
+  requests: a website booking taken as a request because the number has a
+  job that day or is past a confirmation cap (decision 0113);
 - returning-customer differences: review flags from quiet matching;
 - Time Off over a booked job (decision 0098), and a job the calendar sync
   keeps failing to push;
@@ -21,6 +24,7 @@ from dataclasses import dataclass, field
 from django.urls import reverse
 from django.utils import timezone
 
+from appointments.confirmation import open_unconfirmed
 from appointments.models import Appointment, MatchFlag
 from billing.models import TaxRate
 from calendars.models import CalendarFlag, SyncTask
@@ -44,6 +48,10 @@ class Item:
     # The appointment the item is about, so a job is listed once.
     appointment_id: int = None
     also: list = field(default_factory=list)
+    # Call and text links (request_views.contact_links), and where "Mark
+    # confirmed" posts, for a job to confirm.
+    contact: dict = None
+    confirm_url: str = ""
 
 
 def when_text(moment):
@@ -85,7 +93,18 @@ def one_per_appointment(found):
 
 def items(user=None):
     """[Item], newest first."""
+    from .request_views import contact_links
+
     found = []
+    # First, so a job's other items fold into this one and keep its buttons.
+    to_call = open_unconfirmed().filter(unconfirmed_reason=Appointment.UnconfirmedReason.CALL).select_related("customer")
+    for job in to_call.order_by("scheduled_start"):
+        found.append(Item(
+            "call_to_confirm", job.created_at, f"Call to confirm: {job.customer}",
+            f"{when_text(job.scheduled_start)} · a new customer, no text consent", reverse("appointment", args=[job.pk]),
+            job.is_test, appointment_id=job.pk, contact=contact_links(job.customer),
+            confirm_url=reverse("appointment-confirm", args=[job.pk]),
+        ))
     flagged = {}
     for flag in MatchFlag.objects.filter(resolution="").select_related("appointment__customer").order_by("created_at"):
         flagged.setdefault(flag.appointment, []).append(flag)
@@ -108,8 +127,8 @@ def items(user=None):
                           reverse("time-request", args=[item.pk]), item.is_test))
     for item in SecondVehicleRequest.objects.filter(status=SecondVehicleRequest.Status.NEW).select_related("customer", "vehicle"):
         found.append(Item(
-            "second_vehicle", item.created_at, f"Second vehicle the same day: {item.customer}",
-            f"{when_text(item.start)} · {item.vehicle}", reverse("second-vehicle-request", args=[item.pk]), item.is_test,
+            "second_vehicle", item.created_at, f"Booking request: {item.customer}",
+            f"{when_text(item.start)} · {item.vehicle} · {item.get_reason_display().lower()}", reverse("second-vehicle-request", args=[item.pk]), item.is_test,
         ))
     for flag in CalendarFlag.objects.filter(outcome=CalendarFlag.Outcome.OPEN, kind=CalendarFlag.Kind.CLASH).select_related("appointment__customer"):
         job = flag.appointment

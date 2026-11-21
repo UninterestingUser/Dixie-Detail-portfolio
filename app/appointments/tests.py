@@ -289,3 +289,30 @@ class CanceledSpellingMigrationTests(TransactionTestCase):
         after = executor.loader.project_state(self.after).apps.get_model("appointments", "Appointment")
         self.assertEqual(after.objects.get(pk=appointment.pk).status, Appointment.Status.CANCELED)
         self.assertEqual(Appointment.Status.CANCELED.label, "Canceled")
+
+
+class ConfirmationMigrationTests(TransactionTestCase):
+    """Migration 0013 leaves every job that exists before it confirmed,
+    booked ones included (decision 0112)."""
+
+    before = [("appointments", "0012_match_flag_details")]
+    after = [("appointments", "0013_confirmation")]
+
+    def tearDown(self):
+        MigrationExecutor(connection).migrate(MigrationExecutor(connection).loader.graph.leaf_nodes())
+
+    def test_existing_jobs_are_confirmed(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.before)
+        apps = executor.loader.project_state(self.before).apps
+        customer = apps.get_model("customers", "Customer").objects.create(first_name="Pat", mobile="4235550142")
+        Appointment_before = apps.get_model("appointments", "Appointment")
+        booked = Appointment_before.objects.create(customer=customer, scheduled_start=timezone.now(), status="booked", source="website")
+        completed = Appointment_before.objects.create(customer=customer, scheduled_start=timezone.now(), status="completed", source="owner")
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.after)
+        after = executor.loader.project_state(self.after).apps.get_model("appointments", "Appointment")
+        for job in (booked, completed):
+            row = after.objects.get(pk=job.pk)
+            self.assertEqual((row.confirmation, row.unconfirmed_reason, row.confirmed_how), ("confirmed", "", ""))
+            self.assertIsNone(row.confirmed_at)

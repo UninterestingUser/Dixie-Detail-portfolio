@@ -19,13 +19,13 @@
   {% endfor %}
 </ul>
 
-<h2>Second vehicle the same day</h2>
+<h2>Booking requests</h2>
 <ul class="list">
   {% for item in second_vehicle_requests %}
     <li><a class="row{% if item.status != 'new' %} faded{% endif %}" href="{% url 'second-vehicle-request' item.pk %}">
       <strong>{{ item.customer }}: {{ item.vehicle }}</strong>
       <span class="badge">{{ item.get_status_display }}</span>{% if item.is_test %} <span class="badge">Test</span>{% endif %}
-      <span class="sub">Wants {{ item.start|date:"D, M j" }}, {{ item.start|local_time }} · sent {{ item.created_at|date:"D, M j, g:i A" }}</span>
+      <span class="sub">{{ item.get_reason_display }} · wants {{ item.start|date:"D, M j" }}, {{ item.start|local_time }} · sent {{ item.created_at|date:"D, M j, g:i A" }}</span>
     </a></li>
   {% empty %}
     <li class="muted">No second vehicle requests.</li>

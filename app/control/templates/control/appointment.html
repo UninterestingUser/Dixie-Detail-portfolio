@@ -2,10 +2,20 @@
 {% load control %}
 {% block title %}{{ appointment.customer }}, {{ appointment.scheduled_start|date:"M j" }}{% endblock %}
 {% block content %}
-<div class="heading">
+<div class="heading{% if appointment.is_unconfirmed %} unconfirmed{% endif %}">
   <h1>{{ appointment.scheduled_start|date:"D, M j, Y" }}, {{ appointment.scheduled_start|local_time }}</h1>
-  <p><span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>{% if appointment.series %} <span class="badge">{{ appointment.series.get_frequency_display }} series, {{ series_count }} visits</span>{% endif %}</p>
+  <p><span class="badge status-{{ appointment.status }}">{{ appointment.get_status_display }}</span>{% if appointment.is_unconfirmed %} <span class="badge unconfirmed">Unconfirmed: {{ appointment.get_unconfirmed_reason_display|lower }}</span>{% endif %}{% if appointment.series %} <span class="badge">{{ appointment.series.get_frequency_display }} series, {{ series_count }} visits</span>{% endif %}</p>
 </div>
+{% if appointment.is_unconfirmed %}
+<section class="card unconfirmed" aria-labelledby="confirm-heading">
+  <h2 id="confirm-heading">Not confirmed yet</h2>
+  <p class="sub">{% if appointment.unconfirmed_reason == 'text_reply' %}A new customer. We asked them by text to reply YES; the time is held until then.{% else %}A new customer with no text consent. Call them to confirm; the time is held until then.{% endif %}</p>
+  {% url 'appointment-confirm' appointment.pk as confirm_url %}
+  {% include "control/_confirm_actions.html" %}
+</section>
+{% elif appointment.confirmed_how %}
+<p class="sub">Confirmed: {{ appointment.get_confirmed_how_display|lower }}{% if appointment.confirmed_at %}, {{ appointment.confirmed_at|date:"D, M j, Y, g:i A" }}{% endif %}{% if appointment.confirmed_by %}, by {{ appointment.confirmed_by }}{% endif %}.{% if appointment.confirmation_note %} Note: {{ appointment.confirmation_note }}{% endif %}</p>
+{% endif %}
 
 <dl class="details">
   <dt>Customer</dt><dd><a href="{% url 'customer' appointment.customer.pk %}">{{ appointment.customer }}</a>{% if appointment.customer.mobile %} · <a href="tel:+1{{ appointment.customer.mobile }}">{{ appointment.customer.mobile|phone }}</a>{% endif %}</dd>

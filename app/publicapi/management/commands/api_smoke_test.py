@@ -296,9 +296,15 @@ def test_mobile():
 
 def make_returning_customer():
     """A test customer, as if booked before, with two identical vehicles told
-    apart only by color and an address that isn't the smoke test's place."""
+    apart only by color, an address that isn't the smoke test's place, and
+    one completed job, so their bookings are confirmed at once and the caps
+    on unconfirmed bookings don't apply (decision 0112)."""
     customer = Customer.objects.create(first_name="Smoke", last_name="Test", mobile=test_mobile(), source="Smoke test", is_test=True)
     Address.objects.create(customer=customer, line1="1 Example Test Lane", city="Cleveland", state="TN", zip_code="37311")
+    Appointment.objects.create(
+        customer=customer, scheduled_start=timezone.now() - datetime.timedelta(days=60), status=Appointment.Status.COMPLETED,
+        source=Appointment.Source.OWNER, is_test=True, notes="Smoke test: a past job, so the customer is known.",
+    )
     found = classify(VEHICLE["year"], VEHICLE["make"], VEHICLE["model"])
     for color in ("White", "Dark Blue"):
         Vehicle.objects.create(

@@ -4,9 +4,9 @@ summary: Which automated texts the system sends, the one consent they need, the 
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-19
+updated: 2026-11-21
 tags: [texting, sms, consent, compliance, quo]
-related: [data/consent-wording.yaml, docs/reference/public-api.md, data/message-templates.yaml, docs/decisions/0026-carrier-registration-timing.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0030-two-text-consents.md, docs/decisions/0007-quo-phone-and-texts.md]
+related: [docs/decisions/0112-confirming-bookings-from-new-customers.md, app/appointments/confirmation.py, data/consent-wording.yaml, docs/reference/public-api.md, data/message-templates.yaml, docs/decisions/0026-carrier-registration-timing.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0030-two-text-consents.md, docs/decisions/0007-quo-phone-and-texts.md]
 ---
 
 # Text messages and consent
@@ -58,15 +58,33 @@ The wording below is version 2026-11-18, the current version in [data/consent-wo
 
 ## The automated messages
 
-Five automated texts, each with a template the owner edits in the control app. Every one needs appointment-text consent. Seed wording is in [data/message-templates.yaml](../../data/message-templates.yaml).
+Six automated texts, each with a template the owner edits in the control app. Every one needs appointment-text consent. Seed wording is in [data/message-templates.yaml](../../data/message-templates.yaml).
 
-1. Booking confirmation, sent immediately.
-2. Reminder with preparation details: water, power and where to park the vehicle.
-3. "On my way", sent with one tap from the time-to-leave alert.
-4. Payment link at completion, then a receipt.
-5. One review request with the Google review link, after the service.
+1. Booking confirmation, sent immediately. A new customer's website booking gets the confirmation request below instead.
+2. Confirmation request, for a new customer's website booking (below).
+3. Reminder with preparation details: water, power and where to park the vehicle.
+4. "On my way", sent with one tap from the time-to-leave alert.
+5. Payment link at completion, then a receipt.
+6. One review request with the Google review link, after the service.
 
 There is no "time for your next detail" text and no promotional text.
+
+## The confirmation request
+
+A website booking from a number that matches no customer with a completed job holds its time but starts unconfirmed ([decision 0112](../decisions/0112-confirming-bookings-from-new-customers.md), [booking-flow.md](booking-flow.md#confirming-a-new-customers-booking)). With text consent, the booking stores this text as a queued outgoing message (`Message`, kind "confirmation request", status queued); nothing sends it until Phase 4's sender is built:
+
+> Dixie Detail: Please confirm your {service} on {day, date} at {time}. Reply YES to confirm, or call or text (423) 380-9120 to change it. Reply STOP to opt out.
+
+For example, "Dixie Detail: Please confirm your Full Detail on Thursday, December 3 at 8:00 AM. Reply YES to confirm, …". The service is the job's main service, and the day and time are in Eastern time. The code is `app/appointments/confirmation.py`.
+
+**For Phase 4,** the sender and the reply handling will work this way:
+
+- **A reply of YES, Y or CONFIRM,** in any case and with punctuation ignored ("yes!", "Y.", "Confirm"), confirms the soonest unconfirmed appointment for that number, recorded as confirmed by text reply (`confirmation.confirm(…, ConfirmedHow.TEXT_REPLY)`). The words are `CONFIRMING_REPLIES` in that file.
+- **Any other reply** goes on "needs you" as a message to read, and confirms nothing. STOP, HELP and START keep their automatic replies above.
+- **A confirmation text that can't be delivered** puts the job on "needs you" at once, so someone calls instead.
+- **A queued request whose job is no longer unconfirmed,** because it was canceled or a manager marked it confirmed first, is not sent.
+
+Without text consent nothing is queued: the job goes on "needs you" as "Call to confirm".
 
 ## What registration needs
 
@@ -82,7 +100,7 @@ The answers for the registration form, as of 2026-11-18 ([decision 0108](../deci
 
 **How you use text messaging:**
 
-> Dixie Detail LLC is a mobile car detailing business in southeast Tennessee. We text customers who book a detailing appointment and agree to receive texts. Messages include booking confirmations, appointment reminders with preparation details, arrival updates on the day of service, payment links and receipts, replies to customer questions, and one review request after the service. We do not send marketing or promotional texts. Customers can reply STOP at any time to opt out.
+> Dixie Detail LLC is a mobile car detailing business in southeast Tennessee. We text customers who book a detailing appointment and agree to receive texts. Messages include booking confirmations, requests to confirm a new booking, appointment reminders with preparation details, arrival updates on the day of service, payment links and receipts, replies to customer questions, and one review request after the service. We do not send marketing or promotional texts. Customers can reply STOP at any time to opt out.
 
 **How customers opt in:**
 
@@ -90,7 +108,11 @@ The answers for the registration form, as of 2026-11-18 ([decision 0108](../deci
 
 **Message types to select:** appointment confirmations and reminders, customer care, payment and receipt notices, and review requests. Not promotional.
 
-**Sample messages:** the booking confirmation, reminder, "on my way", payment link and review request templates in [data/message-templates.yaml](../../data/message-templates.yaml). The "time for your next detail" sample is dropped.
+**Sample messages:** the booking confirmation, confirmation request, reminder, "on my way", payment link and review request templates in [data/message-templates.yaml](../../data/message-templates.yaml). The "time for your next detail" sample is dropped. The confirmation request sample:
+
+> Dixie Detail: Please confirm your Full Detail on Thursday, December 3 at 8:00 AM. Reply YES to confirm, or call or text (423) 380-9120 to change it. Reply STOP to opt out.
+
+The consent checkbox wording does not change for it: "confirmations" already covers a request to confirm (decision 0112).
 
 ## Published policy pages
 

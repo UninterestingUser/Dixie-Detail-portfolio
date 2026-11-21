@@ -65,6 +65,16 @@ class SchedulingSettings(models.Model):
     leave_buffer_minutes = models.PositiveSmallIntegerField(
         default=10, help_text="Added to the drive time to set the leave time: the Drive to job block and the time-to-leave alert."
     )
+    # Confirming website bookings from new customers (decision 0112).
+    unconfirmed_per_number = models.PositiveSmallIntegerField(
+        default=1, help_text="Open unconfirmed bookings one new customer's number may hold. Past it, a booking becomes a request."
+    )
+    unconfirmed_new_customers = models.PositiveSmallIntegerField(
+        default=5, help_text="Open unconfirmed bookings from new customers at once. Past it, a booking becomes a request."
+    )
+    unconfirmed_banner_hours = models.PositiveSmallIntegerField(
+        default=48, help_text="The schedule's banner lists unconfirmed jobs that start within this many hours."
+    )
     # Assigned to every new booking, from the website or the control app,
     # whoever else qualifies (decision 0107). Seeded by name from
     # data/booking-rules.yaml (staff_assignment.default_staff).
@@ -291,6 +301,9 @@ def seed_from_launch_values():
         "time_off_check_minutes": time_off["check_every_minutes"],
         "stale_copy_warning_minutes": time_off["stale_copy_warning_minutes"],
         "leave_buffer_minutes": rules["time_to_leave_alert"]["buffer_minutes"],
+        "unconfirmed_per_number": rules["new_customer_confirmation"]["unconfirmed_per_number"],
+        "unconfirmed_new_customers": rules["new_customer_confirmation"]["unconfirmed_new_customers"],
+        "unconfirmed_banner_hours": rules["new_customer_confirmation"]["banner_hours"],
         "default_staff": launch_default_staff(rules),
     })
     open_days = set(rules["open_weekdays"])

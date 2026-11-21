@@ -4,9 +4,9 @@ summary: The scheduling settings and the one availability check that decide whic
 audience: [owner, staff, developer]
 visibility: internal
 status: current
-updated: 2026-11-08
+updated: 2026-11-21
 tags: [scheduling, availability, calendar, alerts, settings]
-related: [docs/decisions/0098-calendar-sync-queue-and-worker.md, docs/operations/connecting-the-google-calendars.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
+related: [docs/decisions/0112-confirming-bookings-from-new-customers.md, docs/decisions/0098-calendar-sync-queue-and-worker.md, docs/operations/connecting-the-google-calendars.md, docs/decisions/0095-canceling-and-removing-jobs.md, docs/decisions/0096-booking-off-hours-inline-and-calendar-views.md, docs/decisions/0093-quarter-hour-rounding-confirmed.md, docs/decisions/0094-how-the-availability-check-places-and-shares.md, docs/decisions/0091-google-calls-counted-capped-and-cached.md, docs/decisions/0072-motorcycles-class.md, docs/decisions/0065-condition-lengthens-service-time.md, data/booking-rules.yaml, docs/reference/booking-flow.md, docs/reference/pricing.md, docs/decisions/0056-scheduling-rules-are-settings.md, docs/decisions/0057-calendar-sync-and-conflict-rules.md, docs/decisions/0062-arrival-and-departure-by-one-tap.md, docs/decisions/0006-two-google-calendars.md, docs/decisions/0023-time-to-leave-alert.md]
 ---
 
 # Scheduling, calendars and time-to-leave alerts
@@ -35,6 +35,11 @@ Every scheduling rule is a setting, so a new working pattern needs only new sett
 | Time Off check | Every 5 minutes, and again when a booking is submitted |
 | Warning when the last Time Off copy is old | Older than 60 minutes |
 | Time-to-leave buffer | 10 minutes before the drive: the Drive to job block and the time-to-leave alert start at the drive time plus this before arrival |
+| Unconfirmed bookings per new customer's number | 1: past it, a website booking becomes a request ([decision 0112](../decisions/0112-confirming-bookings-from-new-customers.md)) |
+| Unconfirmed bookings from new customers at once | 5: past it, a website booking becomes a request |
+| List unconfirmed jobs starting within | 48 hours: the Schedule screen's banner |
+
+**Unconfirmed bookings.** A website booking from a number with no completed job holds its time like any booking, so the availability check counts it, but it is unconfirmed until the customer confirms or a manager marks it confirmed ([booking-flow.md](booking-flow.md#confirming-a-new-customers-booking)). The caps count open unconfirmed bookings: booked, not yet confirmed, starting from now on. A known customer's booking and every booking made in the control app are confirmed and never capped.
 
 ## How a scheduling settings change behaves
 
@@ -160,11 +165,12 @@ The database is the only record of appointments ([decision 0057](../decisions/00
 
 1. Each booked or completed appointment has one event and one "Drive to job" block, linked to it by an ID stored on the appointment (its calendar key) and in the events' private extended properties. The event IDs are made from the key.
    - **The job event** covers the whole time on site. Its title is the service and the vehicle, such as "Full Detail · 2019 Toyota RAV4, blue"; its location is the job address; its notes hold the customer's name and phone, the services, the total and the payment method. A job imported without its times shows as an hour.
+   - **An unconfirmed job's event** uses Google's yellow event color, Banana (color 5), and its notes add "Not confirmed yet: call to confirm." or "… waiting for a text reply." Once the job is confirmed the event has no color of its own, so it shows in the calendar's color again ([decision 0112](../decisions/0112-confirming-bookings-from-new-customers.md)).
    - **The Drive to job block** runs from the leave time to the arrival time, with a notification at the leave time. The leave time is the drive time from the home base plus the time-to-leave buffer (10 minutes at launch) before arrival. A job with no drive time recorded, such as one with no address location, has no block.
    - A canceled or removed job's events are deleted, so the Jobs calendar never shows canceled jobs.
    - A test record, such as the smoke test's booking, never goes on the Jobs calendar ([public-api.md](public-api.md#test-records)).
 2. Booking, moving or canceling an appointment updates its events within a minute. If Google is down, the change waits in a queue and retries; a booking never waits for Google.
-3. Appointments change in the control app, not in Google. A Jobs event edited in Google is restored to the app's version at the next check, within 5 minutes, and the control app notes the reset on its home screen and on the job. A Jobs event deleted in Google is recreated and noted the same way.
+3. Appointments change in the control app, not in Google. A Jobs event edited in Google, its color included, is restored to the app's version at the next check, within 5 minutes, and the control app notes the reset on its home screen and on the job. A Jobs event deleted in Google is recreated and noted the same way.
 4. An event added to Jobs by hand counts as busy time and is flagged on the control app's home screen, so the owner can move it to Time Off or delete it. The app never deletes it; the flag goes away when the event does.
 5. Days closed in the control app show on Jobs as all-day "Closed" events.
 6. A full check every night compares future appointments with the Jobs events and repairs any difference: missing events are created, edited ones put back, and app events for jobs no longer booked deleted.

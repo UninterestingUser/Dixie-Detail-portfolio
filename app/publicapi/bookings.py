@@ -11,13 +11,23 @@ confirm, never a silent new price.
 
 Each booking is matched quietly on its mobile number (customers.matching,
 returning-customers.md): a returning customer's booking goes on their
-record, and any difference is flagged for the owner. A returning customer
-who already has a job that day gets a request the owner approves instead
-of a booking (SecondVehicleRequest). Nothing in the answer comes from a
-customer's record: the summary is built from the quote, the place and what
-this booking sent. The job gets the default staff, or, without one, the
-only qualified staff member of a one-person job (decisions 0061 and 0107);
-the crew can be changed on the job.
+record, and any difference is flagged for the owner. Nothing in the answer
+comes from a customer's record: the summary is built from the quote, the
+place and what this booking sent. The job gets the default staff, or,
+without one, the only qualified staff member of a one-person job (decisions
+0061 and 0107); the crew can be changed on the job.
+
+A number that matches a customer with a completed job is booked confirmed.
+Any other booking holds its time unconfirmed until the customer confirms
+(decision 0112, appointments.confirmation), and the answer says which, so
+the site picks its words.
+
+The booking becomes a request instead, with one answer whatever the reason
+(decision 0113): the number already has a job that day, or an unconfirmed
+booking would pass a cap. The request keeps the quote the customer saw,
+for the owner to approve or decline. The time is checked first for every
+booking, so a taken time gets the same answer whatever the number. No
+answer says whether a number already has a booking.
 """
 
 import datetime
@@ -27,11 +37,12 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from appointments import booking
+from appointments import booking, confirmation
 from appointments.models import Appointment
 from billing.methods import saved_method, website_label
 from customers import matching
 from scheduling.availability import local_midnight
+from scheduling.models import SchedulingSettings
 from staff.authorization import auto_assign
 
 from . import consent, quotes, turnstile, validate
@@ -191,9 +202,12 @@ def fresh_quote_error(code, message, web, day=None):
     return ApiError(409, code, message, quote=quotes.quote_json(fresh))
 
 
-SECOND_VEHICLE_MESSAGE = (
-    "Thanks! We've got your request for this time. Because there's already a booking for this number that day, "
-    "we'll confirm this one by text or call. Your request number is {reference}."
+# The one answer for a booking that becomes a request (decision 0113). It
+# never says why, so it never tells anyone whether a number already has a
+# booking.
+REQUESTED_MESSAGE = (
+    "Thanks! We've got your request for this time. We'll confirm it by text or call. "
+    "Your request number is {reference}."
 )
 
 
@@ -219,17 +233,24 @@ def book(request, data):
             )
             return error.status, {"error": error.code, "message": error.message, **error.extra}
         typed = given(form["first_name"], form["last_name"], form["mobile"], web.place, quote_vehicle(web, form["color"]), smoke_test)
-        # The day is locked before looking for the customer's job that day, so
-        # two bookings at once can't both miss each other.
-        booking.lock_day(day)
-        customer, _ = matching.find_match(typed.mobile, typed.is_test, typed.first_name, typed.last_name)
-        other = same_day_job(customer, day)
         try:
             with transaction.atomic():
+                # The time first, for every booking, with the day locked so
+                # two bookings at once can't both miss each other.
+                check_time(web, start)
+                customer, _ = matching.find_match(typed.mobile, typed.is_test, typed.first_name, typed.last_name)
+                known = confirmation.is_known_customer(customer)
+                other = same_day_job(customer, day)
                 if other is not None:
-                    second = write_second_vehicle_request(web, form, start, typed, other)
-                    return 202, second_vehicle_answer(web, second, form)
-                appointment = write_booking(web, form, start, typed)
+                    reason = SecondVehicleRequest.Reason.SAME_DAY
+                elif not known and confirmation.over_a_cap(customer, typed.is_test, SchedulingSettings.get()):
+                    reason = SecondVehicleRequest.Reason.OVER_CAP
+                else:
+                    reason = None
+                if reason is not None:
+                    held = write_request(web, form, start, typed, reason, other)
+                    return 202, requested_answer(web, held, form)
+                appointment = write_booking(web, form, start, typed, known)
         except booking.RulesBroken as error:
             raise ApiError(409, "time_taken", "That time is no longer open. Please pick another time.") from error
         except IntegrityError as error:
@@ -237,30 +258,46 @@ def book(request, data):
     return 201, booking_answer(web, appointment, form)
 
 
-def write_booking(web, form, start, typed):
+def check_time(web, start):
+    """Raise RulesBroken unless the time is open for the quote, after
+    copying Time Off and locking the day (appointments.booking)."""
+    from calendars.sync import refresh_time_off_for_booking
+
+    refresh_time_off_for_booking()
+    booking.check_online(None, start, web.place.as_address(), web.quote)
+
+
+def write_booking(web, form, start, typed, known):
     """Match the booking, then book the quote as issued on the customer it
     matched, with the address and vehicle as booked; raise the review flags
-    and assign the default staff (decision 0107)."""
+    and assign the default staff (decision 0107). A known customer's job is
+    confirmed; any other waits for the customer, with a confirmation request
+    text queued when they gave text consent (decision 0112)."""
     intake = take_in(typed, form["consents"], form["mobile"])
+    text_consent = bool(form["consents"].get("appointment"))
+    state = (
+        confirmation.confirmed_fields(Appointment.ConfirmedHow.KNOWN_CUSTOMER)
+        if known else confirmation.unconfirmed_fields(text_consent)
+    )
     appointment = booking.book_online(
         intake.customer, intake.vehicle, start, None, address=intake.address, quote=web.quote,
         preferred_payment_method=form["payment_method"],
         reference=unique_reference(),
         is_test=intake.customer.is_test,
         intake=intake.as_json(),
+        **state,
     )
     matching.raise_flags(appointment, appointment.intake)
     auto_assign(appointment)
+    if not known and text_consent:
+        confirmation.queue_request(appointment)
     return appointment
 
 
-def write_second_vehicle_request(web, form, start, typed, other):
-    """A returning customer already has a job that day: the time must still
-    be open, but the booking becomes a request the owner approves."""
-    from calendars.sync import refresh_time_off_for_booking
-
-    refresh_time_off_for_booking()
-    booking.check_online(None, start, web.place.as_address(), web.quote)
+def write_request(web, form, start, typed, reason, other=None):
+    """A booking request: the booking as sent, its quote kept for the owner
+    to approve, with its address and vehicle held off the record until then.
+    The time was checked already."""
     intake = take_in(typed, form["consents"], form["mobile"], hold=True)
     return SecondVehicleRequest.objects.create(
         reference=unique_reference(),
@@ -271,17 +308,20 @@ def write_second_vehicle_request(web, form, start, typed, other):
         start=start,
         payment_method=form["payment_method"],
         same_day_appointment=other,
+        reason=reason,
         intake=intake.as_json(),
         is_test=intake.customer.is_test,
     )
 
 
-def second_vehicle_answer(web, second, form):
+def requested_answer(web, held, form):
+    """The same for every reason: the request number, the message and the
+    summary, built only from this booking."""
     return {
-        "request": second.reference,
+        "request": held.reference,
         "status": "requested",
-        "message": SECOND_VEHICLE_MESSAGE.format(reference=second.reference),
-        "summary": summary(web, second.start, form["color"], form["payment_method"]),
+        "message": REQUESTED_MESSAGE.format(reference=held.reference),
+        "summary": summary(web, held.start, form["color"], form["payment_method"]),
     }
 
 
@@ -294,6 +334,9 @@ def booking_answer(web, appointment, form):
     )
     return {
         "reference": appointment.reference,
+        # "confirmed", or how the customer confirms: "text" (reply YES to the
+        # text) or "call" (we call them). The site picks its words from it.
+        "confirmation": confirmation_state(appointment),
         "summary": details,
         "calendar_file": {
             "name": f"dixie-detail-{appointment.reference}.ics",
@@ -304,3 +347,9 @@ def booking_answer(web, appointment, form):
             ),
         },
     }
+
+
+def confirmation_state(appointment):
+    if appointment.confirmation == Appointment.Confirmation.CONFIRMED:
+        return "confirmed"
+    return "text" if appointment.unconfirmed_reason == Appointment.UnconfirmedReason.TEXT_REPLY else "call"

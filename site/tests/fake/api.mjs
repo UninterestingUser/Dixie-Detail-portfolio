@@ -9,7 +9,10 @@
 // prove the page shows the server's numbers and works none out itself.
 //
 // Control endpoints, for the tests only:
-//   POST /__fake/mode {"offline": true, "odd": true, "outage": false}
+//   POST /__fake/mode {"offline": true, "odd": true, "outage": false,
+//                      "requested": true, "known": true}
+//     requested: every booking is taken as a request, answered 202 (decision 0113);
+//     known: bookings come back "confirmed", as for a known customer (decision 0112).
 //   GET  /__fake/log    what was sent to the API and the offline piece
 //   POST /__fake/reset
 
@@ -278,6 +281,8 @@ export function createFakeApi() {
     for (const key of ["first_name", "mobile", "payment_method", "consents", "start"]) {
       if (body[key] == null) return [400, { error: "bad_request", field: key, message: "Something in the form isn't right." }];
     }
+    // "confirmed" for a known customer (mode.known), else how they confirm (decision 0112).
+    const confirmation = state.mode.known ? "confirmed" : body.consents.appointment ? "text" : "call";
     const reference = next("B").padEnd(8, "K");
     const summary = {
       service: web.service.name, add_ons: web.add_ons.map((a) => a.name), vehicle: web.vehicle.description, color: body.color || "",
@@ -285,7 +290,12 @@ export function createFakeApi() {
       address: web.address, total_before_tax: web.total_before_tax, sales_tax: web.sales_tax ? web.sales_tax.amount : "0.00", total: web.total,
       payment_method: body.payment_method, notes: ["The final price is confirmed when we see the vehicle.", "Nothing is charged until the job is done.", "Please have water and power available near the vehicle."],
     };
-    return [201, { reference, summary, calendar_file: { name: `dixie-detail-${reference}.ics`, content_type: "text/calendar", content: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nSUMMARY:Dixie Detail\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n" } }];
+    // A booking that becomes a request (decision 0113): one answer, whatever the reason.
+    if (state.mode.requested) {
+      const request = next("R").padEnd(8, "Q");
+      return [202, { request, status: "requested", message: `Thanks! We've got your request for this time. We'll confirm it by text or call. Your request number is ${request}.`, summary }];
+    }
+    return [201, { reference, confirmation, summary, calendar_file: { name: `dixie-detail-${reference}.ics`, content_type: "text/calendar", content: "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nSUMMARY:Dixie Detail\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n" } }];
   }
 
   async function readBody(req) {
@@ -304,7 +314,7 @@ export function createFakeApi() {
     if (req.method === "OPTIONS") return send(res, 204, {});
     if (url.pathname === "/__fake/mode") { Object.assign(state.mode, JSON.parse((await readBody(req)).toString() || "{}")); return send(res, 200, state.mode); }
     if (url.pathname === "/__fake/log") return send(res, 200, state.log);
-    if (url.pathname === "/__fake/reset") { state.mode = { offline: false, odd: false }; state.log = []; return send(res, 200, {}); }
+    if (url.pathname === "/__fake/reset") { state.mode = { offline: false, odd: false, requested: false, known: false }; state.log = []; return send(res, 200, {}); }
 
     // The Cloudflare offline piece, as the site calls it (functions/offline).
     if (url.pathname.startsWith("/offline/")) {

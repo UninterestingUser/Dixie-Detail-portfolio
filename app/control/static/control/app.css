@@ -353,3 +353,15 @@ dl.facts dd { margin: 0; }
 @media (max-width: 420px) { .side-by-side { grid-template-columns: 1fr; } }
 .review-flag fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
 .review-flag legend { font-weight: 600; margin-bottom: 4px; }
+
+/* Unconfirmed jobs: Banana yellow, as on the Jobs calendar (decision 0112). */
+:root { --unconfirmed: #f6bf26; --unconfirmed-soft: #fff3c4; }
+.row.unconfirmed, .card.unconfirmed, .heading.unconfirmed { background: var(--unconfirmed-soft); border-left: 6px solid var(--unconfirmed); }
+.badge.unconfirmed { background: var(--unconfirmed); border-color: var(--unconfirmed); color: var(--ink); }
+.timegrid-job.unconfirmed, .month-job.unconfirmed { background: var(--unconfirmed); border-color: #d9a400; color: var(--ink); }
+.timegrid-job.unconfirmed .no-staff { color: var(--warn); }
+.unconfirmed-reason { font-weight: 700; }
+.unconfirmed-banner { margin: 0 0 16px; }
+.confirm-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.confirm-form input[name="note"] { flex: 1 1 12rem; }
+.heading.unconfirmed { padding: 8px 12px; border-radius: var(--radius); }

@@ -1,0 +1,17 @@
+{# Unconfirmed jobs that start soon, at the top of the schedule (decision 0112). #}
+{% load control %}
+{% if unconfirmed_soon.jobs %}
+<section class="unconfirmed-banner" aria-labelledby="unconfirmed-heading">
+  <h2 id="unconfirmed-heading">Not confirmed, starting within {{ unconfirmed_soon.hours }} hours</h2>
+  <ul class="list">
+    {% for appointment, contact in unconfirmed_soon.jobs %}
+      <li class="card unconfirmed">
+        <a href="{% url 'appointment' appointment.pk %}"><strong>{{ appointment.scheduled_start|date:"D, M j" }}, {{ appointment.scheduled_start|local_time }}: {{ appointment.customer }}</strong></a>{% if appointment.is_test %} <span class="badge">Test</span>{% endif %}
+        <span class="sub">{{ appointment.get_unconfirmed_reason_display }}</span>
+        {% url 'appointment-confirm' appointment.pk as confirm_url %}
+        {% include "control/_confirm_actions.html" %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

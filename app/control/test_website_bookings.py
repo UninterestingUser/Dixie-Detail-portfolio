@@ -286,7 +286,8 @@ class SecondVehicleScreenTests(ControlTestCase, SecondVehicleTests):
     def test_approve_books_the_quote_at_the_time_picked(self):
         customer, item = self.request()
         page = self.tailnet.get(f"/requests/second-vehicle/{item.pk}/")
-        self.assertContains(page, "Second vehicle the same day")
+        self.assertContains(page, "Booking request")
+        self.assertContains(page, "Another job that day")
         self.assertContains(page, "Road King")
         local = timezone.localtime(item.start)
         response = self.tailnet.post(f"/requests/second-vehicle/{item.pk}/book/", {"book-date": local.date(), "book-time": local.strftime("%H:%M")})
@@ -652,7 +653,11 @@ class SmokeScenarioTests(ControlTestCase):
         self.assertIn("kept the test records", text)
         self.assertTrue(text.strip().endswith("PASS"))
         customer = Customer.objects.get(is_test=True)
-        self.assertEqual(customer.appointments.count(), 3)
+        # Three bookings, confirmed at once: the test customer has a completed
+        # job, so is known and never capped (decision 0112).
+        booked = customer.appointments.filter(source=Appointment.Source.WEBSITE)
+        self.assertEqual(booked.count(), 3)
+        self.assertEqual(set(booked.values_list("confirmed_how", flat=True)), {Appointment.ConfirmedHow.KNOWN_CUSTOMER})
         self.assertEqual(MatchFlag.objects.filter(resolution="").count(), 3)
         self.assertContains(self.tailnet.get("/review/"), "Smoke Test")
         call_command("delete_test_records", stdout=io.StringIO())

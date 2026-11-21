@@ -771,3 +771,47 @@ test("the quote request card lists Not sure, then the services in the owner's or
   await cont(page, 1).click();
   await expect(page.locator("#qr-service option")).toHaveText(["Not sure", "Full Detail", "Interior Only", "Exterior Only", "1-Step Paint Correction", "2-Step Paint Correction"]);
 });
+
+// Confirming new customers (decisions 0112 and 0113) -------------------------
+
+async function toReview(page) {
+  await toDateStep(page);
+  await page.locator("[data-day]").first().click();
+  await page.locator("[data-time]").first().click();
+  await cont(page, 5).click();
+  await details(page);
+  await cont(page, 6).click();
+}
+
+test("a new customer with text consent is told to check their phone", async ({ page }) => {
+  await toReview(page);
+  await page.locator("#consent-appointment").check();
+  await page.locator("[data-book]").click();
+  await expect(page.getByRole("heading", { name: "You're booked" })).toBeVisible();
+  await expect(page.locator("[data-confirmation]")).toHaveText(/^Check your phone\. We've texted you to confirm your appointment\. Reply YES to confirm it\. Your booking reference is /);
+});
+
+test("a new customer without text consent is told we'll call", async ({ page }) => {
+  await toReview(page);
+  await page.locator("[data-book]").click();
+  await expect(page.locator("[data-confirmation]")).toHaveText(/^We'll call you to confirm your appointment\. Your booking reference is /);
+});
+
+test("a known customer sees the confirmation as before", async ({ page, request }) => {
+  await fake(request, { known: true });
+  await toReview(page);
+  await page.locator("#consent-appointment").check();
+  await page.locator("[data-book]").click();
+  await expect(page.locator("[data-confirmation]")).toHaveText(/^We'll text you a confirmation\. Your booking reference is /);
+});
+
+test("a booking the server takes as a request says only that we'll confirm", async ({ page, request }) => {
+  await fake(request, { requested: true });
+  await toReview(page);
+  await page.locator("[data-book]").click();
+  await expect(page.getByRole("heading", { name: "Request received" })).toBeVisible();
+  await expect(page.locator("[data-requested]")).toHaveText(/^Thanks! We've got your request for this time\. We'll confirm it by text or call\. Your request number is R/);
+  await expect(page.locator("[data-requested]")).not.toContainText("already");
+  await expect(page.locator("[data-calendar-file]")).toHaveCount(0);
+  expect((await log(request)).filter((entry) => entry.to === "/offline/time-request")).toHaveLength(0);
+});

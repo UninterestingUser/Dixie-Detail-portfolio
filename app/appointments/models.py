@@ -56,6 +56,20 @@ class Appointment(models.Model):
         CUSTOMER = "customer", "Customer canceled"
         BUSINESS = "business", "Dixie Detail canceled"
 
+    class Confirmation(models.TextChoices):
+        CONFIRMED = "confirmed", "Confirmed"
+        UNCONFIRMED = "unconfirmed", "Unconfirmed"
+
+    class UnconfirmedReason(models.TextChoices):
+        TEXT_REPLY = "text_reply", "Waiting for a text reply"
+        CALL = "call", "Call to confirm"
+
+    class ConfirmedHow(models.TextChoices):
+        KNOWN_CUSTOMER = "known_customer", "Known customer"
+        CONTROL_APP = "control_app", "Booked in the control app"
+        TEXT_REPLY = "text_reply", "Text reply"
+        MANAGER = "manager", "Marked by a manager"
+
     customer = models.ForeignKey(
         "customers.Customer", on_delete=models.PROTECT, related_name="appointments"
     )
@@ -120,6 +134,22 @@ class Appointment(models.Model):
     canceled_by_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    # Whether the customer has confirmed the job (decision 0112). A website
+    # booking from a new customer starts unconfirmed, with the reason: a
+    # text reply is awaited (text consent given) or someone calls. It still
+    # holds its time. How and when it was confirmed are recorded; they are
+    # empty on jobs from before confirmations were recorded, which are all
+    # confirmed.
+    confirmation = models.CharField(
+        max_length=12, choices=Confirmation.choices, default=Confirmation.CONFIRMED, db_default=Confirmation.CONFIRMED
+    )
+    unconfirmed_reason = models.CharField(max_length=12, choices=UnconfirmedReason.choices, blank=True)
+    confirmed_how = models.CharField(max_length=16, choices=ConfirmedHow.choices, blank=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    confirmation_note = models.CharField(max_length=300, blank=True)
 
     history = HistoricalRecords()
 
@@ -129,6 +159,12 @@ class Appointment(models.Model):
 
     def __str__(self):
         return f"{self.customer} on {self.scheduled_start:%Y-%m-%d}"
+
+    @property
+    def is_unconfirmed(self):
+        """A booked job the customer hasn't confirmed yet. A completed or
+        canceled job is never shown as unconfirmed."""
+        return self.status == self.Status.BOOKED and self.confirmation == self.Confirmation.UNCONFIRMED
 
     @property
     def total_before_tax(self):

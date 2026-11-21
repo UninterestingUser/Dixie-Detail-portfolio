@@ -42,6 +42,7 @@ urlpatterns = [
     path("appointments/<int:pk>/price/", appointment_views.appointment_price, name="appointment-price"),
     path("appointments/<int:pk>/status/", appointment_views.appointment_status, name="appointment-status"),
     path("appointments/<int:pk>/cancel/", appointment_views.appointment_cancel, name="appointment-cancel"),
+    path("appointments/<int:pk>/confirm/", appointment_views.appointment_confirm, name="appointment-confirm"),
     path("calendar-flags/<int:pk>/", calendar_views.calendar_flag, name="calendar-flag"),
     # Website requests: quote requests with photos, offline requests and a
     # second vehicle the same day; the review queue for quiet matching.

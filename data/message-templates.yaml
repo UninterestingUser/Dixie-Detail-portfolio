@@ -1,7 +1,7 @@
 meta:
   title: Text message templates
   summary: Seed wording for each automated text, the consent each one requires, and the automatic STOP, HELP and START replies.
-  updated: 2026-11-18
+  updated: 2026-11-21
   status: planned
   explained_in: docs/reference/text-messages.md
   note: Seed wording for Phase 4. The owner edits live templates in the control app. Every message starts with "Dixie Detail:". Placeholders are in braces. Every text is about a booked job and needs appointment-text consent, the one consent collected (decision 0108); there are no promotional texts.
@@ -11,6 +11,10 @@ templates:
     consent: appointment
     sent: Immediately after booking
     text: "Dixie Detail: Your {service} is booked for {date} at {arrival_time} at {address}. Reply here with questions. Reply STOP to opt out, HELP for help."
+  - key: confirmation_request
+    consent: appointment
+    sent: Queued at booking for a new customer's website booking with text consent (decision 0112); sent by Phase 4's sender. A reply of YES, Y or CONFIRM confirms the job.
+    text: "Dixie Detail: Please confirm your {service} on {day_and_date} at {time}. Reply YES to confirm, or call or text (423) 380-9120 to change it. Reply STOP to opt out."
   - key: reminder
     consent: appointment
     sent: The day before the job
