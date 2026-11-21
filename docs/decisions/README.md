@@ -134,3 +134,4 @@ Records 0001 to 0028 were first kept as rows in a single table (`docs/decisions.
 | [0108](0108-one-text-consent.md) | 2026-11-18 | texting | One text consent, for texts about a booked job, including one review request | accepted |
 | [0109](0109-reviews-kept-in-the-control-app.md) | 2026-11-19 | website | Website reviews are kept in the control app and read by the site's build through the public API | accepted |
 | [0110](0110-one-website-list-of-payment-methods.md) | 2026-11-19 | payments | The website offers one list of payment methods, one entry per method, with one Cash App | accepted |
+| [0111](0111-portfolio-from-an-allowlist.md) | 2026-11-21 | repository | The public portfolio copy is built from an include list, without operations docs or restricted files | accepted |

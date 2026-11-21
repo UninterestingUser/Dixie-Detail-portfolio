@@ -4,7 +4,7 @@ The booking, scheduling, pricing and back-office system for Dixie Detail LLC, a 
 
 **Status (November 2026):** Phase 0 (foundations), Phase 1 (core data and control app), Phase 2 (vehicle catalog) and Phase 3 (scheduling and website) are done. The home server runs the database and the control app, with the pricebook, the pricing engine, the imported job history, screens for customers, jobs, staff and the pricebook, a vehicle catalog from EPA and NHTSA data that sets each vehicle's size-based class and refreshes monthly, scheduling settings with one availability check, the Google Calendar sync, the public API, and the new website with live estimates and online booking on a staging address. Phase 4 (texts, alerts and payments) is next; customers keep booking through Setmore until the Phase 5 launch. See [docs/overview/roadmap.md](docs/overview/roadmap.md).
 
-**About the public copy.** The working repository is private. A public copy is published from it with [tools/publish-portfolio.sh](tools/publish-portfolio.sh), which rewrites every commit to replace server addresses and a few private details with placeholders. Everything else, including the full commit history, is as built.
+**About the public copy.** The working repository is private. A public copy is published from it with [tools/publish-portfolio.sh](tools/publish-portfolio.sh), which publishes only the paths on an include list ([data/portfolio-include.txt](data/portfolio-include.txt)) and rewrites every commit to replace server addresses and a few private details with placeholders. The operations runbooks and the documents marked restricted are left out of every commit. Everything else, including the commit history, is as built.
 
 ## How this was built
 

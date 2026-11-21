@@ -16,5 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      # For tools/test-portfolio.sh, which run-tests.sh runs first.
+      - run: sudo apt-get update -q && sudo apt-get install -y -q git-filter-repo
       # The same command as on the workstation; Podman is on the runner image.
       - run: tools/run-tests.sh

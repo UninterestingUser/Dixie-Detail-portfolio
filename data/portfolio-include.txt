@@ -1,0 +1,54 @@
+# The paths the public portfolio copy holds (decision 0111).
+#
+# tools/publish-portfolio.sh reads this file as it is in the commit being
+# published, keeps the paths below in every commit of the public history, and
+# removes every other path. Paths only: never a secret or a server value.
+#
+# A line ending in / is a folder and covers everything under it; any other
+# line is one file. No wildcards. Lines starting with # are comments.
+#
+# Always left out, even inside a folder listed here:
+#   - everything under docs/operations/;
+#   - every file whose header says visibility: restricted;
+#   - everything in the [exclude] section.
+# See docs/operations/publishing-the-portfolio.md.
+
+[include]
+# The system itself.
+app/
+site/
+# The website before it moved to site/ in Phase 3, Step 6, so older commits
+# keep it.
+website/
+ops/
+tools/
+caddy/
+compose.yaml
+.env.example
+.gitignore
+.github/workflows/
+
+# The front page and the notes for AI assistants.
+README.md
+CLAUDE.md
+llms.txt
+
+# The documentation chosen for the portfolio. docs/operations/ is never
+# published.
+docs/README.md
+docs/CONVENTIONS.md
+docs/overview/
+docs/architecture/
+docs/reference/
+docs/guides/
+docs/decisions/
+docs/templates/
+
+# The data files.
+data/
+
+[exclude]
+# Third-party renders the business shows on its own site but holds no
+# license to redistribute (decision 0104).
+site/public/images/vehicle-classes/
+website/public/images/vehicle-classes/
