@@ -15,7 +15,9 @@ import { parse } from "yaml";
 import { setting } from "./settings.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-// site/src/lib -> the repository's data/ folder.
+// The repository's data/ folder: set by astro.config.mjs for a build (the
+// bundled pages can't find it from here), or found from this file when it is
+// run unbundled, as by the unit tests.
 export const DATA_DIR = process.env.DIXIE_DATA_DIR || path.resolve(here, "../../../data");
 
 export const API_BASE = setting("API_BASE").replace(/\/+$/, "");

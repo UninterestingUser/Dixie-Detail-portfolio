@@ -149,6 +149,7 @@ website_build_settings:
   - name: NODE_VERSION
     example: "22"
     purpose: The Node.js version Cloudflare builds with; matches site/.nvmrc
+    note: Astro 7 needs 22.23.4 or later (decision 0119); the build log names the version used
   - name: PUBLIC_OFFLINE_BASE, PUBLIC_TURNSTILE_SCRIPT, PUBLIC_PLACES_ENDPOINT
     purpose: Left unset on Cloudflare; the test build points them at local fakes (site/tests/build-for-tests.mjs)
   - name: QUO_PHONE_NUMBER

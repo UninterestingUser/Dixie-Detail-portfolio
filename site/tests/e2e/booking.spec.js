@@ -843,8 +843,12 @@ test("a used-up lookup session is replaced at once, without the customer noticin
   await address(page, "100 Example", "100 Example St NW");
   await expect(page.locator("[data-in-area]")).toHaveText("In our service area");
   await address(page, "100 Example", "100 Example St NW");
+  // "In our service area" is still shown from the first lookup, so wait for
+  // the second session in the log instead of for the page.
+  await expect.poll(async () => (await log(request)).filter((entry) => entry.to === "addresses/sessions").length).toBe(2);
   await expect(page.locator("[data-in-area]")).toHaveText("In our service area");
-  expect((await log(request)).filter((entry) => entry.to === "addresses/sessions")).toHaveLength(2);
+  const lookups = (await log(request)).filter((entry) => entry.to === "addresses");
+  expect(lookups.at(-1).body.lookup_session).not.toBe(lookups[0].body.lookup_session);
 });
 
 test("once the day's public lookups are used up, the address is typed and the booking becomes a request", async ({ page, request }) => {
