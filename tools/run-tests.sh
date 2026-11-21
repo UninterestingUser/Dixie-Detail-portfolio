@@ -7,7 +7,9 @@
 # (tools/test-bws.sh, which needs jq), and their restic and failure-reporting
 # helpers and the backup's retries with a fake restic (tools/test-restic.sh),
 # and the portfolio publisher against throwaway repositories
-# (tools/test-portfolio.sh, which needs git filter-repo and python3).
+# (tools/test-portfolio.sh, which needs git filter-repo and python3), and the
+# offline Worker's deploy script with a fake wrangler (tools/test-worker-deploy.sh,
+# which needs node).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 # Uses Podman, or Docker where Podman is not installed. CONTAINER_ENGINE=docker
@@ -31,6 +33,15 @@ echo "run-tests: testing the restic and failure helpers (ops/lib/restic.sh, ops/
 "$repo/tools/test-restic.sh" >/dev/null || { "$repo/tools/test-restic.sh"; exit 1; }
 echo "run-tests: testing the portfolio publisher (tools/publish-portfolio.sh)"
 "$repo/tools/test-portfolio.sh" >/dev/null || { "$repo/tools/test-portfolio.sh"; exit 1; }
+
+echo "run-tests: testing the offline Worker's deploy script (site/workers/offline-replay/deploy.sh)"
+"$repo/tools/test-worker-deploy.sh" >/dev/null || { "$repo/tools/test-worker-deploy.sh"; exit 1; }
+
+# The test image must use the production image's base (Dependabot updates
+# both in one pull request, decision 0118).
+base() { grep -m1 -oE '^FROM [^[:space:]]+' "$1" | sed -E 's|^FROM (docker\.io/library/)?||'; }
+[[ $(base "$repo/app/Dockerfile") == "$(base "$repo/app/Dockerfile.test")" ]] ||
+	{ echo "run-tests: FAIL: app/Dockerfile and app/Dockerfile.test use different base images" >&2; exit 1; }
 
 echo "run-tests: building the test image"
 "$engine" build -q -t dixie-app-test:local -f "$repo/app/Dockerfile.test" "$repo/app" >/dev/null

@@ -5,9 +5,11 @@
 #   sudo /srv/dixie-detail/ops/restore-test.sh
 #
 # restic writes the dump to a private folder in /dev/shm, which is in
-# memory, and the container reads it from there through a read-only mount;
-# the container's data directory is in memory too, so no plaintext copy
-# lands on disk. The container has no network, and it and the folder are
+# memory, and pg_restore in the container reads it on its standard input, so
+# the folder stays root's; the container's data directory is in memory too,
+# so no plaintext copy lands on disk. The container runs as the image's
+# postgres user, like the stack's database, so gosu is never used (decision
+# 0117). The container has no network, and it and the folder are
 # removed at the end, pass or fail. restic never writes into a pipe: a
 # reader that stops early (pg_restore --list reads only the archive's table
 # of contents) would cut it off and leave a stale lock in the repository.
@@ -58,10 +60,11 @@ echo "Downloading snapshot $snap_id into memory"
 restic_dump "$snap_id" "$SNAPSHOT_FILE" "$work/dixie-detail.dump"
 echo "Downloaded $(du -h "$work/dixie-detail.dump" | cut -f1)"
 
-# Throwaway PostgreSQL: same image as the stack, no network, data in memory.
+# Throwaway PostgreSQL: same image and user as the stack, no network, data
+# in memory.
 image=$(docker compose config --format json | jq -r .services.db.image)
-docker run --detach --rm --name "$container" --network none \
-	--tmpfs /var/lib/postgresql --volume "$work:/restore:ro" \
+docker run --detach --rm --name "$container" --network none --user 999:999 \
+	--tmpfs /var/lib/postgresql:mode=1777 \
 	-e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=restore_test \
 	"$image" >/dev/null
 # TCP only answers once initialization is over and the real server is up.
@@ -75,11 +78,11 @@ echo "Restoring into $image"
 # Count TABLE entries only. Each table also has a "TABLE DATA" entry, whose
 # fourth field is TABLE too, so match on the fifth field not being DATA (in a
 # TABLE entry the fifth field is the schema).
-toc=$(docker exec "$container" pg_restore --list /restore/dixie-detail.dump) ||
+toc=$(docker exec -i "$container" pg_restore --list <"$work/dixie-detail.dump") ||
 	fail "pg_restore could not read the dump's table of contents"
 expected=$(awk '$4 == "TABLE" && $5 != "DATA"' <<<"$toc" | wc -l)
-docker exec "$container" pg_restore -U postgres -d restore_test --no-owner --no-privileges --exit-on-error \
-	/restore/dixie-detail.dump ||
+docker exec -i "$container" pg_restore -U postgres -d restore_test --no-owner --no-privileges --exit-on-error \
+	<"$work/dixie-detail.dump" ||
 	fail "pg_restore reported an error"
 
 restored=$(psql_ -c "SELECT count(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")

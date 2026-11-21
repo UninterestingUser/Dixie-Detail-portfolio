@@ -2,7 +2,7 @@ name: Docs
 
 on:
   pull_request:
-    paths: ["docs/**", "data/**", "README.md", "CLAUDE.md", "llms.txt", ".env.example", "tools/check_docs.py"]
+    paths: ["docs/**", "data/**", "README.md", "CLAUDE.md", "llms.txt", ".env.example", "tools/check_docs.py", ".github/workflows/docs.yml"]
   push:
     branches: [main]
 
