@@ -27,6 +27,8 @@ compose.yaml
 .env.example
 .gitignore
 .github/workflows/
+# Not .github/dependabot.yml: in the public copy it would open update pull
+# requests against a repository each publish rewrites (decision 0118).
 
 # The front page and the notes for AI assistants.
 README.md

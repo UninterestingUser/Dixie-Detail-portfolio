@@ -1,0 +1,186 @@
+meta:
+  title: Maintenance list
+  summary: Each component the system runs on, with its pinned version, where it is pinned, the upstream end-of-life date, who watches it, and how to update and test it.
+  updated: 2026-11-21
+  status: current
+  explained_in: docs/architecture/keeping-components-current.md
+  # end_of_life: a date is the upstream end of support for the pinned
+  # version; "none published" means upstream gives no date, and text
+  # describes the policy instead. Dates were checked on the updated date.
+  # watched_by: dependabot (opens the pull requests, decision 0118),
+  # grok-bot (the owner's Grok Bot, kept outside this repository, for
+  # news Dependabot can't read) or owner. Every major upgrade is the
+  # owner's, planned, whoever watches the component.
+  # pinned: for a component Dependabot watches, the version line; the exact
+  # version is in the file pinned_in names, which Dependabot keeps current.
+  # Change this list when a line changes (a planned upgrade, or a major
+  # update merged), in the same pull request.
+
+components:
+  - name: Ubuntu Server release
+    pinned: Ubuntu 24.04 LTS
+    pinned_in: the server itself; the workflows' runs-on (ubuntu-24.04) match it
+    end_of_life: 2029-04 (standard security maintenance)
+    watched_by: grok-bot
+    update: A release upgrade is planned work. Before moving to 26.04, check its timeout command first (docs/operations/troubleshooting.md, the uutils coreutils entry), then move the workflows' runs-on in the same pull request.
+    test: tools/run-tests.sh on the new release, then the restore test and the gosu test on the server.
+
+  - name: Linux kernel
+    pinned: the GRUB default, set by title
+    pinned_in: GRUB on the server (docs/operations/updating-the-kernel.md)
+    end_of_life: follows the Ubuntu kernel lifecycle (ubuntu.com/kernel/lifecycle) for the 24.04 kernel track in use
+    watched_by: owner
+    update: Boot each new kernel once with grub-reboot, and make it the default only after the gosu test passes (decision 0088).
+    test: ops/gosu-test.sh, then the stack's status and the control app over Tailscale.
+
+  - name: Docker Engine and Docker Compose
+    pinned: not pinned; the server's packages (Ubuntu's, or Docker's own if Phase 0 needed them)
+    pinned_in: apt on the server
+    end_of_life: none published (Docker Engine is maintained by the Moby project, with no list of supported versions)
+    watched_by: grok-bot
+    update: sudo apt update && sudo apt upgrade at a quiet time, then sudo systemctl restart dixie-stack.
+    test: docker compose ps shows every service up and db and app healthy; the public health check stays green.
+
+  - name: PostgreSQL major version
+    pinned: "18 (the postgres:18.x-trixie image)"
+    pinned_in: compose.yaml (db); tools/run-tests.sh and the ops scripts read the same tag
+    end_of_life: 2030-11-14
+    watched_by: dependabot
+    update: Minor releases come in Dependabot's compose pull request. A major upgrade is planned work, a dump and restore into the new version (never a new tag on the old volume).
+    test: tools/run-tests.sh (it starts the compose tag), then after the deploy the nightly backup and the restore test.
+
+  - name: Python
+    pinned: "3.13 (the python:3.13.x-slim-trixie image)"
+    pinned_in: app/Dockerfile and app/Dockerfile.test (tools/run-tests.sh checks they match)
+    end_of_life: 2029-10
+    watched_by: dependabot
+    update: Dependabot sends patch releases only; 3.14 and later are planned upgrades.
+    test: tools/run-tests.sh.
+
+  - name: Django
+    pinned: "5.2 LTS"
+    pinned_in: app/requirements.txt
+    end_of_life: 2028-04
+    watched_by: dependabot
+    update: Patch releases in Dependabot's pip pull request. The next LTS is a planned upgrade, before 2028-04.
+    test: tools/run-tests.sh.
+
+  - name: gunicorn
+    pinned: "26.x"
+    pinned_in: app/requirements.txt
+    end_of_life: none published
+    watched_by: dependabot
+    update: Dependabot's pip pull request; a major update comes on its own.
+    test: tools/run-tests.sh, then after the deploy the app's healthcheck and the control app.
+
+  - name: Pillow and libheif
+    pinned: "Pillow 13.x (from 12.x in decision 0120), pillow-heif 1.x (its wheels include libheif)"
+    pinned_in: app/requirements.txt
+    end_of_life: none published; fixes go to the newest release
+    watched_by: dependabot
+    update: Dependabot's pip pull request; a major update comes on its own. They read customers' quote request photos, so take their security updates promptly, and keep the upload limited to the four accepted decoders (decision 0120).
+    test: tools/run-tests.sh (the quote request photo tests read JPEG and HEIC photos).
+
+  - name: Node on Cloudflare Pages
+    pinned: "22"
+    pinned_in: site/.nvmrc (the Site workflow), and the Pages build setting NODE_VERSION (data/configuration.yaml)
+    end_of_life: 2027-04-30
+    watched_by: grok-bot
+    update: Planned upgrade before 2027-04-30. Change site/.nvmrc, the engines line in site/package.json and NODE_VERSION on the Pages project together.
+    test: The Site workflow, then a staging build and a test booking (docs/guides/previewing-and-deploying-the-website.md).
+
+  - name: Astro
+    pinned: "7.x (from 5.x in decision 0119)"
+    pinned_in: site/package.json and site/package-lock.json
+    end_of_life: none published; Astro gives security fixes to the previous major version only
+    watched_by: dependabot
+    update: Minor and patch releases in Dependabot's npm pull request; a major update comes on its own and follows Astro's upgrade guide.
+    test: The Site workflow (build, price check, unit, browser and Lighthouse tests).
+
+  - name: Offline replay Worker's compatibility date
+    pinned: "2026-11-01"
+    pinned_in: site/workers/offline-replay/wrangler.toml (compatibility_date)
+    end_of_life: none; Cloudflare keeps an old compatibility date working
+    watched_by: owner
+    update: Move the date forward only for a runtime change the Worker needs, then deploy with site/workers/offline-replay/deploy.sh.
+    test: npm run test:unit in site/, deploy.sh --dry-run, then a staging offline request (the website guide).
+
+  - name: Wrangler
+    pinned: "4.48.0"
+    pinned_in: site/workers/offline-replay/deploy.sh and the commands in the website guide and wrangler.toml
+    end_of_life: none published
+    watched_by: owner
+    update: Change every wrangler@ version in one pull request (grep -rn "wrangler@" site docs).
+    test: tools/test-worker-deploy.sh, then deploy.sh --dry-run.
+
+  - name: cloudflared
+    pinned: "the release in compose.yaml (2026.10.2 on 2026-11-21)"
+    pinned_in: compose.yaml (cloudflared)
+    end_of_life: one year after each release (about 2027-10 for 2026.10.2)
+    watched_by: dependabot
+    update: Dependabot's compose pull request; a new year's version comes on its own, as its version is the year.
+    test: After the deploy, docker compose ps and the public health check.
+
+  - name: Caddy
+    pinned: "2.x (the caddy:2.x-alpine image)"
+    pinned_in: compose.yaml (caddy)
+    end_of_life: none published; fixes go to the newest release
+    watched_by: dependabot
+    update: Dependabot's compose pull request.
+    test: After the deploy, the control app over Tailscale and the public health check.
+
+  - name: restic
+    pinned: not pinned; Ubuntu's package (0.17 or later needed, for restic dump --target)
+    pinned_in: apt on the server
+    end_of_life: none published; fixes go to the newest release
+    watched_by: grok-bot
+    update: apt, with the other updates.
+    test: The next nightly backup's Healthchecks ping, then the restore test.
+
+  - name: rclone
+    pinned: not pinned; Ubuntu's package
+    pinned_in: apt on the server
+    end_of_life: none published; kept until it is retired from the backup
+    watched_by: grok-bot
+    update: apt, with the other updates.
+    test: The next nightly backup's Healthchecks ping, then the restore test.
+
+  - name: Bitwarden Secrets Manager CLI (bws)
+    pinned: not pinned; installed from Bitwarden's Linux download
+    pinned_in: the server's bws binary
+    end_of_life: none published
+    watched_by: grok-bot
+    update: Download the new release as in the Phase 0 runbook's Step 2, replacing the binary.
+    test: tools/test-bws.sh, then sudo systemctl restart dixie-stack and docker compose ps.
+
+  - name: Tailscale
+    pinned: not pinned; the server's package
+    pinned_in: apt on the server, and each staff device
+    end_of_life: none published
+    watched_by: grok-bot
+    update: apt on the server; the app stores on the phones.
+    test: The control app opens over Tailscale, and tailscale serve status still shows port 8000.
+
+  - name: apcupsd
+    pinned: not pinned; Ubuntu's package
+    pinned_in: apt on the server
+    end_of_life: none published; the last upstream release is 3.14.14, from 2016
+    watched_by: grok-bot
+    update: apt, with the other updates; it still needs restarting after a configuration change.
+    test: apcaccess status shows STATUS ONLINE and the shutdown levels.
+
+  - name: The NUC's firmware
+    pinned: the last firmware its maker released
+    pinned_in: the NUC
+    end_of_life: no longer updated by its maker
+    watched_by: owner
+    update: None to install.
+    test: None.
+
+  - name: Google Maps Platform APIs
+    pinned: Places API (New) (Autocomplete in the browser, Place Details with Essentials fields, Text Search with place ids only), Routes API, Maps Embed API
+    pinned_in: app/geo/google.py, app/geo/drive.py, and the site's address field and map
+    end_of_life: none announced for these APIs; Google announces deprecations on each API's page and by email to the billing account
+    watched_by: grok-bot
+    update: Follow Google's migration guide in a pull request, with the call counts and caps (decision 0091) checked afterwards.
+    test: tools/run-tests.sh (Google is faked), then api_smoke_test on the server and a staging booking.

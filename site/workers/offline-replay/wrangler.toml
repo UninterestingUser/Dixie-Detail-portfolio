@@ -1,6 +1,8 @@
 # The scheduled Worker that replays held offline requests
-# (docs/guides/previewing-and-deploying-the-website.md). Deploy from site/:
-#   npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml
+# (docs/guides/previewing-and-deploying-the-website.md). Deploy it with the
+# script beside this file, which looks the KV namespace id up in the account
+# (decision 0116), never with `wrangler deploy` on this file:
+#   site/workers/offline-replay/deploy.sh
 # The signing key is a Worker secret. Wrangler asks for it; paste it from the
 # Bitwarden web vault, so it never touches disk:
 #   npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml
@@ -19,9 +21,10 @@ crons = ["*/5 * * * *"]
 [vars]
 API_BASE = "https://api.dixiedetail.com/api/public/v1"
 
-# The same KV namespace the Pages project binds as OFFLINE_REQUESTS. Its id
-# is printed by `npx wrangler@4.48.0 kv namespace create OFFLINE_REQUESTS`;
-# it names the namespace, it is not a secret.
+# The same KV namespace the Pages project binds as OFFLINE_REQUESTS. The id
+# stays this placeholder: deploy.sh finds the namespace titled
+# OFFLINE_REQUESTS and deploys with its id, so no account value is ever
+# written here or left as a local change (decision 0116).
 [[kv_namespaces]]
 binding = "OFFLINE_REQUESTS"
 id = "SET_TO_THE_OFFLINE_REQUESTS_NAMESPACE_ID"

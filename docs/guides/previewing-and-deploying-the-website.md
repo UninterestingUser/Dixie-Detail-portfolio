@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-21
 tags: [website, cloudflare, deploy, preview, guide, phase-3]
-related: [docs/decisions/0114-offline-requests-kept-whatever-they-hold.md, docs/decisions/0115-address-lookup-sessions-and-a-public-share.md, docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
+related: [docs/decisions/0116-worker-deploys-look-up-the-namespace.md, site/workers/offline-replay/deploy.sh, docs/decisions/0114-offline-requests-kept-whatever-they-hold.md, docs/decisions/0115-address-lookup-sessions-and-a-public-share.md, docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
 ---
 
 # Previewing and deploying the website
@@ -47,7 +47,7 @@ The fake API must answer with the real API's shapes, recorded in [data/public-ap
 
 Do these in order. They need the Cloudflare account that holds dixiedetail.com, the Bitwarden web vault, and the Turnstile and Google Cloud consoles.
 
-1. **The KV namespace for held requests.** On the workstation, from `site/`: `npx wrangler@4.48.0 login`, then `npx wrangler@4.48.0 kv namespace create OFFLINE_REQUESTS`. Put the id it prints in `site/workers/offline-replay/wrangler.toml` and commit it; it names the namespace and is not a secret.
+1. **The KV namespace for held requests.** On the workstation, from `site/`: `npx wrangler@4.48.0 login`, then `npx wrangler@4.48.0 kv namespace create OFFLINE_REQUESTS`. Leave `site/workers/offline-replay/wrangler.toml` as it is: its namespace id is a placeholder, and the Worker's deploy script looks the real id up by the namespace's title, `OFFLINE_REQUESTS` ([decision 0116](../decisions/0116-worker-deploys-look-up-the-namespace.md)). Keep that title, and don't make a second namespace with it.
 2. **The Pages project.** In the Cloudflare dashboard, Workers & Pages, Create, Pages, Connect to Git. Pick this repository and name the project `dixie-detail`, which gives the staging address `https://dixie-detail.pages.dev`; if that name is taken, use the address Cloudflare gives instead, everywhere below. Production branch `main`, root directory `site`, build command `npm run build`, output directory `dist`.
 3. **Its build settings** (Settings, Variables and Secrets, for Production and Preview), all listed under `website_build_settings` in [data/configuration.yaml](../../data/configuration.yaml). Add each as type **Text**, not Secret: they are public, and the build can't read a Secret. A build with `API_BASE`, `PUBLIC_TURNSTILE_SITE_KEY` or `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` empty stops with a message naming it:
    - `API_BASE` = `https://api.dixiedetail.com/api/public/v1`;
@@ -55,7 +55,7 @@ Do these in order. They need the Cloudflare account that holds dixiedetail.com, 
    - `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` = the browser key;
    - `NODE_VERSION` = `22`. Astro 7 needs Node 22.23.4 or later; the build log's first lines name the version Cloudflare used ([decision 0119](../decisions/0119-the-website-moves-to-astro-7.md)).
 4. **The offline piece's bindings** on the same project. Under Settings, Bindings, add a KV namespace binding named `OFFLINE_REQUESTS`, pointing to the namespace from step 1. Under Variables and Secrets, add `API_BASE` as above. Add two secrets, `TURNSTILE_SECRET_KEY` and `OFFLINE_REQUESTS_SIGNING_KEY`, as type **Secret**, the only two on this project, each pasted from the Bitwarden web vault into the dashboard, so neither touches disk. Then redeploy once, so the function picks them up.
-5. **The replay Worker.** From `site/`: `npx wrangler@4.48.0 deploy --config workers/offline-replay/wrangler.toml`, then `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. Then `npx wrangler@4.48.0 secret put HEALTHCHECKS_OFFLINE_URL --config workers/offline-replay/wrangler.toml` and paste the offline requests check's ping address from Bitwarden the same way ([monitoring.md](../operations/monitoring.md#the-offline-requests-check), [decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). It then runs every 5 minutes and reports each run to that check.
+5. **The replay Worker.** From the repository: `site/workers/offline-replay/deploy.sh` (see [Deploying the replay Worker](#deploying-the-replay-worker)). Then, from `site/`, `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. Then `npx wrangler@4.48.0 secret put HEALTHCHECKS_OFFLINE_URL --config workers/offline-replay/wrangler.toml` and paste the offline requests check's ping address from Bitwarden the same way ([monitoring.md](../operations/monitoring.md#the-offline-requests-check), [decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). It then runs every 5 minutes and reports each run to that check.
 6. **The deploy hook.** On the Pages project, Settings, Builds, Deploy hooks: add one named "Pricebook" for branch `main`. Copy its URL into a new Bitwarden secret `CLOUDFLARE_PAGES_DEPLOY_HOOK` in the "Dixie Detail" project, then restart the stack on the server so the app gets it: `sudo systemctl restart dixie-stack.service`.
 7. **Let the staging site call the API.** In `/srv/dixie-detail/.env` on the server, add the staging address to `PUBLIC_API_CORS_ORIGINS`, such as `https://dixiedetail.com,https://www.dixiedetail.com,https://dixie-detail.pages.dev`, then restart the stack. Each entry is `https://` and the host name only, with no trailing slash and no path. The app trims a stray slash or space, and refuses to start, naming the entry, if one is still not a bare origin. The app's log shows the list in use: `docker compose logs app | grep "CORS origins"`. Then check from the workstation:
 
@@ -93,11 +93,25 @@ If a send fails instead, the form says so with the phone number and keeps what w
 Requests the Worker hasn't delivered yet are in the KV namespace under `pending:`. The server keeps every signed request it can read, listing any problem for the owner ([decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)), so a refusal is rare: a body that isn't JSON or has no request id. Any the server refused are kept under `refused:` with the server's answer, so none is lost, and the offline requests check in Healthchecks fails until they are dealt with:
 
 ```bash
-npx wrangler@4.48.0 kv key list --namespace-id=<the namespace id> --prefix=refused:
-npx wrangler@4.48.0 kv key get --namespace-id=<the namespace id> "refused:time-request:<request id>"
+id=$(workers/offline-replay/deploy.sh --id)     # from site/; looks the namespace up by its title
+npx wrangler@4.48.0 kv key list --namespace-id="$id" --prefix=refused:
+npx wrangler@4.48.0 kv key get --namespace-id="$id" "refused:time-request:<request id>"
 ```
 
-A refused request needs the owner to contact the customer from what it holds; then delete the key with `npx wrangler@4.48.0 kv key delete --namespace-id=<the namespace id> "refused:time-request:<request id>"`, and the check turns green on the next run. The Worker's own log (Workers & Pages, `dixie-offline-replay`, Logs) shows each run's counts, never a request. A line saying the server refused the signature means the two copies of `OFFLINE_REQUESTS_SIGNING_KEY` on Cloudflare don't match Bitwarden: put them there again, as in steps 4 and 5.
+A refused request needs the owner to contact the customer from what it holds; then delete the key with `npx wrangler@4.48.0 kv key delete --namespace-id="$id" "refused:time-request:<request id>"`, and the check turns green on the next run. The Worker's own log (Workers & Pages, `dixie-offline-replay`, Logs) shows each run's counts, never a request. A line saying the server refused the signature means the two copies of `OFFLINE_REQUESTS_SIGNING_KEY` on Cloudflare don't match Bitwarden: put them there again, as in steps 4 and 5.
+
+## Deploying the replay Worker
+
+Deploy the Worker with its script, from anywhere in the repository on the workstation, after `npx wrangler@4.48.0 login`:
+
+```bash
+site/workers/offline-replay/deploy.sh --dry-run   # shows the bindings, uploads nothing
+site/workers/offline-replay/deploy.sh             # deploys
+```
+
+`wrangler.toml` keeps a placeholder for the KV namespace id. The script asks the Cloudflare account for the namespace titled `OFFLINE_REQUESTS`, writes a copy of `wrangler.toml` with the real id beside it (git ignores it), deploys with the copy and removes it. So the id is never committed or left as a local change, and nothing has to be edited before or after a deploy ([decision 0116](../decisions/0116-worker-deploys-look-up-the-namespace.md)). It stops with a message, and deploys nothing, when wrangler isn't signed in, when no namespace or more than one has that title, or when `wrangler.toml` holds a real id instead of the placeholder. `deploy.sh --id` prints the id only, for the `kv key` commands in [Checking the offline piece](#checking-the-offline-piece). Its tests run with `tools/run-tests.sh` (`tools/test-worker-deploy.sh`, with a fake wrangler).
+
+Deploy again after any change to the Worker, its shared code in `site/shared/offline.js`, or `wrangler.toml`. The Worker's secrets stay in place across deploys.
 
 ## At the Phase 5 launch
 
