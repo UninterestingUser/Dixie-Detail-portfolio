@@ -1,7 +1,7 @@
 cryptography==50.0.2
 django-simple-history==3.13.0
 Django==5.2.19
-gunicorn==26.2.0
+gunicorn==27.0.1
 pillow-heif==1.8.1
 Pillow==13.0.0
 psycopg[binary]==3.3.9
