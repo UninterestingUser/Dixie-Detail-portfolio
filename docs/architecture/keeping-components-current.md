@@ -6,7 +6,7 @@ visibility: internal
 status: current
 updated: 2026-11-22
 tags: [maintenance, dependencies, dependabot, upgrades]
-related: [data/maintenance.yaml, .github/dependabot.yml, docs/decisions/0118-dependabot-and-a-maintenance-list.md, docs/decisions/0117-hardened-containers-and-the-database-without-gosu.md, docs/operations/deploying-changes.md, docs/operations/updating-the-kernel.md]
+related: [data/maintenance.yaml, .github/dependabot.yml, docs/decisions/0118-dependabot-and-a-maintenance-list.md, docs/decisions/0117-hardened-containers-and-the-database-without-gosu.md, docs/operations/deploying-changes.md, docs/operations/updating-the-kernel.md, docs/decisions/0121-ubuntu-26-04-gnu-timeout-and-node-24.md, docs/decisions/0122-dependabot-pull-requests-reviewed-and-merged-after-launch.md]
 ---
 
 # Keeping components current
@@ -40,7 +40,17 @@ The list names the machines by role. The production host runs the stack; the bac
 - **Minor and patch updates** for each ecosystem come together in one pull request, such as "pip-minor-and-patch".
 - **A major update** of anything else comes as its own pull request, so it can be read on its own.
 - **Security updates** come as they're published, each on its own. They need Dependabot security updates switched on in the repository's settings (Code security).
-- **Every pull request runs CI** like any other: the Tests workflow (`tools/run-tests.sh`) on all of them, and the Site workflow when `site/` changes. Merge once the checks pass.
+- **Every pull request runs CI** like any other: the Tests workflow (`tools/run-tests.sh`, and the ops-script tests on Ubuntu 26.04) on all of them, and the Site workflow when `site/` changes.
+
+### Who reviews and merges Dependabot's pull requests
+
+The maintenance assistant reviews each Dependabot pull request as it opens: what changed upstream, whether it is a minor, patch, security or major update, and whether it touches anything beyond the dependency files (decision 0122).
+
+- **Until launch,** the owner merges every Dependabot pull request, after the assistant's review.
+- **After launch,** the assistant may merge a Dependabot **minor, patch or security update** once **every check has passed**.
+- **Always the owner's:** a **major update**, a pull request that **changes more than dependency files** (`app/requirements*.txt`, `site/package.json` and `site/package-lock.json`, the image tags in `compose.yaml` and the Dockerfiles, the actions' versions in the workflows), and **every deploy**. A merged update that changes the server waits for the owner's deploy.
+
+**The GitHub setting.** GitHub can refuse a merge until the checks pass: a branch protection rule or ruleset on `main` with "Require status checks to pass" (the `test`, `ops-on-26-04`, `site` and `check` jobs). On a private repository that needs a paid GitHub plan (Pro, Team or Enterprise); this account's plan refuses it, so `main` has no such rule. The rule above stands without it: the assistant merges only after it has read every check's result as passed (`gh pr checks`), never with a check pending, failed or skipped for a reason it can't explain. If the plan changes, turn the setting on and the rule is enforced as well as followed.
 
 ### Updates that reach the server
 
@@ -53,8 +63,8 @@ Dependabot never proposes a major version of Django, PostgreSQL, Python or Node.
 - **PostgreSQL** moves to a new major version by a dump and restore into a new volume, never by changing the image tag on the old one, which the new version can't read.
 - **Python** moves in both Dockerfiles together; Dependabot sends its patch releases only.
 - **Django** moves from one LTS release to the next.
-- **Node** moves in `site/.nvmrc`, the `engines` line in `site/package.json` and the Pages build setting `NODE_VERSION` together.
+- **Node** moves in `site/.nvmrc`, the `engines` line in `site/package.json` and the Pages build setting `NODE_VERSION` together. The site moved from 22 to 24 LTS in decision 0121.
 
 ## What Dependabot can't see
 
-The hosts' packages (the Ubuntu release, the kernel, Docker, restic, rclone, Tailscale, apcupsd), the bws CLI, the firmware, Node on Pages, Wrangler, the Worker's compatibility date and the Google Maps APIs are not in any file Dependabot reads. Their entries in the maintenance list name who watches them. Ubuntu's security updates install themselves on the current server with `unattended-upgrades`. A new kernel is tested before it becomes the default ([updating-the-kernel.md](../operations/updating-the-kernel.md)).
+The hosts' packages (the Ubuntu release, the kernel, Docker, restic, rclone, Tailscale, apcupsd), the bws CLI, the firmware, Node on Pages, Wrangler, the Worker's compatibility date and the Google Maps APIs are not in any file Dependabot reads. Their entries in the maintenance list name who watches them. Ubuntu's security updates install themselves on the current server with `unattended-upgrades`. The hosts run Ubuntu 26.04 LTS, whose plain `timeout` is the uutils one; the backup uses GNU's `gnutimeout` instead, and `tools/test-timeout.sh` checks it on a host (decision 0121). A new kernel is tested before it becomes the default ([updating-the-kernel.md](../operations/updating-the-kernel.md)).

@@ -4,7 +4,7 @@ summary: How to preview the website on the workstation against a fake API, run i
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-21
+updated: 2026-11-22
 tags: [website, cloudflare, deploy, preview, guide, phase-3]
 related: [docs/decisions/0116-worker-deploys-look-up-the-namespace.md, site/workers/offline-replay/deploy.sh, docs/decisions/0114-offline-requests-kept-whatever-they-hold.md, docs/decisions/0115-address-lookup-sessions-and-a-public-share.md, docs/reference/website-and-seo.md, docs/reference/booking-flow.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/reference/configuration.md, data/configuration.yaml, docs/reference/public-api.md]
 ---
@@ -53,7 +53,7 @@ Do these in order. They need the Cloudflare account that holds dixiedetail.com, 
    - `API_BASE` = `https://api.dixiedetail.com/api/public/v1`;
    - `PUBLIC_TURNSTILE_SITE_KEY` = the Turnstile widget's site key;
    - `PUBLIC_GOOGLE_MAPS_BROWSER_KEY` = the browser key;
-   - `NODE_VERSION` = `22`. Astro 7 needs Node 22.23.4 or later; the build log's first lines name the version Cloudflare used ([decision 0119](../decisions/0119-the-website-moves-to-astro-7.md)).
+   - `NODE_VERSION` = `24`, Node 24 LTS, the same as `site/.nvmrc` ([decision 0121](../decisions/0121-ubuntu-26-04-gnu-timeout-and-node-24.md)). The build log's first lines name the version Cloudflare used.
 4. **The offline piece's bindings** on the same project. Under Settings, Bindings, add a KV namespace binding named `OFFLINE_REQUESTS`, pointing to the namespace from step 1. Under Variables and Secrets, add `API_BASE` as above. Add two secrets, `TURNSTILE_SECRET_KEY` and `OFFLINE_REQUESTS_SIGNING_KEY`, as type **Secret**, the only two on this project, each pasted from the Bitwarden web vault into the dashboard, so neither touches disk. Then redeploy once, so the function picks them up.
 5. **The replay Worker.** From the repository: `site/workers/offline-replay/deploy.sh` (see [Deploying the replay Worker](#deploying-the-replay-worker)). Then, from `site/`, `npx wrangler@4.48.0 secret put OFFLINE_REQUESTS_SIGNING_KEY --config workers/offline-replay/wrangler.toml` and paste the key from Bitwarden at its prompt. Then `npx wrangler@4.48.0 secret put HEALTHCHECKS_OFFLINE_URL --config workers/offline-replay/wrangler.toml` and paste the offline requests check's ping address from Bitwarden the same way ([monitoring.md](../operations/monitoring.md#the-offline-requests-check), [decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). It then runs every 5 minutes and reports each run to that check.
 6. **The deploy hook.** On the Pages project, Settings, Builds, Deploy hooks: add one named "Pricebook" for branch `main`. Copy its URL into a new Bitwarden secret `CLOUDFLARE_PAGES_DEPLOY_HOOK` in the "Dixie Detail" project, then restart the stack on the server so the app gets it: `sudo systemctl restart dixie-stack.service`.

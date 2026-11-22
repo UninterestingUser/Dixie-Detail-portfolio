@@ -4,7 +4,7 @@
   "type": "module",
   "description": "The Dixie Detail website: a static Astro site on Cloudflare Pages, with the booking flow (docs/reference/booking-flow.md).",
   "engines": {
-    "node": ">=22.23.4"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "astro dev",

@@ -147,9 +147,9 @@ website_build_settings:
     purpose: The browser key for address suggestions (GOOGLE_MAPS_BROWSER_KEY above)
     note: Required, type Text on Cloudflare; an empty value stops the build
   - name: NODE_VERSION
-    example: "22"
+    example: "24"
     purpose: The Node.js version Cloudflare builds with; matches site/.nvmrc
-    note: Astro 7 needs 22.23.4 or later (decision 0119); the build log names the version used
+    note: Node 24 LTS (decision 0121); the build log names the version used
   - name: PUBLIC_OFFLINE_BASE, PUBLIC_TURNSTILE_SCRIPT, PUBLIC_PLACES_ENDPOINT
     purpose: Left unset on Cloudflare; the test build points them at local fakes (site/tests/build-for-tests.mjs)
   - name: QUO_PHONE_NUMBER
