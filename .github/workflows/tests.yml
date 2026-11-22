@@ -15,7 +15,7 @@ jobs:
     # and kills restic outright (docs/operations/troubleshooting.md).
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # For tools/test-portfolio.sh, which run-tests.sh runs first.
       - run: sudo apt-get update -q && sudo apt-get install -y -q git-filter-repo
       # The same command as on the workstation; Podman is on the runner image.
