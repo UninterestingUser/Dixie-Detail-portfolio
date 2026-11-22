@@ -1,38 +1,45 @@
 #!/usr/bin/env bash
-# Nightly backup. Run by dixie-backup.service (dixie-backup.timer, 2:45 AM).
+# The backups (decision 0127). Run on the production host by
+#   dixie-backup.service, every hour at 5 past:   backup.sh hourly
+#   dixie-backup-offsite.service, at 2:45 AM:      backup.sh nightly
 #
-# 1. Dumps PostgreSQL from the running db container to
-#    $BACKUP_DIR/daily/dixie-detail-YYYY-MM-DD.dump, and links the month's
-#    first dump into $BACKUP_DIR/monthly/.
-# 2. Keeps the newest 14 daily and 12 monthly dumps.
-# 3. Mirrors the quote request photo folder ($QUOTE_PHOTO_HOST_DIR) to
-#    $BACKUP_DIR/quote-photos/ (decision 0099).
-# 4. Sends tonight's dump to the restic repository on Google Drive and
-#    applies the same 14 daily / 12 monthly policy there, to the dumps
-#    (tag nightly) and the photo snapshots (tag photos) each on their own.
-# 5. Sends the photo folder to the same repository, tagged photos. restic
-#    uploads only photos it has not stored before.
+# Both runs:
+# 1. Dump PostgreSQL from the running db container, read the dump back with
+#    pg_restore --list, and keep it as $BACKUP_DIR/dixie-detail-latest.dump,
+#    replacing the last one: the production host keeps only its latest
+#    local dump.
+# 2. Send the dump (tag database) and then the quote request photo folder
+#    (tag photos) to the backup server's repository: the backup host's
+#    rest-server, append-only, so this host can add snapshots but never
+#    delete one. Its ping is HEALTHCHECKS_BACKUP_URL.
+# The nightly run then sends the same dump and the photos to Backblaze B2
+# (restic's S3 backend), pinging HEALTHCHECKS_OFFSITE_URL. Nothing reaches
+# B2 except restic's encrypted repository. Each destination is tried even if
+# the other failed, and has its own ping; a failure in either fails the run.
+# Nothing is pruned here: the backup host prunes its repository itself, and
+# dixie-offsite-prune.timer prunes B2 weekly.
 #
-# Google Drive is sometimes slow or rate-limiting, so each restic step for
-# the dump (the upload, then forget/prune) gets up to three attempts of at
-# most 8 minutes each, 5 and then 15 minutes apart (decision 0089). The
-# photo upload gets one attempt of at most 8 minutes: a night's new photos
-# take seconds, a failure is reported like any other, and the next night
-# sends whatever was missed. The database dump is never retried. A wrong
-# password or a missing repository is not retried either: waiting cannot
-# fix them. Worst case with every retry: about 1 h 52 min, inside the
-# unit's TimeoutStartSec and the Healthchecks grace time (both 2 hours).
+# Each dump upload gets up to three attempts of at most 8 minutes, 5 and
+# then 15 minutes apart (decision 0089); a photo upload gets one attempt,
+# and the next run sends whatever was missed. The database dump is never
+# retried, nor is what waiting can't fix: a wrong password, a missing
+# repository, a refused certificate or key. Worst case for one destination:
+# about 56 minutes. An hourly run that finds the nightly one running skips
+# itself (the nightly run backs up that hour); the nightly run waits up to
+# an hour for an hourly one to end. Worst case for the nightly run: about
+# 2 h 55 min, inside its unit's TimeoutStartSec.
 #
-# RESTIC_PASSWORD and RCLONE_CONFIG_PASS come from Bitwarden at the start of
-# the run and live only in this script's memory and in the environment of
-# the restic and rclone processes it starts. Healthchecks gets a start ping,
-# then a success or failure ping; the failure ping carries every failed
-# restic attempt's error and the end of the run's log. A failure prints what
-# failed (ops/lib/errors.sh), and a locked restic repository also names the unlock
-# command (ops/lib/restic.sh), so both reach the failure ping's log.
+# The secrets come from Bitwarden at the start of the run and live only in
+# this script's memory and in restic's environment.
 set -euo pipefail
 
+mode=${1:-hourly}
+[[ $mode == hourly || $mode == nightly ]] || { echo "backup: usage: backup.sh hourly|nightly" >&2; exit 2; }
+
 cd "$(dirname "$0")/.."
+# shellcheck source=lib/hold.sh
+. ops/lib/hold.sh
+held_skip backup
 # shellcheck source=lib/bws.sh
 . ops/lib/bws.sh
 # shellcheck source=lib/restic.sh
@@ -42,41 +49,67 @@ cd "$(dirname "$0")/.."
 # shellcheck source=lib/errors.sh
 . ops/lib/errors.sh
 
-: "${RUNTIME_DIRECTORY:?run this from dixie-backup.service}"
+: "${RUNTIME_DIRECTORY:?run this from dixie-backup.service or dixie-backup-offsite.service}"
 : "${BWS_PROJECT_ID:?set BWS_PROJECT_ID in .env}"
 : "${BACKUP_DIR:?set BACKUP_DIR in .env}"
-: "${RESTIC_REPOSITORY:?set RESTIC_REPOSITORY in .env}"
 : "${POSTGRES_DB:?set POSTGRES_DB in .env}" "${POSTGRES_USER:?set POSTGRES_USER in .env}"
 # The quote request photos (decision 0099), mounted into the app container.
 QUOTE_PHOTO_HOST_DIR=${QUOTE_PHOTO_HOST_DIR:-/srv/dixie-quote-photos}
+# One run at a time: the hourly and the nightly run share this lock.
+BACKUP_LOCK=${BACKUP_LOCK:-/run/dixie-backup.lock}
 
-KEEP_DAILY=14
-KEEP_MONTHLY=12
 SNAPSHOT_FILE=dixie-detail.dump
-# Minutes to wait before the second and the third attempt of a restic step.
+# Minutes to wait before the second and the third attempt of a dump upload.
 RETRY_WAITS=(5 15)
 # Longest a single restic attempt may run (see run_restic).
 ATTEMPT_LIMIT=8m
-# Most bytes sent with the failure ping, as the ops scripts always have.
+# Most bytes sent with a failure ping, as the ops scripts always have.
 PING_BODY_BYTES=10000
 
-# If this fails there is no ping URL either; Healthchecks reports the
-# missing ping when the grace time runs out.
-# One Bitwarden call for all three, retried if Bitwarden is rate-limiting.
-bws_load "$BWS_PROJECT_ID"
-restic_password=$(bws_get RESTIC_PASSWORD)
-rclone_config_pass=$(bws_get RCLONE_CONFIG_PASS)
-hc_url=$(bws_get_optional HEALTHCHECKS_BACKUP_URL)
-bws_forget
+exec 9>"$BACKUP_LOCK"
+if [[ $mode == hourly ]]; then
+	if ! flock -n 9; then
+		echo "backup: the nightly run is in progress and backs up this hour; this hourly run is skipped"
+		exit 0
+	fi
+else
+	flock -w 3600 9 || { echo "backup: an hourly run held the lock for an hour; giving up" >&2; exit 1; }
+fi
 
-# keep_newest DIR N: delete all but the newest N dumps in DIR. Names sort by date.
-keep_newest() {
-	local dumps=("$1"/dixie-detail-*.dump)
-	[[ -e ${dumps[0]} ]] || return 0
-	local excess=$((${#dumps[@]} - $2))
-	((excess > 0)) || return 0
-	echo "Removing ${excess} old dump(s) from $1"
-	rm -f -- "${dumps[@]:0:excess}"
+# If this fails there is no ping URL either; Healthchecks reports the
+# missing ping when the grace time runs out. One Bitwarden call for all.
+targets=(backup-server)
+[[ $mode == hourly ]] || targets+=(b2)
+bws_load "$BWS_PROJECT_ID"
+hc_backup=$(bws_get_optional HEALTHCHECKS_BACKUP_URL)
+hc_offsite=$(bws_get_optional HEALTHCHECKS_OFFSITE_URL)
+# Reuses the fetch above, then drops it.
+restic_load_secrets "$BWS_PROJECT_ID" "${targets[@]}" ||
+	{ echo "backup: couldn't read the secrets from Bitwarden" >&2; exit 1; }
+
+dump="$BACKUP_DIR/dixie-detail-latest.dump"
+
+# make_dump: dumps the database to $dump, once per run.
+make_dump() {
+	[[ ! -e $RUNTIME_DIRECTORY/dumped ]] || return 0
+	install -d -m 0700 "$BACKUP_DIR"
+	local partial="$dump.partial"
+	echo "Dumping $POSTGRES_DB to $dump"
+	# Read the archive back before trusting it.
+	if ! docker compose exec -T db pg_dump --format=custom -U "$POSTGRES_USER" -d "$POSTGRES_DB" >"$partial" ||
+		! docker compose exec -T db pg_restore --list <"$partial" >/dev/null; then
+		rm -f -- "$partial"
+		echo "backup: the database dump failed" >&2
+		return 1
+	fi
+	mv -f -- "$partial" "$dump"
+	touch "$RUNTIME_DIRECTORY/dumped"
+}
+
+# not_retried: true when restic's last error is one waiting can't fix.
+not_retried() {
+	(($1 == 10 || $1 == 12)) ||
+		grep -qiE 'wrong password or no key found|401 Unauthorized|x509:|certificate|InvalidAccessKeyId|SignatureDoesNotMatch|AccessDenied' <<<"$restic_last_error"
 }
 
 # restic_step NAME [--tries N] [--input FILE] RESTIC_ARGS...
@@ -110,7 +143,7 @@ restic_step() {
 			echo "== $name, attempt $attempt of $tries, $(TZ=America/New_York date '+%F %H:%M:%S %Z'): exit status $rc$(restic_status_meaning "$rc")"
 			printf '%s\n' "$restic_last_error"
 		} >>"$attempts_log"
-		if ((rc == 10 || rc == 12)) || grep -q 'wrong password or no key found' <<<"$restic_last_error"; then
+		if not_retried "$rc"; then
 			echo "backup: waiting will not fix this, so $name is not retried" >&2
 			return "$rc"
 		fi
@@ -136,63 +169,34 @@ restic_status_meaning() {
 	esac
 }
 
-backup() {
-	mountpoint -q /mnt/raid || { echo "backup: /mnt/raid is not mounted" >&2; return 1; }
-	install -d -m 0700 "$BACKUP_DIR" "$BACKUP_DIR/daily" "$BACKUP_DIR/monthly"
-
-	local day month daily monthly partial
-	day=$(TZ=America/New_York date +%F)
-	month=${day%-*}
-	daily="$BACKUP_DIR/daily/dixie-detail-$day.dump"
-	monthly="$BACKUP_DIR/monthly/dixie-detail-$month.dump"
-	partial="$daily.partial"
-
-	echo "Dumping $POSTGRES_DB to $daily"
-	# Read the archive back before trusting it.
-	if ! docker compose exec -T db pg_dump --format=custom -U "$POSTGRES_USER" -d "$POSTGRES_DB" >"$partial" ||
-		! docker compose exec -T db pg_restore --list <"$partial" >/dev/null; then
-		rm -f -- "$partial"
-		echo "backup: the database dump failed" >&2
-		return 1
-	fi
-	mv -f -- "$partial" "$daily"
-	if [[ ! -e $monthly ]]; then
-		echo "First dump of $month: keeping it as $monthly"
-		ln -- "$daily" "$monthly"
-	fi
-	keep_newest "$BACKUP_DIR/daily" "$KEEP_DAILY"
-	keep_newest "$BACKUP_DIR/monthly" "$KEEP_MONTHLY"
-
+# send_to TARGET: the dump, then the photo folder, to one repository.
+send_to() {
+	make_dump
 	# ops/deploy.sh creates the photo folder, owned by the app's user.
 	[[ -d $QUOTE_PHOTO_HOST_DIR ]] || { echo "backup: $QUOTE_PHOTO_HOST_DIR is missing; run ops/deploy.sh" >&2; return 1; }
-	echo "Copying $(find "$QUOTE_PHOTO_HOST_DIR" -type f -name '*.jpg' | wc -l) quote request photo(s) to $BACKUP_DIR/quote-photos"
-	# Exit status 24 means a file vanished while rsync ran: a customer
-	# removed a photo they had just picked. The copy is still good.
-	rsync -a --delete -- "$QUOTE_PHOTO_HOST_DIR/" "$BACKUP_DIR/quote-photos/" || (($? == 24))
-
-	echo "Sending to $RESTIC_REPOSITORY"
-	restic_step upload --input "$daily" \
-		backup --host "$RESTIC_HOST" --tag nightly --stdin --stdin-filename "$SNAPSHOT_FILE"
-	# Two --tag options select either tag; --group-by keeps each its own group.
-	restic_step forget/prune forget --host "$RESTIC_HOST" --tag nightly --tag photos --group-by host,tags \
-		--keep-daily "$KEEP_DAILY" --keep-monthly "$KEEP_MONTHLY" --prune
-	restic_step "photo upload" --tries 1 \
+	restic_use "$1"
+	echo "Sending the dump and $(find "$QUOTE_PHOTO_HOST_DIR" -type f -name '*.jpg' | wc -l) quote request photo(s) to $1"
+	restic_step "upload to $1" --input "$dump" \
+		backup --host "$RESTIC_HOST" --tag database --stdin --stdin-filename "$SNAPSHOT_FILE"
+	restic_step "photo upload to $1" --tries 1 \
 		backup --host "$RESTIC_HOST" --tag photos "$QUOTE_PHOTO_HOST_DIR"
 }
 
-log="$RUNTIME_DIRECTORY/backup.log"
-attempts_log="$RUNTIME_DIRECTORY/attempts.log"
-: >"$attempts_log"
-hc_ping "$hc_url" /start
-set +e
-(set -e; report_failures backup; backup) 2>&1 | tee "$log"
-rc=${PIPESTATUS[0]}
-set -e
-
-if ((rc == 0)); then
-	hc_ping "$hc_url" ""
-else
-	echo "backup: failed with exit status $rc" | tee -a "$log" >&2
+# part NAME PING_URL TARGET: sends to TARGET with its own log and pings.
+# Called with set +e (see the end of this script).
+part() {
+	local name=$1 url=$2 target=$3 rc room
+	log="$RUNTIME_DIRECTORY/$name.log"
+	attempts_log="$RUNTIME_DIRECTORY/$name-attempts.log"
+	: >"$attempts_log"
+	hc_ping "$url" /start
+	(set -e; report_failures "backup ($name)"; send_to "$target") 2>&1 | tee "$log"
+	rc=${PIPESTATUS[0]}
+	if ((rc == 0)); then
+		hc_ping "$url" ""
+		return 0
+	fi
+	echo "backup: $name failed with exit status $rc" | tee -a "$log" >&2
 	# Every failed attempt first, then as much of the end of the log as fits.
 	{
 		if [[ -s $attempts_log ]]; then
@@ -204,6 +208,20 @@ else
 	} >"$log.tail"
 	room=$((PING_BODY_BYTES - $(stat -c %s -- "$log.tail")))
 	((room <= 0)) || tail -c "$room" -- "$log" >>"$log.tail"
-	hc_ping "$hc_url" /fail "$log.tail"
+	hc_ping "$url" /fail "$log.tail"
+	return "$rc"
+}
+
+# Not `part ... || status=$?`: a call on the left of || runs with set -e
+# off, even inside the subshell that turns it back on, so a failed upload
+# would carry on. set +e here, and set -e in part's subshell, work.
+rm -f -- "$RUNTIME_DIRECTORY/dumped"
+set +e
+part backup-server "$hc_backup" backup-server
+status=$?
+if [[ $mode == nightly ]]; then
+	part offsite "$hc_offsite" b2
+	rc=$?
+	((status)) || status=$rc
 fi
-exit "$rc"
+exit "$status"

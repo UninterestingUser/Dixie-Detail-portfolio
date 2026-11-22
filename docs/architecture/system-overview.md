@@ -11,7 +11,7 @@ related: [docs/architecture/server-and-stack.md, docs/architecture/network-and-a
 
 # System overview
 
-One database feeds the website, the control app and every outside service. Customers only ever touch the website on Cloudflare. The home server sits behind an outbound tunnel, and every outside service connects through the core app, never straight to the database.
+One database feeds the website, the control app and every outside service. Customers only ever touch the website on Cloudflare. The production host sits behind an outbound tunnel, and every outside service connects through the core app, never straight to the database.
 
 Phase 0 built the foundation: the server stack, private and public access, backups and monitoring. Phases 1 to 3 added the business screens, the vehicle data, scheduling, the calendars and the website. Parts not built yet are marked "planned" below.
 
@@ -21,7 +21,7 @@ flowchart TB
     staff["Owner and staff<br/>Fedora desktops, Pixel"] -- "Tailscale<br/>private door" --> caddy
     website -- "Cloudflare Tunnel<br/>public door" --> caddy
 
-    subgraph server["Home server, Docker stack 'dixie'"]
+    subgraph server["Production host, Docker stack 'dixie'"]
         caddy["Caddy<br/>reverse proxy"]
         core["Core app (Django)<br/>API, control app, scheduled jobs"]
         db[("PostgreSQL<br/>single source of truth")]
@@ -33,7 +33,7 @@ flowchart TB
     core -. planned .-> quo["Quo"]
     core --> google["Google Workspace calendars<br/>and Maps Platform"]
     core --> govdata["EPA, NHTSA, Census,<br/>Tennessee Revenue"]
-    db --> backups["Nightly backups<br/>RAID and Google Drive"]
+    db --> backups["Hourly backups to the backup host<br/>nightly to Backblaze B2"]
 ```
 
 ## Components
@@ -49,7 +49,7 @@ flowchart TB
 | Public website | Astro static site on Cloudflare's free plan | Plain HTML is fast and strong for search; the site stays up when the server is down | Running on a staging address (Phase 3); public at the Phase 5 launch |
 | Scheduling | Built into the core app | Services, durations and availability live in the same database; replaces Setmore at the Phase 5 launch | Running (Phase 3) |
 | Secrets | Bitwarden Secrets Manager | The owner's standard; nothing secret stored in plaintext | Running |
-| Backups | pg_dump to the RAID, restic to Google Drive | The database is the business | Running |
+| Backups | pg_dump and restic: hourly to an append-only backup server on the backup host, nightly to Backblaze B2 (decision 0127) | The database is the business, and a dead production host must not take its backups with it | Running |
 | Monitoring | Healthchecks.io | Emails the owner when backups, the vehicle data refresh, the tax rate check or the calendar check stop or the public path breaks | Running |
 
 ## How data moves

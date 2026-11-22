@@ -25,15 +25,16 @@ The fixed monthly cost of the finished system is the phone service plus Google W
 | Cloudflare (DNS, Tunnel, website hosting) | 0 | 2026-10-07 | Free plan |
 | Bitwarden Secrets Manager | Existing | 2026-10-13 | Already used by the owner |
 | Tailscale | Existing | 2026-10-07 | Already used by the owner |
-| Healthchecks.io | 0 | 2026-10-12 | Free plan, 20 checks; three are used |
-| Off-site backups in Google Drive | 0 | 2026-10-13 | Uses Workspace storage already paid for; dumps are a few megabytes |
+| Healthchecks.io | 0 | 2026-10-12 | Free plan, 20 checks; eight are used |
+| Off-site backups in Backblaze B2 | Cents per month | 2026-11-22 | Pay per GB stored, the first 10 GB free; the repository of dumps and photos is small (decision 0127). Google Drive, used until the move, cost nothing extra |
+| The backup server | 0 | 2026-11-22 | On the backup host, the former home server, which runs anyway |
 | Stripe | Per transaction, no monthly fee | From memory | Roughly 2.9% plus 30 cents for an online card payment; confirm on Stripe's pricing page |
 | Government data (EPA, NHTSA, Census, Tennessee Revenue), GnuCash | 0 | 2026-10-07 | Free sources and free software |
 | BTCPay Server (Phase 7) | 0 | 2026-10-07 | Self-hosted |
 
 ## Contingency cost
 
-If home-server outages recur, the same Docker stack can move to a cloud server for about $14 to $29 a month (server plus provider backups). The trigger is more than one outage a month during booking hours, or any outage over four hours.
+If production host outages recur, the same Docker stack can move to a cloud server for about $14 to $29 a month (server plus provider backups). The trigger is more than one outage a month during booking hours, or any outage over four hours.
 
 ## Costs that go away at launch
 

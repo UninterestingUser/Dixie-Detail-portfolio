@@ -1,0 +1,10 @@
+# Runs dixie-monitor-snapshot.service every 5 minutes (decision 0128).
+[Unit]
+Description=Dixie Detail status snapshot every 5 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

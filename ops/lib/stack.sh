@@ -17,6 +17,26 @@ STACK_RUN_DIR=${STACK_RUN_DIR:-/run/dixie-stack}
 # shellcheck disable=SC2034 # used by the scripts that source this file
 STACK_UP=(up --detach --remove-orphans --wait --wait-timeout 600)
 
+# The tunnel hold (decision 0128). While this file exists, this host isn't
+# production yet: the stack starts without its tunnel connector and without
+# the calendar worker (both scaled to 0), and the backups and the calendar
+# check skip their runs. So a new production host can be restored and
+# checked while the old host still runs production: two connectors with the
+# same token would split the public traffic between the hosts, two calendar
+# workers would both write to Google, and the new host's backups would add
+# snapshots of a copy that is about to be replaced. ops/tunnel-hold.sh sets
+# and clears it. lib/hold.sh holds the path. Changed only by the tests.
+# shellcheck source=hold.sh
+. "$(dirname "${BASH_SOURCE[0]}")/hold.sh"
+if [[ -e $TUNNEL_HOLD ]]; then
+	STACK_UP+=(--scale cloudflared=0 --scale calendar-worker=0)
+fi
+
+# stack_hold_note: says so when the tunnel is held.
+stack_hold_note() {
+	[[ ! -e $TUNNEL_HOLD ]] || echo "stack: the tunnel is held ($TUNNEL_HOLD): starting without cloudflared and the calendar worker; ops/tunnel-hold.sh off starts them" >&2
+}
+
 # The health check's Healthchecks ping URL, as its own systemd credential
 # (decision 0125), so the 10-minute check never calls Bitwarden.
 HEALTH_CRED_NAME=healthchecks-public-url

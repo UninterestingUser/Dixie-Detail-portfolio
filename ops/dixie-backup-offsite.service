@@ -1,0 +1,27 @@
+# The nightly backup to the backup server and to Backblaze B2 (decision
+# 0127); started by dixie-backup-offsite.timer. Installed to
+# /etc/systemd/system by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-backup-offsite.service
+[Unit]
+Description=Dixie Detail nightly backup to the backup server and Backblaze B2
+Wants=network-online.target
+After=network-online.target docker.service dixie-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+# Non-secret settings only, including B2_REPOSITORY.
+EnvironmentFile=/srv/dixie-detail/.env
+Environment=HOME=/root
+# The Bitwarden token; backup.sh fetches RESTIC_PASSWORD,
+# BACKUP_REST_PASSWORD, B2_KEY_ID and B2_APPLICATION_KEY with it.
+LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+RuntimeDirectory=dixie-backup-offsite
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/backup.sh nightly
+Nice=10
+IOSchedulingClass=idle
+# Worst case: an hour waiting for an hourly run, then about 56 minutes for
+# each destination (ops/backup.sh).
+TimeoutStartSec=3h15min

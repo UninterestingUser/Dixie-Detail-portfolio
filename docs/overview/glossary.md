@@ -221,7 +221,15 @@ Terms are grouped by subject and listed alphabetically within each group. Use th
 
 **Public door.** Caddy's port 8080 inside the Docker network, reached only by the Cloudflare Tunnel, answering only `/health` and `/api/public/`.
 
-**Restic snapshot.** One encrypted backup stored in Google Drive by restic.
+**Backup host.** The former home server, which keeps the backup server's repository on its RAID, prunes it, runs the weekly restore test and can take over production if the production host dies. It has no Bitwarden access (decisions 0126 and 0127).
+
+**Backup server.** restic's rest-server on the backup host, append-only: the production host can add snapshots but never delete one (decision 0127).
+
+**Production host.** The dedicated mini PC that runs the stack and nothing else (decision 0128).
+
+**Requests-only mode.** The website's mode while online booking is paused with `ops/site-mode.sh requests`: customers get the request form (decision 0129).
+
+**Restic snapshot.** One encrypted backup made by restic: the database dump or the quote request photos, stored on the backup server every hour and on Backblaze B2 every night.
 
 **Test record.** A customer or appointment marked test, made by the smoke test or from a number on the test-number list. It stays off the Jobs calendar and is deleted by `delete_test_records`.
 

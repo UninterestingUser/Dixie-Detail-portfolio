@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Reads non-secret settings from .env in the current directory. Source it.
 # Units get .env through EnvironmentFile=; scripts run by hand use this.
 

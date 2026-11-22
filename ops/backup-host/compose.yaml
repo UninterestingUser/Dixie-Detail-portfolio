@@ -1,0 +1,47 @@
+# The backup server on the backup host (decision 0127): restic's rest-server,
+# append-only, private repositories, a password, and TLS with a self-signed
+# certificate that the production host's restic pins (--cacert). Started by
+# dixie-rest-server.service with the backup host's .env:
+#   docker compose --env-file /srv/dixie-detail/.env up --detach --wait
+# ops/backup-host/setup.sh writes the certificate, its key and the password's
+# hash (never the password) to /etc/dixie-rest-server.
+name: dixie-backup-server
+
+services:
+  rest-server:
+    image: restic/rest-server:0.14.0
+    # The image's entrypoint would start rest-server without these options.
+    entrypoint: ["rest-server"]
+    command:
+      - --path=/data
+      - --htpasswd-file=/config/htpasswd
+      - --listen=:8443
+      - --tls
+      - --tls-cert=/config/cert.pem
+      - --tls-key=/config/key.pem
+      # The production host can add snapshots but never delete or change one.
+      # Only the backup host's own restic, reading the folder directly,
+      # prunes.
+      - --append-only
+      # User dixie-detail reaches only /dixie-detail/.
+      - --private-repos
+    user: "10010:10010"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    pids_limit: 64
+    # On the backup host's LAN address only. pfSense lets the production
+    # host's network reach it on this port, and nothing else.
+    ports:
+      - "${BACKUP_HOST_ADDRESS:?set BACKUP_HOST_ADDRESS in .env}:${BACKUP_REST_PORT:-8443}:8443"
+    volumes:
+      - "${BACKUP_REST_DATA_DIR:?set BACKUP_REST_DATA_DIR in .env}:/data"
+      - /etc/dixie-rest-server:/config:ro
+    healthcheck:
+      test: ["CMD-SHELL", "nc -w 3 127.0.0.1 8443 </dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

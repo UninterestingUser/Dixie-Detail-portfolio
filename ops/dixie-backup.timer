@@ -1,16 +1,11 @@
-# Runs dixie-backup.service at 2:45 AM Eastern every night, clear of the
-# public health check's 10-minute marks so the two never call Bitwarden in the
-# same minute (decision 0070). Persistent= runs a missed backup as soon as the
-# server is back up.
+# Runs dixie-backup.service every hour at 5 past (decision 0127). The 2:45 AM
+# run to Backblaze is dixie-backup-offsite.timer. Persistent= runs a missed
+# backup as soon as the host is back up.
 [Unit]
-Description=Dixie Detail nightly backup at 2:45 AM
+Description=Dixie Detail hourly backup at 5 past
 
 [Timer]
-OnCalendar=*-*-* 02:45:00 America/New_York
-# 2:45 AM does not exist on the night clocks spring forward (the second
-# Sunday in March, always the 8th to the 14th), so systemd would skip it.
-# Run at 3:45 AM that day instead.
-OnCalendar=Sun *-03-08..14 03:45:00 America/New_York
+OnCalendar=*-*-* *:05:00 America/New_York
 Persistent=true
 
 [Install]

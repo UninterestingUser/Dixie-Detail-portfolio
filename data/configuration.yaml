@@ -10,7 +10,7 @@ meta:
 settings:
   - name: BWS_PROJECT_ID
     purpose: ID of the Bitwarden project "Dixie Detail" (from the end of the project page's address)
-    used_by: ops/stack-start.sh, ops/backup.sh, ops/public-health.sh, ops/deploy.sh, ops/restore-test.sh, ops/restic.sh
+    used_by: ops/stack-start.sh, ops/backup.sh, ops/deploy.sh, ops/restore-test.sh, ops/restore.sh, ops/restic.sh, ops/offsite-prune.sh
     phase: 0
   - name: BWS_SERVER_URL
     example: https://vault.bitwarden.com
@@ -39,18 +39,39 @@ settings:
     purpose: The branch ops/deploy.sh pulls
     phase: 0
   - name: BACKUP_DIR
-    example: /mnt/raid/Backups/dixie-detail
+    example: /var/backups/dixie-detail
+    purpose: On the production host, where the latest database dump is kept, dixie-detail-latest.dump, replaced by every backup run (decision 0127)
     used_by: ops/backup.sh
     phase: 0
-  - name: RESTIC_REPOSITORY
-    example: rclone:gdrive:dixie-detail-backups
-    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+  - name: BACKUP_HOST_ADDRESS
+    example: 192.0.2.20
+    purpose: The backup host's LAN address. rest-server listens on it only and its certificate is made for it; the production host's backups go to it; the production host's firewall lets apcupsd's port 3551 in from it only (decisions 0127 and 0128)
+    used_by: ops/lib/restic.sh, ops/backup-host/compose.yaml, ops/backup-host/setup.sh, ops/host-firewall.sh
     phase: 0
-  - name: RCLONE_CONFIG
-    purpose: Path to the owner's encrypted rclone config, so the root-run backup finds it
-    example: /home/OWNER/.config/rclone/rclone.conf
-    note: .env.example shows /root/.config/rclone/rclone.conf; set it to wherever rclone config was run
-    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+  - name: BACKUP_REST_PORT
+    example: "8443"
+    purpose: The backup server's (rest-server's) port on BACKUP_HOST_ADDRESS
+    used_by: ops/lib/restic.sh, ops/backup-host/compose.yaml
+    phase: 0
+  - name: BACKUP_REST_DATA_DIR
+    example: /mnt/raid/Backups/dixie-rest-server
+    purpose: On the backup host, the backup server's repository folder on the RAID, owned by rest-server's user (uid 10010)
+    used_by: ops/backup-host/compose.yaml, ops/backup-host/setup.sh, ops/backup-host/weekly.sh, ops/lib/restic.sh (--repo local)
+    phase: 0
+  - name: BACKUP_REST_CACERT
+    example: /etc/dixie-detail/backup-server.pem
+    purpose: On the production host, the backup server's self-signed certificate, which restic pins with --cacert; copied from the backup host's /etc/dixie-rest-server/cert.pem; not secret
+    used_by: ops/lib/restic.sh
+    phase: 0
+  - name: B2_REPOSITORY
+    example: s3:https://s3.us-west-004.backblazeb2.com/dixie-detail-backups/restic
+    purpose: The Backblaze B2 repository, through restic's S3-compatible backend - the bucket's S3 endpoint, the bucket and the repository's folder in it
+    used_by: ops/lib/restic.sh, ops/lib/b2.sh (the bucket check)
+    phase: 0
+  - name: PRODUCTION_HOST_ADDRESS
+    example: 192.0.2.30
+    purpose: The production host's LAN address, which the backup host's apcupsd asks for the UPS's status (port 3551)
+    used_by: ops/ups/install.sh backup-host
     phase: 0
   - name: PUBLIC_HEALTH_URL
     example: https://api.dixiedetail.com/health
@@ -204,18 +225,44 @@ secrets:
     phase: 0
     note: Phase 0 stored it in Bitwarden as DEPLOY_KEY; renamed in Bitwarden to match ops/deploy.sh on 2026-10-13
   - name: RESTIC_PASSWORD
-    purpose: Encrypts the off-site backups
-    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    purpose: Encrypts every backup repository - the backup server's and Backblaze B2's, and the old Drive one
+    used_by: ops/backup.sh, ops/offsite-prune.sh, ops/restore-test.sh, ops/restore.sh, ops/restic.sh; on the backup host, its own credential /etc/credstore.encrypted/dixie-restic-password.cred, pasted once by ops/backup-host/credentials.sh (decision 0126)
     phase: 0
     exception: Also kept in the owner's Bitwarden vault and as a sealed paper copy (decision 0041)
   - name: RCLONE_CONFIG_PASS
-    purpose: Decrypts rclone's config, which holds the Google Drive sign-in
-    used_by: ops/backup.sh, ops/restore-test.sh, ops/restic.sh
+    purpose: Decrypted rclone's config, which held the Google Drive sign-in
+    used_by: only the one-time copy of the Drive history (docs/operations/backups-and-restore.md); no script
+    status: retiring; delete it from Bitwarden when Google Drive is retired (decision 0127)
+    phase: 0
+  - name: BACKUP_REST_PASSWORD
+    purpose: The production host's password for the backup server (rest-server user dixie-detail)
+    used_by: ops/backup.sh, ops/restore-test.sh, ops/restore.sh, ops/restic.sh; the backup host stores only its bcrypt hash, made by ops/backup-host/setup.sh
+    phase: 0
+  - name: B2_KEY_ID
+    purpose: The Backblaze B2 application key's ID, for a key that reaches only the backup bucket
+    used_by: ops/backup.sh (nightly), ops/offsite-prune.sh, ops/restore-test.sh --repo b2, ops/restore.sh --from b2, ops/restic.sh --repo b2; on the backup host, pasted at the prompt and never kept
+    phase: 0
+  - name: B2_APPLICATION_KEY
+    purpose: The Backblaze B2 application key itself (shown once by Backblaze)
+    used_by: the same as B2_KEY_ID
     phase: 0
   - name: HEALTHCHECKS_BACKUP_URL
-    purpose: Ping address for the nightly backup check
+    purpose: Ping address for the hourly backup check (the backup server)
     used_by: ops/backup.sh
     note: Optional; without it the backup runs with no pings
+    phase: 0
+  - name: HEALTHCHECKS_OFFSITE_URL
+    purpose: Ping address for the offsite backup check (the nightly copy to Backblaze B2, and failures of the weekly B2 prune)
+    used_by: ops/backup.sh (nightly), ops/offsite-prune.sh
+    note: Optional; without it the runs go on with no pings
+    phase: 0
+  - name: HEALTHCHECKS_BACKUP_HOST_URL
+    purpose: Ping address for the backup host's weekly prune, check and restore test
+    used_by: ops/backup-host/weekly.sh, from the backup host's own credential /etc/credstore.encrypted/dixie-healthchecks-backup-host-url.cred (decision 0126); never read from Bitwarden by a script
+    phase: 0
+  - name: DOT_ENV
+    purpose: A copy of the production host's whole .env file, which holds no secret; the build guide creates .env from it, and ops/deploy.sh warns, naming the settings, when the two differ (decision 0128)
+    used_by: ops/lib/deploy.sh, docs/operations/building-the-production-host.md
     phase: 0
   - name: HEALTHCHECKS_PUBLIC_URL
     purpose: Ping address for the public address check
@@ -352,9 +399,30 @@ development:
 
 stored_on_server:
   - name: bws-token
-    purpose: Access token (labeled dixie-server) for the Bitwarden machine account server
+    host: production host
+    purpose: Access token (labeled dixie-production-host) for the Bitwarden machine account server
     location: /etc/credstore.encrypted/dixie-bws-token.cred
     protection: systemd-creds, --with-key=host+tpm2
+  - name: healthchecks-public-url
+    host: production host
+    purpose: A copy of HEALTHCHECKS_PUBLIC_URL for the public health check (decision 0125)
+    location: /etc/credstore.encrypted/dixie-healthchecks-public-url.cred
+    protection: systemd-creds, --with-key=host+tpm2
+  - name: restic-password
+    host: backup host
+    purpose: A copy of RESTIC_PASSWORD, pasted once by ops/backup-host/credentials.sh (decision 0126)
+    location: /etc/credstore.encrypted/dixie-restic-password.cred
+    protection: systemd-creds, --with-key=host+tpm2
+  - name: healthchecks-backup-host-url
+    host: backup host
+    purpose: A copy of HEALTHCHECKS_BACKUP_HOST_URL, pasted once by ops/backup-host/credentials.sh (decision 0126)
+    location: /etc/credstore.encrypted/dixie-healthchecks-backup-host-url.cred
+    protection: systemd-creds, --with-key=host+tpm2
+  - name: rest-server password hash
+    host: backup host
+    purpose: The bcrypt hash of BACKUP_REST_PASSWORD, for rest-server; never the password
+    location: /etc/dixie-rest-server/htpasswd
+    protection: root and rest-server's group only
 
 paths:
   - name: Import folder
@@ -374,7 +442,7 @@ paths:
   - name: Quote request photos
     host: /srv/dixie-quote-photos
     container: /srv/quote-photos (setting QUOTE_PHOTO_DIR)
-    purpose: The cleaned JPEGs customers send with quote requests, under random names (decision 0099); mounted read-write into the app container, owned by uid 10001, mode 0700; created by ops/deploy.sh; mirrored to BACKUP_DIR/quote-photos and sent to restic (tag photos) by the nightly backup
+    purpose: The cleaned JPEGs customers send with quote requests, under random names (decision 0099); mounted read-write into the app container, owned by uid 10001, mode 0700; created by ops/deploy.sh; sent to restic (tag photos) by every backup, hourly to the backup server and nightly to B2 (decision 0127)
     holds_personal_data: true
     used_by: the public API and the control app's Website requests screen; clean_public_api deletes photos past their time
     phase: 3

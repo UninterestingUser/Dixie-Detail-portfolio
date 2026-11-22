@@ -1,7 +1,7 @@
 meta:
   title: Outside services
   summary: Every outside service the system uses or will use, with its purpose, phase and status.
-  updated: 2026-11-21
+  updated: 2026-11-22
   status: current
   explained_in: docs/architecture/integrations.md
 
@@ -19,23 +19,28 @@ services:
   - name: Tailscale
     purpose: Private access to the control app
     phase: 0
-    status: In use; server is a node; control app published with tailscale serve
+    status: In use; the production host is a node tagged tag:dixie-prod, which can start no connection into the tailnet (docs/operations/tailscale-policy.md); control app published with tailscale serve
   - name: Bitwarden Secrets Manager
     purpose: Every key, password and token
     phase: 0
-    status: In use; project Dixie Detail, machine account server (access token labeled dixie-server)
+    status: In use; project Dixie Detail, machine account server (one access token per host that runs production; the backup host has none, decision 0126)
   - name: GitHub
     purpose: Private repository; server pulls with a read-only deploy key
     phase: 0
     status: In use
   - name: Google Workspace Drive
-    purpose: Encrypted off-site backups through rclone and restic
+    purpose: Encrypted off-site backups through rclone and restic, until 2026-11
     phase: 0
-    status: In use
+    status: Retired for backups (decision 0127); its history copied to the backup server with restic copy, then the rclone remote, its config and RCLONE_CONFIG_PASS deleted (docs/operations/backups-and-restore.md)
+  - name: Backblaze B2
+    purpose: The nightly off-site copy of the backups, through restic's S3-compatible backend; nothing but restic's encrypted repository is stored there (decision 0127)
+    phase: 0
+    status: In use from the move to the production host; a private bucket keeping prior versions 30 days, a key limited to that bucket (B2_KEY_ID, B2_APPLICATION_KEY), pruned weekly to 14 daily and 12 monthly by dixie-offsite-prune.timer, which also checks the bucket holds only repository files
+    plan: Pay as you go
   - name: Healthchecks.io
-    purpose: Alerts when the backup, the public path, the monthly vehicle data refresh, the morning sales tax rate check or the nightly calendar check stops checking in or fails, and when a tax rate change waits for approval
+    purpose: Alerts when the hourly or nightly backup, the backup host's weekly prune and restore test, the public path, the monthly vehicle data refresh, the morning sales tax rate check or the nightly calendar check stops checking in or fails, and when a tax rate change waits for approval
     phase: 0
-    status: In use; six checks, one pinged by the offline replay Worker (docs/operations/monitoring.md)
+    status: In use; eight checks, one pinged by the offline replay Worker (docs/operations/monitoring.md)
     plan: Free
   - name: EPA FuelEconomy.gov
     purpose: Year, make, model, size class, drive, body styles and passenger and luggage volume, from 1984
@@ -110,7 +115,5 @@ considered_not_used:
     reason: "No phone app; calls would need a second service"
   - name: UptimeRobot
     reason: "Free plan is non-commercial since October 2024"
-  - name: Backblaze B2
-    reason: "Google Drive storage is already paid for"
   - name: RockAuto
     reason: "No public API; scraping may breach its terms"

@@ -1,28 +1,30 @@
-# Nightly backup; started by dixie-backup.timer. Installed to
-# /etc/systemd/system by ops/deploy.sh. Run by hand with:
+# The hourly backup to the backup server (decision 0127); started by
+# dixie-backup.timer. Installed to /etc/systemd/system by ops/deploy.sh.
+# Run by hand with:
 #   sudo systemctl start dixie-backup.service
 [Unit]
-Description=Dixie Detail nightly backup
+Description=Dixie Detail hourly backup to the backup server
 Wants=network-online.target
 After=network-online.target docker.service dixie-stack.service
-RequiresMountsFor=/mnt/raid
 
 [Service]
 Type=oneshot
 WorkingDirectory=/srv/dixie-detail
-# Non-secret settings only, including RESTIC_REPOSITORY and RCLONE_CONFIG.
+# Non-secret settings only, including the backup server's address and
+# BACKUP_DIR.
 EnvironmentFile=/srv/dixie-detail/.env
 # restic keeps its (encrypted) cache under $HOME/.cache.
 Environment=HOME=/root
 # The Bitwarden machine-account token, decrypted into this run's private,
 # in-memory credentials directory. backup.sh fetches RESTIC_PASSWORD and
-# RCLONE_CONFIG_PASS with it at the start of each run.
+# BACKUP_REST_PASSWORD with it at the start of each run.
 LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
 # /run/dixie-backup, on tmpfs, for the run's log. Deleted when the run ends.
 RuntimeDirectory=dixie-backup
 RuntimeDirectoryMode=0700
 UMask=0077
-ExecStart=/srv/dixie-detail/ops/backup.sh
+ExecStart=/srv/dixie-detail/ops/backup.sh hourly
 Nice=10
 IOSchedulingClass=idle
-TimeoutStartSec=2h
+# Worst case with every retry is about 56 minutes (ops/backup.sh).
+TimeoutStartSec=1h

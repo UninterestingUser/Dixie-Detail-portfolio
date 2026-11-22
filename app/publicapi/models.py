@@ -403,3 +403,27 @@ class SmokeTestPass(models.Model):
     token = models.CharField(max_length=40, unique=True, default=new_token)
     expires_at = models.DateTimeField()
     uses_left = models.PositiveSmallIntegerField(default=3)
+
+
+class SiteMode(models.Model):
+    """The one row (pk 1) of the requests-only switch (decision 0128). In
+    requests mode the public API's booking and quote endpoints answer 503,
+    which the website treats as "server unavailable", so customers get the
+    request form; the offline request endpoints keep working. Set with
+    ops/site-mode.sh. No row means normal."""
+
+    NORMAL = "normal"
+    REQUESTS = "requests"
+    MODES = [(NORMAL, "Normal"), (REQUESTS, "Requests only")]
+
+    mode = models.CharField(max_length=10, choices=MODES, default=NORMAL)
+    changed_at = models.DateTimeField(default=timezone.now)
+    reason = models.CharField(max_length=200, blank=True)
+
+    @classmethod
+    def current(cls):
+        row = cls.objects.filter(pk=1).first()
+        return row.mode if row else cls.NORMAL
+
+    def __str__(self):
+        return self.get_mode_display()

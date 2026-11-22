@@ -41,6 +41,7 @@ bws_forget
 
 # Recreate every container so each mounts the files just written. A container
 # left from the last run would still hold the old ones.
+stack_hold_note
 if ! docker compose "${STACK_UP[@]}" --force-recreate; then
 	echo "stack-start: the containers didn't all come up running and healthy; see docker compose ps. Trying again in a minute" >&2
 	exit 1

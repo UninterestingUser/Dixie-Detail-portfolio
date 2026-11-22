@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared Bitwarden helpers for ops scripts. Source it; do not run it.
 #
 # Secret values stay in shell variables and pipes. They are never written to

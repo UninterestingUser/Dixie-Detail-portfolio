@@ -137,6 +137,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "core.middleware.PublicEntranceMiddleware",
+    # The requests-only switch (decision 0128), before anything else reads
+    # the request.
+    "publicapi.site_mode.RequestsOnlyMiddleware",
     # After the entrance check, so the public door never serves static files.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

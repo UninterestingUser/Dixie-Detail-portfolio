@@ -32,4 +32,9 @@ jobs:
       # Shows which timeout this runner has, so a passing run is known to
       # have exercised the uutils one.
       - run: timeout --version | head -1; gnutimeout --version | head -1
+      # APCUPSD_PACKAGE_CHECK: tools/test-host-setup.sh also downloads this
+      # release's apcupsd package and checks that its shutdown hook switches
+      # the UPS off (decision 0128).
       - run: tools/run-tests.sh --ops-only
+        env:
+          APCUPSD_PACKAGE_CHECK: "1"

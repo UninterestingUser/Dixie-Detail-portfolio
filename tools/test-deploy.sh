@@ -36,8 +36,9 @@ cat >"$work/bin/bws" <<'FAKE'
 #!/usr/bin/env bash
 echo "bws $*" >>"$FAKE_LOG"
 if [[ -n ${FAKE_BWS_ERROR:-} ]]; then echo "Error: $FAKE_BWS_ERROR" >&2; exit 1; fi
-jq -n '[{key:"POSTGRES_PASSWORD",value:"made-up-pg"},{key:"DJANGO_SECRET_KEY",value:"made-up-django"},
-	{key:"CLOUDFLARE_TUNNEL_TOKEN",value:"made-up-tunnel"},{key:"HEALTHCHECKS_PUBLIC_URL",value:"https://hc.example/made-up"}]'
+jq -n --arg env "${FAKE_DOT_ENV-}" '[{key:"POSTGRES_PASSWORD",value:"made-up-pg"},{key:"DJANGO_SECRET_KEY",value:"made-up-django"},
+	{key:"CLOUDFLARE_TUNNEL_TOKEN",value:"made-up-tunnel"},{key:"HEALTHCHECKS_PUBLIC_URL",value:"https://hc.example/made-up"}]
+	+ (if $env == "" then [] else [{key:"DOT_ENV",value:$env}] end)'
 FAKE
 # A fake docker: logs every call; `compose build` fails with FAKE_BUILD_FAILS,
 # `compose up` with FAKE_UP_FAILS.
@@ -134,6 +135,19 @@ running_stack
 FAKE_ACTIVE=1 FAKE_UP_FAILS=1 deploy
 [[ $rc != 0 ]] && grep -q "didn't all come up running and healthy" "$work/out" && pass "an unhealthy container fails the deploy, with a message" || fail "rc $rc, said: $(cat "$work/out")"
 
+echo "test-deploy: the deploy compares .env with the DOT_ENV secret"
+running_stack
+FAKE_ACTIVE=1 FAKE_DOT_ENV=$(cat "$work/repo/.env") deploy
+[[ $rc == 0 ]] && grep -q ".env matches the DOT_ENV secret" "$work/out" && pass "the same: it says so" || fail "rc $rc, said: $(cat "$work/out")"
+running_stack
+FAKE_ACTIVE=1 FAKE_DOT_ENV=$'BWS_PROJECT_ID=made-up-project\nBWS_SERVER_URL=https://other.example\nOLD_SETTING=made-up-value' deploy
+[[ $rc == 0 ]] && grep -q "WARNING: .env differs from the DOT_ENV secret in Bitwarden, in: BWS_SERVER_URL OLD_SETTING\." "$work/out" &&
+	pass "different: a warning naming the settings, and the deploy goes on" || fail "rc $rc, said: $(cat "$work/out")"
+! grep -qE "other\.example|made-up-value|vault\.example" "$work/out" && pass "no setting's value is printed" || fail "said: $(cat "$work/out")"
+running_stack
+FAKE_ACTIVE=1 deploy
+[[ $rc == 0 ]] && grep -q "there's no DOT_ENV secret in Bitwarden" "$work/out" && pass "missing: a warning" || fail "rc $rc, said: $(cat "$work/out")"
+
 echo "test-deploy: with the stack stopped, the deploy starts it"
 rm -rf "$STACK_RUN_DIR/secrets"
 deploy
@@ -155,6 +169,26 @@ FAKE_UP_FAILS=1 start
 start
 [[ $rc == 0 ]] && grep -qx "docker compose up --detach --remove-orphans --wait --wait-timeout 600 --force-recreate" "$FAKE_LOG" &&
 	pass "a good start recreates every container and waits for them" || fail "rc $rc, calls: $(cat "$FAKE_LOG")"
+
+echo "test-deploy: the tunnel hold keeps the connector stopped (decision 0128)"
+export TUNNEL_HOLD="$work/hold-tunnel"
+touch "$TUNNEL_HOLD"
+start
+[[ $rc == 0 ]] && grep -qx "docker compose up --detach --remove-orphans --wait --wait-timeout 600 --scale cloudflared=0 --scale calendar-worker=0 --force-recreate" "$FAKE_LOG" &&
+	grep -q "the tunnel is held" "$work/out" && pass "a start while held runs everything but cloudflared, and says so" || fail "rc $rc, calls: $(cat "$FAKE_LOG")"
+running_stack
+FAKE_ACTIVE=1 deploy
+grep -qx "docker compose up --detach --remove-orphans --wait --wait-timeout 600 --scale cloudflared=0 --scale calendar-worker=0" "$FAKE_LOG" &&
+	pass "a deploy while held keeps cloudflared and the calendar worker at 0" || fail "calls: $(cat "$FAKE_LOG")"
+hold() { : >"$FAKE_LOG"; rc=0; printf '%s\n' "${2:-}" >"$work/tty"; (cd "$work/repo" && DIXIE_EUID=0 DIXIE_DIR="$work/repo" DIXIE_TTY="$work/tty" FAKE_ACTIVE=1 ops/tunnel-hold.sh "$1") >"$work/out" 2>&1 || rc=$?; }
+hold off no
+[[ $rc != 0 && -e $TUNNEL_HOLD ]] && ! grep -q "^docker compose up" "$FAKE_LOG" && pass "off without confirming the other connector is stopped changes nothing" || fail "rc $rc: $(cat "$work/out")"
+hold off yes
+[[ $rc == 0 && ! -e $TUNNEL_HOLD ]] && grep -qx "docker compose up --detach --remove-orphans --wait --wait-timeout 600" "$FAKE_LOG" &&
+	pass "off, confirmed, starts the connector" || fail "rc $rc, calls: $(cat "$FAKE_LOG")"
+hold on
+[[ $rc == 0 && -e $TUNNEL_HOLD ]] && grep -qx "docker compose stop cloudflared calendar-worker" "$FAKE_LOG" && pass "on stops a running connector and calendar worker" || fail "rc $rc, calls: $(cat "$FAKE_LOG")"
+rm -f "$TUNNEL_HOLD"
 
 echo "test-deploy: the units"
 unit="$repo/ops/dixie-stack.service"
