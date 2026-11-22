@@ -4,7 +4,7 @@ summary: Every endpoint the website calls under /api/public/v1/, what each takes
 audience: [owner, developer]
 visibility: internal
 status: current
-updated: 2026-11-21
+updated: 2026-11-22
 tags: [api, booking, website, quotes, photos, reviews, phase-3]
 related: [docs/decisions/0114-offline-requests-kept-whatever-they-hold.md, docs/decisions/0115-address-lookup-sessions-and-a-public-share.md, docs/decisions/0112-confirming-bookings-from-new-customers.md, docs/decisions/0113-one-answer-for-a-booking-that-becomes-a-request.md, docs/decisions/0109-reviews-kept-in-the-control-app.md, docs/decisions/0110-one-website-list-of-payment-methods.md, docs/decisions/0105-the-website-on-cloudflare-pages.md, docs/decisions/0106-add-ons-go-with-listed-services.md, docs/decisions/0108-one-text-consent.md, docs/decisions/0103-service-levels-for-interior-work-and-level-3-by-quote.md, docs/decisions/0101-website-bookings-in-the-control-app.md, docs/guides/handling-website-bookings.md, docs/decisions/0100-public-api-quotes-and-bookings.md, docs/decisions/0099-quote-requests-with-photos.md, docs/reference/booking-flow.md, docs/architecture/network-and-access.md, docs/reference/configuration.md, docs/reference/pricing.md, docs/reference/returning-customers.md, docs/reference/text-messages.md, docs/decisions/0038-two-doors-access-model.md, docs/decisions/0059-quoted-price-is-price-of-record.md, docs/decisions/0067-color-tells-identical-vehicles-apart.md, data/consent-wording.yaml]
 ---
@@ -162,8 +162,9 @@ The answer is the request's `reference` and a message that Dixie Detail will rep
 
 ## Every photo is checked and cleaned
 
-- The server opens every photo as an image and refuses anything else, and anything over 64 million pixels, before decoding it.
-- It saves a new JPEG, at most 2,560 pixels on the long side, drawn into a fresh image, so no metadata of any kind survives: no location, no camera, no date, no color profile. The original is never written to disk.
+- The public service never opens a photo itself. It hands each one to the photo worker, a container with no network, no secrets and no database, which decodes it in a fresh process with `PHOTO_DECODE_SECONDS` (20) to finish ([decision 0123](../decisions/0123-a-separate-public-service-and-a-photo-sandbox.md)). The upload waits for the result, up to `PHOTO_DECODE_WAIT_SECONDS` (90), and answers as below; a photo that fails or takes too long is refused as `not_an_image`.
+- The worker opens every photo as an image and refuses anything else, and anything over 64 million pixels, before decoding it.
+- It saves a new JPEG, at most 2,560 pixels on the long side, drawn into a fresh image, so no metadata of any kind survives: no location, no camera, no date, no color profile. The original is never written to disk: it passes through an in-memory folder shared only with the worker, which deletes it.
 - Photos are stored under random names in the photo folder (`/srv/dixie-quote-photos` on the server, mounted at `QUOTE_PHOTO_DIR` in the app container), readable by the app only.
 - No public endpoint ever returns a photo or its file name. They are seen only in the control app, over Tailscale.
 

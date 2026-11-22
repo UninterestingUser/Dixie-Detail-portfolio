@@ -10,6 +10,7 @@
   <li><a class="row" href="{% url 'scheduling-settings' %}"><strong>Scheduling settings</strong><span class="sub">Open days and hours, date exceptions, start times, notice, setup and breakdown, jobs per day, the gap between jobs and the Time Off buffer</span></a></li>
   <li><a class="row" href="{% url 'open-times' %}"><strong>Open times</strong><span class="sub">The next 90 days of start times for a job, and why closed times are closed</span></a></li>
   {% if is_manager %}<li><a class="row" href="{% url 'site-reviews' %}"><strong>Reviews</strong><span class="sub">The customer reviews the website shows: add, edit, reorder, show or hide, and delete</span></a></li>{% endif %}
+  {% if is_manager %}<li><a class="row" href="{% url 'sign-in-lockouts' %}"><strong>Sign-in lockouts</strong><span class="sub">Usernames and addresses paused after too many failed sign-ins, and clearing one</span></a></li>{% endif %}
   {% if is_manager %}<li><a class="row" href="{% url 'location-settings' %}"><strong>Location settings</strong><span class="sub">Home base, Google's daily caps, drive-time estimates and this month's calls</span></a></li>{% endif %}
 </ul>
 {% if user.is_superuser %}

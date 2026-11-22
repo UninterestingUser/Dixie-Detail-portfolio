@@ -1,44 +1,34 @@
-"""Quote request photos (decision 0099).
+"""Quote request photos (decisions 0099, 0120 and 0123).
 
-Each photo is opened as an image and refused if it is anything else, or has
-an absurd pixel count. What is kept is a new JPEG, at most 2,560 pixels on
-the long side, drawn into a fresh image so no metadata of any kind comes
-along: no EXIF, no location, no camera, no color profile, no comments. The
-original bytes are never written to disk. JPEG, PNG, WebP and HEIC (the
-iPhone format, through pillow-heif) are accepted.
+The public service never decodes a photo itself. It writes the upload to
+the photo worker's inbox, a tmpfs volume, and waits for the worker's
+result: a clean JPEG with no metadata, made in a container with no network,
+no secrets and no database (photoworker). Where no inbox is set
+(PHOTO_INBOX_DIR empty: development and tests), the same decode runs here,
+in a fresh process with the same time limit. Either way the original bytes
+are never written to disk, and a photo that fails or takes too long to
+decode is refused as not_an_image. The decode rules are in
+photoworker.imaging.
 
 The files live in QUOTE_PHOTO_DIR under random names. No public endpoint
 returns one; the control app shows them over Tailscale.
 """
 
-import io
+import json
 import os
 import re
 import secrets
-import warnings
+import tempfile
+import time
+from pathlib import Path
 
-import pillow_heif
 from django.conf import settings
-from PIL import Image, ImageOps, UnidentifiedImageError
+
+from photoworker import worker
+from photoworker.imaging import FORMATS, OPENED_AS  # noqa: F401 (the accepted formats, for tests and readers)
 
 from .http import ApiError
 
-pillow_heif.register_heif_opener()
-
-# Formats as Pillow names them. Only these decoders ever see an upload:
-# Image.open tries no other, so a file in any other format (TIFF, GIF, PDF,
-# EPS and the rest, where most of Pillow's security bugs have been) is
-# refused before any of its bytes are parsed (decision 0120).
-FORMATS = ("JPEG", "PNG", "WEBP", "HEIF")
-# A JPEG holding more than one picture, as some Android phones and cameras
-# write, opens through the JPEG decoder as "MPO". Only its first picture, the
-# photo itself, is read: nothing here seeks to the others.
-OPENED_AS = {*FORMATS, "MPO"}
-LONG_SIDE = 2560
-# A 48-megapixel phone photo is about 49 million pixels. Anything far past
-# that is refused before it is decoded.
-MAX_PIXELS = 64_000_000
-JPEG_QUALITY = 85
 FILE_NAME = re.compile(r"^[0-9a-f]{32}\.jpg$")
 
 
@@ -54,43 +44,60 @@ def too_large():
     return ApiError(413, "photo_too_large", f"That photo is larger than {settings.QUOTE_REQUEST_PHOTO_MAX_MB} MB. Please send a smaller one.")
 
 
+def bad_size():
+    return ApiError(422, "not_an_image", "That photo's size isn't one we can use. Please send an ordinary photo.")
+
+
+def write_private(path, data):
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o640)
+    with os.fdopen(descriptor, "wb") as handle:
+        handle.write(data)
+
+
+def through_worker(data, ident):
+    """Hand the upload to the photo worker and wait for its result."""
+    inbox, outbox = Path(settings.PHOTO_INBOX_DIR), Path(settings.PHOTO_OUTBOX_DIR)
+    partial = inbox / f"{ident}.part"
+    write_private(partial, data)
+    # The worker takes only *.upload names, so it never sees a half-written file.
+    os.replace(partial, inbox / f"{ident}.upload")
+    result_path, jpeg_path = outbox / f"{ident}.json", outbox / f"{ident}.jpg"
+    deadline = time.monotonic() + settings.PHOTO_DECODE_WAIT_SECONDS
+    try:
+        while not result_path.exists():
+            if time.monotonic() > deadline:
+                # The worker is down or far behind: refused, as a failed decode is.
+                return {"refused": "not_an_image"}, None
+            time.sleep(0.05)
+        result = json.loads(result_path.read_text())
+        jpeg = jpeg_path.read_bytes() if "refused" not in result else None
+        return result, jpeg
+    finally:
+        for leftover in (inbox / f"{ident}.upload", result_path, jpeg_path):
+            leftover.unlink(missing_ok=True)
+
+
+def here(data, ident):
+    """The same decode, in this container (development and tests)."""
+    shm = "/dev/shm" if os.path.isdir("/dev/shm") else None
+    with tempfile.TemporaryDirectory(dir=shm) as box:
+        write_private(Path(box) / f"{ident}.upload", data)
+        result = worker.run_one(box, box, ident, settings.PHOTO_DECODE_SECONDS)
+        jpeg_path = Path(box) / f"{ident}.jpg"
+        return result, (jpeg_path.read_bytes() if "refused" not in result else None)
+
+
 def clean_jpeg(data):
     """A new JPEG from the uploaded bytes, and its width and height."""
     if len(data) > max_bytes():
         raise too_large()
-    with warnings.catch_warnings():
-        # A decompression bomb is refused, never decoded.
-        warnings.simplefilter("error", Image.DecompressionBombWarning)
-        try:
-            image = Image.open(io.BytesIO(data), formats=FORMATS)
-            if image.format not in OPENED_AS:
-                raise not_an_image()
-            width, height = image.size
-            if width < 1 or height < 1 or width * height > MAX_PIXELS:
-                raise ApiError(422, "not_an_image", "That photo's size isn't one we can use. Please send an ordinary photo.")
-            if image.format in ("JPEG", "MPO"):
-                # Decode a large JPEG at a reduced scale, still at least the
-                # final size: far less memory for a phone's 48-megapixel photo.
-                image.draft("RGB", (LONG_SIDE, LONG_SIDE))
-            image.load()
-            image = ImageOps.exif_transpose(image)
-        except ApiError:
-            raise
-        except (UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning, OSError, ValueError, SyntaxError, EOFError) as error:
-            raise not_an_image() from error
-    if image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info):
-        rgba = image.convert("RGBA")
-        flat = Image.new("RGB", rgba.size, "white")
-        flat.paste(rgba, mask=rgba.getchannel("A"))
-    else:
-        flat = image.convert("RGB")
-    flat.thumbnail((LONG_SIDE, LONG_SIDE), Image.Resampling.LANCZOS)
-    # A fresh image holds the pixels only: nothing from image.info comes along.
-    clean = Image.new("RGB", flat.size)
-    clean.paste(flat)
-    out = io.BytesIO()
-    clean.save(out, "JPEG", quality=JPEG_QUALITY, optimize=True)
-    return out.getvalue(), clean.width, clean.height
+    ident = secrets.token_hex(16)
+    result, jpeg = (through_worker if settings.PHOTO_INBOX_DIR else here)(data, ident)
+    if result.get("refused") == "bad_size":
+        raise bad_size()
+    if "refused" in result or not jpeg:
+        raise not_an_image()
+    return jpeg, result["width"], result["height"]
 
 
 def folder():

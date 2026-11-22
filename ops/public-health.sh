@@ -10,13 +10,11 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-# shellcheck source=lib/bws.sh
-. ops/lib/bws.sh
 # shellcheck source=lib/healthchecks.sh
 . ops/lib/healthchecks.sh
 
-: "${BWS_PROJECT_ID:?set BWS_PROJECT_ID in .env}"
 : "${PUBLIC_HEALTH_URL:?set PUBLIC_HEALTH_URL in .env}"
+: "${CREDENTIALS_DIRECTORY:?run this from dixie-public-health.service}"
 
 body=$(curl --fail --silent --show-error --max-time 20 \
 	--retry 2 --retry-delay 10 --retry-all-errors "$PUBLIC_HEALTH_URL")
@@ -25,8 +23,8 @@ if ! printf '%s' "$body" | jq -e '.status == "ok"' >/dev/null 2>&1; then
 	exit 1
 fi
 
-# Fetched only after a good answer, and kept in memory for this run.
-bws_load "$BWS_PROJECT_ID"
-hc_url=$(bws_get HEALTHCHECKS_PUBLIC_URL)
-bws_forget
+# The ping URL is its own systemd credential (decision 0125): this check runs
+# every 10 minutes and never calls Bitwarden, whose rate limit it used to
+# share with the backup and the stack's start (decision 0070).
+hc_url=$(cat -- "$CREDENTIALS_DIRECTORY/healthchecks-public-url")
 hc_ping "$hc_url" ""

@@ -1,0 +1,29 @@
+{% extends "control/base.html" %}
+{% block title %}Sign-in lockouts{% endblock %}
+{% block content %}
+<h1>Sign-in lockouts</h1>
+<p class="help">After {{ settings_failures }} failed sign-ins for one username, or from one address, within {{ settings_window }} minutes, sign-ins for it are refused for {{ settings_minutes }} minutes. Clearing a lockout allows them again at once.</p>
+<h2>In force</h2>
+{% if active %}
+<ul class="list">
+  {% for item in active %}
+  <li class="row" data-lockout="{{ item.pk }}">
+    <strong>{{ item.get_kind_display }}: {{ item.value }}</strong>
+    <span class="sub">{{ item.failures }} failed sign-ins; refused until {{ item.until|date:"g:i A" }}</span>
+    <form method="post" action="{% url 'sign-in-lockout-clear' item.pk %}">{% csrf_token %}<button type="submit">Clear</button></form>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>None.</p>
+{% endif %}
+{% if recent %}
+<h2>Earlier</h2>
+<ul class="list">
+  {% for item in recent %}
+  <li class="row"><strong>{{ item.get_kind_display }}: {{ item.value }}</strong><span class="sub">{{ item.started_at|date:"M j, g:i A" }}, {{ item.failures }} failed sign-ins{% if item.cleared_at %}; cleared by {{ item.cleared_by.get_username|default:"a manager" }}{% else %}; ended {{ item.until|date:"g:i A" }}{% endif %}</span></li>
+  {% endfor %}
+</ul>
+{% endif %}
+<p><a href="{% url 'account' %}">Back to the account page</a></p>
+{% endblock %}

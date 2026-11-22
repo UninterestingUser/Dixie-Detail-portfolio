@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Pulls the latest code with the deploy key, then rebuilds and restarts the
-# stack. Run on the server as root:
+# Pulls the latest code with the deploy key, fetches the secrets and builds
+# the images, and only then recreates the containers that changed: the
+# running stack is never taken down first, and a failed fetch or build
+# leaves it as it was (decision 0125). Run on the server as root:
 #
 #   sudo /srv/dixie-detail/ops/deploy.sh
 #
@@ -51,46 +53,11 @@ if [[ -z ${DIXIE_DEPLOY_PULLED:-} ]]; then
 	exec env DIXIE_DEPLOY_PULLED=1 "$DIXIE_DIR/ops/deploy.sh"
 fi
 
-# Install or update every unit kept in ops/.
-changed=0
-for unit in ops/*.service ops/*.timer; do
-	if ! cmp -s "$unit" "/etc/systemd/system/${unit#ops/}"; then
-		install -m 0644 "$unit" /etc/systemd/system/
-		changed=1
-	fi
-done
-((changed == 0)) || systemctl daemon-reload
-systemctl enable --quiet dixie-stack.service
-# Every timer kept in ops/: the backup, the public health check, the
-# vehicle data refresh, the sales tax rate check, the calendar check and the
-# public API cleanup.
-timers=(ops/*.timer)
-timers=("${timers[@]#ops/}")
-systemctl enable --quiet --now "${timers[@]}"
-
-# The vehicle data download cache, outside the repository, owned by the app
-# container's user (uid 10001, app/Dockerfile), so a rebuilt server needs no
-# manual step. An existing folder is left as it is.
-[[ -d /srv/dixie-vehicle-data ]] || install -d -m 0700 -o 10001 -g 10001 /srv/dixie-vehicle-data
-# The quote request photos (decision 0099), the same way. compose.yaml mounts
-# it into the app container; the nightly backup copies it.
-[[ -d /srv/dixie-quote-photos ]] || install -d -m 0700 -o 10001 -g 10001 /srv/dixie-quote-photos
-
-docker compose build --pull
-systemctl restart dixie-stack.service
-
-# Check that every timer is enabled and waiting for its next run.
-systemctl list-timers --all --no-pager "${timers[@]}"
-timers_ok=1
-for timer in "${timers[@]}"; do
-	if ! systemctl is-enabled --quiet "$timer" || ! systemctl is-active --quiet "$timer"; then
-		echo "deploy.sh: $timer is not enabled and active; see docs/operations/troubleshooting.md" >&2
-		timers_ok=0
-	fi
-done
-((timers_ok)) && echo "deploy.sh: all ${#timers[@]} timers enabled and active"
-
-systemctl --no-pager --lines=0 status dixie-stack.service
-
-# A timer that failed the check above fails the deploy.
-((timers_ok))
+# Everything after the pull: fetch and build first, then install, then
+# recreate only what changed, never taking the running stack down first
+# (ops/lib/deploy.sh, decision 0125).
+# shellcheck source=lib/stack.sh
+. "$ops_dir/lib/stack.sh"
+# shellcheck source=lib/deploy.sh
+. "$ops_dir/lib/deploy.sh"
+deploy_apply

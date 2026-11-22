@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.http import HttpResponseNotFound
 
 # Paths the public entrance (the Cloudflare Tunnel) may reach. Caddy enforces
@@ -16,6 +17,10 @@ class PublicEntranceMiddleware:
     Caddy sets X-Dixie-Entrance on every request, overwriting any value the
     client sent: "tailnet" on the control-app port, "public" on the tunnel
     port. A request without the header is treated as public.
+
+    The public service (DIXIE_SERVICE=public, decision 0123) serves the
+    public paths only, whatever the header says: Caddy sends it only the
+    tunnel's requests, and this is the second check.
     """
 
     def __init__(self, get_response):
@@ -23,6 +28,8 @@ class PublicEntranceMiddleware:
 
     def __call__(self, request):
         entrance = request.headers.get("X-Dixie-Entrance", "public")
+        if settings.DIXIE_SERVICE == "public":
+            entrance = "public"
         if entrance != "tailnet" and not is_public_path(request.path_info):
             return HttpResponseNotFound()
         return self.get_response(request)

@@ -5,7 +5,8 @@
 <h1>Sign in</h1>
 <form method="post" class="stack">
   {% csrf_token %}
-  {% if form.non_field_errors %}<p class="error" role="alert">Your username or password is not right. Try again.</p>{% endif %}
+  {% if locked %}<p class="error" role="alert" data-locked>Too many failed sign-ins. Signing in is paused for {{ lockout_minutes }} minutes. A manager can clear it sooner.</p>
+  {% elif form.non_field_errors %}<p class="error" role="alert">Your username or password is not right. Try again.</p>{% endif %}
   {% include "control/_field.html" with field=form.username %}
   {% include "control/_field.html" with field=form.password %}
   <input type="hidden" name="next" value="{{ next }}">

@@ -4,7 +4,7 @@ from unittest import mock
 from django.core.management import call_command
 
 from django.db import OperationalError, connection
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 
 
 @mock.patch("core.views.connection")
@@ -58,6 +58,24 @@ class PublicEntranceTests(SimpleTestCase):
         with mock.patch("core.middleware.HttpResponseNotFound") as blocked:
             self.client.get("/anything", headers={"X-Dixie-Entrance": "tailnet"})
         blocked.assert_not_called()
+
+
+@mock.patch("core.views.connection")
+@override_settings(DIXIE_SERVICE="public")
+class PublicServiceTests(SimpleTestCase):
+    """The public service (decision 0123) serves the public paths only, even
+    for a request that says it came over the tailnet."""
+
+    def test_health_and_the_public_api_are_served(self, connection):
+        self.assertEqual(self.client.get("/health", headers={"X-Dixie-Entrance": "public"}).status_code, 200)
+        with mock.patch("core.middleware.HttpResponseNotFound") as blocked:
+            self.client.get("/api/public/v1/vehicles/years", headers={"X-Dixie-Entrance": "tailnet"})
+        blocked.assert_not_called()
+
+    def test_the_control_app_is_refused_even_with_the_tailnet_header(self, connection):
+        for path in ("/", "/sign-in/", "/admin/", "/schedule/"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path, headers={"X-Dixie-Entrance": "tailnet"}).status_code, 404)
 
 
 class MigrationTests(TestCase):

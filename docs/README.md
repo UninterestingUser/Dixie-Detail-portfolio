@@ -47,7 +47,7 @@ Every page starts with a header block. `status` matters most: **current** descri
 | [Keeping components current](architecture/keeping-components-current.md) | How the system's components are kept up to date - Dependabot's weekly pull requests, the planned major upgrades, and the maintenance list of pins and end-of-life dates. | current |
 | [Network and access](architecture/network-and-access.md) | How staff reach the private control app over Tailscale, how the public reaches only the health page and booking API through the Cloudflare Tunnel, and which host names the app accepts. | current |
 | [Secrets architecture](architecture/secrets.md) | How every key, password and token is kept in Bitwarden Secrets Manager, how the server holds one encrypted token, and how secrets reach containers without touching disk. | current |
-| [Server and Docker stack](architecture/server-and-stack.md) | The home server's hardware and folders, the four containers of the Phase 0 stack, and the systemd units and scripts that start, back up and watch it and refresh the vehicle data. | current |
+| [Server and Docker stack](architecture/server-and-stack.md) | The home server's hardware and folders, the containers of the Docker stack, and the systemd units and scripts that start, deploy, back up, firewall and watch it. | current |
 | [System overview](architecture/system-overview.md) | The parts of the Dixie Detail business system, how they connect, how data moves between them, and the principles every part follows. | current |
 
 ## Reference: business rules and behavior

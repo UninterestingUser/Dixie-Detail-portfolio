@@ -1,13 +1,27 @@
 {
 	admin off
 	auto_https off
+	# The private door is reached only through tailscale serve on the host,
+	# which connects from Docker's own addresses. Trusting those lets
+	# {client_ip} be the address tailscale serve passes on, for the sign-in
+	# lockout (decision 0124). When it passes none, {client_ip} is the
+	# host's, which the app knows not to count by address.
+	servers :8000 {
+		trusted_proxies static private_ranges
+	}
 }
 
-# Control app: the whole site. Published on 127.0.0.1:8000 only, for
-# `tailscale serve`. Requests from cloudflared are refused, so a tunnel route
-# pointed at this port by mistake exposes nothing.
+# Control app: the whole site, served by the app service. Published on
+# 127.0.0.1:8000 only, for `tailscale serve`. Requests from the tunnel
+# network are refused, so a tunnel route pointed at this port by mistake,
+# or anything else on that network, exposes nothing (the host's firewall
+# also drops them, decision 0125). The network's gateway, 172.31.250.1, is
+# the host itself: Docker's port forwarding may arrive from it.
 :8000 {
-	@tunnel remote_ip 172.31.250.10
+	@tunnel {
+		remote_ip 172.31.250.0/24
+		not remote_ip 172.31.250.1
+	}
 	abort @tunnel
 
 	# tailscale serve ends HTTPS and is the only way to this port, so every
@@ -16,16 +30,18 @@
 	reverse_proxy app:8000 {
 		header_up X-Dixie-Entrance tailnet
 		header_up X-Forwarded-Proto https
+		header_up X-Dixie-Client {client_ip}
 	}
 }
 
 # Public entrance, reached only by cloudflared over the tunnel network: the
-# health page and the public API, nothing else. The app checks the same rule
+# health page and the public API, nothing else, served by the public service
+# (decision 0123). The public service checks the same rule
 # (core/middleware.py).
 :8080 {
 	@public path /health /api/public/*
 	handle @public {
-		reverse_proxy app:8000 {
+		reverse_proxy public:8000 {
 			header_up X-Dixie-Entrance public
 		}
 	}

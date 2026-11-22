@@ -1,0 +1,19 @@
+# The tunnel network's firewall on the host (ops/tunnel-firewall.sh,
+# decision 0125). Applied after Docker starts, and again whenever Docker
+# restarts (PartOf); dixie-stack.service starts after it. Installed and
+# enabled by ops/deploy.sh.
+[Unit]
+Description=Dixie Detail tunnel network firewall
+Requires=docker.service
+After=docker.service
+PartOf=docker.service
+Before=dixie-stack.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/srv/dixie-detail/ops/tunnel-firewall.sh apply
+ExecStop=/srv/dixie-detail/ops/tunnel-firewall.sh remove
+
+[Install]
+WantedBy=docker.service multi-user.target
