@@ -157,7 +157,7 @@ services:
     networks: [backend]
 
   caddy:
-    image: caddy:2.11.4-alpine
+    image: caddy:2.11.9-alpine
     restart: unless-stopped
     read_only: true
     # Caddy's data and config folders: with admin off and auto_https off it
@@ -179,7 +179,7 @@ services:
     networks: [backend, tunnel]
 
   cloudflared:
-    image: cloudflare/cloudflared:2026.10.2
+    image: cloudflare/cloudflared:2026.11.1
     restart: unless-stopped
     user: "65532:65532"
     read_only: true
