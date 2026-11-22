@@ -3,12 +3,14 @@ from django.urls import path
 
 from . import (
     approval_views, appointment_views, calendar_views, catalog_views, location_views, pricebook_views, request_views, review_views, schedule_views, site_review_views,
-    scheduling_views, staff_views, views,
+    scheduling_views, sign_in_views, staff_views, views,
 )
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("sign-in/", auth_views.LoginView.as_view(template_name="control/sign_in.html", redirect_authenticated_user=True), name="sign-in"),
+    path("sign-in/", sign_in_views.SignInView.as_view(), name="sign-in"),
+    path("settings/sign-in-lockouts/", sign_in_views.sign_in_lockouts, name="sign-in-lockouts"),
+    path("settings/sign-in-lockouts/<int:pk>/clear/", sign_in_views.sign_in_lockout_clear, name="sign-in-lockout-clear"),
     path("sign-out/", auth_views.LogoutView.as_view(), name="sign-out"),
     path("account/", views.account, name="account"),
     path("customers/", views.customers, name="customers"),

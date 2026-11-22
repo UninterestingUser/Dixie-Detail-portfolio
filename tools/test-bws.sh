@@ -71,9 +71,13 @@ if run_case other 0 "Unauthorized" >/dev/null; then fail "succeeded on an error"
 echo "test-bws: every ops script fetches through bws_load"
 direct=$(grep -nE 'bws_project_secrets|bws_value|bws_optional_value|bws secret' "$repo"/ops/*.sh "$repo"/ops/lib/restic.sh || true)
 [[ -z $direct ]] && pass "no script calls bws or reads secrets around the helper" || fail "direct use: $direct"
-for script in backup.sh restore-test.sh public-health.sh stack-start.sh deploy.sh restic.sh vehicle-refresh.sh tax-rate-check.sh; do
+for script in backup.sh restore-test.sh health-credential.sh stack-start.sh deploy.sh restic.sh vehicle-refresh.sh tax-rate-check.sh; do
 	if grep -qE 'bws_load|restic_load_secrets' "$repo/ops/$script"; then pass "$script uses bws_load"; else fail "$script does not use bws_load"; fi
 done
+# The public health check never calls Bitwarden: its ping URL is its own
+# credential (decision 0125).
+! grep -qE 'bws_|bws-token' "$repo/ops/public-health.sh" "$repo/ops/dixie-public-health.service" &&
+	pass "public-health.sh never calls Bitwarden" || fail "public-health.sh still calls Bitwarden"
 
 ((failures == 0)) || { echo "test-bws: $failures failure(s)" >&2; exit 1; }
 echo "test-bws: PASS"

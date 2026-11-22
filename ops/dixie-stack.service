@@ -3,8 +3,15 @@
 [Unit]
 Description=Dixie Detail Docker stack
 Requires=docker.service
-Wants=network-online.target
-After=docker.service network-online.target
+# The tunnel's firewall rules are in place before any container starts
+# (decision 0125). Wants, not Requires: if they fail, the site still runs,
+# and ops/check-tunnel-isolation.sh shows the gap.
+Wants=network-online.target dixie-tunnel-firewall.service
+After=docker.service network-online.target dixie-tunnel-firewall.service
+# Never give up: after a power or internet cut, a start that fails (Bitwarden
+# unreachable, a container not healthy) is tried again every minute until it
+# works (decision 0125).
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
@@ -24,6 +31,8 @@ UMask=0077
 ExecStart=/srv/dixie-detail/ops/stack-start.sh
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=15min
+Restart=on-failure
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target

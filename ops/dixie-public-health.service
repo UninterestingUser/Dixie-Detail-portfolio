@@ -11,9 +11,10 @@ Type=oneshot
 WorkingDirectory=/srv/dixie-detail
 # Non-secret settings only, including PUBLIC_HEALTH_URL.
 EnvironmentFile=/srv/dixie-detail/.env
-# The Bitwarden machine-account token, for the Healthchecks ping URL.
-LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+# The Healthchecks ping URL, its own credential (decision 0125), so this
+# check never calls Bitwarden. Made by ops/health-credential.sh, which
+# deploy.sh runs when it is missing.
+LoadCredentialEncrypted=healthchecks-public-url:/etc/credstore.encrypted/dixie-healthchecks-public-url.cred
 UMask=0077
 ExecStart=/srv/dixie-detail/ops/public-health.sh
-# Room for three 65-second waits if Bitwarden is rate-limiting (ops/lib/bws.sh).
-TimeoutStartSec=6min
+TimeoutStartSec=2min

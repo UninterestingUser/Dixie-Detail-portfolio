@@ -10,6 +10,12 @@
 # every Linux capability (Caddy keeps the one its binary is marked with), has
 # a read-only root file system with in-memory folders for what it writes
 # outside its volumes, and a process limit well above what it uses.
+#
+# Memory limits (decision 0123), measured on 2026-11-22 with the stack idle
+# and a 64-megapixel photo decoded: app 203 MB, public 188 MB, calendar
+# worker 63 MB, db 54 MB, Caddy and cloudflared 11 MB each, the photo worker
+# 11 MB idle and 624 MB at its peak. The limits add up to about 5.4 GB,
+# leaving most of a 16 GB machine free.
 
 name: dixie
 
@@ -29,6 +35,7 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     pids_limit: 256
+    mem_limit: 2g
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
@@ -56,6 +63,7 @@ services:
     cap_drop: [ALL]
     # gunicorn's 3 workers and their threads.
     pids_limit: 128
+    mem_limit: 768m
     volumes:
       # The price matrix and launch values the pricebook and scheduling read
       # (settings DATA_DIR), from the checkout, read-only.
@@ -71,6 +79,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
       GOOGLE_MAPS_SERVER_KEY_FILE: /run/secrets/google_maps_server_key
+      # The sign-in lockout (decision 0124), each empty for the default.
+      SIGN_IN_LOCKOUT_FAILURES: ${SIGN_IN_LOCKOUT_FAILURES:-}
+      SIGN_IN_LOCKOUT_WINDOW_MINUTES: ${SIGN_IN_LOCKOUT_WINDOW_MINUTES:-}
+      SIGN_IN_LOCKOUT_MINUTES: ${SIGN_IN_LOCKOUT_MINUTES:-}
       # The two Google calendars (not secret) and the service account key
       # (a secret file), decision 0098.
       GOOGLE_CALENDAR_JOBS_ID: ${GOOGLE_CALENDAR_JOBS_ID:-}
@@ -115,6 +127,116 @@ services:
       timeout: 10s
       retries: 3
 
+  # The public API (decision 0123): the same image as the app, with its own
+  # gunicorn workers, serving only /health and /api/public/ for the tunnel
+  # (DIXIE_SERVICE=public, enforced by the app as well as by Caddy). A rush of
+  # website traffic uses this service's workers and memory, never the control
+  # app's. It decodes no photo itself: the photo worker does.
+  public:
+    image: dixie-app:local
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    pids_limit: 128
+    mem_limit: 768m
+    command: ["gunicorn", "dixie.wsgi", "--no-control-socket", "--bind", "0.0.0.0:8000", "--workers", "3", "--access-logfile", "-"]
+    volumes:
+      - ./data:/srv/data:ro
+      - /srv/dixie-quote-photos:/srv/quote-photos
+      # Uploads to the photo worker, and its results back (tmpfs, in memory).
+      - photo-inbox:/srv/photo-inbox
+      - photo-outbox:/srv/photo-outbox
+    environment:
+      DIXIE_SERVICE: public
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:?set DJANGO_ALLOWED_HOSTS in .env}
+      DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      GOOGLE_MAPS_SERVER_KEY_FILE: /run/secrets/google_maps_server_key
+      # A booking refreshes the Time Off copy first (decision 0098).
+      GOOGLE_CALENDAR_JOBS_ID: ${GOOGLE_CALENDAR_JOBS_ID:-}
+      GOOGLE_CALENDAR_TIME_OFF_ID: ${GOOGLE_CALENDAR_TIME_OFF_ID:-}
+      GOOGLE_SERVICE_ACCOUNT_JSON_FILE: /run/secrets/google_service_account_json
+      PUBLIC_API_CORS_ORIGINS: ${PUBLIC_API_CORS_ORIGINS:-}
+      QUOTE_LIFETIME_MINUTES: ${QUOTE_LIFETIME_MINUTES:-}
+      QUOTE_REQUEST_MAX_PHOTOS: ${QUOTE_REQUEST_MAX_PHOTOS:-}
+      QUOTE_REQUEST_PHOTO_MAX_MB: ${QUOTE_REQUEST_PHOTO_MAX_MB:-}
+      QUOTE_REQUEST_PHOTO_DAYS: ${QUOTE_REQUEST_PHOTO_DAYS:-}
+      ADDRESS_LOOKUP_SESSION_LOOKUPS: ${ADDRESS_LOOKUP_SESSION_LOOKUPS:-}
+      ADDRESS_LOOKUP_SESSION_MINUTES: ${ADDRESS_LOOKUP_SESSION_MINUTES:-}
+      TEST_PHONE_NUMBERS: ${TEST_PHONE_NUMBERS:-}
+      PHOTO_INBOX_DIR: /srv/photo-inbox
+      PHOTO_OUTBOX_DIR: /srv/photo-outbox
+      PHOTO_DECODE_SECONDS: ${PHOTO_DECODE_SECONDS:-}
+      PHOTO_DECODE_WAIT_SECONDS: ${PHOTO_DECODE_WAIT_SECONDS:-}
+      TURNSTILE_SECRET_KEY_FILE: /run/secrets/turnstile_secret_key
+      OFFLINE_REQUESTS_SIGNING_KEY_FILE: /run/secrets/offline_requests_signing_key
+    # The same secret files as the app, less the website's deploy hook, which
+    # only publishing a pricebook in the control app uses.
+    secrets:
+      - source: app_django_secret_key
+        target: django_secret_key
+      - source: app_postgres_password
+        target: postgres_password
+      - source: app_google_maps_server_key
+        target: google_maps_server_key
+      - source: app_google_service_account_json
+        target: google_service_account_json
+      - source: app_turnstile_secret_key
+        target: turnstile_secret_key
+      - source: app_offline_requests_signing_key
+        target: offline_requests_signing_key
+    # The app runs the migrations as it starts; this waits for it.
+    depends_on:
+      app:
+        condition: service_healthy
+      photo-worker:
+        condition: service_healthy
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # The photo worker (decision 0123): decodes each quote request photo the
+  # public service hands it, one at a time, each in a fresh process with a
+  # time limit. No network at all, no secrets, no database, and only the two
+  # in-memory folders it shares with the public service, so a photo that
+  # exploits an image decoder finds nothing to take and nowhere to send it.
+  photo-worker:
+    image: dixie-app:local
+    restart: unless-stopped
+    command: ["python", "-m", "photoworker"]
+    network_mode: none
+    # Not the app's user: it shares only the app's group, for the two folders.
+    user: "10002:10001"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    pids_limit: 32
+    # A 64-megapixel PNG, the largest photo allowed, peaked at 624 MiB.
+    mem_limit: 1g
+    volumes:
+      - photo-inbox:/srv/photo-inbox
+      - photo-outbox:/srv/photo-outbox
+    environment:
+      PHOTO_INBOX_DIR: /srv/photo-inbox
+      PHOTO_OUTBOX_DIR: /srv/photo-outbox
+      PHOTO_DECODE_SECONDS: ${PHOTO_DECODE_SECONDS:-}
+    healthcheck:
+      # The loop touches this file every tenth of a second.
+      test: ["CMD", "python", "-c", "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/photo-worker-alive') > 30)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   # The calendar worker (decision 0098): pushes queued changes to the Jobs
   # calendar within seconds and copies the Time Off calendar every few
   # minutes. Same image, settings and secrets as the app; it serves nothing.
@@ -127,6 +249,7 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     pids_limit: 64
+    mem_limit: 384m
     command: ["python", "manage.py", "calendar_worker"]
     stop_signal: SIGTERM
     volumes:
@@ -163,6 +286,7 @@ services:
     # Caddy's data and config folders: with admin off and auto_https off it
     # keeps nothing there worth saving.
     tmpfs: [/data, /config, /tmp]
+    mem_limit: 256m
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     # Its ports are above 1024, but the image's caddy binary carries this
@@ -175,8 +299,13 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-    depends_on: [app]
-    networks: [backend, tunnel]
+    depends_on: [app, public]
+    networks:
+      backend: {}
+      tunnel:
+        # Fixed, so the host's firewall can let the tunnel reach this one
+        # address and port (decision 0125).
+        ipv4_address: 172.31.250.20
 
   cloudflared:
     image: cloudflare/cloudflared:2026.11.1
@@ -186,6 +315,11 @@ services:
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
     pids_limit: 128
+    mem_limit: 256m
+    # Public resolvers: the host's firewall drops everything from the tunnel
+    # network to private addresses, which would include a resolver on the
+    # LAN (decision 0125).
+    dns: [1.1.1.1, 1.0.0.1]
     command: tunnel --no-autoupdate run --token-file /run/secrets/cloudflared_token
     secrets:
       - source: tunnel_cloudflared_token
@@ -229,3 +363,10 @@ networks:
 
 volumes:
   pgdata: {}
+  # The photo worker's two folders (decision 0123), in memory: uploads, with
+  # their location data, never reach a disk, and both empty on a restart.
+  # Owned by the app's group, which the worker shares.
+  photo-inbox:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=96m,uid=10001,gid=10001,mode=0770"}
+  photo-outbox:
+    driver_opts: {type: tmpfs, device: tmpfs, o: "size=48m,uid=10001,gid=10001,mode=0770"}

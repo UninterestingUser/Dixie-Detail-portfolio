@@ -50,13 +50,33 @@ QUOTE_LIFETIME_MINUTES = env_int("QUOTE_LIFETIME_MINUTES", 120)
 QUOTE_REQUEST_MAX_PHOTOS = env_int("QUOTE_REQUEST_MAX_PHOTOS", 6)
 QUOTE_REQUEST_PHOTO_MAX_MB = env_int("QUOTE_REQUEST_PHOTO_MAX_MB", 15)
 QUOTE_REQUEST_PHOTO_DAYS = env_int("QUOTE_REQUEST_PHOTO_DAYS", 90)
+# Sign-in lockout (decision 0124): this many failed sign-ins for one
+# username, or from one address, within the window refuses sign-ins for it
+# for SIGN_IN_LOCKOUT_MINUTES, unless a manager clears it.
+SIGN_IN_LOCKOUT_FAILURES = env_int("SIGN_IN_LOCKOUT_FAILURES", 5)
+SIGN_IN_LOCKOUT_WINDOW_MINUTES = env_int("SIGN_IN_LOCKOUT_WINDOW_MINUTES", 15)
+SIGN_IN_LOCKOUT_MINUTES = env_int("SIGN_IN_LOCKOUT_MINUTES", 15)
 # Address lookup sessions (decision 0115): how many address lookups one
 # session allows, and for how many minutes after it opens.
 ADDRESS_LOOKUP_SESSION_LOOKUPS = env_int("ADDRESS_LOOKUP_SESSION_LOOKUPS", 10)
 ADDRESS_LOOKUP_SESSION_MINUTES = env_int("ADDRESS_LOOKUP_SESSION_MINUTES", 30)
 # Where the photos are kept in the app container: the host folder
 # /srv/dixie-quote-photos is mounted here (compose.yaml).
+# Which service this process is (decision 0123): "app" serves the control
+# app over the tailnet; "public" serves only /health and /api/public/ for the
+# tunnel, whatever Caddy's entrance header says.
+DIXIE_SERVICE = os.environ.get("DIXIE_SERVICE", "app")
 QUOTE_PHOTO_DIR = Path(os.environ.get("QUOTE_PHOTO_DIR", "/srv/quote-photos"))
+# The photo worker (decision 0123): the public service writes each upload to
+# the inbox and reads the worker's result from the outbox, both tmpfs volumes
+# shared with the worker only. Empty (development and tests): the same decode
+# runs in the app's own container. Each photo gets PHOTO_DECODE_SECONDS to
+# decode; the upload waits at most PHOTO_DECODE_WAIT_SECONDS for its result,
+# which leaves room for a few photos ahead of it.
+PHOTO_INBOX_DIR = os.environ.get("PHOTO_INBOX_DIR", "")
+PHOTO_OUTBOX_DIR = os.environ.get("PHOTO_OUTBOX_DIR", "")
+PHOTO_DECODE_SECONDS = float(os.environ.get("PHOTO_DECODE_SECONDS") or 20)
+PHOTO_DECODE_WAIT_SECONDS = float(os.environ.get("PHOTO_DECODE_WAIT_SECONDS") or 90)
 # Mobile numbers whose website bookings and requests are marked test
 # records, 10 digits each.
 TEST_PHONE_NUMBERS = env_list("TEST_PHONE_NUMBERS")

@@ -9,7 +9,9 @@
 # and the portfolio publisher against throwaway repositories
 # (tools/test-portfolio.sh, which needs git filter-repo and python3), and the
 # offline Worker's deploy script with a fake wrangler (tools/test-worker-deploy.sh,
-# which needs node).
+# which needs node), the deploy and the stack's start with fakes
+# (tools/test-deploy.sh), and the tunnel firewall's rules in a network
+# namespace of its own (tools/test-tunnel-firewall.sh).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 #   tools/run-tests.sh --ops-only   runs only the ops-script tests, with no
@@ -38,6 +40,10 @@ echo "run-tests: testing the timeout run_restic uses (tools/test-timeout.sh)"
 "$repo/tools/test-timeout.sh" >/dev/null || { "$repo/tools/test-timeout.sh"; exit 1; }
 echo "run-tests: testing the restic and failure helpers (ops/lib/restic.sh, ops/lib/errors.sh)"
 "$repo/tools/test-restic.sh" >/dev/null || { "$repo/tools/test-restic.sh"; exit 1; }
+echo "run-tests: testing the deploy and the stack's start (ops/lib/deploy.sh, ops/stack-start.sh)"
+"$repo/tools/test-deploy.sh" >/dev/null || { "$repo/tools/test-deploy.sh"; exit 1; }
+echo "run-tests: testing the tunnel firewall (ops/tunnel-firewall.sh)"
+"$repo/tools/test-tunnel-firewall.sh" >/dev/null || { "$repo/tools/test-tunnel-firewall.sh"; exit 1; }
 echo "run-tests: testing the portfolio publisher (tools/publish-portfolio.sh)"
 "$repo/tools/test-portfolio.sh" >/dev/null || { "$repo/tools/test-portfolio.sh"; exit 1; }
 

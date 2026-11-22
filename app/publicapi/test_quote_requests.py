@@ -220,16 +220,22 @@ class PhotoTests(QuoteRequestTestCase):
     def test_other_formats_never_reach_their_decoders(self):
         # Decision 0120: Image.open tries only the four accepted formats, so a
         # file in any other format is refused before its decoder reads it.
+        # Checked in this process, where the mock applies; the upload path
+        # runs the same code in the photo worker's own process.
         from PIL import TiffImagePlugin
+
+        from photoworker import imaging
 
         session = self.session()
         for kind in ("TIFF", "GIF", "BMP", "PDF"):
             out = io.BytesIO()
             Image.new("RGB", (10, 10)).save(out, kind)
             with self.subTest(kind), mock.patch.object(TiffImagePlugin.TiffImageFile, "_open", side_effect=AssertionError("TIFF decoder reached")) as tiff:
-                answer = self.upload(session, out.getvalue(), "photo.jpg", "image/jpeg", expect=422)
-                self.assertEqual(answer["error"], "not_an_image")
+                with self.assertRaises(imaging.Refused):
+                    imaging.clean(out.getvalue())
                 tiff.assert_not_called()
+            answer = self.upload(session, out.getvalue(), "photo.jpg", "image/jpeg", expect=422)
+            self.assertEqual(answer["error"], "not_an_image")
         self.assertEqual(photos.FORMATS, ("JPEG", "PNG", "WEBP", "HEIF"))
         self.assertEqual(os.listdir(self.photo_dir), [])
 

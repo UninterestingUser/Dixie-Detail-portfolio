@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-21
+  updated: 2026-11-22
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -100,6 +100,31 @@ settings:
     purpose: Days a quote request's photos are kept after it is declined, or its job is done or canceled
     used_by: app container (clean_public_api, run by dixie-api-cleanup.timer)
     phase: 3
+  - name: PHOTO_DECODE_SECONDS
+    default: 20
+    purpose: Seconds the photo worker gives one quote request photo to decode before refusing it (decision 0123)
+    used_by: photo-worker container
+    phase: 3
+  - name: PHOTO_DECODE_WAIT_SECONDS
+    default: 90
+    purpose: Seconds a photo upload waits for the photo worker's result before refusing the photo; room for a few photos ahead of it (decision 0123)
+    used_by: public container
+    phase: 3
+  - name: SIGN_IN_LOCKOUT_FAILURES
+    default: 5
+    purpose: Failed control app sign-ins, for one username or from one address, that lock it out (decision 0124)
+    used_by: app container
+    phase: 3
+  - name: SIGN_IN_LOCKOUT_WINDOW_MINUTES
+    default: 15
+    purpose: Minutes within which those failures count
+    used_by: app container
+    phase: 3
+  - name: SIGN_IN_LOCKOUT_MINUTES
+    default: 15
+    purpose: Minutes a lockout lasts, unless a manager clears it
+    used_by: app container
+    phase: 3
   - name: ADDRESS_LOOKUP_SESSION_LOOKUPS
     default: 10
     purpose: Public address lookups one lookup session allows (decision 0115)
@@ -194,8 +219,8 @@ secrets:
     phase: 0
   - name: HEALTHCHECKS_PUBLIC_URL
     purpose: Ping address for the public address check
-    used_by: ops/public-health.sh
-    note: Required; the check fails without it
+    used_by: ops/health-credential.sh and ops/deploy.sh, which copy it into the systemd credential /etc/credstore.encrypted/dixie-healthchecks-public-url.cred that ops/public-health.sh reads (decision 0125)
+    note: Required; the check fails without it. After changing it, run sudo ops/health-credential.sh
     phase: 0
   - name: HEALTHCHECKS_VEHICLE_REFRESH_URL
     purpose: Ping address for the vehicle data refresh check (docs/operations/monitoring.md)
