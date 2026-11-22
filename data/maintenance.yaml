@@ -192,10 +192,10 @@ components:
 
   - name: Production host firmware
     status: planned (task B2 makes this machine the production host)
-    hardware: Intel NUC5i7RYH mini PC (2 cores, 16 GB, 256 GB NVMe, Intel PTT), discontinued in 2015
-    pinned: the last BIOS its maker released
+    hardware: Intel NUC5i7RYH mini PC (2 cores, 16 GB, 512 GB NVMe boot drive, Intel PTT), discontinued in 2015
+    pinned: BIOS 0381 (2019-08-07), Intel's last release on its download center
     pinned_in: the production host
-    end_of_life: ended; its maker no longer updates its firmware
+    end_of_life: ended; the downloads have since been removed, and no further updates are expected
     watched_by: owner
     update: None to install.
     test: None.
