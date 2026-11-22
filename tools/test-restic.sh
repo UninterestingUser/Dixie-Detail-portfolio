@@ -157,6 +157,39 @@ PATH="$work/hang:$PATH" bash -c '
 [[ $rc == 124 ]] && grep -q "interrupted, lock removed" "$work/err" && pass "stopped after 1 second with SIGINT, exit status 124" ||
 	fail "status $rc, printed: $(cat "$work/err")"
 
+echo "test-restic: run_restic uses a GNU timeout, never uutils' (Ubuntu 26.04)"
+# A fake uutils timeout, which kills at once, as uutils 0.10.0 does when
+# given --signal=INT with --kill-after, and a real GNU one as gnutimeout.
+real_gnu=$(bash -c '. "$1/ops/lib/restic.sh"; command -v "$(gnu_timeout)"' _ "$repo")
+mkdir -p "$work/uutils" "$work/both"
+cat >"$work/uutils/timeout" <<'FAKE'
+#!/usr/bin/env bash
+[[ $1 == --version ]] && { echo "timeout (uutils coreutils) 0.10.0"; exit 0; }
+echo "fake uutils timeout ran" >>"$FAKE_LOG"
+exit 137
+FAKE
+chmod +x "$work/uutils/timeout"
+cp "$work/uutils/timeout" "$work/both/timeout"
+ln -s "$real_gnu" "$work/both/gnutimeout"
+rc=0
+FAKE_LOG="$work/uutils.log" PATH="$work/uutils:$work/hang:/usr/bin:/bin" bash -c '
+	. "$1/ops/lib/restic.sh"
+	# Hide a real gnutimeout on this machine.
+	command() { [[ $1 == -v && $2 == gnutimeout ]] && return 1; builtin command "$@"; }
+	restic_password=made-up-password rclone_config_pass=made-up-rclone restic_time_limit=1s
+	run_restic backup
+' _ "$repo" 2>"$work/err" || rc=$?
+[[ $rc != 0 && ! -e $work/uutils.log ]] && grep -q "no GNU coreutils timeout found" "$work/err" &&
+	pass "with only a uutils timeout, run_restic refuses and starts nothing" || fail "status $rc, printed: $(cat "$work/err")"
+rc=0
+FAKE_LOG="$work/both.log" PATH="$work/both:$work/hang:$PATH" bash -c '
+	. "$1/ops/lib/restic.sh"
+	restic_password=made-up-password rclone_config_pass=made-up-rclone restic_time_limit=1s
+	run_restic backup
+' _ "$repo" 2>"$work/err" || rc=$?
+[[ $rc == 124 && ! -e $work/both.log ]] && grep -q "interrupted, lock removed" "$work/err" &&
+	pass "with uutils as timeout and GNU as gnutimeout, gnutimeout runs: SIGINT, exit status 124" || fail "status $rc, printed: $(cat "$work/err")"
+
 # ops/backup.sh against fakes. The fake restic fails the first
 # FAKE_FAIL_BACKUP backup calls and the first FAKE_FAIL_FORGET forget calls
 # with exit status FAKE_RC, logging each call and how many bytes of stdin a

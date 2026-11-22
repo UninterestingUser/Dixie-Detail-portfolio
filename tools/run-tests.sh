@@ -12,13 +12,18 @@
 # which needs node).
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
+#   tools/run-tests.sh --ops-only   runs only the ops-script tests, with no
+#   container engine (the Tests workflow runs them on Ubuntu 26.04, the
+#   server's release).
 # Uses Podman, or Docker where Podman is not installed. CONTAINER_ENGINE=docker
 # forces one.
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/.." && pwd)
+ops_only=false
+[[ ${1:-} == --ops-only ]] && { ops_only=true; shift; }
 engine=${CONTAINER_ENGINE:-$(command -v podman || command -v docker || true)}
-[[ -n $engine ]] || { echo "run-tests: install Podman: sudo dnf install podman" >&2; exit 1; }
+$ops_only || [[ -n $engine ]] || { echo "run-tests: install Podman: sudo dnf install podman" >&2; exit 1; }
 
 # The same PostgreSQL image as the db service in compose.yaml.
 postgres_image=docker.io/library/$(grep -m1 -oE 'postgres:[^[:space:]]+' "$repo/compose.yaml")
@@ -29,6 +34,8 @@ trap cleanup EXIT
 
 echo "run-tests: testing the Bitwarden helper (ops/lib/bws.sh)"
 "$repo/tools/test-bws.sh" >/dev/null || { "$repo/tools/test-bws.sh"; exit 1; }
+echo "run-tests: testing the timeout run_restic uses (tools/test-timeout.sh)"
+"$repo/tools/test-timeout.sh" >/dev/null || { "$repo/tools/test-timeout.sh"; exit 1; }
 echo "run-tests: testing the restic and failure helpers (ops/lib/restic.sh, ops/lib/errors.sh)"
 "$repo/tools/test-restic.sh" >/dev/null || { "$repo/tools/test-restic.sh"; exit 1; }
 echo "run-tests: testing the portfolio publisher (tools/publish-portfolio.sh)"
@@ -36,6 +43,11 @@ echo "run-tests: testing the portfolio publisher (tools/publish-portfolio.sh)"
 
 echo "run-tests: testing the offline Worker's deploy script (site/workers/offline-replay/deploy.sh)"
 "$repo/tools/test-worker-deploy.sh" >/dev/null || { "$repo/tools/test-worker-deploy.sh"; exit 1; }
+
+if $ops_only; then
+	echo "run-tests: PASS (ops scripts only)"
+	exit 0
+fi
 
 # The test image must use the production image's base (Dependabot updates
 # both in one pull request, decision 0118).

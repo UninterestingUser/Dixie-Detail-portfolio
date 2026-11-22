@@ -10,13 +10,26 @@ permissions:
 
 jobs:
   test:
-    # Pinned to the server's release. ubuntu-latest became 26.04 in
-    # November 2026, whose uutils coreutils `timeout` ignores --signal=INT
-    # and kills restic outright (docs/operations/troubleshooting.md).
+    # Everything in tools/run-tests.sh: the ops-script tests, then the app's
+    # tests in the production image under Podman, which is on this runner
+    # image. The app tests don't depend on the runner's release; the ops
+    # scripts are also tested on the servers' release in the next job.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       # For tools/test-portfolio.sh, which run-tests.sh runs first.
       - run: sudo apt-get update -q && sudo apt-get install -y -q git-filter-repo
-      # The same command as on the workstation; Podman is on the runner image.
+      # The same command as on the workstation.
       - run: tools/run-tests.sh
+
+  ops-on-26-04:
+    # The ops scripts on the servers' release, Ubuntu 26.04, whose plain
+    # `timeout` is uutils coreutils (docs/operations/troubleshooting.md).
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo apt-get update -q && sudo apt-get install -y -q git-filter-repo jq
+      # Shows which timeout this runner has, so a passing run is known to
+      # have exercised the uutils one.
+      - run: timeout --version | head -1; gnutimeout --version | head -1
+      - run: tools/run-tests.sh --ops-only

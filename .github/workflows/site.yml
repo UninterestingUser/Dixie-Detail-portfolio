@@ -15,7 +15,8 @@ permissions:
 
 jobs:
   site:
-    # Pinned to the server's release, like the other workflows.
+    # Pinned, so a change of ubuntu-latest never changes the browser tests
+    # unseen. The site runs on Cloudflare, not on the servers.
     runs-on: ubuntu-24.04
     defaults:
       run:

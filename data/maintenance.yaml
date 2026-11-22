@@ -19,6 +19,12 @@ meta:
   #   owner - the two hosts' firmware.
   # Grok Bot only recommends. The owner acts on every report, Dependabot's
   # and Grok Bot's, and nothing changes without the owner and a pull request.
+  # The maintenance assistant reviews each Dependabot pull request as it
+  # opens. Until launch the owner merges them all. After launch the
+  # assistant may merge a Dependabot minor, patch or security update once
+  # every check has passed; a major update, a pull request that changes more
+  # than dependency files, and every deploy stay with the owner (decision
+  # 0122, docs/architecture/keeping-components-current.md).
   # status: only on an entry that is planned, not yet in use.
   # Hosts are named by role: the production host runs the stack, and the
   # backup host keeps the backups. Until task B2 moves production to its new
@@ -30,17 +36,25 @@ meta:
 
 components:
   - name: Ubuntu Server release
-    pinned: Ubuntu 24.04 LTS on the current server; the production host's release is chosen when it is set up (B2)
-    pinned_in: each host; the workflows' runs-on (ubuntu-24.04) match the production host's release
-    end_of_life: 2029-04 (standard security maintenance)
+    pinned: Ubuntu 26.04.1 LTS (Resolute Raccoon) on the current server; the production host will run the same release (B2)
+    pinned_in: each host; the Tests workflow's ops-on-26-04 job runs the ops-script tests on the same release
+    end_of_life: 2031-05 (end of standard support, from Canonical's list of releases and kernel lifecycle table)
     watched_by: grok-bot
-    update: A release upgrade is planned work. Before moving to 26.04, check its timeout command first (docs/operations/troubleshooting.md, the uutils coreutils entry), then move the workflows' runs-on in the same pull request.
-    test: tools/run-tests.sh on the new release, then the restore test and the gosu test on the host.
+    update: Point releases (26.04.2 and later) come with apt. The next release is planned work; run tools/test-timeout.sh and tools/run-tests.sh --ops-only on it first, and move the ops-on-26-04 job in the same pull request.
+    test: tools/test-timeout.sh and tools/run-tests.sh --ops-only on the host, then the restore test and the gosu test.
+
+  - name: GNU timeout (gnutimeout)
+    pinned: not pinned; GNU coreutils 9.7 from Ubuntu's gnu-coreutils package (priority required, so on every 26.04 install)
+    pinned_in: apt on each host; ops/lib/restic.sh picks it with gnu_timeout
+    end_of_life: none published; it goes with the Ubuntu release
+    watched_by: grok-bot
+    update: apt, with the other updates. 26.04's plain timeout is uutils coreutils 0.10.0, which kills restic at once when given --signal=INT with --kill-after, so the backup must keep using GNU's (decision 0121).
+    test: tools/test-timeout.sh on the host.
 
   - name: Linux kernel
-    pinned: the GRUB default, set by title
+    pinned: the GRUB default, set by title, on 26.04's general availability (GA) kernel track, Linux 7.0
     pinned_in: GRUB on each host (docs/operations/updating-the-kernel.md)
-    end_of_life: follows the Ubuntu kernel lifecycle (ubuntu.com/kernel/lifecycle) for the 24.04 kernel track in use
+    end_of_life: 2031-05 for 26.04's 7.0 GA kernel (Canonical's kernel lifecycle table, ubuntu.com/kernel/lifecycle)
     watched_by: grok-bot
     update: Boot each new kernel once with grub-reboot, and make it the default only after the gosu test passes (decision 0088). Grok Bot also watches for the Ubuntu kernel that fixes the gosu and AppArmor hang, which ends the pin.
     test: ops/gosu-test.sh, then the stack's status and the control app over Tailscale.
@@ -94,11 +108,11 @@ components:
     test: tools/run-tests.sh (the quote request photo tests read JPEG and HEIC photos).
 
   - name: Node on Cloudflare Pages
-    pinned: "22"
+    pinned: "24 LTS (from 22 in decision 0121)"
     pinned_in: site/.nvmrc (the Site workflow), and the Pages build setting NODE_VERSION (data/configuration.yaml)
-    end_of_life: 2027-04-30
+    end_of_life: 2028-04-30
     watched_by: grok-bot
-    update: Planned upgrade before 2027-04-30. Change site/.nvmrc, the engines line in site/package.json and NODE_VERSION on the Pages project together.
+    update: Planned upgrade before 2028-04-30. Change site/.nvmrc, the engines line in site/package.json and NODE_VERSION on the Pages project together.
     test: The Site workflow, then a staging build and a test booking (docs/guides/previewing-and-deploying-the-website.md).
 
   - name: Astro

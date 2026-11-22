@@ -11,9 +11,8 @@ permissions:
 
 jobs:
   check:
-    # Pinned to the server's release. ubuntu-latest became 26.04 in
-    # November 2026, whose uutils coreutils `timeout` ignores --signal=INT
-    # and kills restic outright (docs/operations/troubleshooting.md).
+    # Pinned, so a change of ubuntu-latest never changes this check unseen.
+    # The servers run 26.04; the Tests workflow checks the ops scripts there.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7

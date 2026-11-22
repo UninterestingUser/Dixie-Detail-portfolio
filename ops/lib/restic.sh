@@ -46,6 +46,26 @@ restic_load_secrets() {
 	bws_forget
 }
 
+# gnu_timeout
+# Prints the name of a GNU coreutils timeout, or fails with a message.
+# run_restic needs GNU's: on Ubuntu 26.04 `timeout` is uutils' 0.10.0, which,
+# given --signal=INT together with --kill-after, sends SIGKILL at once instead
+# of SIGINT, so a restic cut off at its time limit leaves its lock behind.
+# 26.04 also installs GNU's as `gnutimeout` (package gnu-coreutils, priority
+# required); 24.04 and Fedora have GNU's as `timeout`. tools/test-timeout.sh
+# checks the one this picks.
+gnu_timeout() {
+	local candidate
+	for candidate in gnutimeout timeout; do
+		if command -v "$candidate" >/dev/null && [[ $("$candidate" --version 2>/dev/null) == *"GNU coreutils"* ]]; then
+			echo "$candidate"
+			return 0
+		fi
+	done
+	echo "restic: no GNU coreutils timeout found (the uutils one kills restic without letting it remove its lock); install gnu-coreutils" >&2
+	return 1
+}
+
 # run_restic ARGS...
 # Runs restic with the passwords, RESTIC_OPTIONS and RESTIC_RCLONE_TPSLIMIT.
 # When the caller sets restic_time_limit (a duration for timeout(1), such as
@@ -61,8 +81,11 @@ restic_load_secrets() {
 # ops script pipes it. When the repository is locked, restic's own error is
 # followed by restic_lock_hint.
 run_restic() {
-	local err rc=0 limit=()
-	[[ -z ${restic_time_limit:-} ]] || limit=(timeout --signal=INT --kill-after=1m "$restic_time_limit")
+	local err rc=0 limit=() timeout_cmd
+	if [[ -n ${restic_time_limit:-} ]]; then
+		timeout_cmd=$(gnu_timeout) || return
+		limit=("$timeout_cmd" --signal=INT --kill-after=1m "$restic_time_limit")
+	fi
 	err=$(mktemp /dev/shm/dixie-restic.XXXXXX) || return
 	# restic's errors go to the terminal or log as they come, and to $err to
 	# be checked. The braces make this shell, not restic's, start tee, so
