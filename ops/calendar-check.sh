@@ -16,6 +16,9 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=lib/hold.sh
+. ops/lib/hold.sh
+held_skip calendar-check
 # shellcheck source=lib/bws.sh
 . ops/lib/bws.sh
 # shellcheck source=lib/healthchecks.sh

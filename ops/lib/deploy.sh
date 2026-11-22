@@ -25,6 +25,34 @@ deploy_unchanged() {
 	echo "deploy.sh: $1. The running stack was left as it was; nothing was changed." >&2
 }
 
+# deploy_compare_env: warns, naming the settings (never their values), when
+# .env differs from the Bitwarden secret DOT_ENV, the copy a rebuilt host
+# starts from (decision 0128). Never fails the deploy. Call after bws_load.
+deploy_compare_env() {
+	local dot_env differ
+	dot_env=$(bws_get_optional DOT_ENV) || return 0
+	if [[ -z $dot_env ]]; then
+		echo "deploy.sh: WARNING: there's no DOT_ENV secret in Bitwarden, so a rebuilt host has no copy of .env; save it there (docs/operations/building-the-production-host.md)" >&2
+		return 0
+	fi
+	# KEY=value lines only, the last of each key winning, as setting reads them.
+	differ=$(awk '
+		/^[A-Za-z_][A-Za-z0-9_]*=/ {
+			key = substr($0, 1, index($0, "=") - 1)
+			if (FNR == NR) saved[key] = $0; else here[key] = $0
+		}
+		END {
+			for (key in here) if (!(key in saved) || saved[key] != here[key]) print key
+			for (key in saved) if (!(key in here)) print key
+		}' <(printf '%s\n' "$dot_env") .env | sort -u | tr '\n' ' ')
+	dot_env=""
+	if [[ -n $differ ]]; then
+		echo "deploy.sh: WARNING: .env differs from the DOT_ENV secret in Bitwarden, in: ${differ% }. Update whichever is out of date (docs/operations/deploying-changes.md)" >&2
+	else
+		echo "deploy.sh: .env matches the DOT_ENV secret in Bitwarden"
+	fi
+}
+
 deploy_apply() {
 	local project_id server_url staged changed=0 unit timers timers_ok=1 timer health_url=""
 
@@ -44,6 +72,7 @@ deploy_apply() {
 	if [[ ! -f $HEALTH_CRED ]]; then
 		health_url=$(bws_get HEALTHCHECKS_PUBLIC_URL) || { deploy_unchanged "couldn't read HEALTHCHECKS_PUBLIC_URL from Bitwarden"; return 1; }
 	fi
+	deploy_compare_env
 	bws_forget
 
 	# 2. The images.
@@ -86,6 +115,7 @@ deploy_apply() {
 		[[ ! -e $STACK_RUN_DIR/secrets ]] || mv -- "$STACK_RUN_DIR/secrets" "$STACK_RUN_DIR/secrets.old"
 		mv -- "$staged/secrets" "$STACK_RUN_DIR/secrets"
 		rm -rf -- "$STACK_RUN_DIR/secrets.old"
+		stack_hold_note
 		if ! docker compose "${STACK_UP[@]}"; then
 			echo "deploy.sh: the changed containers didn't all come up running and healthy; see docker compose ps and docs/operations/troubleshooting.md" >&2
 			return 1

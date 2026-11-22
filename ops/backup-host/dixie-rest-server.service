@@ -1,0 +1,22 @@
+# The backup server (decision 0127). Installed to /etc/systemd/system on
+# the backup host by ops/backup-host/setup.sh, never on the production host.
+[Unit]
+Description=Dixie Detail backup server (restic rest-server)
+Requires=docker.service
+Wants=network-online.target
+After=docker.service network-online.target
+# The repository lives on the RAID (BACKUP_REST_DATA_DIR).
+RequiresMountsFor=/mnt/raid
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/srv/dixie-detail/ops/backup-host
+ExecStart=/usr/bin/docker compose --env-file /srv/dixie-detail/.env up --detach --wait --wait-timeout 120 --remove-orphans
+ExecStop=/usr/bin/docker compose --env-file /srv/dixie-detail/.env down
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

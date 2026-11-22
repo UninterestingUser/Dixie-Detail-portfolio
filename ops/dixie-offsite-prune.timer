@@ -1,0 +1,11 @@
+# Runs dixie-offsite-prune.service every Sunday at 5:20 AM Eastern, clear of
+# the hourly backup at 5 past and the nightly one at 2:45 (decision 0127).
+[Unit]
+Description=Dixie Detail weekly prune of the Backblaze B2 repository
+
+[Timer]
+OnCalendar=Sun *-*-* 05:20:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

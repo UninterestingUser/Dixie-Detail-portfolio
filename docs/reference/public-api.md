@@ -61,6 +61,7 @@ Every refusal is JSON with an `error` code and a plain `message` the website can
 | 422 | `not_an_image`, `too_many_photos` | A photo was refused |
 | 429 | `rate_limited` | Too many requests from one visitor address |
 | 503 | `unavailable` | Google or Cloudflare could not be asked just now, or no pricebook is published |
+| 503 | `requests_only` | Online booking is paused by the requests-only switch; every endpoint but the two offline ones answers this (see below) |
 
 ## The pricebook: GET services
 
@@ -170,7 +171,7 @@ The answer is the request's `reference` and a message that Dixie Detail will rep
 
 ## How long photos are kept
 
-The nightly cleanup (`clean_public_api`, run by `dixie-api-cleanup.timer` at 2:20 AM) deletes photos never attached to a sent request after a day, and a request's photos `QUOTE_REQUEST_PHOTO_DAYS` (90) after it is declined, or its job is done or canceled. The description stays, with a note of how many photos were deleted and when. The photo folder is in the nightly backup, and the restore test reports how many photos the newest backup holds ([backups-and-restore.md](../operations/backups-and-restore.md)).
+The nightly cleanup (`clean_public_api`, run by `dixie-api-cleanup.timer` at 2:20 AM) deletes photos never attached to a sent request after a day, and a request's photos `QUOTE_REQUEST_PHOTO_DAYS` (90) after it is declined, or its job is done or canceled. The description stays, with a note of how many photos were deleted and when. The photo folder is in every backup, hourly and nightly, and the restore test reports how many photos the newest backup holds ([backups-and-restore.md](../operations/backups-and-restore.md)).
 
 ## The price table: GET price-table
 
@@ -190,6 +191,10 @@ While the server can't be reached, or Google's address suggestions are down, the
 ## Offline quote requests: POST quote-requests/offline
 
 A quote request sent while the server can't be reached, or while Google's address suggestions are down, is held and replayed by the same piece, signed the same way. It carries no photos: the form tells the customer they can text photos later. The body is the quote request's fields (vehicle, `size`, `service` or `"not_sure"`, `condition`, `add_ons`, `description`, name, mobile, consents, `preferred_days`) plus the website's `request_id`, `submitted_at`, and the `place_id` with its `session_token` or the `address` as typed. Nothing the customer sent is lost: an address that can't be checked, a job the site would book online after all, or any field that can't be read, is kept with the problem noted on the request for the owner, with the body as it arrived when something couldn't be read ([decision 0114](../decisions/0114-offline-requests-kept-whatever-they-hold.md)). It is refused only as a time request is. A second replay of the same `request_id` changes nothing.
+
+## The requests-only switch
+
+`ops/site-mode.sh requests` pauses online booking for maintenance, a move to a new host or an outage of something the booking flow needs ([decision 0129](../decisions/0129-a-requests-only-switch.md)). While it's on, every endpoint under `/api/public/` answers `503` with `{"error": "requests_only", ...}`, `Retry-After: 600` and the CORS headers, except `POST time-requests` and `POST quote-requests/offline`, which keep working. The website treats the 503 like a server it can't reach and offers the request form from the first step, and Cloudflare's held requests are still delivered. `/health` isn't under `/api/public/`, so the public health check stays green. The mode is a row in the database (`SiteMode`), so it lasts through restarts until `ops/site-mode.sh normal`.
 
 ## Abuse and privacy controls
 

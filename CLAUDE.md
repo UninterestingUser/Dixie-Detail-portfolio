@@ -10,7 +10,8 @@ This repository holds the Dixie Detail business system. Read this file first, th
 - The final price is always calculated on the server. The website only displays it.
 - The control app is reachable only over Tailscale. Never expose it publicly. The public API does three things: list services and prices, show open slots, take a booking.
 - Secrets live only in Bitwarden Secrets Manager (project "Dixie Detail"). Never commit a secret or write one to disk in plaintext: not in `.env`, not in compose files, not in Docker environment variables (Docker saves those in its config on disk), not in logs, not in backups.
-- The server's only stored secret is the Bitwarden machine-account token, encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred`. Services load it with `LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred`, fetch their secrets with `bws`, and hand them to containers as files on in-memory mounts, or keep them in process memory.
+- The production host's only stored secret from Bitwarden is the machine-account token, encrypted with `systemd-creds` at `/etc/credstore.encrypted/dixie-bws-token.cred` (plus the health check's ping URL, decision 0125). Services load it with `LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred`, fetch their secrets with `bws`, and hand them to containers as files on in-memory mounts, or keep them in process memory.
+- The backup host has no Bitwarden access. It keeps only `RESTIC_PASSWORD` and `HEALTHCHECKS_BACKUP_HOST_URL`, each encrypted with `systemd-creds` (decision 0126). Never give it the token or another secret.
 - `.env` holds non-secret settings only. `.env.example` lists those settings and the names of the Bitwarden secrets.
 - Development and tests use made-up throwaway values in `app/dixie/settings_dev.py`, never Bitwarden and never a real secret (decision 0045). The production image leaves that file out, and `tools/run-tests.sh` fails if it ever gets in. Production settings never import it.
 - Card details never touch the server.
@@ -18,8 +19,8 @@ This repository holds the Dixie Detail business system. Read this file first, th
 
 ## Owner's environment
 
-- Server: Ubuntu Server 26.04 LTS with Docker, hostname `grassman-server`. Its plain `timeout` is uutils', not GNU's (see `ops/lib/restic.sh`). Clients: Fedora Workstation and a Google Pixel 9a.
-- On the server, the code lives at `/srv/dixie-detail`. The systemd unit, ops scripts and docs assume that path.
+- Two hosts, named by role in prose (decision 0128): the production host, a dedicated mini PC that runs only the stack, and the backup host, the former server (hostname `grassman-server`), which keeps the backups and runs unrelated software too. Both run Ubuntu Server 26.04 LTS with Docker. Their plain `timeout` is uutils', not GNU's (see `ops/lib/restic.sh`). Clients: Fedora Workstation and a Google Pixel 9a.
+- On each host, the code lives at `/srv/dixie-detail`. The systemd units, ops scripts and docs assume that path. `ops/deploy.sh` installs `ops/*.service` and `ops/*.timer` on the production host only; the backup host's units are in `ops/backup-host/`.
 - Linux-first. Anything the owner runs locally must work on Fedora.
 - Eastern time for everything customer-facing.
 

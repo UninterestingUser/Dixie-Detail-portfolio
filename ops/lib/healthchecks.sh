@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Healthchecks.io pings for ops scripts. Source it.
 
 # hc_ping URL SUFFIX [BODY_FILE]

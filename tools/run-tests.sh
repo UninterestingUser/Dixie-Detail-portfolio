@@ -10,8 +10,12 @@
 # (tools/test-portfolio.sh, which needs git filter-repo and python3), and the
 # offline Worker's deploy script with a fake wrangler (tools/test-worker-deploy.sh,
 # which needs node), the deploy and the stack's start with fakes
-# (tools/test-deploy.sh), and the tunnel firewall's rules in a network
-# namespace of its own (tools/test-tunnel-firewall.sh).
+# (tools/test-deploy.sh), the tunnel firewall's rules in a network
+# namespace of its own (tools/test-tunnel-firewall.sh), the hourly and
+# nightly backups (tools/test-backup.sh), the backup host's scripts and the
+# restore (tools/test-backup-host.sh, which needs openssl), and the
+# production host's firewall, UPS, monitor account and requests-only switch
+# (tools/test-host-setup.sh), all with fakes.
 #
 # Usage, from anywhere in the repository:  tools/run-tests.sh [pytest arguments]
 #   tools/run-tests.sh --ops-only   runs only the ops-script tests, with no
@@ -40,6 +44,12 @@ echo "run-tests: testing the timeout run_restic uses (tools/test-timeout.sh)"
 "$repo/tools/test-timeout.sh" >/dev/null || { "$repo/tools/test-timeout.sh"; exit 1; }
 echo "run-tests: testing the restic and failure helpers (ops/lib/restic.sh, ops/lib/errors.sh)"
 "$repo/tools/test-restic.sh" >/dev/null || { "$repo/tools/test-restic.sh"; exit 1; }
+echo "run-tests: testing the hourly and nightly backups (ops/backup.sh)"
+"$repo/tools/test-backup.sh" >/dev/null || { "$repo/tools/test-backup.sh"; exit 1; }
+echo "run-tests: testing the backup host's scripts and the restore (ops/backup-host/, ops/restore.sh)"
+"$repo/tools/test-backup-host.sh" >/dev/null || { "$repo/tools/test-backup-host.sh"; exit 1; }
+echo "run-tests: testing the production host's setup scripts (firewall, UPS, monitor account, site mode)"
+"$repo/tools/test-host-setup.sh" >/dev/null || { "$repo/tools/test-host-setup.sh"; exit 1; }
 echo "run-tests: testing the deploy and the stack's start (ops/lib/deploy.sh, ops/stack-start.sh)"
 "$repo/tools/test-deploy.sh" >/dev/null || { "$repo/tools/test-deploy.sh"; exit 1; }
 echo "run-tests: testing the tunnel firewall (ops/tunnel-firewall.sh)"

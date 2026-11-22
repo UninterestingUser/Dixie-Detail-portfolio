@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Failure reporting for ops scripts. Source it.
 #
 # Under set -e a failed command ends a script without a word of its own, so

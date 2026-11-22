@@ -1,0 +1,12 @@
+# Writes the containers and NVMe part of the monitor account's status report
+# (decision 0128); started by dixie-monitor-snapshot.timer. Installed by
+# ops/deploy.sh.
+[Unit]
+Description=Dixie Detail status snapshot for the monitor account
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+ExecStart=/srv/dixie-detail/ops/monitor/snapshot.sh
+TimeoutStartSec=2min

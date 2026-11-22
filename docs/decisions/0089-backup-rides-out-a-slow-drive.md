@@ -4,18 +4,18 @@ title: "The nightly backup waits longer for Google Drive, retries each restic st
 summary: "restic waits 5 minutes for rclone to open the Drive repository, each restic step of the backup gets three time-limited attempts, and rclone makes at most 5 Drive calls a second."
 date: 2026-11-06
 area: backups
-status: accepted
+status: superseded
 audience: [owner, developer]
 visibility: internal
-updated: 2026-11-06
+updated: 2026-11-22
 supersedes: []
-superseded_by: []
+superseded_by: [docs/decisions/0127-hourly-backups-to-the-backup-host-and-nightly-to-backblaze.md]
 related: [docs/operations/backups-and-restore.md, docs/operations/troubleshooting.md, docs/architecture/backups-and-monitoring.md, docs/decisions/0027-backups-to-google-drive.md, docs/decisions/0087-restic-never-writes-into-a-pipe.md, ops/backup.sh, ops/lib/restic.sh, tools/test-restic.sh]
 ---
 
 # 0089: The nightly backup waits longer for Google Drive, retries each restic step twice, and calls Drive gently
 
-**Status:** accepted · **Date:** 2026-11-06 · **Area:** backups
+**Status:** superseded by [0127](0127-hourly-backups-to-the-backup-host-and-nightly-to-backblaze.md), which keeps the retries and drops the Drive settings · **Date:** 2026-11-06 · **Area:** backups
 
 ## Context
 

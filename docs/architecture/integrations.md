@@ -19,8 +19,12 @@ Every outside service connects to the core app, never straight to the database. 
 - **Tailscale.** The owner's private network. Every staff device and the server are nodes; pfSense also advertises the home network. The control app is published to the tailnet only.
 - **Bitwarden Secrets Manager.** Holds every secret. See [secrets.md](secrets.md).
 - **GitHub.** Hosts the private repository. The server pulls with a read-only deploy key.
-- **Google Workspace (Drive).** Holds the encrypted off-site backups, through rclone with access only to the files it creates.
+- **Google Workspace (Drive).** Held the encrypted off-site backups, through rclone, until 2026-11. Retired by decision 0127: its history was copied to the backup server, and Backblaze B2 holds the off-site copy.
 - **Healthchecks.io.** Emails the owner when the backup, the public path, the monthly vehicle data refresh, the morning sales tax rate check or the nightly calendar check stops checking in or fails ([../operations/monitoring.md](../operations/monitoring.md)).
+
+## In use since the review of 2026-11
+
+- **Backblaze B2.** Holds the nightly off-site copy of the backups: a private bucket reached through restic's S3-compatible backend, with a key that can reach only that bucket. Nothing but restic's encrypted repository is stored there, and a weekly check lists the bucket to prove it. Prior versions are kept 30 days ([decision 0127](../decisions/0127-hourly-backups-to-the-backup-host-and-nightly-to-backblaze.md)).
 
 ## In use since Phase 2
 
@@ -48,5 +52,4 @@ Every outside service connects to the core app, never straight to the database. 
 | Directus or another off-the-shelf admin | Starts faster, but pricing rules, availability and promotions need custom code either way |
 | Twilio | Cheaper pure API, but no phone app, so calls would need a second service |
 | UptimeRobot | Free plan is non-commercial since October 2024 |
-| Backblaze B2 | Google Drive storage is already paid for |
 | RockAuto | No public API; scraping may breach its terms |

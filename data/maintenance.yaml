@@ -27,8 +27,8 @@ meta:
   # 0122, docs/architecture/keeping-components-current.md).
   # status: only on an entry that is planned, not yet in use.
   # Hosts are named by role: the production host runs the stack, and the
-  # backup host keeps the backups. Until task B2 moves production to its new
-  # host, the current server is both.
+  # backup host keeps the backups (decision 0128). Until the move
+  # (docs/operations/moving-production.md), the current server is both.
   # pinned: for a component Dependabot watches, the version line; the exact
   # version is in the file pinned_in names, which Dependabot keeps current.
   # Change this list when a line changes (a planned upgrade, or a major
@@ -36,7 +36,7 @@ meta:
 
 components:
   - name: Ubuntu Server release
-    pinned: Ubuntu 26.04.1 LTS (Resolute Raccoon) on the current server; the production host will run the same release (B2)
+    pinned: Ubuntu 26.04.1 LTS (Resolute Raccoon) on both hosts
     pinned_in: each host; the Tests workflow's ops-on-26-04 job runs the ops-script tests on the same release
     end_of_life: 2031-05 (end of standard support, from Canonical's list of releases and kernel lifecycle table)
     watched_by: grok-bot
@@ -156,29 +156,20 @@ components:
     test: After the deploy, the control app over Tailscale and the public health check.
 
   - name: restic
-    pinned: not pinned; Ubuntu's package (0.17 or later needed, for restic dump --target)
-    pinned_in: apt on each host that runs the backup or the restore test
+    pinned: not pinned; Ubuntu's package (0.17 or later needed, for restic dump --target and --retry-lock)
+    pinned_in: apt on both hosts
     end_of_life: none published; fixes go to the newest release
     watched_by: grok-bot
     update: apt, with the other updates.
-    test: The next nightly backup's Healthchecks ping, then the restore test.
+    test: The next hourly backup's Healthchecks ping, then the restore test (ops/restore-test.sh) on each host.
 
   - name: restic rest-server
-    status: planned (not installed yet)
-    pinned: not installed yet
-    pinned_in: the backup host, once a task sets it up
+    pinned: the image tag in ops/backup-host/compose.yaml
+    pinned_in: ops/backup-host/compose.yaml, on the backup host
     end_of_life: none published; fixes go to the newest release
-    watched_by: grok-bot
-    update: Written with the task that installs it.
-    test: Written with the task that installs it; at least a nightly backup to it and the restore test from it.
-
-  - name: rclone
-    pinned: not pinned; Ubuntu's package
-    pinned_in: apt on the host that runs the backup
-    end_of_life: none published; kept until it is retired from the backup
-    watched_by: grok-bot
-    update: apt, with the other updates.
-    test: The next nightly backup's Healthchecks ping, then the restore test.
+    watched_by: dependabot
+    update: Dependabot's compose pull request. On the backup host, copy the code there and run sudo ops/backup-host/setup.sh, which restarts it (docs/operations/setting-up-the-backup-host.md).
+    test: sudo systemctl start dixie-backup.service on the production host, then sudo systemctl start dixie-backup-host-weekly.service on the backup host.
 
   - name: Bitwarden Secrets Manager CLI (bws)
     pinned: not pinned; installed from Bitwarden's Linux download
@@ -198,14 +189,13 @@ components:
 
   - name: apcupsd
     pinned: not pinned; Ubuntu's package
-    pinned_in: apt on the host the battery unit is connected to by USB
+    pinned_in: apt on both hosts; the production host has the USB cable and serves the backup host (ops/ups/)
     end_of_life: none published; the last upstream release is 3.14.14, from 2016
     watched_by: grok-bot
-    update: apt, with the other updates; it still needs restarting after a configuration change.
-    test: apcaccess status shows STATUS ONLINE and the shutdown levels.
+    update: apt, with the other updates; after a change in ops/ups/, run sudo ops/ups/install.sh production or backup-host. A new release must still ship /usr/lib/systemd/system-shutdown/apcupsd_shutdown, which switches the UPS off after the shutdown; install.sh and the Tests workflow on 26.04 check it.
+    test: apcaccess status shows STATUS ONLINE and the shutdown levels on the production host, and apcaccess status PRODUCTION_HOST_ADDRESS:3551 does on the backup host.
 
   - name: Production host firmware
-    status: planned (task B2 makes this machine the production host)
     hardware: Intel NUC5i7RYH mini PC (2 cores, 16 GB, 512 GB NVMe boot drive, Intel PTT), discontinued in 2015
     pinned: BIOS 0381 (2019-08-07), Intel's last release on its download center
     pinned_in: the production host
@@ -220,8 +210,8 @@ components:
     pinned_in: the backup host
     end_of_life: none published
     watched_by: owner
-    update: Flash a new BIOS only for a fix this host needs, at a quiet time, after a backup. A BIOS update can reset the firmware TPM (fTPM), which locks the Bitwarden token encrypted with it; be ready to encrypt the token again (the Phase 0 runbook's Step 2).
-    test: systemd-analyze has-tpm2 says yes, the token decrypts (sudo systemd-creds decrypt --name=bws-token /etc/credstore.encrypted/dixie-bws-token.cred - | wc -c), and sudo systemctl restart dixie-stack brings every container up.
+    update: Flash a new BIOS only for a fix this host needs, at a quiet time, after a backup. A BIOS update can reset the firmware TPM (fTPM), which locks the credentials encrypted with it; be ready to store them again (docs/operations/secrets-management.md).
+    test: systemd-analyze has-tpm2 says yes, and the weekly job's credentials decrypt (sudo systemctl start dixie-backup-host-weekly.service passes); if not, store them again with ops/backup-host/credentials.sh. Before the move, also the Bitwarden token (sudo systemd-creds decrypt --name=bws-token /etc/credstore.encrypted/dixie-bws-token.cred - | wc -c).
 
   - name: Google Maps Platform APIs
     pinned: Places API (New) (Autocomplete in the browser, Place Details with Essentials fields, Text Search with place ids only), Routes API, Maps Embed API

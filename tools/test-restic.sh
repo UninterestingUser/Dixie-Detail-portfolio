@@ -7,8 +7,8 @@
 # behind when it is killed. Reproduces the 2026-11-03 incident: a reader that
 # stopped early cut restic off mid-dump, the restore test quit without a
 # message, and the stale lock failed every backup until `restic unlock`.
-# Also runs ops/backup.sh against fakes of restic, bws, docker and curl to
-# test its retries of a slow Google Drive (decision 0089).
+# Also checks how run_restic hands restic its repository, password and keys
+# (decision 0127). ops/backup.sh's own runs are tested in tools/test-backup.sh.
 # Needs bash, coreutils and jq; no restic, no repository and no real secret.
 # Run by tools/run-tests.sh, or on its own:  tools/test-restic.sh
 set -euo pipefail
@@ -31,10 +31,10 @@ mkdir -p "$work/bin" "$work/repo/locks"
 cat >"$work/bin/restic" <<'FAKE'
 #!/usr/bin/env bash
 locks="$FAKE_REPO/locks"
-printf '%s|tps=%s\n' "$*" "${RCLONE_TPSLIMIT:-}" >>"$FAKE_REPO/calls"
-[[ $RESTIC_PASSWORD == made-up-password && $RCLONE_CONFIG_PASS == made-up-rclone ]] ||
-	{ echo "Fatal: wrong password" >&2; exit 1; }
-[[ $1 == -o && $2 == rclone.timeout=* ]] && shift 2
+printf '%s|repo=%s|user=%s|rest=%s|aws=%s:%s\n' "$*" "${RESTIC_REPOSITORY:-}" "${RESTIC_REST_USERNAME:-}" \
+	"${RESTIC_REST_PASSWORD:-}" "${AWS_ACCESS_KEY_ID:-}" "${AWS_SECRET_ACCESS_KEY:-}" >>"$FAKE_REPO/calls"
+[[ $RESTIC_PASSWORD == made-up-password ]] || { echo "Fatal: wrong password" >&2; exit 1; }
+[[ $1 == --cacert ]] && shift 2
 if [[ $1 == unlock ]]; then
 	for lock in "$locks"/*; do
 		[[ -e $lock ]] || continue
@@ -72,7 +72,8 @@ in_ops() {
 		. ops/lib/errors.sh
 		. ops/lib/restic.sh
 		restic_password=made-up-password
-		rclone_config_pass=made-up-rclone
+		B2_REPOSITORY=s3:https://s3.us-west-004.backblazeb2.com/made-up-bucket/restic
+		restic_use b2
 		eval "$2"
 	' _ "$repo" "$1" >"$work/out" 2>"$work/err"
 }
@@ -89,7 +90,7 @@ if in_ops "$early_reader"; then fail "the script carried on"; else pass "the scr
 echo "test-restic: a locked repository names the unlock command"
 if in_ops 'run_restic forget --prune'; then fail "forget succeeded on a locked repository"; else pass "forget fails"; fi
 grep -q "repository is already locked" "$work/err" && pass "restic's own error is shown" || fail "restic's error is missing"
-grep -q "sudo /srv/dixie-detail/ops/restic.sh unlock" "$work/err" && pass "the unlock command is named" ||
+grep -q "sudo /srv/dixie-detail/ops/restic.sh --repo b2 unlock" "$work/err" && pass "the unlock command is named" ||
 	fail "no unlock command in: $(cat "$work/err")"
 grep -q "The backup repository is locked" "$work/err" && pass "the troubleshooting entry is named" || fail "no troubleshooting pointer"
 in_ops 'run_restic unlock' && [[ $(locks) == 0 ]] && pass "unlock removes the stale lock" || fail "$(locks) locks after unlock"
@@ -117,7 +118,7 @@ PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" env --default-signal=PIPE bash -c 
 	cd "$1"
 	. ops/lib/errors.sh
 	. ops/lib/restic.sh
-	restic_password=made-up-password rclone_config_pass=made-up-rclone
+	restic_password=made-up-password restic_repository=made-up-repo
 	restic_dump abcd1234 /dixie-detail.dump "$2/dump"
 	head -c 5 "$2/dump" >/dev/null
 ' _ "$repo" "$work" && pass "the dump and an early reader of the file both succeed" || fail "restic_dump failed"
@@ -125,20 +126,60 @@ PATH="$work/bin:$PATH" FAKE_REPO="$work/repo" env --default-signal=PIPE bash -c 
 [[ $(locks) == 0 ]] && pass "no lock is left" || fail "$(locks) locks left"
 
 echo "test-restic: no ops script pipes restic's output"
-piped=$(grep -nE '^[^#]*run_restic' "$repo"/ops/*.sh "$repo"/ops/lib/*.sh | sed 's/||//g' | grep -E 'run_restic[^#]*\|' || true)
+piped=$(grep -nE '^[^#]*run_restic' "$repo"/ops/*.sh "$repo"/ops/*/*.sh | sed 's/||//g' | grep -E 'run_restic[^#]*\|' || true)
 [[ -z $piped ]] && pass "run_restic's output never goes into a pipe" || fail "piped: $piped"
-bare=$(grep -nE '^[^#]*(^|[^_[:alnum:]])restic ' "$repo"/ops/*.sh | grep -vE 'run_restic|restic\.sh|echo' || true)
+bare=$(grep -nE '^[^#]*(^|[^_[:alnum:]])restic ' "$repo"/ops/*.sh "$repo"/ops/*/*.sh | grep -vE 'run_restic|restic\.sh|echo|for tool in' || true)
 [[ -z $bare ]] && pass "every script runs restic through run_restic" || fail "restic run directly: $bare"
 grep -q 'restic_dump' "$repo/ops/restore-test.sh" && pass "restore-test.sh downloads with restic_dump" || fail "restore-test.sh does not use restic_dump"
-for script in backup.sh restore-test.sh gosu-test.sh; do
+for script in backup.sh restore-test.sh restore.sh offsite-prune.sh gosu-test.sh backup-host/weekly.sh; do
 	grep -q 'report_failures' "$repo/ops/$script" && pass "$script reports failures" || fail "$script does not call report_failures"
 done
 
-echo "test-restic: every restic call gets the 5-minute rclone timeout and the Drive call limit"
+echo "test-restic: run_restic hands each repository its password and keys in the environment only"
 rm -f "$work/repo/calls"
-in_ops 'run_restic snapshots >/dev/null; restic_dump latest /dixie-detail.dump /dev/null'
-[[ $(wc -l <"$work/repo/calls") == 2 ]] && ! grep -v '^-o rclone.timeout=5m .*|tps=5$' "$work/repo/calls" &&
-	pass "run_restic and restic_dump pass -o rclone.timeout=5m and RCLONE_TPSLIMIT=5" || fail "calls: $(cat "$work/repo/calls")"
+in_ops 'b2_key_id=made-up-key-id b2_application_key=made-up-app-key; run_restic snapshots >/dev/null; restic_dump latest /dixie-detail.dump /dev/null'
+[[ $(wc -l <"$work/repo/calls") == 2 ]] && ! grep -v '|repo=s3:https://s3.us-west-004.backblazeb2.com/made-up-bucket/restic|.*|aws=made-up-key-id:made-up-app-key$' "$work/repo/calls" &&
+	pass "B2: the S3 repository and the key, as AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY" || fail "calls: $(cat "$work/repo/calls")"
+rm -f "$work/repo/calls"
+in_ops 'BACKUP_HOST_ADDRESS=192.0.2.20 BACKUP_REST_CACERT=/etc/made-up.pem; restic_use backup-server; rest_password=made-up-rest; run_restic snapshots >/dev/null'
+grep -q '^--cacert /etc/made-up.pem snapshots|repo=rest:https://192.0.2.20:8443/dixie-detail/|user=dixie-detail|rest=made-up-rest|' "$work/repo/calls" &&
+	pass "the backup server: rest-server's address, the pinned certificate, the user and its password" || fail "calls: $(cat "$work/repo/calls")"
+! grep -qE 'made-up-(password|rest|app-key)' <(cut -d'|' -f1 "$work/repo/calls") &&
+	pass "no password or key is ever on restic's command line" || fail "calls: $(cat "$work/repo/calls")"
+in_ops 'restic_use nowhere' && fail "an unknown repository was accepted" || pass "an unknown repository is refused"
+in_ops 'unset B2_REPOSITORY; restic_use b2' && fail "a missing B2_REPOSITORY was accepted" || grep -q "set B2_REPOSITORY in .env" "$work/err" &&
+	pass "a missing setting is named" || fail "printed: $(cat "$work/err")"
+
+echo "test-restic: restic_init_labeled leaves one key, labeled restic/restic"
+cat >"$work/bin/restic-keys" <<'FAKE'
+#!/usr/bin/env bash
+# A fake restic with a key list: init makes one key labeled with a real
+# host and user, key add another, key remove drops one.
+state="$FAKE_REPO/keys.json"
+[[ $1 == --cacert ]] && shift 2
+case $1 in
+	cat) [[ -e $FAKE_REPO/initialized ]] ;;
+	init) touch "$FAKE_REPO/initialized"; echo '[{"id":"aaaa","userName":"owner","hostName":"real-host"}]' >"$state" ;;
+	key)
+		case $2 in
+			list) cat "$state" ;;
+			add) [[ $(cat) == made-up-password ]] || exit 1
+				jq --arg u "$6" --arg h "$4" '. + [{id:"bbbb",userName:$u,hostName:$h}]' "$state" >"$state.new" && mv "$state.new" "$state" ;;
+			remove) jq --arg id "${@: -1}" 'map(select(.id != $id))' "$state" >"$state.new" && mv "$state.new" "$state" ;;
+		esac ;;
+esac
+FAKE
+chmod +x "$work/bin/restic-keys"
+rm -f "$work/repo/initialized"
+mkdir -p "$work/keysbin" && ln -sf "$work/bin/restic-keys" "$work/keysbin/restic"
+PATH="$work/keysbin:$PATH" FAKE_REPO="$work/repo" bash -c '
+	set -euo pipefail
+	cd "$1"; . ops/lib/restic.sh
+	restic_password=made-up-password B2_REPOSITORY=s3:https://s3.us-west-004.backblazeb2.com/b/r
+	restic_use b2
+	restic_init_labeled
+' _ "$repo" >"$work/out" 2>"$work/err" && jq -e 'length == 1 and .[0].userName == "restic" and .[0].hostName == "restic"' "$work/repo/keys.json" >/dev/null &&
+	pass "the first key, with the real host and user, is replaced" || fail "keys: $(cat "$work/repo/keys.json" 2>/dev/null) $(cat "$work/err")"
 
 echo "test-restic: restic_time_limit stops a restic that hangs, with SIGINT so it can remove its lock"
 mkdir -p "$work/hang"
@@ -151,7 +192,7 @@ chmod +x "$work/hang/restic"
 rc=0
 PATH="$work/hang:$PATH" bash -c '
 	. "$1/ops/lib/restic.sh"
-	restic_password=made-up-password rclone_config_pass=made-up-rclone restic_time_limit=1s
+	restic_password=made-up-password restic_repository=made-up-repo restic_time_limit=1s
 	run_restic backup
 ' _ "$repo" 2>"$work/err" || rc=$?
 [[ $rc == 124 ]] && grep -q "interrupted, lock removed" "$work/err" && pass "stopped after 1 second with SIGINT, exit status 124" ||
@@ -176,141 +217,28 @@ FAKE_LOG="$work/uutils.log" PATH="$work/uutils:$work/hang:/usr/bin:/bin" bash -c
 	. "$1/ops/lib/restic.sh"
 	# Hide a real gnutimeout on this machine.
 	command() { [[ $1 == -v && $2 == gnutimeout ]] && return 1; builtin command "$@"; }
-	restic_password=made-up-password rclone_config_pass=made-up-rclone restic_time_limit=1s
+	restic_password=made-up-password restic_repository=made-up-repo restic_time_limit=1s
 	run_restic backup
 ' _ "$repo" 2>"$work/err" || rc=$?
 [[ $rc != 0 && ! -e $work/uutils.log ]] && grep -q "no GNU coreutils timeout found" "$work/err" &&
 	pass "with only a uutils timeout, run_restic refuses and starts nothing" || fail "status $rc, printed: $(cat "$work/err")"
 rc=0
+FAKE_LOG="$work/uutils.log" PATH="$work/uutils:$work/hang:/usr/bin:/bin" bash -c '
+	. "$1/ops/lib/restic.sh"
+	command() { [[ $1 == -v && $2 == gnutimeout ]] && return 1; builtin command "$@"; }
+	restic_password=made-up-password restic_repository=made-up-repo
+	run_restic snapshots
+' _ "$repo" 2>"$work/err" || rc=$?
+[[ $rc != 0 ]] && grep -q "/usr/bin/gnutimeout is missing. Install it with: sudo apt install gnu-coreutils" "$work/err" &&
+	pass "without a time limit too, a missing GNU timeout stops run_restic with a clear error" || fail "status $rc, printed: $(cat "$work/err")"
+rc=0
 FAKE_LOG="$work/both.log" PATH="$work/both:$work/hang:$PATH" bash -c '
 	. "$1/ops/lib/restic.sh"
-	restic_password=made-up-password rclone_config_pass=made-up-rclone restic_time_limit=1s
+	restic_password=made-up-password restic_repository=made-up-repo restic_time_limit=1s
 	run_restic backup
 ' _ "$repo" 2>"$work/err" || rc=$?
 [[ $rc == 124 && ! -e $work/both.log ]] && grep -q "interrupted, lock removed" "$work/err" &&
 	pass "with uutils as timeout and GNU as gnutimeout, gnutimeout runs: SIGINT, exit status 124" || fail "status $rc, printed: $(cat "$work/err")"
-
-# ops/backup.sh against fakes. The fake restic fails the first
-# FAKE_FAIL_BACKUP backup calls and the first FAKE_FAIL_FORGET forget calls
-# with exit status FAKE_RC, logging each call and how many bytes of stdin a
-# backup got. The fake sleep only records how long it was asked to wait.
-mkdir -p "$work/fake"
-cat >"$work/fake/restic" <<'FAKE'
-#!/usr/bin/env bash
-printf '%s|tps=%s\n' "$*" "${RCLONE_TPSLIMIT:-}" >>"$FAKE_DIR/restic-calls"
-[[ $RESTIC_PASSWORD == made-up-password && $RCLONE_CONFIG_PASS == made-up-rclone ]] ||
-	{ echo "Fatal: wrong password or no key found" >&2; exit 12; }
-[[ $1 == -o ]] && shift 2
-command=$1
-[[ $1 == backup && " $* " == *" --tag photos "* ]] && command=photos
-echo "$command" >>"$FAKE_DIR/commands"
-n=$(grep -cx "$command" "$FAKE_DIR/commands")
-case $command in
-	backup) echo "$(wc -c)" >>"$FAKE_DIR/stdin-bytes"; fails=${FAKE_FAIL_BACKUP:-0} ;;
-	forget) fails=${FAKE_FAIL_FORGET:-0} ;;
-	photos) printf '%s\n' "$*" >>"$FAKE_DIR/photo-calls"; fails=${FAKE_FAIL_PHOTOS:-0} ;;
-esac
-if ((n <= fails)); then
-	echo "Fatal: unable to open repository at rclone:gdrive:made-up: error talking HTTP to rclone: made-up error $1 $n" >&2
-	exit "${FAKE_RC:-1}"
-fi
-echo "made-up $1 output"
-FAKE
-cat >"$work/fake/bws" <<'FAKE'
-#!/usr/bin/env bash
-echo '[{"key":"RESTIC_PASSWORD","value":"made-up-password"},{"key":"RCLONE_CONFIG_PASS","value":"made-up-rclone"},{"key":"HEALTHCHECKS_BACKUP_URL","value":"https://hc.example.invalid/ping/made-up"}]'
-FAKE
-cat >"$work/fake/docker" <<'FAKE'
-#!/usr/bin/env bash
-echo "$*" >>"$FAKE_DIR/docker-calls"
-case "$*" in
-	*pg_dump*) printf 'PGDMP made-up dump\n' ;;
-	*pg_restore*) cat >/dev/null ;;
-esac
-FAKE
-cat >"$work/fake/curl" <<'FAKE'
-#!/usr/bin/env bash
-url=$(sed -n 's/^url = "\(.*\)"$/\1/p')
-echo "$url" >>"$FAKE_DIR/pings"
-for arg; do [[ $arg != @* ]] || cp -- "${arg#@}" "$FAKE_DIR/ping-body"; done
-FAKE
-printf '#!/bin/sh\necho "$1" >>"$FAKE_DIR/sleeps"\n' >"$work/fake/sleep"
-printf '#!/bin/sh\necho "$*" >>"$FAKE_DIR/rsync-calls"\n' >"$work/fake/rsync"
-printf '#!/bin/sh\nexit 0\n' >"$work/fake/mountpoint"
-chmod +x "$work/fake"/*
-printf 'made-up-token' >"$work/bws-token"
-
-# run_backup [VAR=VALUE...]: runs ops/backup.sh with the fakes and a fresh
-# state; its output goes to $work/b/out. Prints its exit status.
-run_backup() {
-	rm -rf "$work/b"
-	mkdir -p "$work/b/run" "$work/b/creds" "$work/b/photos"
-	cp "$work/bws-token" "$work/b/creds/bws-token"
-	local rc=0
-	env "$@" PATH="$work/fake:$PATH" FAKE_DIR="$work/b" RUNTIME_DIRECTORY="$work/b/run" \
-		CREDENTIALS_DIRECTORY="$work/b/creds" BWS_SERVER_URL=https://vault.example.invalid \
-		BWS_PROJECT_ID=made-up-project BACKUP_DIR="$work/b/backups" \
-		RESTIC_REPOSITORY=rclone:gdrive:made-up POSTGRES_DB=dixie POSTGRES_USER=dixie QUOTE_PHOTO_HOST_DIR="$work/b/photos" \
-		"$repo/ops/backup.sh" >"$work/b/out" 2>&1 || rc=$?
-	echo "$rc"
-}
-count() { grep -cx "$1" "$work/b/commands" 2>/dev/null || true; }
-sleeps() { tr '\n' ' ' 2>/dev/null <"$work/b/sleeps" | sed 's/ $//'; }
-failed_ping() { grep -q '/fail$' "$work/b/pings"; }
-
-echo "test-restic: backup.sh retries an upload that fails once"
-rc=$(run_backup FAKE_FAIL_BACKUP=1)
-[[ $rc == 0 ]] && pass "the run ends as a success" || fail "exit status $rc: $(tail -5 "$work/b/out")"
-[[ $(count backup) == 2 && $(count forget) == 1 ]] && pass "two upload attempts, one forget" || fail "$(count backup) uploads, $(count forget) forgets"
-[[ $(sleeps) == 300 ]] && pass "it waited 5 minutes before the second attempt" || fail "waits: $(sleeps)"
-[[ $(sort -u "$work/b/stdin-bytes") == 19 ]] && pass "both attempts got the whole dump" || fail "bytes: $(cat "$work/b/stdin-bytes")"
-[[ $(grep -c pg_dump "$work/b/docker-calls") == 1 ]] && pass "the database was dumped once" || fail "dumped $(grep -c pg_dump "$work/b/docker-calls") times"
-grep -q "upload, attempt 1 of 3, failed with exit status 1" "$work/b/out" && grep -q "made-up error backup 1" "$work/b/out" &&
-	grep -q "upload succeeded on attempt 2 of 3" "$work/b/out" && pass "each attempt and its error are logged" || fail "log: $(cat "$work/b/out")"
-! failed_ping && [[ $(tail -1 "$work/b/pings") == https://hc.example.invalid/ping/made-up ]] && pass "the success ping is sent" ||
-	fail "pings: $(cat "$work/b/pings")"
-! grep -v '^-o rclone.timeout=5m .*|tps=5$' "$work/b/restic-calls" && pass "every restic call in the backup gets the timeout and the call limit" ||
-	fail "calls: $(cat "$work/b/restic-calls")"
-
-echo "test-restic: backup.sh gives up after three failed uploads"
-rc=$(run_backup FAKE_FAIL_BACKUP=9)
-[[ $rc != 0 ]] && pass "the run fails" || fail "the run succeeded"
-[[ $(count backup) == 3 && $(count forget) == 0 ]] && pass "three upload attempts, no forget" || fail "$(count backup) uploads, $(count forget) forgets"
-[[ $(sleeps) == "300 900" ]] && pass "it waited 5, then 15 minutes" || fail "waits: $(sleeps)"
-[[ $(grep -c pg_dump "$work/b/docker-calls") == 1 ]] && pass "the database dump is not retried" || fail "dumped $(grep -c pg_dump "$work/b/docker-calls") times"
-failed_ping && pass "the failure ping is sent" || fail "pings: $(cat "$work/b/pings")"
-for n in 1 2 3; do
-	grep -q "upload, attempt $n of 3" "$work/b/ping-body" && grep -q "made-up error backup $n" "$work/b/ping-body" ||
-		fail "attempt $n is missing from the ping's log"
-done
-grep -q "upload failed 3 times; giving up" "$work/b/ping-body" && pass "the failure ping carries every attempt's error" || fail "no summary in the ping's log"
-[[ $(stat -c %s "$work/b/ping-body") -le 10000 ]] && pass "and stays within 10,000 bytes" || fail "ping body is $(stat -c %s "$work/b/ping-body") bytes"
-
-echo "test-restic: backup.sh retries forget/prune as its own step"
-rc=$(run_backup FAKE_FAIL_FORGET=2)
-[[ $rc == 0 && $(count backup) == 1 && $(count forget) == 3 && $(sleeps) == "300 900" ]] &&
-	pass "one upload, three forget attempts, then success" || fail "status $rc, $(count backup) uploads, $(count forget) forgets, waits $(sleeps)"
-
-echo "test-restic: backup.sh copies the photo folder to the RAID and sends it once, tagged photos"
-rc=$(run_backup)
-[[ $rc == 0 && $(count photos) == 1 ]] && pass "one photo upload" || fail "status $rc, $(count photos) photo uploads"
-grep -q -- "--tag photos $work/b/photos" "$work/b/photo-calls" && pass "the photo folder is sent tagged photos" || fail "photo calls: $(cat "$work/b/photo-calls" 2>/dev/null)"
-grep -q -- "--tag nightly --tag photos --group-by host,tags" "$work/b/restic-calls" && pass "forget keeps each tag's own 14 daily / 12 monthly" || fail "calls: $(cat "$work/b/restic-calls")"
-grep -q -- "-a --delete -- $work/b/photos/ $work/b/backups/quote-photos/" "$work/b/rsync-calls" && pass "the folder is mirrored to the RAID" || fail "rsync: $(cat "$work/b/rsync-calls" 2>/dev/null)"
-[[ $(tail -1 "$work/b/commands") == photos ]] && pass "the photos go last, after forget/prune" || fail "order: $(tr '\n' ' ' <"$work/b/commands")"
-
-echo "test-restic: a failed photo upload is not retried and fails the run"
-rc=$(run_backup FAKE_FAIL_PHOTOS=9)
-[[ $rc != 0 && $(count photos) == 1 && $(count backup) == 1 && $(count forget) == 1 && -z $(sleeps) ]] && failed_ping &&
-	grep -q "photo upload failed 1 times; giving up" "$work/b/ping-body" &&
-	pass "one attempt, no wait, failure ping" || fail "status $rc, $(count photos) photo uploads, waits $(sleeps)"
-
-echo "test-restic: backup.sh does not retry what waiting cannot fix"
-for code in 12 10; do
-	rc=$(run_backup FAKE_FAIL_BACKUP=9 FAKE_RC=$code)
-	[[ $rc == "$code" && $(count backup) == 1 && -z $(sleeps) ]] && failed_ping && grep -q "upload is not retried" "$work/b/ping-body" &&
-		pass "exit $code: one attempt, no wait, failure ping" || fail "exit $code: status $rc, $(count backup) uploads, waits $(sleeps)"
-done
 
 ((failures == 0)) || { echo "test-restic: $failures failure(s)" >&2; exit 1; }
 echo "test-restic: PASS"

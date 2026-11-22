@@ -38,7 +38,7 @@ class HealthDatabaseTests(TestCase):
 
 
 @mock.patch("core.views.connection")
-class PublicEntranceTests(SimpleTestCase):
+class PublicEntranceTests(TestCase):
     def test_public_entrance_reaches_health(self, connection):
         response = self.client.get("/health", headers={"X-Dixie-Entrance": "public"})
         self.assertEqual(response.status_code, 200)
@@ -62,7 +62,7 @@ class PublicEntranceTests(SimpleTestCase):
 
 @mock.patch("core.views.connection")
 @override_settings(DIXIE_SERVICE="public")
-class PublicServiceTests(SimpleTestCase):
+class PublicServiceTests(TestCase):
     """The public service (decision 0123) serves the public paths only, even
     for a request that says it came over the tailnet."""
 

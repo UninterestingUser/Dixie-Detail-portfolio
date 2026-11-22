@@ -1,0 +1,22 @@
+# The weekly prune of the Backblaze B2 repository, and the check that the
+# bucket holds only restic's repository files (decision 0127); started by
+# dixie-offsite-prune.timer. Installed by ops/deploy.sh. Run by hand with:
+#   sudo systemctl start dixie-offsite-prune.service
+[Unit]
+Description=Dixie Detail weekly prune of the Backblaze B2 repository
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+EnvironmentFile=/srv/dixie-detail/.env
+Environment=HOME=/root
+LoadCredentialEncrypted=bws-token:/etc/credstore.encrypted/dixie-bws-token.cred
+RuntimeDirectory=dixie-offsite-prune
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/offsite-prune.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=2h

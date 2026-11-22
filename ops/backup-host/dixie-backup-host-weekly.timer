@@ -1,0 +1,11 @@
+# Runs dixie-backup-host-weekly.service every Sunday at 3:30 AM Eastern,
+# between the hourly backups (5 past) and after the nightly one (2:45).
+[Unit]
+Description=Dixie Detail weekly prune and restore test on the backup host
+
+[Timer]
+OnCalendar=Sun *-*-* 03:30:00 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

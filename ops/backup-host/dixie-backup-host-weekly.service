@@ -1,0 +1,25 @@
+# The backup host's weekly job (decision 0127): prune the backup server's
+# repository, check it, and run the restore test from it. Installed by
+# ops/backup-host/setup.sh. Run by hand with:
+#   sudo systemctl start dixie-backup-host-weekly.service
+[Unit]
+Description=Dixie Detail weekly prune and restore test on the backup host
+After=docker.service dixie-rest-server.service
+RequiresMountsFor=/mnt/raid
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/dixie-detail
+EnvironmentFile=/srv/dixie-detail/.env
+Environment=HOME=/root
+# The backup host's own two credentials (decision 0126), decrypted into
+# this run's private, in-memory credentials directory. No Bitwarden here.
+LoadCredentialEncrypted=restic-password:/etc/credstore.encrypted/dixie-restic-password.cred
+LoadCredentialEncrypted=healthchecks-backup-host-url:/etc/credstore.encrypted/dixie-healthchecks-backup-host-url.cred
+RuntimeDirectory=dixie-backup-host-weekly
+RuntimeDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/dixie-detail/ops/backup-host/weekly.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=3h
