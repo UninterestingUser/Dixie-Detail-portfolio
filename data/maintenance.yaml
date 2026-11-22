@@ -66,7 +66,7 @@ components:
     test: tools/run-tests.sh.
 
   - name: gunicorn
-    pinned: "26.x"
+    pinned: "27.x (from 26.x with Dependabot's #93)"
     pinned_in: app/requirements.txt
     end_of_life: none published
     watched_by: dependabot
