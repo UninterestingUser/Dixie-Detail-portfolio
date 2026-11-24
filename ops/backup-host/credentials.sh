@@ -2,7 +2,8 @@
 # Stores the backup host's two secrets as systemd credentials (decision
 # 0126). The backup host has no Bitwarden machine account, so it can never
 # read the production secrets; it keeps only these two, each encrypted with
-# systemd-creds (TPM plus host key) and never in plain text:
+# systemd-creds (the host key, plus the TPM when the host has a usable one,
+# decision 0130) and never in plain text:
 #   RESTIC_PASSWORD               for the weekly prune and restore test
 #   HEALTHCHECKS_BACKUP_HOST_URL  the weekly job's Healthchecks ping URL
 # Run on the backup host as root. It asks for each value, pasted from the
@@ -62,8 +63,8 @@ for name in "${names[@]}"; do
 		exit 1
 	fi
 	install -d -m 0700 "$HOST_CRED_DIR"
-	printf '%s' "$value" | systemd-creds encrypt --with-key=host+tpm2 --name="$cred" - "$HOST_CRED_DIR/dixie-$cred.cred"
+	printf '%s' "$value" | systemd-creds encrypt --with-key=auto --name="$cred" - "$HOST_CRED_DIR/dixie-$cred.cred"
 	chmod 0600 "$HOST_CRED_DIR/dixie-$cred.cred"
 	unset value
-	echo "credentials: stored $name as $HOST_CRED_DIR/dixie-$cred.cred (encrypted with this host's TPM and key)"
+	echo "credentials: stored $name as $HOST_CRED_DIR/dixie-$cred.cred (encrypted with this host's key, and its TPM if it has a usable one)"
 done

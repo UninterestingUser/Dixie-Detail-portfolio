@@ -1,7 +1,7 @@
 meta:
   title: Maintenance list
   summary: Each component the system runs on, with its pinned version, where it is pinned, the upstream end-of-life date, who watches it, and how to update and test it.
-  updated: 2026-11-22
+  updated: 2026-11-24
   status: current
   explained_in: docs/architecture/keeping-components-current.md
   # end_of_life: a date is the upstream end of support for the pinned
@@ -196,7 +196,7 @@ components:
     test: apcaccess status shows STATUS ONLINE and the shutdown levels on the production host, and apcaccess status PRODUCTION_HOST_ADDRESS:3551 does on the backup host.
 
   - name: Production host firmware
-    hardware: Intel NUC5i7RYH mini PC (2 cores, 16 GB, 512 GB NVMe boot drive, Intel PTT), discontinued in 2015
+    hardware: Intel NUC5i7RYH mini PC (2 cores, 16 GB, 512 GB NVMe boot drive), discontinued in 2015
     pinned: BIOS 0381 (2019-08-07), Intel's last release on its download center
     pinned_in: the production host
     end_of_life: ended; the downloads have since been removed, and no further updates are expected

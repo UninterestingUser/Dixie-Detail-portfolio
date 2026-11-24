@@ -168,8 +168,8 @@ creds() { # VALUE NAME...
 }
 creds https://hc.example.invalid/ping/made-up-host HEALTHCHECKS_BACKUP_HOST_URL &&
 	[[ $(cat "$work/credstore/dixie-healthchecks-backup-host-url.cred") == https://hc.example.invalid/ping/made-up-host ]] &&
-	grep -q "systemd-creds encrypt --with-key=host+tpm2 --name=healthchecks-backup-host-url - $work/credstore/dixie-healthchecks-backup-host-url.cred" "$FAKE_LOG" &&
-	pass "the ping URL is encrypted with the TPM and host key" || fail "said: $(cat "$work/out") log: $(cat "$FAKE_LOG")"
+	grep -q "systemd-creds encrypt --with-key=auto --name=healthchecks-backup-host-url - $work/credstore/dixie-healthchecks-backup-host-url.cred" "$FAKE_LOG" &&
+	pass "the ping URL is encrypted, with the TPM only where there is one" || fail "said: $(cat "$work/out") log: $(cat "$FAKE_LOG")"
 creds made-up-password RESTIC_PASSWORD && [[ $(cat "$work/credstore/dixie-restic-password.cred") == made-up-password ]] &&
 	pass "with no repository yet, the password is asked for twice and stored" || fail "said: $(cat "$work/out")"
 ! grep -q 'made-up-password\|made-up-host' "$FAKE_LOG" && ! grep -q 'made-up-password' "$work/out" &&

@@ -1,7 +1,7 @@
 meta:
   title: Settings and secrets
   summary: Every run-time setting (in .env, not secret) and every secret (in Bitwarden, names only) the system uses, with purpose, consumer and phase.
-  updated: 2026-11-22
+  updated: 2026-11-24
   status: current
   explained_in: docs/reference/configuration.md
   rule: Values are never written here. Settings live in /srv/dixie-detail/.env; secrets live in the Bitwarden Secrets Manager project "Dixie Detail".
@@ -402,22 +402,22 @@ stored_on_server:
     host: production host
     purpose: Access token (labeled dixie-production-host) for the Bitwarden machine account server
     location: /etc/credstore.encrypted/dixie-bws-token.cred
-    protection: systemd-creds, --with-key=host+tpm2
+    protection: systemd-creds, --with-key=auto (decision 0130)
   - name: healthchecks-public-url
     host: production host
     purpose: A copy of HEALTHCHECKS_PUBLIC_URL for the public health check (decision 0125)
     location: /etc/credstore.encrypted/dixie-healthchecks-public-url.cred
-    protection: systemd-creds, --with-key=host+tpm2
+    protection: systemd-creds, --with-key=auto (decision 0130)
   - name: restic-password
     host: backup host
     purpose: A copy of RESTIC_PASSWORD, pasted once by ops/backup-host/credentials.sh (decision 0126)
     location: /etc/credstore.encrypted/dixie-restic-password.cred
-    protection: systemd-creds, --with-key=host+tpm2
+    protection: systemd-creds, --with-key=auto (decision 0130)
   - name: healthchecks-backup-host-url
     host: backup host
     purpose: A copy of HEALTHCHECKS_BACKUP_HOST_URL, pasted once by ops/backup-host/credentials.sh (decision 0126)
     location: /etc/credstore.encrypted/dixie-healthchecks-backup-host-url.cred
-    protection: systemd-creds, --with-key=host+tpm2
+    protection: systemd-creds, --with-key=auto (decision 0130)
   - name: rest-server password hash
     host: backup host
     purpose: The bcrypt hash of BACKUP_REST_PASSWORD, for rest-server; never the password

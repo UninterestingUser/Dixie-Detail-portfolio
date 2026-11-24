@@ -2,8 +2,9 @@
 # Creates or refreshes the public health check's ping URL credential
 # (decision 0125): the Bitwarden secret HEALTHCHECKS_PUBLIC_URL, encrypted
 # with systemd-creds to /etc/credstore.encrypted/
-# dixie-healthchecks-public-url.cred, bound to this host and its TPM like the
-# Bitwarden token. dixie-public-health.service loads it, so the 10-minute
+# dixie-healthchecks-public-url.cred, bound to this host (and its TPM, if it
+# has a usable one, decision 0130) like the Bitwarden token.
+# dixie-public-health.service loads it, so the 10-minute
 # check never calls Bitwarden. Run on the server as root:
 #
 #   sudo /srv/dixie-detail/ops/health-credential.sh
