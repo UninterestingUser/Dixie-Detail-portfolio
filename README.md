@@ -13,7 +13,7 @@ This is a real system for a real business, built by its owner working with AI to
 **Kris Grassman, owner**
 
 - **Product and business rules.** Set the goals, the scope and every business rule: pricing, scheduling, payments, sales tax and bookkeeping. Made or approved every decision recorded in [docs/decisions/](docs/decisions/README.md), choosing among options Claude laid out or setting the rule directly.
-- **Infrastructure.** Set up and runs a dedicated production host and a backup host (Ubuntu Server, Docker, RAID 5, a shared battery backup) and the services around them: a Tailscale network, a Cloudflare Tunnel, Bitwarden Secrets Manager with a TPM-bound machine token, Google Workspace, and encrypted backups every hour to an append-only backup server and every night to Backblaze B2. Ran every command on the server and worked through each failure.
+- **Infrastructure.** Set up and runs a dedicated production host and a backup host (Ubuntu Server, Docker, RAID 5, a shared battery backup) and the services around them: a Tailscale network, a Cloudflare Tunnel, Bitwarden Secrets Manager with an encrypted machine token, Google Workspace, and encrypted backups every hour to an append-only backup server and every night to Backblaze B2. Ran every command on the server and worked through each failure.
 - **Direction and review.** Gives Claude Code each task from a step-by-step runbook, reviews and merges every pull request, and runs the check that closes each step, such as restoring a real backup into a scratch database.
 - **Business data.** Supplied the price matrix and the history exported from the earlier tools, and decided every correction to it.
 - **Second opinion.** Cross-checks plans, decisions and changes with Grok (xAI) along the way.
@@ -68,7 +68,7 @@ This is a real system for a real business, built by its owner working with AI to
 
 - A system designed around one source of truth, with every business rule written down and traced to a decision record.
 - Production services on self-hosted hardware: Docker Compose under systemd, a reverse proxy with separate private and public entry points, a Cloudflare Tunnel and Tailscale.
-- Secrets without plaintext: Bitwarden Secrets Manager, a TPM-sealed credential, and secrets handed to containers as in-memory files.
+- Secrets without plaintext: Bitwarden Secrets Manager, a systemd-encrypted credential, and secrets handed to containers as in-memory files.
 - Backups that are proven: hourly dumps to an append-only backup server, nightly encrypted off-site copies with restic, and a weekly restore test into a scratch database.
 - Documentation as code for people and AI: structured Markdown and YAML, a docs check on every pull request, and an index for AI tools.
 - Directing AI agents on a real project: plans, task prompts, review, and a second-model cross-check.
@@ -98,7 +98,7 @@ site/         The Astro website and its Cloudflare pieces; see site/README.md
 
 ## Secrets
 
-Every key, password and token lives in Bitwarden Secrets Manager. Nothing secret is committed or stored in plaintext on the server. The server keeps one secret, the Bitwarden machine-account token, encrypted as a systemd credential bound to the server's TPM; services fetch everything else from Bitwarden when they start. `.env` holds only settings that are not secret, and [.env.example](.env.example) lists them along with the names of the Bitwarden secrets.
+Every key, password and token lives in Bitwarden Secrets Manager. Nothing secret is committed or stored in plaintext on the server. The server keeps one secret, the Bitwarden machine-account token, encrypted as a systemd credential; services fetch everything else from Bitwarden when they start. `.env` holds only settings that are not secret, and [.env.example](.env.example) lists them along with the names of the Bitwarden secrets.
 
 ## Copyright
 

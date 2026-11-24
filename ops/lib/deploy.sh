@@ -81,7 +81,7 @@ deploy_apply() {
 	# 3. Units, timers, folders and the health check's credential. None of
 	# this touches a running container.
 	if [[ -n $health_url ]]; then
-		printf '%s' "$health_url" | systemd-creds encrypt --with-key=host+tpm2 --name="$HEALTH_CRED_NAME" - "$HEALTH_CRED"
+		printf '%s' "$health_url" | systemd-creds encrypt --with-key=auto --name="$HEALTH_CRED_NAME" - "$HEALTH_CRED"
 		health_url=""
 		echo "deploy.sh: wrote the health check's credential $HEALTH_CRED"
 	fi

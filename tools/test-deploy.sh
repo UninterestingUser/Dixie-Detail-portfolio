@@ -125,7 +125,7 @@ grep -qx "docker compose up --detach --remove-orphans --wait --wait-timeout 600"
 [[ $(grep -n "^docker compose build" "$FAKE_LOG" | cut -d: -f1) -lt $(grep -n "^docker compose up" "$FAKE_LOG" | cut -d: -f1) ]] && pass "built before anything was recreated" || fail "order: $(cat "$FAKE_LOG")"
 [[ $(cat "$STACK_RUN_DIR/secrets/app/django_secret_key") == made-up-django && ! -e $STACK_RUN_DIR/secrets.old ]] && pass "the new secret files are in place" || fail "secrets: $(ls -R "$STACK_RUN_DIR")"
 [[ -z $(ls -A "$STACK_STAGE_PARENT") ]] && pass "the staging folder is gone" || fail "left: $(ls "$STACK_STAGE_PARENT")"
-[[ $(cat "$HEALTH_CRED") == https://hc.example/made-up ]] && grep -q "systemd-creds encrypt --with-key=host+tpm2 --name=healthchecks-public-url" "$FAKE_LOG" &&
+[[ $(cat "$HEALTH_CRED") == https://hc.example/made-up ]] && grep -q "systemd-creds encrypt --with-key=auto --name=healthchecks-public-url" "$FAKE_LOG" &&
 	pass "the missing health check credential was created" || fail "credential: $(cat "$HEALTH_CRED" 2>/dev/null)"
 grep -q "^systemctl restart dixie-tunnel-firewall.service" "$FAKE_LOG" && [[ -f $SYSTEMD_UNIT_DIR/dixie-tunnel-firewall.service ]] &&
 	pass "the tunnel firewall's unit is installed and applied" || fail "firewall: $(grep firewall "$FAKE_LOG")"
@@ -134,6 +134,12 @@ FAKE_ACTIVE=1 deploy
 running_stack
 FAKE_ACTIVE=1 FAKE_UP_FAILS=1 deploy
 [[ $rc != 0 ]] && grep -q "didn't all come up running and healthy" "$work/out" && pass "an unhealthy container fails the deploy, with a message" || fail "rc $rc, said: $(cat "$work/out")"
+
+echo "test-deploy: every systemd-creds encrypt works on a host without a TPM (decision 0130)"
+# The public copy has no docs/operations, so its absence is no failure.
+encrypts=$(grep -rnE "systemd-creds encrypt +-" "$repo/ops" "$repo/docs/operations" 2>/dev/null || true)
+[[ $(wc -l <<<"$encrypts") -ge 3 ]] && ! grep -v -- "--with-key=auto " <<<"$encrypts" &&
+	pass "each uses --with-key=auto" || fail "without --with-key=auto: $encrypts"
 
 echo "test-deploy: the deploy compares .env with the DOT_ENV secret"
 running_stack

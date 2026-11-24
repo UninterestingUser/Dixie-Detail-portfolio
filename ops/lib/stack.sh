@@ -78,10 +78,11 @@ stack_write_secrets() {
 
 # stack_write_health_credential
 # Encrypts the Bitwarden secret HEALTHCHECKS_PUBLIC_URL, from bws_load's
-# result, into HEALTH_CRED with systemd-creds, bound to this host and its
-# TPM like the Bitwarden token. The value goes through a pipe only.
+# result, into HEALTH_CRED with systemd-creds, as the Bitwarden
+# token is: --with-key=auto uses the TPM when the host has a usable one, and
+# the host key always (decision 0130). The value goes through a pipe only.
 stack_write_health_credential() {
 	local url
 	url=$(bws_get HEALTHCHECKS_PUBLIC_URL) || return
-	printf '%s' "$url" | systemd-creds encrypt --with-key=host+tpm2 --name="$HEALTH_CRED_NAME" - "$HEALTH_CRED"
+	printf '%s' "$url" | systemd-creds encrypt --with-key=auto --name="$HEALTH_CRED_NAME" - "$HEALTH_CRED"
 }
