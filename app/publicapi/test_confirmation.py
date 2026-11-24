@@ -15,7 +15,17 @@ from messaging.models import Message
 from publicapi.models import SecondVehicleRequest
 from scheduling.models import SchedulingSettings
 
-from .testing import ApiTestCase, eastern, open_day
+from .testing import ApiTestCase, day_after, eastern, open_day
+
+
+def booking_day(number):
+    """open_day(3) for number 3, then the next Monday to Saturday for each
+    number after it. No two numbers share a day, whatever today's weekday;
+    open_day(n) and open_day(n + 1) do when the first moves off a Sunday."""
+    day = open_day(3)
+    for _ in range(number - 3):
+        day = day_after(day)
+    return day
 
 
 class ConfirmationTestCase(ApiTestCase):
@@ -28,13 +38,13 @@ class ConfirmationTestCase(ApiTestCase):
     MOTORCYCLE = {"year": 2020, "make": "Honda", "model": "Gold Wing", "type": "motorcycle"}
 
     def post(self, day=3, mobile="4235550142", text_consent=True, hour=8, motorcycle=False, **changes):
-        """A booking at hour on open_day(day), or on day when it is a date."""
+        """A booking at hour on booking_day(day), or on day when it is a date."""
         if motorcycle:
             quote = self.quote(vehicle=self.MOTORCYCLE, service=self.motorcycle_detail, place=self.place_token)
         else:
             quote = self.quote(place=self.place_token)
         consents = {"version": "2026-11-18", "appointment": text_consent}
-        date = day if isinstance(day, datetime.date) else open_day(day)
+        date = day if isinstance(day, datetime.date) else booking_day(day)
         return self.client.post_json(
             "bookings", self.booking_body(quote, eastern(date, hour), mobile=mobile, consents=consents, **changes)
         )
@@ -121,7 +131,7 @@ class CapTests(ConfirmationTestCase):
         self.assertEqual(Appointment.objects.count(), 1)
         request = SecondVehicleRequest.objects.get(reference=response.json()["request"])
         self.assertEqual(request.reason, SecondVehicleRequest.Reason.OVER_CAP)
-        self.assertEqual(request.start, eastern(open_day(4), 8))
+        self.assertEqual(request.start, eastern(booking_day(4), 8))
         self.assertIsNone(request.same_day_appointment)
         # Another number still books.
         self.booked(self.post(day=4, mobile="4235550111"))
